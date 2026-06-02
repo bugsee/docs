@@ -15,9 +15,17 @@ npm run serve                     # Serve built site locally
 npm run clear                     # Clear Docusaurus cache
 npm run typecheck                 # TypeScript validation
 scripts/build.sh                  # Full CI build: spellcheck → build → copy raw markdown
-scripts/deploy.sh                 # Deploy: sync build/ to S3 + invalidate CloudFront
+scripts/deploy.sh                 # Manual deploy fallback: sync build/ to S3 + invalidate CloudFront
 npx cspell "docs/**/*.md" "docs/**/*.mdx" --no-cache -c cspell.json  # Spell check only
 ```
+
+## Deployment & Git remote
+
+- **Remote**: `origin` → `https://github.com/bugsee/docs` (public GitHub repo, canonical). Push here.
+- **Push target**: do all work on **`main`** and push to `origin main` — there is no separate release branch.
+- **Auto-deploy**: every push to `main` runs `.github/workflows/deploy.yml`, which builds the site, syncs `build/` to the production S3 bucket, and invalidates CloudFront. AWS access uses GitHub OIDC (keyless); the bucket name, distribution ID, region, and deploy-role ARN live in GitHub Actions **secrets/variables**, never in the repo.
+- **Manual run**: the workflow also supports `workflow_dispatch` — trigger it from the **Actions** tab or with `gh workflow run "Build and Deploy"`.
+- **Manual deploy (fallback)**: run `scripts/build.sh` then `scripts/deploy.sh` with `S3CMD_CONFIG`, `DEPLOY_ENDPOINT`, and `CLOUDFRONT_ID` set locally.
 
 ## Workflow Rules
 
@@ -49,7 +57,7 @@ All markdown content, organized by section:
 
 ### Build Pipeline (`scripts/`)
 - **build.sh** — Runs spell check → `npm run build` → `node scripts/copy-raw-markdown.mjs`
-- **deploy.sh** — S3 sync + CloudFront invalidation (requires `S3CMD_CONFIG`, `DEPLOY_ENDPOINT`, `CLOUDFRONT_ID` env vars)
+- **deploy.sh** — Manual fallback deploy: S3 sync + CloudFront invalidation (requires `S3CMD_CONFIG`, `DEPLOY_ENDPOINT`, `CLOUDFRONT_ID` env vars). CI normally deploys automatically on every push to `main` — see **Deployment & Git remote**.
 - **copy-raw-markdown.mjs** — Post-build: copies docs to `build/` as raw `.md` files for AI agents. Strips JSX from `.mdx` files (`<Tabs>` → bold labels), simplifies front matter to title/description/url only
 - **migrate-content.mjs** — One-time MkDocs → Docusaurus migration script (already run, kept for reference)
 
