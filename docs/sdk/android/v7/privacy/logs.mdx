@@ -1,0 +1,78 @@
+---
+title: "Privacy and console logs (7.x Beta)"
+description: "How to disable or sanitize logcat capture in the Bugsee Android SDK 7.x using the EventFilter<LogEvent> API."
+sidebar_position: 3
+slug: "/sdk/android/v7/privacy/logs"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning 7.x Beta
+This page documents the 7.x beta line. For the stable release, see the
+[6.x log privacy page](/sdk/android/privacy/logs/).
+:::
+
+## Disabling log collection
+
+Log collection can be turned off with the `CaptureLogs` option — see
+[configuration](/sdk/android/v7/configuration/).
+
+## Sanitizing logs
+
+7.x uses a single generic filter interface, `EventFilter<T>`, for both log
+and network events. Return the (possibly mutated) event to keep it; return
+`null` to drop it entirely. There is no second-argument listener callback —
+the filter method is synchronous.
+
+The event type is `LogEvent` (package `com.bugsee.library.contracts`), which
+replaces the 6.x `BugseeLog` type.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.setLogEventFilter(log -> {
+    String message = log.getMessage();
+    if (message != null) {
+        // Strip tokens, redact PII, etc.
+        log.setMessage(message.replaceAll("token=\\S+", "token=[REDACTED]"));
+    }
+
+    // Return the mutated event to keep it…
+    return log;
+
+    // …or return null to drop it entirely:
+    // return null;
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.setLogEventFilter { log ->
+    log.message?.let { message ->
+        log.message = message.replace(Regex("token=\\S+"), "token=[REDACTED]")
+    }
+
+    // Return the mutated event to keep it…
+    log
+
+    // …or return null to drop it entirely:
+    // null
+}
+```
+
+  </TabItem>
+</Tabs>
+
+:::info `setLogFilter` alias
+`Bugsee.setLogFilter(EventFilter<LogEvent>)` is kept as an alias for
+`setLogEventFilter(...)` to smooth 6.x call-site migration. Both resolve to
+the same registration.
+:::
+
+See [migration section 6](/sdk/android/v7/migration/#6-filtering-network-and-log-events)
+for a side-by-side of the old two-arg callback vs. the new single-method
+filter shape.

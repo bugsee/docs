@@ -1,0 +1,213 @@
+---
+title: "Appearance (7.x Beta)"
+description: "Customizing the Bugsee report dialog, notification icons, and feedback UI appearance in Bugsee Android SDK 7.x."
+sidebar_position: 9
+slug: "/sdk/android/v7/appearance"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::caution 7.x Beta
+This page documents the 7.x beta. In 7.x, the monolithic `BugseeAppearance` data class from 6.x has been replaced by a typed `Appearance` contract with namespaced string property keys. Those keys are declared as constants on three sibling contract interfaces:
+
+- `ReportAppearance` (core, `bugsee-android`) — bug-report UI colors and placeholders.
+- `NotificationAppearance` (core, `bugsee-android`) — notification trigger title.
+- `FeedbackAppearance` (feedback extension, `bugsee-android-feedback`) — feedback / chat UI colors.
+
+See the [6.x → 7.x migration guide](/sdk/android/v7/migration/) for the field-rename mapping.
+:::
+
+## Accessing appearance
+
+The entry point is `Bugsee.getAppearance()`, which returns a
+`com.bugsee.library.contracts.appearance.Appearance` instance. Unlike the 6.x
+data class, the 7.x `Appearance` exposes only typed getters and setters:
+
+```java
+Appearance setColor(String propertyName, Integer color);
+Integer    getColor(String propertyName);
+Appearance setString(String propertyName, String value);
+String     getString(String propertyName);
+```
+
+Setters return the `Appearance` instance for chaining. Property keys are the
+namespaced `String` constants exposed on `ReportAppearance`,
+`NotificationAppearance`, and `FeedbackAppearance`.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+import com.bugsee.library.Bugsee;
+import com.bugsee.library.contracts.appearance.Appearance;
+import com.bugsee.library.contracts.appearance.ReportAppearance;
+import com.bugsee.library.contracts.appearance.FeedbackAppearance;
+
+Appearance appearance = Bugsee.getAppearance();
+appearance
+    .setColor(ReportAppearance.ActionBarColor, Color.BLACK)
+    .setColor(FeedbackAppearance.OutgoingBubbleColor, Color.BLUE);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+import com.bugsee.library.Bugsee
+import com.bugsee.library.contracts.appearance.ReportAppearance
+import com.bugsee.library.contracts.appearance.FeedbackAppearance
+
+Bugsee.getAppearance()
+    .setColor(ReportAppearance.ActionBarColor, Color.BLACK)
+    .setColor(FeedbackAppearance.OutgoingBubbleColor, Color.BLUE)
+```
+
+  </TabItem>
+</Tabs>
+
+Always reference the constants on the contract interfaces — don't type the raw
+namespaced strings (e.g. `"Report::ActionBarColor"`) directly.
+
+## ReportAppearance
+
+Package: `com.bugsee.library.contracts.appearance.ReportAppearance`. Shipped
+with the core `bugsee-android` library. Controls the built-in bug-reporting UI.
+
+| Constant | Setter | Purpose |
+| --- | --- | --- |
+| `ReportAppearance.ActionBarColor` | `setColor` | Action bar background color in the Report UI. |
+| `ReportAppearance.EditTextBackgroundColor` | `setColor` | `EditText` background color in the Report UI. |
+| `ReportAppearance.VersionColor` | `setColor` | Bugsee version label text color. |
+| `ReportAppearance.TextColor` | `setColor` | `TextView` and `EditText` text color. |
+| `ReportAppearance.HintColor` | `setColor` | `EditText` hint text color. |
+| `ReportAppearance.ActionBarTextColor` | `setColor` | Action bar button text color. |
+| `ReportAppearance.ActionBarButtonBackgroundClickedColor` | `setColor` | Action bar button background in the clicked state. |
+| `ReportAppearance.BackgroundColor` | `setColor` | Report UI background color. |
+| `ReportAppearance.SeverityLabelActiveColor` | `setColor` | Severity label text color in the active state. |
+| `ReportAppearance.SummaryPlaceholder` | `setString` | Placeholder displayed in the Summary field. |
+| `ReportAppearance.DescriptionPlaceholder` | `setString` | Placeholder displayed in the Description field. |
+| `ReportAppearance.LabelsPlaceholder` | `setString` | Placeholder displayed in the Labels field. |
+| `ReportAppearance.EmailPlaceholder` | `setString` | Placeholder displayed in the Email field. |
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.getAppearance()
+    .setColor(ReportAppearance.ActionBarColor, Color.parseColor("#263238"))
+    .setColor(ReportAppearance.BackgroundColor, Color.WHITE)
+    .setString(ReportAppearance.SummaryPlaceholder, "What went wrong?");
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.getAppearance()
+    .setColor(ReportAppearance.ActionBarColor, Color.parseColor("#263238"))
+    .setColor(ReportAppearance.BackgroundColor, Color.WHITE)
+    .setString(ReportAppearance.SummaryPlaceholder, "What went wrong?")
+```
+
+  </TabItem>
+</Tabs>
+
+## NotificationAppearance
+
+Package: `com.bugsee.library.contracts.appearance.NotificationAppearance`.
+Shipped with the core `bugsee-android` library. Controls the notification-based
+report trigger.
+
+| Constant | Setter | Purpose |
+| --- | --- | --- |
+| `NotificationAppearance.Title` | `setString` | Title shown in the Bugsee system notification. |
+
+:::note
+The 6.x `NotificationTitleResId` field has no 7.x equivalent. Resolve the string
+resource yourself and pass the resolved value via `NotificationAppearance.Title`.
+:::
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.getAppearance()
+    .setString(NotificationAppearance.Title, getString(R.string.bugsee_notification_title));
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.getAppearance()
+    .setString(NotificationAppearance.Title, getString(R.string.bugsee_notification_title))
+```
+
+  </TabItem>
+</Tabs>
+
+## FeedbackAppearance
+
+Package: `com.bugsee.library.contracts.appearance.FeedbackAppearance`. Shipped
+with the **feedback extension module** (`bugsee-android-feedback`) and only
+available when that module is on the classpath. Controls colors in the feedback
+/ chat UI.
+
+| Constant | Setter | Purpose |
+| --- | --- | --- |
+| `FeedbackAppearance.ActionBarColor` | `setColor` | Action bar background color. |
+| `FeedbackAppearance.BackgroundColor` | `setColor` | Feedback UI background color. |
+| `FeedbackAppearance.ActionBarButtonBackgroundClickedColor` | `setColor` | Action bar button background in the clicked state. |
+| `FeedbackAppearance.IncomingBubbleColor` | `setColor` | Incoming message bubble background. |
+| `FeedbackAppearance.OutgoingBubbleColor` | `setColor` | Outgoing message bubble background. |
+| `FeedbackAppearance.IncomingTextColor` | `setColor` | Incoming message text color. |
+| `FeedbackAppearance.OutgoingTextColor` | `setColor` | Outgoing message text color. |
+| `FeedbackAppearance.DateTextColor` | `setColor` | Message date text color. |
+| `FeedbackAppearance.TitleTextColor` | `setColor` | Action bar title text color. |
+| `FeedbackAppearance.EmailSkipTextColor` | `setColor` | "Skip" button text color in the ask-for-email dialog. |
+| `FeedbackAppearance.EmailSkipBackgroundClickedColor` | `setColor` | "Skip" button background in the clicked state. |
+| `FeedbackAppearance.EmailBackgroundColor` | `setColor` | Ask-for-email dialog background. |
+| `FeedbackAppearance.EmailContinueNotActiveColor` | `setColor` | "Continue" button background in the disabled state. |
+| `FeedbackAppearance.EmailContinueActiveColor` | `setColor` | "Continue" button background in the enabled state. |
+| `FeedbackAppearance.EmailContinueClickedColor` | `setColor` | "Continue" button background in the clicked state. |
+| `FeedbackAppearance.InputTextColor` | `setColor` | Input message text color. |
+| `FeedbackAppearance.InputTextHintColor` | `setColor` | Input message hint text color. |
+| `FeedbackAppearance.BottomDelimiterColor` | `setColor` | Delimiter between the message list and the input field. |
+| `FeedbackAppearance.LoadingBarBackgroundColor` | `setColor` | Background of the loading / status bar. |
+| `FeedbackAppearance.LoadingTextColor` | `setColor` | Text color in the loading bar. |
+| `FeedbackAppearance.ErrorTextColor` | `setColor` | Error description text color. |
+| `FeedbackAppearance.VersionChangedBackgroundColor` | `setColor` | Background of the "version changed" bar. |
+| `FeedbackAppearance.VersionChangedTextColor` | `setColor` | Text color of the "version changed" bar. |
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.getAppearance()
+    .setColor(FeedbackAppearance.IncomingBubbleColor, Color.parseColor("#ECEFF1"))
+    .setColor(FeedbackAppearance.OutgoingBubbleColor, Color.parseColor("#1E88E5"))
+    .setColor(FeedbackAppearance.OutgoingTextColor, Color.WHITE);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.getAppearance()
+    .setColor(FeedbackAppearance.IncomingBubbleColor, Color.parseColor("#ECEFF1"))
+    .setColor(FeedbackAppearance.OutgoingBubbleColor, Color.parseColor("#1E88E5"))
+    .setColor(FeedbackAppearance.OutgoingTextColor, Color.WHITE)
+```
+
+  </TabItem>
+</Tabs>
+
+## Timing
+
+`Bugsee.getAppearance()` is safe to call before or after the SDK is launched —
+the returned `Appearance` instance is process-wide and persists across
+`Bugsee.launch()` / `Bugsee.stop()` / `Bugsee.relaunch()` cycles. Apply your
+appearance overrides as early as convenient (for example, in your
+`Application.onCreate()` alongside launch configuration) so they are in effect
+before any report dialog, notification, or feedback activity is shown.

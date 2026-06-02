@@ -1,0 +1,70 @@
+---
+title: "Privacy and Report fields"
+description: "How to pre-populate or post-process Bugsee report fields such as summary, description, severity, and labels using the BugseeDelegate protocol on iOS."
+sidebar_position: 4
+slug: "/sdk/ios/privacy/report"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+You can use both pre and postprocessing for report fields. This is useful when you want to strip any sensitive data user may enter into it or when you want to apply some specific formatting.
+
+The principle is simple, for every generated report, Bugsee will call the corresponding delegate method from provided ```BugseeDelegate``` protocol.
+Your class should implement **BugseeDelegate** protocol and it must set itself as the delegate for Bugsee (choose the sync or async delegate method that fits your needs).
+You should then perform all the required fields manipulations and pass your changes back to Bugsee.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// sample code blocks are provided for async versions
+- (void)bugseeAddFieldsBeforeReportCreatedWith:(void (^)(BugseeReportFields * _Nonnull))completion {
+    __block BugseeReportFields *report = [BugseeReportFields reportFieldsWith:@"Begin;" description:@"Begin;" severity:BugseeSeverityBlocker labels:@[@"qa"]];
+    
+    completion(report);
+}
+
+- (void)bugseeCheckFieldsAfterReportCreated:(BugseeReportFields *)report completionHandler:(void (^)(BugseeReportFields * _Nonnull))completion {
+    report.summary = [report.summary stringByAppendingString:@";End"];
+    report.reportDescription = [report.reportDescription stringByAppendingString:@";End"];
+    report.severity = BugseeSeverityHigh;
+    
+    NSMutableArray<NSString *> * currentLabels = [NSMutableArray arrayWithArray:report.labels];
+    [currentLabels addObject:@"dev"];
+    report.labels = currentLabels;
+
+    completion(report);
+}
+
+// somewhere within the class
+[Bugsee sharedInstance].delegate = self;
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// sample code blocks are provided for async versions
+func bugseeAddFieldsBeforeReportCreated(_ completion: @escaping (BugseeReportFields) -> Void) {
+    var reportFields = BugseeReportFields("Begin;", description: "Begin;", severity: BugseeSeverityBlocker, labels: ["qa"])
+
+    completion(reportFields)
+}
+
+func bugseeCheckFields(afterReportCreated report: BugseeReportFields, completionHandler completion: @escaping (BugseeReportFields) -> Void) {
+    _ = report.summary?.appending(";End")
+    _ = report.reportDescription?.appending(";End")
+    report.severity = BugseeSeverityHigh
+    report.labels?.append("dev")
+    
+    completion(report)
+}
+
+// somewhere within the class
+Bugsee.sharedInstance()?.delegate = self;
+```
+
+  </TabItem>
+</Tabs>

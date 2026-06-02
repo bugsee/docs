@@ -1,0 +1,301 @@
+---
+title: "Adding custom data"
+description: "How to attach user email, session attributes, custom traces, events, and file attachments to Bugsee reports on iOS."
+sidebar_position: 4
+slug: "/sdk/ios/custom"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## User email
+
+When you already have your users identified within your app, you might want to automatically attach their email to the bug report. Bugsee provides APIs for setting, getting, and clearing the email.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// setting email
+[Bugsee setEmail:@"name@example.com"]
+
+// getting email, nil will be returned if email was never set
+NSString *email = [Bugsee getEmail];
+
+// clearing email
+[Bugsee clearEmail];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// setting email
+Bugsee.setEmail("name@example.com")
+
+// getting email, nil will be returned if email was never set
+var email = Bugsee.getEmail()
+
+// clearing email
+Bugsee.clearEmail()
+```
+
+  </TabItem>
+</Tabs>
+
+## Session/User Attributes
+
+Besides email, any arbitrary attributes can be attached to the report. Issues are searchable by these attributes in the Bugsee dashboard.
+
+:::warning
+Note that each attribute has a limit of 1kB and the total size of all attributes must not exceed 25kB
+:::
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee setAttribute:@"name" withValue:@"John Doe"];
+[Bugsee setAttribute:@"age" withValue:@23];
+[Bugsee setAttribute:@"married" withValue:@YES];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.setAttribute("name", value: "John Doe")
+Bugsee.setAttribute("age", value: 23)
+Bugsee.setAttribute("married", value: false)
+```
+
+  </TabItem>
+</Tabs>
+
+Once set, attributes persist until the application is uninstalled from the device. However, they can be cleared using the following API.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// Clear a single attribute by name
+[Bugsee clearAttribute:@"name"];
+
+// .. or clear all of them
+[Bugsee clearAllAttributes];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// Clear a single attribute by name
+Bugsee.clearAttribute("name")
+
+// .. or clear all of them
+Bugsee.clearAllAttributes()
+```
+
+  </TabItem>
+</Tabs>
+
+## Custom Traces
+
+Traces may be useful when you want to track how a specific variable or state changes over time right before a problem occurs.
+
+There are two ways to trace a property: manually setting a value or automatically setting an observer on a property of an object.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// Manually set value of @15 to property named "credit_balance"
+// any time it changes
+[Bugsee traceKey:@"credit_balance" withValue:@15];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// Manually set value of @15 to property named "credit_balance"
+// any time it changes
+Bugsee.trace(key:"credit_balance", value:15)
+```
+
+  </TabItem>
+</Tabs>
+
+## Custom Events
+
+Events are identified by a string and can have an optional dictionary of parameters that will be stored and passed along with the report.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// Without any additional parameters
+[Bugsee registerEvent:@"payment_processed"];
+
+// ...or with additional custom parameters
+[Bugsee registerEvent:@"payment_processed"
+            withParams:@{
+                @"amount": @125,
+                @"currency": @"USD"
+                }];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// Without any additional parameters
+Bugsee.event("payment_processed")
+
+// ...or with additional custom parameters
+Bugsee.event("payment_processed", params:["amount": 125, "currency": "USD"])
+```
+
+  </TabItem>
+</Tabs>
+
+## File Attachments
+
+Binary files (attachments) can also be added to the report right before it is sent. The attachment will be available for download directly from the issue viewer.
+Currently both the amount of attachments and their size is limited. Max of 3 attachments, 3MB each (size increased from 1MB starting from v3.4.0).
+
+Your class should implement the **BugseeDelegate** protocol and set itself as the delegate for Bugsee.
+
+Note that in Swift, when conforming to the ```BugseeDelegate``` protocol, you should also add ```NSObject``` as a base class. This will let you avoid
+implementing the ```responds(to: aSelector)``` method and many others.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+-(NSArray<BugseeAttachment *> *)bugseeAttachmentsForReport:(BugseeReport *)report
+{
+    // Only if it's a blocker and on every crash
+    if ((report.severity == BugseeSeverityBlocker) ||
+        ([report.type isEqualToString:BugseeReportTypeCrash])) {
+
+        BugseeAttachment * att = [BugseeAttachment attachmentWithName:@"internal app db" filename:@"custom.db" data:[NSData dataWithContentsOfFile:pathToMyFile]];
+
+        // Return array with one attachment
+        return @[att];
+    }
+
+    return @[];
+}
+
+// ..somewhere within the class
+[Bugsee sharedInstance].delegate = self;
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// Note the NSObject as a base class. This will let you avoid,
+// implementing the responds(to: aSelector) method and many others.
+public class BugseeCustomDelegate: NSObject, BugseeDelegate {
+    // .. other methods
+
+    func bugseeAttachments(for report: BugseeReport) -> [BugseeAttachment] {
+        // Only if it's a blocker and on every crash
+        if (report.severity == BugseeSeverityBlocker ||
+            report.type == BugseeReportTypeCrash) {
+
+            let fileURL: URL
+            if #available(iOS 16.0, *) {
+                fileURL = URL(filePath: pathToMyFile)
+            } else {
+                fileURL = URL(fileURLWithPath: pathToMyFile)
+            }
+            
+            if let att = BugseeAttachment(name:"internal app db", filename:"custom.db", data:Data(contentsOf: fileURL)) {
+                // Return array with one attachment
+                return [att]
+            }
+        }
+
+        return []
+    }
+
+    // ..somewhere within the class
+    func initBugseeDelegate() {
+        Bugsee.sharedInstance()?.delegate = self;
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+In cases where you need to perform an asynchronous operation to gather attachment information, you can use the async variant instead:
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+- (void) bugseeAttachmentsForReport:(nonnull BugseeReport *)report completionHandler:(nonnull BugseeAttachmentsDecisionBlock)decisionBlock
+{
+    // Do some async stuff...
+
+    NSMutableArray<BugseeAttachment*>* attachments = ...
+
+    // Decision block can receive nil as argument.
+    decisionBlock(attachments);
+}
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+
+func bugseeAttachments(for report: BugseeReport, completionHandler decisionBlock: @escaping BugseeAttachmentsDecisionBlock) {
+
+    let attachments = ...
+
+    decisionBlock(attachments)
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## View hierarchy
+
+By default, Bugsee automatically captures view hierarchy upon bug or error report generation. This feature is controlled by the ```BugseeViewHierarchyEnabledKey``` launch option (Refer to [configuration](/sdk/ios/configuration/) section for more details on launch options).
+
+You can also trigger view hierarchy capture manually using the following API:
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee captureViewHierarchy];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.captureViewHierarchy()
+```
+
+  </TabItem>
+</Tabs>
+
+This API can be called multiple times, and all the captured view hierarchies will be attached to the next report. Be aware that depending on the depth of your view hierarchy and the number of snapshots, the resulting size of the report bundle may be significantly increased.
+
+Also note that if the ```BugseeViewHierarchyEnabledKey``` launch option is set to ```false```, this API will have no effect.

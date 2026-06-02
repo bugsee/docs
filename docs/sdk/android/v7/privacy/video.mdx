@@ -1,0 +1,218 @@
+---
+title: "Privacy and video (7.x Beta)"
+description: "Secure-area APIs in the Bugsee Android SDK 7.x: activities, views, rectangles, WebViews, Compose, and the blackout API."
+sidebar_position: 2
+slug: "/sdk/android/v7/privacy/video"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning 7.x Beta
+This page documents the 7.x beta line. For the stable release, see the
+[6.x video privacy page](/sdk/android/privacy/video/).
+:::
+
+## Disabling video
+
+Video recording can be disabled completely via the `VideoEnabled` option —
+see [configuration](/sdk/android/v7/configuration/).
+
+## Protect activities
+
+Add a fully-qualified activity class name to the list of secure activities.
+When the user navigates to that activity, the screen is substituted with
+black frames and touch events are dropped.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.addSecureActivity(MySecretActivity.class.getName());
+// Later:
+Bugsee.removeSecureActivity(MySecretActivity.class.getName());
+boolean secure = Bugsee.isSecureActivity(MySecretActivity.class.getName());
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.addSecureActivity(MySecretActivity::class.java.name)
+// Later:
+Bugsee.removeSecureActivity(MySecretActivity::class.java.name)
+val secure = Bugsee.isSecureActivity(MySecretActivity::class.java.name)
+```
+
+  </TabItem>
+</Tabs>
+
+Activities carrying the system `FLAG_SECURE` flag are protected without any
+Bugsee call.
+
+## Protecting views
+
+### By `View` reference
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.addSecureView(mySecretView);
+// View is substituted by a black rectangle in the video.
+Bugsee.removeSecureView(mySecretView);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.addSecureView(mySecretView)
+Bugsee.removeSecureView(mySecretView)
+```
+
+  </TabItem>
+</Tabs>
+
+### By `Fragment`
+
+In 7.x the hosting-Activity argument has been removed — pass the `Fragment`
+directly.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.addSecureView(myFragment);
+Bugsee.removeSecureView(myFragment);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.addSecureView(myFragment)
+Bugsee.removeSecureView(myFragment)
+```
+
+  </TabItem>
+</Tabs>
+
+:::note
+`Bugsee.addSecureViews(int layoutId, Activity)` still exists but is
+deprecated in 7.x and always returns `false`. Walk the view tree yourself
+and call `addSecureView(View)` per node.
+:::
+
+### Jetpack Compose
+
+Add the Compose extension module and apply `Modifier.bugseeSecure()` to any
+sensitive composable:
+
+```kotlin
+// build.gradle.kts
+implementation("com.bugsee:bugsee-android-compose:<version>")
+```
+
+```kotlin
+import com.bugsee.library.compose.bugseeSecure
+
+Text(
+    text = "Confidential",
+    modifier = Modifier.bugseeSecure()
+)
+```
+
+The Bugsee Kotlin compiler plugin can also auto-inject `bugseeSecure()` into
+password `TextField` call sites — see the
+[gradle-plugin reference](/sdk/android/v7/configuration/).
+
+### WebView elements
+
+Add `class="bugsee-hide"` to any element that must be redacted, or
+`class="bugsee-show"` to opt back in an element that is hidden by default
+(like `type="password"`):
+
+```html
+<input type="text" class="bugsee-hide">
+<input type="password" class="bugsee-show">
+```
+
+If you call `WebView.setWebViewClient(...)` yourself, register the WebView
+explicitly:
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+webView.setWebViewClient(new WebViewClient());
+Bugsee.addSecureWebView(webView);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+webView.webViewClient = WebViewClient()
+Bugsee.addSecureWebView(webView)
+```
+
+  </TabItem>
+</Tabs>
+
+## Protecting by coordinates
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.addSecureRectangle(new Rect(100, 100, 200, 200));
+List<Rect> all = Bugsee.getAllSecureRectangles();
+Bugsee.removeSecureRectangle(new Rect(100, 100, 200, 200));
+Bugsee.removeAllSecureRectangles();
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.addSecureRectangle(Rect(100, 100, 200, 200))
+val all = Bugsee.getAllSecureRectangles()
+Bugsee.removeSecureRectangle(Rect(100, 100, 200, 200))
+Bugsee.removeAllSecureRectangles()
+```
+
+  </TabItem>
+</Tabs>
+
+## Blackout — time-bounded full redaction
+
+Bracket a sensitive flow with `startBlackout()` / `endBlackout()` to fully
+blank the video and drop touches for the duration. This pair replaces the
+6.x `Bugsee.pause()` / `Bugsee.resume()` methods — the semantics are unchanged,
+only the names.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.startBlackout();
+// ...render / interact with sensitive content...
+Bugsee.endBlackout();
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.startBlackout()
+// ...render / interact with sensitive content...
+Bugsee.endBlackout()
+```
+
+  </TabItem>
+</Tabs>
+
+For a hard stop of all capture (including log, network, and event collection),
+call `Bugsee.stop()` and resume later with `Bugsee.launch(...)` — see
+[Lifecycle events](/sdk/android/v7/lifecycle).

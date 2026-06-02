@@ -1,0 +1,214 @@
+---
+title: "Privacy and breadcrumbs (7.x Beta)"
+description: "Filter, mutate, or drop breadcrumbs before they are persisted with the Bugsee Android SDK 7.x EventFilter<Breadcrumb> API."
+sidebar_position: 5
+slug: "/sdk/android/v7/privacy/breadcrumbs"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning 7.x Beta
+This page documents the 7.x beta line. Breadcrumb filtering is **new in 7.0.0-beta6**; there is no equivalent on the 6.x stable line.
+:::
+
+## What breadcrumbs are
+
+Breadcrumbs are short structured records of what the app was doing in the lead-up to an issue — navigation, taps, lifecycle changes, network requests, system events. They are aggregated into the report timeline and surface in the Bugsee dashboard.
+
+The 7.x SDK ships four built-in breadcrumb sources:
+
+| Source | Examples |
+| --- | --- |
+| **App** | Application lifecycle (`onCreate`, foreground/background), low-memory warnings. |
+| **UI** | Activity / Fragment navigation, dialog open/close, gesture events. |
+| **Network** | HTTP request lifecycle entries — host, path, method, status, mechanism. |
+| **System** | Connectivity, battery, thermal, orientation, configuration changes. |
+
+Breadcrumb capture is on by default and is gated by the `CaptureBreadcrumbs` option — see [configuration](/sdk/android/v7/configuration).
+
+## Disabling breadcrumb collection
+
+To turn off breadcrumb capture entirely, set `CaptureBreadcrumbs` to `false` in your manifest or programmatically:
+
+```xml
+<meta-data android:name="com.bugsee.option.capture.breadcrumbs"
+           android:value="false" />
+```
+
+Most apps should keep capture on and use the filter below to scrub or drop only the entries that matter.
+
+## Filtering breadcrumbs
+
+`Bugsee.setBreadcrumbFilter(EventFilter<Breadcrumb>)` registers a single filter that is invoked for **every** breadcrumb the SDK is about to record — regardless of source. Return the (possibly mutated) breadcrumb to keep it; return `null` to drop it.
+
+The filter shape mirrors [`setLogEventFilter`](/sdk/android/v7/privacy/logs) and [`setNetworkEventFilter`](/sdk/android/v7/privacy/network) — same generic `EventFilter<T>` interface, single synchronous method, no completion callback.
+
+:::caution Producer-side URL sanitization removed
+Before 7.0.0-beta6, HTTP-request breadcrumbs had hardcoded URL sanitization baked into the producer (query-string masking, `*` substitution on certain segments). That logic has been **removed**: HTTP-request URLs are now emitted verbatim and you opt into masking, PII redaction, or drop semantics through this filter. If you depended on the old producer-side behavior, install a filter that reproduces it.
+:::
+
+### Breadcrumb shape
+
+The `Breadcrumb` interface (`com.bugsee.library.contracts.exchange.Breadcrumb`) exposes:
+
+| Method | Purpose |
+| --- | --- |
+| `getCategory()` / `setCategory(String)` | Source category — typical values: `"navigation"`, `"user"`, `"system"`, `"business"`, `"error"`. |
+| `getType()` / `setType(String)` | Sub-type within the category (for example `http_request`, `gesture`, `lifecycle`). |
+| `getMessage()` / `setMessage(String)` | Human-readable description. |
+| `getLevel()` / `setLevel(Breadcrumb.Level)` | One of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `FATAL`. |
+| `getData()` / `setData(Map)` / `setData(key, value)` | Free-form key/value context map. HTTP-request breadcrumbs put `url`, `method`, `status_code`, `mechanism`, etc. here. |
+| `getTimestamp()` / `setTimestamp(long)` | Wall-clock milliseconds. |
+
+### Examples
+
+#### Mask query-string tokens on HTTP-request breadcrumbs
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+import com.bugsee.library.Bugsee;
+import com.bugsee.library.contracts.exchange.Breadcrumb;
+
+Bugsee.setBreadcrumbFilter(crumb -> {
+    Map<String, Object> data = crumb.getData();
+    if (data != null) {
+        Object urlObj = data.get("url");
+        if (urlObj instanceof String) {
+            String url = (String) urlObj;
+            if (url.contains("token=")) {
+                crumb.setData("url",
+                        url.replaceAll("token=[^&\\s]+", "token=[REDACTED]"));
+            }
+        }
+    }
+    return crumb; // return null to drop the breadcrumb entirely
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+import com.bugsee.library.Bugsee
+
+Bugsee.setBreadcrumbFilter { crumb ->
+    val url = crumb.data?.get("url") as? String
+    if (url != null && url.contains("token=")) {
+        crumb.setData("url", url.replace(Regex("token=[^&\\s]+"), "token=[REDACTED]"))
+    }
+    crumb // return null to drop the breadcrumb entirely
+}
+```
+
+  </TabItem>
+</Tabs>
+
+#### Drop noisy breadcrumb categories
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.setBreadcrumbFilter(crumb -> {
+    if ("system".equals(crumb.getCategory())
+            && "battery".equals(crumb.getType())) {
+        return null; // drop battery-state pings
+    }
+    return crumb;
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.setBreadcrumbFilter { crumb ->
+    if (crumb.category == "system" && crumb.type == "battery") null else crumb
+}
+```
+
+  </TabItem>
+</Tabs>
+
+#### Downgrade level for known-noisy entries
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.setBreadcrumbFilter(crumb -> {
+    String message = crumb.getMessage();
+    if (message != null && message.startsWith("[heartbeat]")) {
+        crumb.setLevel(Breadcrumb.Level.DEBUG);
+    }
+    return crumb;
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.setBreadcrumbFilter { crumb ->
+    if (crumb.message?.startsWith("[heartbeat]") == true) {
+        crumb.level = Breadcrumb.Level.DEBUG
+    }
+    crumb
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Recording custom breadcrumbs
+
+:::note
+`Bugsee.addBreadcrumb(...)` is **new in 7.0.0-beta7**.
+:::
+
+The four built-in sources cover most apps, but you can also record domain-specific breadcrumbs — business checkpoints (`"checkout.paid"`, `"trial.expired"`), navigation events from a wrapper SDK, or breadcrumbs forwarded from a non-Android subsystem — into the same timeline:
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+import com.bugsee.library.Bugsee;
+import com.bugsee.library.contracts.exchange.Breadcrumb;
+
+Breadcrumb crumb = /* construct or obtain a Breadcrumb */;
+Bugsee.addBreadcrumb(crumb);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+import com.bugsee.library.Bugsee
+import com.bugsee.library.contracts.exchange.Breadcrumb
+
+val crumb: Breadcrumb = /* construct or obtain a Breadcrumb */
+Bugsee.addBreadcrumb(crumb)
+```
+
+  </TabItem>
+</Tabs>
+
+Custom breadcrumbs are routed through the same filter the SDK applies to built-in ones — the [filter](#filtering-breadcrumbs) you registered with `setBreadcrumbFilter(...)` will run on every call, with the same semantics described above.
+
+The call no-ops silently when the SDK has not been launched, when `CaptureBreadcrumbs` is disabled, or when `breadcrumb` is `null`.
+
+## Notes
+
+- The filter is **synchronous** — it runs on the recording thread before the breadcrumb is persisted. Keep it allocation-light and fast; do not perform I/O.
+- Mutate the breadcrumb in place and return the same instance. Returning a different `Breadcrumb` implementation is not supported.
+- The filter is invoked for **all** sources. Use `getCategory()` / `getType()` to scope your logic per source (for example, only touch HTTP-request entries by checking `category == "navigation"` and `type == "http_request"`).
+- Network **events** (the entries surfaced in the network tab of the report) are scrubbed separately via [`setNetworkEventFilter`](/sdk/android/v7/privacy/network). The breadcrumb filter only affects the breadcrumb timeline.
+
+## Related
+
+- [Console logs filter](/sdk/android/v7/privacy/logs) — `setLogEventFilter`.
+- [Network traffic filter](/sdk/android/v7/privacy/network) — `setNetworkEventFilter`.
+- [Configuration: `CaptureBreadcrumbs`](/sdk/android/v7/configuration) — master toggle for breadcrumb capture.

@@ -1,0 +1,55 @@
+---
+title: "Privacy and data cleanup"
+description: "How to delete all locally stored Bugsee recording data from an iOS device using the data cleanup API."
+sidebar_position: 5
+slug: "/sdk/ios/privacy/cleanup"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Bugsee SDK does not continuously stream any personal data. The collected data and the reports built from it are stored locally on the device. In some specific cases, there might be a need to clean up the data stored on the disk.
+
+## Data cleanup
+
+Bugsee SDK provides a way to clean up the data stored on the disk. This can be useful in cases when you want to remove all the data collected by Bugsee from the device.
+
+:::warning
+Note that this API does not delete the session-related data, such as [attributes](/sdk/ios/custom/#usersession-attributes). To cleanup up those, use corresponding API (e.g. `[Bugsee clearAllAttributes]`)
+:::
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+
+// Bugsee must be stopped before deleting the data
+[Bugsee stop:^{
+    // Clean up all the data stored on the disk
+    [Bugsee deleteCollectedDataOnDevice:^(BOOL success) {
+        NSString *message = success ? @"Data deleted successfully" : @"Failed to delete data";
+        NSLog(@"CollectedDataDeletion: %@", message);
+    }];
+}];
+
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+
+// Bugsee must be stopped before deleting the data
+Bugsee.stop {
+    // Clean up all the data stored on the disk
+    Bugsee.deleteCollectedDataOnDevice { success in
+        let message = success ? "Data deleted successfully" : "Failed to delete data"
+        print("CollectedDataDeletion: \(message)")
+    }
+}
+
+```
+
+  </TabItem>
+</Tabs>

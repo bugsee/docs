@@ -1,0 +1,258 @@
+---
+title: "Manual invocation"
+description: "How to programmatically trigger the Bugsee report UI, upload issues from code, report non-fatal errors, and validate asserts on iOS."
+sidebar_position: 3
+slug: "/sdk/ios/manual"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Report view
+
+In addition to detection of shake gesture or screenshot issue report view can be triggered programmatically:
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee showReportController];
+
+// or pre-fill some fields, user will be able to modify them
+[Bugsee showReportControllerWithSummary:@"Some problem"
+          description:@""
+          severity:BugseeSeverityMedium,
+          labels: @[@"some-label"]];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.showReportController()
+
+// or pre-fill some fields, user will be able to modify them
+Bugsee.showReportController(summary: "Some problem",
+    description: "",
+    severity: BugseeSeverityMedium,
+    labels: ["some-label"])
+```
+
+  </TabItem>
+</Tabs>
+
+## Issue create
+
+You can build your own custom UI for collecting summary, description and severity from a user and use the following call to send it to Bugsee
+to upload.
+> **Note:** You should not use it for reporting errors automatically from within code, use [Non-fatal errors](#non-fatal-errors) for this instead.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee uploadWithSummary:@"Upload from code"
+        description:@"Some description"
+        severity:BugseeSeverityMedium];
+
+// or, if you want, you can provide the list of labels which will be
+// attached to the bug report
+[Bugsee uploadWithSummary:@"Upload from code"
+        description:@"Some description"
+        severity:BugseeSeverityMedium
+        labels:@[]];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.upload(summary: "Upload from code",
+        description: "Some description",
+        severity: BugseeSeverityMedium)
+
+// or, if you want, you can provide the list of labels which will be
+// attached to the bug report
+Bugsee.upload(summary: "Upload from code",
+        description: "Some description",
+        severity: BugseeSeverityMedium,
+        labels: [])
+```
+
+  </TabItem>
+</Tabs>
+
+You can also use the BugseeExtendedReport to fill it with information and upload:
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// Bugsee SDK v5.1.0 and above
+
+// Create a report and fill it in completionHandler
+[Bugsee createReportWithCompletion:^(BugseeExtendedReport * report) {
+    [report setSummary:@"UI is broken."];
+    [report setDescription:@"It happened when I pressed the button"];
+    [report setLabels:@[@"test", @"qa"]];
+
+    UIImage * image = report.screenshot;
+    // Do something with the screenshot here
+    // ...
+
+    // Store changed screenshot
+    [report setScreenshot:image];
+    
+    // you also can add custom attributes for report
+    [report setAttribute:@"attribute name" withValue:@"attribute value"];
+
+    // You can request video export to the specified file. This
+    // operation is asynchronous.
+    // 
+    // Note: Do no trigger upload while video export is being performed!
+    // 
+    // Available since Bugsee iOS SDK v5.4.0
+    [extendedReport exportVideoToPath:@"full/video/path.mov" withCompletion:^{
+        // Video export completed. Check the file presence. If
+        // export failed, the file will not be created.
+    }];
+    
+    // Then upload with customized report
+    [Bugsee uploadReport:report];
+}];
+
+// Pre v5.1.0
+
+[Bugsee stop:^() {
+        BugseeExtendedReport * report = [Bugsee createReport];
+        [report setSummary:@"UI is broken."];
+        [report setDescription:@"It happened when I pressed the button"];
+
+        UIImage * image = report.screenshot;
+        [report setScreenshot:image];
+        [report setAttribute:@"attribute name" withValue:@"attribute value"];
+
+        // Then upload with customized report and call [Bugsee relaunch] when report was prepared for upload in completion block.
+        [Bugsee uploadReport:report withCompletion:^{
+                [Bugsee relaunchWithOptions:nil];
+        }];
+}];
+
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// Bugsee SDK v5.1.0 and above
+
+// Create a report and fill it in completionHandler
+Bugsee.createReport { report in
+    guard let report = report else { return }
+    
+    report.setSummary("UI is broken.")
+    report.setDescription("It happened when I pressed the button")
+    report.labels = ["test"]
+    
+    let image = report.screenshot
+    
+    // Do something with the screenshot here
+    // ...
+    
+    // Store changed screenshot
+    report.setScreenshot(image)
+    // you also can add custom attributes for report
+    report.setAttribute("attribute name", value: "attribute value")
+
+    // You can request video export to the specified file. This
+    // operation is asynchronous.
+    // 
+    // Note: Do no trigger upload while video export is being performed!
+    // 
+    // Available since Bugsee iOS SDK v5.4.0
+    report.exportVideo(path: "full/video/path.mov") {
+        // Video export completed. Check the file presence. If
+        // export failed, the file will not be created.
+    }
+    
+    // Then upload the customized report
+    Bugsee.uploadReport(report)
+}
+
+// Pre v5.1.0
+Bugsee.stop {
+    guard let report = Bugsee.createReport() else { return }
+    report.setSummary("UI is broken.")
+    report.setDescription("It happened when I pressed the button")
+    
+    let image = report.screenshot
+    report.setScreenshot(image)
+    
+    report.setAttribute("attribute name", value: "attribute value")
+    // Then upload with customized report and call [Bugsee relaunch] when report was prepared for upload in completion block.
+    Bugsee.uploadReport(report, completion: {
+        Bugsee.relaunch()
+    })
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Non-fatal errors
+
+It is possible to report non-fatal errors from code. These reports will get combined similar to crashes,
+and you will be provided with statistics and a break down by unique devices, IOS versions, etc.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee logError:[NSError errorWithDomain:@"com.example.errors.ServerIsDown"
+							code:10234 userInfo:@{
+								@"key1":@"value1",
+								@"key2": @"value2"}]];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.logError(NSError(domain: "com.example.errors.ServerIsDown",
+						code: 10234,
+						userInfo: ["key1": "value1", "key2": "value2"]))
+```
+
+  </TabItem>
+</Tabs>
+
+> **Note:** Make sure to set code and domain wisely, the errors are combined on code, domain and location of the error, if you
+put arbitrary data into domain the errors will not get combined properly. Put custom data into userInfo instead.
+
+
+## Asserts
+
+You can also let Bugsee validate asserts and auto create issues and upload them once the assert fails.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BUGSEE_ASSERT(balance > 0, @"Balance is wrong")
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// Unfortunately, there is no preprocessor in Swift, so you have to construct location string yourself
+if balance < 0 Bugsee.logAssert(description: "Balance is wrong", location:"\(#function) (\(#file):\(#line))")
+```
+
+  </TabItem>
+</Tabs>

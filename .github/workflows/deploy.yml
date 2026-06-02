@@ -1,0 +1,60 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Required for GitHub OIDC -> AWS IAM role assumption (no stored AWS keys).
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Spell check
+        run: npx cspell "docs/**/*.md" "docs/**/*.mdx" --no-cache -c cspell.json
+
+      - name: Build site
+        run: |
+          node scripts/sync-skills.mjs
+          npm run build
+          node scripts/copy-raw-markdown.mjs
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Sync to S3
+        # --acl public-read mirrors the existing s3cmd `-P` behavior. Remove it if the
+        # bucket uses a bucket policy with ACLs disabled (Object Ownership = enforced).
+        run: |
+          aws s3 sync build/ "s3://${{ vars.S3_BUCKET }}/" \
+            --delete \
+            --acl public-read
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_ID }}" \
+            --paths "/*"

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/alexeykarimov/Projects/Bugsee/docs log --oneline -20)",
+      "Bash(npm --version)"
+    ]
+  }
+}

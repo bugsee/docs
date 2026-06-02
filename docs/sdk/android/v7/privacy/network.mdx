@@ -1,0 +1,101 @@
+---
+title: "Privacy and network traffic (7.x Beta)"
+description: "How to disable network capture or scrub URLs, headers, and bodies with the Bugsee Android SDK 7.x EventFilter<NetworkEvent> API."
+sidebar_position: 4
+slug: "/sdk/android/v7/privacy/network"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning 7.x Beta
+This page documents the 7.x beta line. For the stable release, see the
+[6.x network privacy page](/sdk/android/privacy/network/).
+:::
+
+## Disabling network traffic collection
+
+Network capture can be disabled via the `MonitorNetwork` option — see
+[configuration](/sdk/android/v7/configuration/).
+
+## Sanitizing network events
+
+7.x replaces the 6.x `NetworkEventFilter` two-arg callback with a
+single-method generic `EventFilter<T>`. Return the (possibly mutated)
+`NetworkEvent` to keep it; return `null` to drop it. The event type is
+`NetworkEvent` (package `com.bugsee.library.contracts`) — it replaces
+6.x's `BugseeNetworkEvent`. The helper getters/setters carry over almost
+unchanged (including `getNoBodyReason()`).
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.setNetworkEventFilter(event -> {
+    // URL
+    String url = event.getUrl();
+    if (url != null && url.contains("token")) {
+        event.setUrl(url.replaceAll("token=\\S+", "token=[REDACTED]"));
+    }
+
+    // Headers
+    Map<String, Object> headers = event.getHeaders();
+    if (headers != null) {
+        headers.remove("Authorization");
+        event.setHeaders(headers);
+    }
+
+    // Body
+    String body = event.getBody();
+    if (body != null && body.contains("\"password\"")) {
+        event.setBody("[REDACTED]");
+    }
+
+    // Error text (captured for failed requests)
+    if (event.getErrorDescription() != null) {
+        event.setErrorDescription("…");
+    }
+
+    return event;                       // keep
+    // return null;                     // drop
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.setNetworkEventFilter { event ->
+    event.url?.takeIf { it.contains("token") }?.let {
+        event.url = it.replace(Regex("token=\\S+"), "token=[REDACTED]")
+    }
+
+    event.headers?.let { headers ->
+        headers.remove("Authorization")
+        event.headers = headers
+    }
+
+    event.body?.takeIf { it.contains("\"password\"") }?.let {
+        event.body = "[REDACTED]"
+    }
+
+    event.errorDescription?.let { event.errorDescription = "…" }
+
+    event            // keep — or `null` to drop
+}
+```
+
+  </TabItem>
+</Tabs>
+
+:::info Replacement for 6.x filters
+This API supersedes the 6.x `setNetworkEventFilter(NetworkEventFilter)` two-
+arg callback. See
+[migration section 6](/sdk/android/v7/migration/#6-filtering-network-and-log-events)
+for a side-by-side and note on type renames.
+:::
+
+Capture from OkHttp 3/4, Ktor 2/3, and Cronet is wired automatically by the
+Bugsee Gradle plugin through the matching
+[extension modules](/sdk/android/v7/extensions/) — no manual interceptor
+registration is required in 7.x.

@@ -1,0 +1,200 @@
+---
+title: "Configuration"
+description: "Complete reference of Bugsee iOS SDK launch options for controlling recording, crash detection, network capture, privacy, and UI behavior."
+sidebar_position: 1
+slug: "/sdk/ios/configuration"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Launching with options
+
+:::warning
+Since v6.0.0 the Bugsee iOS SDK supports the simulator; crash capture is excluded. For full functionality, launch your app with Bugsee on a real device.
+:::
+
+Bugsee behavior is very customizable. If the default configuration does not satisfy your needs, you can launch the SDK with additional parameters passed as a dictionary.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+- (BOOL)application:(UIApplication *)application
+    didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    // ...other initialization code
+
+    NSDictionary * options = @{
+           BugseeMaxRecordingTimeKey   : @60,  
+           BugseeShakeToReportKey      : BugseeFalse,
+           BugseeScreenshotToReportKey : BugseeTrue,
+           BugseeCrashReportKey        : BugseeTrue
+    };
+
+    [Bugsee launchWithToken:@"<your_app_token>" andOptions:options];
+
+    return YES;
+}
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
+    // ...other initialization code
+
+    let options : [String: Any] =
+        [ BugseeMaxRecordingTimeKey   : 60,
+          BugseeShakeToReportKey      : false,
+          BugseeScreenshotToReportKey : true,
+          BugseeCrashReportKey        : true ]
+
+    Bugsee.launch(token: "<your_app_token>", options: options)
+
+    return true
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Stopping
+
+Stopping will fully stop the SDK operation and clean up all the used resources. The operation may take a while to complete.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+  [Bugsee stop:^(void) {
+    // operations to perform upon completion  
+    }];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+  Bugsee.stop {
+    // operations to perform upon completion
+  }
+```
+
+  </TabItem>
+</Tabs>
+
+## Relaunching
+
+Relaunching will fully stop the SDK operation and clean up all the used resources. Upon completion it will start recording again with new options.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee relaunchWithDictionaryOptions:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.relaunch(options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+## Available Options
+|Key|Default value|Notes
+|---|---|---|
+|BugseeMaxRecordingTimeKey|@60|Maximum recording duration|
+|BugseeShakeToReportKey|NO|Shake gesture to trigger report. <br />_Be aware, that enabling this option may cause a startup delay/freeze on iOS 12.x devices due to a bug in the CoreMotion system framework ([read more](https://stackoverflow.com/questions/54607856/main-thread-checker-warning-with-coremotion-only-appearing-on-2018-model-iphone))._|
+|BugseeScreenshotToReportKey|YES|Screenshot key to trigger report|
+|BugseeCrashReportKey\*|YES|Catch and report application crashes|
+|BugseeKillDetectionKey|NO|Detect abnormal termination ([read more](/sdk/ios/app-kills/))|
+|BugseeDetectAppExitKey|NO|Detect any kind of process termination \(e.g. when user swipes off the application from multitasking UI, or when system unloads the app due memory pressure\). Special error report is generated for this scenario with "BugseeAppExit" domain|
+|BugseeVideoEnabledKey|YES|Enable video recording|
+|BugseeScreenshotEnabledKey|YES|Attach screenshot to a report. Note, that if ```BugseeVideoEnabledKey``` option is *NO*, default value of this option is *NO* too.|
+|BugseeViewHierarchyEnabledKey|YES|Capture view hierarchy for Bug and Error reports|
+|BugseeCaptureLogsKey|YES|Automatically capture all console logs|
+|BugseeCaptureOSLogsKey|NO|Automatically capture OSLog and Logger print statements.<br />_**IMPORTANT**: Experimental feature_|
+|BugseeMonitorNetworkKey|YES|Capture network traffic|
+|BugseeMaxNetworkBodySizeKey|@20480|The maximal size of network request/response body (in bytes).|
+|BugseeSanitizeNetworkDataKey|YES|Automatically redact values of known sensitive keys (PII) from URL query parameters, HTTP headers, and JSON bodies of captured network events. Applies only when no custom network filter (delegate or block) is set. See [Privacy and Network traffic](/sdk/ios/privacy/network/).|
+|BugseeMonitorBluetoothStatusKey|NO|Monitor bluetooth state.<br />_**IMPORTANT**: You must add "Privacy - Bluetooth Always Usage Description" key into your Info.plist with a string value explaining to the user why you need bluetooth permission_|
+|BugseeMonitorDiskSpaceKey|NO|Monitor available disk space and include it in reports as a system trace.|
+|BugseeReportPrioritySelectorKey|NO|Allow user to modify priority when reporting manually|
+|BugseeReportLabelsEnabledKey|NO|Display labels field in the built-in bug reporting UI|
+|BugseeReportLabelsRequiredKey|NO|Controls whether  _"Labels"_ field in bug reporting UI is mandatory or not.|
+|BugseeDefaultCrashPriorityKey|BugseeSeverityBlocker|Default priority for crashes|
+|BugseeDefaultBugPriorityKey|BugseeSeverityHigh|Default priority for bugs|
+|BugseeWifiOnlyUploadKey|NO|Upload reports only when a device is connected to a Wi-Fi network.|
+|BugseeMaxDataSizeKey|@50|Bugsee will avoid using more disk space than specified (in MB). If total Bugsee data size exceeds specified value, oldest recordings (even not sent) will be removed. Value should not be smaller than 10.|
+|BugseeStyleKey|Default|Enumeration of BugseeStyleSystemDefault, BugseeStyleDefault, BugseeStyleDark and BugseeStyleBasedOnStatusBarStyle|
+|BugseeFrameRateKey|BugseeFrameRateHigh|Specifies how often frames are attempted to be captured|
+|BugseeVideoScaleKey|@1|Additional down scaling applied to recorded video, (e.x @0.5 would reduce both width and height by half)|
+|BugseeCaptureDeviceAndNetworkNamesKey\*\*|NO|Capture device name, wifi SSID and mobile carrier name.|
+|BugseeReportSummaryRequiredKey|NO|Controls whether  _"Summary"_ field in bug reporting UI is mandatory or not.|
+|BugseeReportDescriptionRequiredKey|NO|Controls whether  _"Description"_ field in bug reporting UI is mandatory or not.|
+|BugseeReportEmailRequiredKey|NO|Controls whether  _"Email"_ field in bug reporting UI is mandatory or not.|
+|BugseeAppLaunchCrashDetectionKey|NO|Controls whether early crashes are intercepted and uploaded. Early crashes are those happening within first 5 seconds after app launch. And they are uploaded synchronously (with blocking main thread) to guarantee upload|
+|BugseeCaptureAVPlayerKey|NO|When enabled, video playing via AVPlayerLayer and via AVPlayerViewController will be captured on video|
+
+
+### Built-in reporting UI adjustments
+
+Alongside stylistic changes, you can also change the placeholders' texts shown in input controls within the built-in bug reporting UI
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+  [[Bugsee appearance] setReportSummaryPlaceholder:@"What's happened? Only briefly"];
+  [[Bugsee appearance] setReportDescriptionPlaceholder:@"Here, describe all the pains and frustrations you had. In details"];
+  [[Bugsee appearance] setReportEmailPlaceholder:@"Identify yourself here"];
+  [[Bugsee appearance] setReportLabelsPlaceholder:@"Labels.For.Developers. [Comma separated]"];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+  Bugsee.appearance().reportSummaryPlaceholder = "What's happened? Only briefly"
+  Bugsee.appearance().reportDescriptionPlaceholder = "Here, describe all the pains and frustrations you had. In details"
+  Bugsee.appearance().reportEmailPlaceholder = "Identify yourself here"
+  Bugsee.appearance().reportLabelsPlaceholder = "Labels.For.Developers. [Comma separated]"
+```
+
+  </TabItem>
+</Tabs>
+
+&nbsp;
+<hr />
+
+<div class="footnote">
+  * iOS allows only one crash detector to be active at a time. If you insist on using an alternative solution for handling crashes, you might want to use this option and disable Bugsee from taking over.
+</div>
+
+<div class="footnote">
+  ** To obtain WiFi information, the requesting app must meet one of the following requirements (for full details please refer to <a href="https://developer.apple.com/documentation/systemconfiguration/1614126-cncopycurrentnetworkinfo#discussion">Apple documentation</a>):
+
+  <ul>
+    <li>The app uses Core Location, and has the user’s authorization to use location information.</li>
+    <li>The app uses the NEHotspotConfiguration API to configure the current Wi-Fi network.</li>
+    <li>The app has active VPN configurations installed.</li>
+    <li>The app has an active <code>NEDNSSettingsManager</code> configuration installed.</li>
+  </ul>
+
+  Note that requesting location access requires a change to your app's <i>Info.plist</i> file. Two keys must be added with appropriate descriptions:
+  <ul>
+    <li>Privacy - Location Always and When In Use Usage Description</li>
+    <li>Privacy - Location When In Use Usage Description</li>
+  </ul>
+
+  Note: Your app must enable the Access WiFi Information capability in Xcode.
+</div>

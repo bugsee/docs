@@ -1,0 +1,119 @@
+---
+title: "Lifecycle events (7.x Beta)"
+description: "SDK lifecycle APIs (launch, stop, relaunch) and lifecycle event listeners in Bugsee Android SDK 7.x."
+sidebar_position: 10
+slug: "/sdk/android/v7/lifecycle"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::caution 7.x Beta
+This page documents the 7.x beta release. APIs may change before GA.
+:::
+
+The SDK can be launched, stopped, and re-launched at runtime, and exposes a listener for internal state transitions (report uploads, blackouts, crash relaunches).
+
+## Launch, stop, and relaunch
+
+In 7.x, `launch`, `stop`, and `relaunch` each offer an optional async completion callback invoked on the background pool thread when the operation has fully applied. The synchronous overloads still exist.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+// Launch (only needed if no token in AndroidManifest.xml)
+Bugsee.launch("<app-token>");
+Bugsee.launch(context, "<app-token>");
+Bugsee.launch(context, "<app-token>", options);
+Bugsee.launch(context, "<app-token>", options, success -> { /* async */ });
+// Stop
+Bugsee.stop();
+Bugsee.stop(() -> { /* fully stopped */ });
+// Relaunch (stop + launch, preserves token)
+Bugsee.relaunch();
+Bugsee.relaunch(newOptions);
+Bugsee.relaunch(success -> { /* ... */ });
+Bugsee.relaunch(newOptions, success -> { /* ... */ });
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+// Launch
+Bugsee.launch("<app-token>")
+Bugsee.launch(context, "<app-token>")
+Bugsee.launch(context, "<app-token>", options)
+Bugsee.launch(context, "<app-token>", options) { success -> /* async */ }
+// Stop
+Bugsee.stop()
+Bugsee.stop { /* fully stopped */ }
+// Relaunch
+Bugsee.relaunch()
+Bugsee.relaunch(newOptions)
+Bugsee.relaunch { success -> /* ... */ }
+Bugsee.relaunch(newOptions) { success -> /* ... */ }
+```
+
+  </TabItem>
+</Tabs>
+
+If your app declares the token in `AndroidManifest.xml`, the SDK auto-launches at process start via a `ContentProvider` — no explicit `launch` call is needed. See [Installation](/sdk/android/v7/installation).
+
+## Renamed and removed lifecycle methods
+
+`Bugsee.pause()` / `resume()` were **renamed** to `Bugsee.startBlackout()` / `endBlackout()` — same semantics (bracket a window where video is blanked and touches dropped), new names that better describe what they do. `Bugsee.isResumed()` and `Bugsee.getDeviceId()` were removed; use `Bugsee.stop()` / `Bugsee.launch()` when you need to fully shut the SDK down, and the dashboard's device-correlation features in place of `getDeviceId`. See the [migration guide](/sdk/android/v7/migration) for the full list.
+
+## Lifecycle event listener
+
+Register a listener with `setLifecycleEventsListener` to observe internal SDK transitions. The callback receives an event-type string and optional data payload, and is invoked on a background thread.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.setLifecycleEventsListener((eventType, data) -> {
+    if (LifecycleEvents.RelaunchedAfterCrash.equals(eventType)) {
+        // previous session ended with a crash
+    }
+});
+
+// Unsubscribe
+Bugsee.setLifecycleEventsListener(null);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.setLifecycleEventsListener { eventType, data ->
+    if (eventType == LifecycleEvents.RelaunchedAfterCrash) {
+        // previous session ended with a crash
+    }
+}
+
+// Unsubscribe
+Bugsee.setLifecycleEventsListener(null)
+```
+
+  </TabItem>
+</Tabs>
+
+Event-type strings are declared as constants on `com.bugsee.library.contracts.lifecycle.LifecycleEvents`:
+
+| Constant | Description |
+| --- | --- |
+| `Launched` / `Stopped` | SDK has launched / stopped. |
+| `BlackoutStarted` / `BlackoutEnded` | Visual capture paused / resumed by `startBlackout()` / `endBlackout()`. |
+| `RelaunchedAfterCrash` | SDK launched and a pending crash from a previous session was discovered. |
+| `BeforeReportShown` / `AfterReportShown` | Reporting UI is about to be / has been shown. |
+| `BeforeReportAssembled` / `AfterReportAssembled` / `ReportAssemblyFailed` | Report assembly stages. |
+| `BeforeReportUploaded` / `AfterReportUploaded` | Report upload start / success. |
+| `ReportUploadFailedWithFutureRetry` / `ReportUploadFailed` | Upload failed (retryable / permanent). |
+
+Feedback-specific events (e.g. `BeforeFeedbackShown`, `AfterFeedbackShown`) are declared on `FeedbackLifecycleEvents` (in the same package) and dispatched only when `bugsee-android-feedback` is on the classpath.
+
+## Extension lifecycle
+
+Extension modules (feedback, OkHttp, Ktor, Cronet, Compose, etc.) receive their own `launch(options)` and `stop()` callbacks automatically when the SDK starts and stops — they are wired through the same `Bugsee.launch` / `Bugsee.stop` entry points and need no separate initialization from your code. See [Extensions](/sdk/android/v7/extensions) for details.

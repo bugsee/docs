@@ -1,0 +1,89 @@
+---
+title: "Feedback"
+description: "How to show the built-in Bugsee in-app messenger on iOS, receive new message notifications, and set a default greeting for users."
+sidebar_position: 7
+slug: "/sdk/ios/feedback"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Bugsee implements built in single threaded messenger to allow your users to communicate with your support and developers. 
+
+## Feedback controller
+
+To start feedback controller from within your application
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee showFeedbackController];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.showFeedbackController()
+```
+
+  </TabItem>
+</Tabs>
+
+## Notifications
+
+To receive notifications about new messages arriving from the server, your delegate should implement **BugseeDelegate** protocol:
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+-(void)bugsee:(Bugsee *)bugsee didReceiveNewFeedback:(NSArray<NSString *> *)messages
+{
+    ///...
+}
+
+// ..somewhere within the class
+[Bugsee sharedInstance].delegate = self;
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+func bugsee(_ bugsee: Bugsee, didReceiveNewFeedback messages: [String]) {
+    ///...
+}
+
+// ..somewhere within the class
+Bugsee.sharedInstance()?.delegate = self;
+```
+
+  </TabItem>
+</Tabs>
+
+## Default greeting
+
+Default greeting can be set on the server in your application settings. However, for the cases when network is not available, you can
+set default greeting on the client as well:
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee setDefaultFeedbackGreeting:@"Hi! How can we help?"];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.setDefaultFeedbackGreeting("Hi! How can we help?")
+```
+
+  </TabItem>
+</Tabs>

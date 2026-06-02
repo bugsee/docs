@@ -1,0 +1,277 @@
+---
+title: "Crash reports"
+description: "How to configure automatic source map uploads and symbolication for readable JavaScript and native crash stack traces in React Native."
+sidebar_position: 9
+slug: "/sdk/react_native/crashes"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Bugsee automatically intercepts uncaught exceptions and sends crash reports on app restart. Refer to [installation](/sdk/react_native/installation/) for more details. However, due to various optimizations, stack traces in these reports can be mangled. To make them human readable and point to correct code locations Bugsee requires additional debug information which should be collected and sent as described in this section.
+
+## Symbolication
+
+### Native
+
+To symbolicate crashes captured in native code, you should configure underlying Android and iOS projects following the instructions in the documentation for these SDKs. Refer to symbolication documentation for [Android](/sdk/android/crashes/) and [iOS](/sdk/ios/symbolication/).
+
+### JavaScript
+
+We rely on source maps to fill captured stack traces with proper methods, filenames and line numbers. To let this magic happen, Bugsee needs the related source maps which is uploaded automatically once you configure your projects following instructions below.
+
+By default, during Bugsee initialization, we will try to get version automatically. Similarly, during build we will pick the application version from underlying native projects. If versions in Android/iOS projects and the one obtained during the initialization are in sync, then no extra actions are required. If not (e.g. when you set version explicitly following instructions below), then you should provide Bugsee with correct version using `Bugsee.setAppVersion('<your_app_version>')` method.
+
+## Source maps: Automatic upload
+
+### Prerequisites
+
+Before proceeding with automatic upload configuration, you need to ensure you have `bugsee-sourcemaps` tool installed. It's included as development dependency of Bugsee React Native SDK and thus may not be installed by default.
+
+You can install it globally or locally. In either case, source maps collection scripts will locate it properly.
+
+
+<Tabs groupId="code-tabs">
+  <TabItem value="local-installation" label="Local installation">
+
+```bash
+# with NPM
+npm install --save-dev bugsee-sourcemaps
+
+# with Yarn
+yarn add bugsee-sourcemaps --dev
+```
+
+  </TabItem>
+  <TabItem value="global-installation" label="Global installation">
+
+```bash
+# with NPM
+npm install -g bugsee-sourcemaps
+
+# with Yarn
+yarn global add bugsee-sourcemaps
+```
+
+  </TabItem>
+</Tabs>
+
+### Android
+
+Open your application build script (usually located in ```<$PROJECT_DIR>/android/app/build.gradle```) and add the line shown in the code snippet below
+
+```gradle
+// this line should be in the file
+apply from: "../../node_modules/react-native/react.gradle"
+
+// add the line below
+apply from: "../../node_modules/react-native-bugsee/bugsee.gradle"
+```
+
+After Gradle integration is set up, you need to provide configuration options to let Bugsee React Native SDK perform correctly. These options can be specified in several ways (these are listed in a order in which properties are being read):
+
+- Dedicated options file
+- Options in gradle script
+- Environment variables
+
+
+
+<Tabs groupId="code-tabs">
+  <TabItem value="dedicated-options-file" label="Dedicated options file">
+
+```text
+// create properties file <$PROJECT_DIR>/android/bugsee.properties with the following
+
+app.version=1.0.001
+app.token=<your-app-token>
+```
+
+  </TabItem>
+  <TabItem value="options-in-gradle-script" label="Options in Gradle script">
+
+```gradle
+// add the following to <$PROJECT_DIR>/android/app/build.gradle
+
+project.ext.bugseeConfig = [
+    appVersion: "1.0.001",
+    appToken: "<your-app-token>"
+]
+```
+
+  </TabItem>
+  <TabItem value="environment-variables" label="Environment variables">
+
+```bash
+# Specify the following options
+
+export BUGSEE_APP_TOKEN="<your-app-token>"
+export BUGSEE_APP_VERSION="1.0.001"
+```
+
+  </TabItem>
+</Tabs>
+
+Note that providing the application token is mandatory, whereas application version can be extracted automatically if not provided. Also, you can specify different properties in different sources, i.e. you can set application token in dedicated properties file and application version in the environment variable.
+
+Bugsee React Native SDK also supports dedicated bugsee.properties files for different flavors. For that, you need to be using to add:
+
+```gradle
+project.ext.bugseeConfig = [
+    flavorAware: true
+]
+```
+
+In this case, your properties file for the "Android staging" flavor would be ```<$PROJECT-DIR>/android/bugsee-staging.properties```.
+
+
+### iOS
+
+Open Xcode and navigate to Build Phases in your project. Locate the _"Bundle React Native code and images"_ phase and change its code from this
+
+```bash
+export NODE_BINARY=node
+../node_modules/react-native/scripts/react-native-xcode.sh
+```
+
+to this
+
+
+<Tabs groupId="code-tabs">
+  <TabItem value="react-native-pre-069" label="React Native pre-0.69">
+
+```bash
+export NODE_BINARY=node
+# this is a relative path to the file with configuration options. Optional.
+export BUGSEE_PROPERTIES=./bugsee.properties
+
+../node_modules/react-native-bugsee/scripts/build-wrap.sh ../node_modules/react-native/scripts/react-native-xcode.sh
+```
+
+  </TabItem>
+  <TabItem value="react-native-069" label="React Native 0.69+">
+
+```bash
+export NODE_BINARY=node
+# this is a relative path to the file with configuration options. Optional.
+export BUGSEE_PROPERTIES=./bugsee.properties
+
+WITH_ENVIRONMENT="../node_modules/react-native/scripts/xcode/with-environment.sh"
+REACT_NATIVE_XCODE="../node_modules/react-native/scripts/react-native-xcode.sh"
+BUGSEE_SCRIPT="../node_modules/react-native-bugsee/scripts/build-wrap.sh"
+
+/bin/sh -c "$BUGSEE_SCRIPT $WITH_ENVIRONMENT $REACT_NATIVE_XCODE"
+```
+
+  </TabItem>
+</Tabs>
+
+In the code snippet above, we set an additional environment variable _"BUGSEE_PROPERTIES"_ which is pointing to the file with configuration options. It's optional, which means you can omit it. But, in this case you will have to specify the configuration options as environment variables here in the script. Please see examples below. 
+
+
+<Tabs groupId="code-tabs">
+  <TabItem value="dedicated-options-file" label="Dedicated options file">
+
+```text
+// create properties file <$PROJECT_DIR>/ios/bugsee.properties with the following
+
+app.version=1.0.001
+app.token=<your-app-token>
+```
+
+  </TabItem>
+  <TabItem value="environment-variables" label="Environment variables">
+
+```bash
+# Specify the following options
+
+export BUGSEE_APP_TOKEN="<your-app-token>"
+export BUGSEE_APP_VERSION="1.0.001"
+```
+
+  </TabItem>
+</Tabs>
+
+Note that providing the application token is mandatory, whereas application version can be extracted automatically if not provided.
+
+
+## Source maps: Manual upload
+
+To upload source maps manually, you will need [bugsee-sourcemaps](/tools/sourcemaps/) tool.
+
+By default, source maps are generated by `react-native` CLI tool but you need to call it yourself to generate them. You will also need to trigger `upload` command for [bugsee-sourcemaps](/tools/sourcemaps/) to upload generated data. To simplify this process we provide `make` command which does all those steps for you. Below, we briefly describe the steps and give you command examples on how to upload source maps in your generic development flow.
+
+#### Debug builds
+
+- Open your React Native project
+- Make some changes
+- Build
+- Upload source maps with:
+
+
+<Tabs groupId="platform">
+  <TabItem value="ios" label="iOS">
+
+```sh
+# Execute in project root or add project path as last parameter
+bugsee-sourcemaps make -t <YOUR-TOKEN> \
+-v <APP-VERSION> \
+-p ios \
+-c debug \
+--overwrite
+```
+
+  </TabItem>
+  <TabItem value="android" label="Android">
+
+```sh
+# Execute in project root or add project path as last parameter
+bugsee-sourcemaps make -t <YOUR-TOKEN> \
+-v <APP-VERSION> \
+-p android \
+-c debug \
+--overwrite
+```
+
+  </TabItem>
+</Tabs>
+
+- Run your app
+
+#### Release builds
+
+> **IMPORTANT**: For release builds, we strongly recommend to upload source maps BEFORE deploying your app. That will guarantee your reports will not fail to symbolicate due to missing symbols.
+
+- Open your React Native project
+- Make some changes
+- Build
+- Upload sourcemaps with:
+
+
+<Tabs groupId="platform">
+  <TabItem value="ios" label="iOS">
+
+```sh
+# Execute in project root or add project path as last parameter
+bugsee-sourcemaps make -t <YOUR-TOKEN> \
+-v <APP-VERSION> \
+-p ios \
+-c release \
+--overwrite
+```
+
+  </TabItem>
+  <TabItem value="android" label="Android">
+
+```sh
+# Execute in project root or add project path as last parameter
+bugsee-sourcemaps make -t <YOUR-TOKEN> \
+-v <APP-VERSION> \
+-p android \
+-c release \
+--overwrite
+```
+
+  </TabItem>
+</Tabs>
+
+- Deploy your build app to target Store

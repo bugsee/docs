@@ -1,0 +1,227 @@
+---
+title: "Manual invocation (7.x Beta)"
+description: "Showing the Bugsee report dialog programmatically, uploading silent reports, configuring shake/screenshot triggers, and hooking ReportHandler."
+sidebar_position: 4
+slug: "/sdk/android/v7/manual"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::info 7.x Beta
+This page documents the Bugsee Android SDK **7.x beta**. The API surface described here is not final and may change before the stable 7.0 release. For the current production API, see the [6.x documentation](/sdk/android/manual).
+:::
+
+## Built-in report triggers
+
+The SDK can surface the report dialog through two user-facing gestures. Both are controlled by manifest options (or programmatic overrides at `Bugsee.launch(...)` time):
+
+| Option                            | Manifest key                                           | Default |
+| --------------------------------- | ------------------------------------------------------ | ------- |
+| `ReportingTriggerByShake`         | `com.bugsee.option.reporting.triggers.shake`           | `true`  |
+| `ReportingTriggerByScreenshot`    | `com.bugsee.option.reporting.triggers.screenshot`      | `false` |
+| `ReportingTriggerByNotification`  | `com.bugsee.option.reporting.triggers.notification-bar`| `true`  |
+| `ReportingTriggerByBroadcast`     | `com.bugsee.option.reporting.triggers.broadcast`       | `false` |
+
+Disable the shake trigger in `AndroidManifest.xml`:
+
+```xml
+<meta-data
+    android:name="com.bugsee.option.reporting.triggers.shake"
+    android:value="false" />
+```
+
+Or override at launch time:
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Map<String, Object> options = new HashMap<>();
+options.put(Options.ReportingTriggerByShake, false);
+options.put(Options.ReportingTriggerByScreenshot, true);
+Bugsee.launch(application, options);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+val options = HashMap<String, Any>()
+options[Options.ReportingTriggerByShake] = false
+options[Options.ReportingTriggerByScreenshot] = true
+Bugsee.launch(application, options)
+```
+
+  </TabItem>
+</Tabs>
+
+## `Bugsee.showReportDialog(...)`
+
+Opens the standard reporting UI. The user can edit any pre-filled values before submitting.
+
+```java
+static void showReportDialog();
+static void showReportDialog(String summary, String description);
+static void showReportDialog(String summary, String description, IssueSeverity severity);
+static void showReportDialog(String summary, String description, IssueSeverity severity, ArrayList<String> labels);
+```
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.showReportDialog();
+
+// Pre-fill summary and description; user can still edit them.
+Bugsee.showReportDialog("Checkout is frozen", "The spinner never stops.");
+
+// Pre-fill everything including severity.
+Bugsee.showReportDialog(
+    "Checkout is frozen",
+    "The spinner never stops.",
+    IssueSeverity.Blocker);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.showReportDialog()
+
+// Pre-fill summary and description; user can still edit them.
+Bugsee.showReportDialog("Checkout is frozen", "The spinner never stops.")
+
+// Pre-fill everything including severity.
+Bugsee.showReportDialog(
+    "Checkout is frozen",
+    "The spinner never stops.",
+    IssueSeverity.Blocker)
+```
+
+  </TabItem>
+</Tabs>
+
+:::note
+There is no severity-only overload. To set severity without pre-filling the text fields, pass `null` for both `summary` and `description`.
+:::
+
+## `Bugsee.upload(...)` — silent upload
+
+Submits a report without showing any UI. Use this when you already collected the details in your own UI.
+
+```java
+static void upload(String summary, String description);
+static void upload(String summary, String description, IssueSeverity severity);
+static void upload(String summary, String description, IssueSeverity severity, List<String> labels);
+static void upload(Report report);
+static void upload(Report report, Callback1<Boolean> callback);
+```
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.upload("Checkout frozen", "Spinner never stops", IssueSeverity.High);
+
+ArrayList<String> labels = new ArrayList<>();
+labels.add("checkout");
+Bugsee.upload("Checkout frozen", "Spinner never stops", IssueSeverity.High, labels);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.upload("Checkout frozen", "Spinner never stops", IssueSeverity.High)
+
+val labels = arrayListOf("checkout")
+Bugsee.upload("Checkout frozen", "Spinner never stops", IssueSeverity.High, labels)
+```
+
+  </TabItem>
+</Tabs>
+
+:::warning
+Do not call `upload(...)` from automated error paths. For programmatic exception reporting use `Bugsee.logException(...)` — this keeps traces grouped and rate-limited correctly.
+:::
+
+## Default severities
+
+Crash, error, and bug reports get a default severity unless one is specified or set from a `ReportHandler`. Override via manifest:
+
+| Option                            | Manifest key                                              | Default                   |
+| --------------------------------- | --------------------------------------------------------- | ------------------------- |
+| `ReportingDefaultCrashPriority`   | `com.bugsee.option.reporting.defaults.crash-priority`     | `IssueSeverity.Blocker`   |
+| `ReportingDefaultErrorPriority`   | `com.bugsee.option.reporting.defaults.error-priority`     | `IssueSeverity.High`      |
+| `ReportingDefaultBugPriority`     | `com.bugsee.option.reporting.defaults.bug-priority`       | `IssueSeverity.High`      |
+
+## `ReportHandler` — mutate every outgoing report
+
+`ReportHandler` is the **idiomatic 7.x way** to inspect or rewrite reports before they are uploaded. It replaces the 6.x `ExtendedReportCreatedListener`, `ReportFieldsFilter`, and `ReportAttachmentsProvider` hooks (see [migration guide section 7.2](/sdk/android/v7/migration#72-mutate-every-report-before-upload-via-reporthandler)).
+
+Two callbacks are provided as default methods on the interface:
+
+- `onBeforeReportCreated(Report, boolean isTerminating, Runnable completionCallback)` — runs before the report payload is assembled.
+- `onAfterReportCreated(Report, boolean isTerminating, Runnable completionCallback)` — runs after assembly, ideal for attachments.
+
+You **must** invoke `completionCallback.run()` for the pipeline to proceed — unless `isTerminating` is `true`, in which case the pipeline continues regardless (the process is about to exit).
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.setReportHandler(new ReportHandler() {
+    @Override
+    public void onBeforeReportCreated(Report report, boolean isTerminating, Runnable completionCallback) {
+        report.setSummary("[" + BuildConfig.FLAVOR + "] " + report.getSummary());
+        report.setSeverity(IssueSeverity.High);
+        completionCallback.run();
+    }
+
+    @Override
+    public void onAfterReportCreated(Report report, boolean isTerminating, Runnable completionCallback) {
+        report.addAttachment(loadConfigSnapshot());
+        completionCallback.run();
+    }
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.setReportHandler(object : ReportHandler {
+    override fun onBeforeReportCreated(report: Report, isTerminating: Boolean, completionCallback: Runnable) {
+        report.summary = "[${BuildConfig.FLAVOR}] ${report.summary}"
+        report.severity = IssueSeverity.High
+        completionCallback.run()
+    }
+
+    override fun onAfterReportCreated(report: Report, isTerminating: Boolean, completionCallback: Runnable) {
+        report.addAttachment(loadConfigSnapshot())
+        completionCallback.run()
+    }
+})
+```
+
+  </TabItem>
+</Tabs>
+
+### Attachments
+
+Call `report.addAttachment(...)` from `onAfterReportCreated`. The 6.x **3 attachments × 3 MB** quota is preserved — enforce it inside your own handler if relevant.
+
+### Callback timeout
+
+The SDK waits at most `ReportHandlerCallbackTimeout` seconds (default `30`) for `completionCallback` to fire. Tune via manifest:
+
+```xml
+<meta-data
+    android:name="com.bugsee.option.config.report-handler-callback-timeout"
+    android:value="10" />
+```
+
+## Severity values
+
+`IssueSeverity` values: `VeryLow`, `Medium`, `High`, `Critical`, `Blocker`. See the [configuration reference — Enums](/sdk/android/v7/configuration#enums) for each value's meaning.

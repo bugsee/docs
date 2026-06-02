@@ -1,0 +1,95 @@
+---
+title: "Privacy and report fields (7.x Beta)"
+description: "Scrub or enrich every Bugsee report before upload with ReportHandler in Android SDK 7.x."
+sidebar_position: 6
+slug: "/sdk/android/v7/privacy/report"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning 7.x Beta
+This page documents the 7.x beta line. For the stable release, see the
+[6.x report privacy page](/sdk/android/privacy/report/).
+:::
+
+In 7.x, a single `ReportHandler` supersedes 6.x's `ReportFieldsFilter`,
+`ExtendedReportCreatedListener`, and `ReportAttachmentsProvider`. It exposes
+two callbacks that fire around every report — including crashes and manual
+reports:
+
+- `onBeforeReportCreated(Report, isTerminating, completionCallback)` — runs
+  before the report is assembled. Use it to rewrite the summary /
+  description / severity / labels, or to drop sensitive user-entered text.
+- `onAfterReportCreated(Report, isTerminating, completionCallback)` — runs
+  after assembly. Use it to attach logs, config snapshots, or other extras.
+
+Both callbacks **must** invoke `completionCallback.run()` to release the
+pipeline — except when `isTerminating == true` (the process is about to
+exit, e.g. unhandled crash), in which case the pipeline continues
+regardless.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.setReportHandler(new ReportHandler() {
+    @Override
+    public void onBeforeReportCreated(Report report, boolean isTerminating,
+                                      Runnable completionCallback) {
+        report.setSummary("[" + BuildConfig.FLAVOR + "] " + report.getSummary());
+        // Scrub anything the user may have typed into the report form:
+        String desc = report.getDescription();
+        if (desc != null) {
+            report.setDescription(desc.replaceAll("\\d{16}", "[CARD]"));
+        }
+        report.setSeverity(IssueSeverity.High);
+        completionCallback.run();
+    }
+
+    @Override
+    public void onAfterReportCreated(Report report, boolean isTerminating,
+                                     Runnable completionCallback) {
+        report.addAttachment(loadConfigSnapshot());   // max 3 attachments × 3 MB
+        completionCallback.run();
+    }
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.setReportHandler(object : ReportHandler {
+    override fun onBeforeReportCreated(
+        report: Report,
+        isTerminating: Boolean,
+        completionCallback: Runnable
+    ) {
+        report.summary = "[${BuildConfig.FLAVOR}] ${report.summary}"
+        report.description = report.description?.replace(Regex("\\d{16}"), "[CARD]")
+        report.severity = IssueSeverity.High
+        completionCallback.run()
+    }
+
+    override fun onAfterReportCreated(
+        report: Report,
+        isTerminating: Boolean,
+        completionCallback: Runnable
+    ) {
+        report.addAttachment(loadConfigSnapshot())  // max 3 attachments × 3 MB
+        completionCallback.run()
+    }
+})
+```
+
+  </TabItem>
+</Tabs>
+
+The 6.x quota of **3 attachments × 3 MB each** is preserved in 7.x — enforce
+it inside your own `ReportHandler` if needed.
+
+For programmatic report creation see
+[manual reports](/sdk/android/v7/manual/). For the complete list of
+listener interfaces see the
+[public API reference](/sdk/android/v7/configuration/).

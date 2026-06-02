@@ -1,0 +1,67 @@
+---
+title: "Privacy and console logs"
+description: "How to disable console log collection or use a delegate filter to strip PII from iOS log entries before they are included in Bugsee reports."
+sidebar_position: 2
+slug: "/sdk/ios/privacy/logs"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Bugsee automatically captures all standard applications console logs. The feature can be either completely disabled or
+logs can be sanitized during recording to strip any PII data.
+
+## Disabling log collection
+
+Console log collection can be disabled completely using **BugseeCaptureLogsKey** launch option. See [configuration](/sdk/ios/configuration/) for more info.
+
+## Sanitizing logs 
+
+Your class should implement **BugseeDelegate** protocol and it must set itself as the delegate for Bugsee.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+-(void)bugseeFilterLog:(BugseeLogEvent *)log completionHandler:(BugseeLogFilterDecisionBlock)decisionBlock
+{
+    // Below is an example code that will remove access_token from all URLs going through the filter.
+    NSError * error;
+    NSRegularExpression * regex = [NSRegularExpression regularExpressionWithPattern:@"access_token=[0-9a-z\\-]*" 
+                                                                            options:NSRegularExpressionCaseInsensitive error:&error];
+    log.text = [regex stringByReplacingMatchesInString:log.text
+                                                options:0
+                                                  range:NSMakeRange(0, log.text.length)
+                                           withTemplate:@"TokenWasFound here"];
+    decisionBlock(log);
+}
+
+// ..somewhere within the class
+[Bugsee sharedInstance].delegate = self;
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+private func bugseeFilterLog(log: BugseeLogEvent, completionHandler decisionBlock: @escaping BugseeLogFilterDecisionBlock) {
+    let regex : NSRegularExpression
+    do {
+        regex = try NSRegularExpression.init(pattern: "&access_token=[0-9a-z\\-]*",
+                                                 options: NSRegularExpression.Options.caseInsensitive)
+        let range = NSMakeRange(0 , log.text.count)
+        log.text = regex.stringByReplacingMatches(in: log.text, options: .reportProgress, range: range, withTemplate: "")
+    }catch { print("Somethings went wrong!") }
+
+    decisionBlock(log);
+}
+
+// ..somewhere within the class
+Bugsee.sharedInstance()?.delegate = self;
+```
+
+  </TabItem>
+</Tabs>
+
+More about console logs - [Logging](/sdk/ios/logs/)

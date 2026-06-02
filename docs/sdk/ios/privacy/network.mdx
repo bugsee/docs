@@ -1,0 +1,153 @@
+---
+title: "Privacy and Network traffic"
+description: "How to disable network capture or sanitize sensitive data from recorded HTTP requests and responses on iOS using a delegate or block filter."
+sidebar_position: 3
+slug: "/sdk/ios/privacy/network"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Disabling network traffic collection
+
+Network traffic collection can be disabled completely using **BugseeMonitorNetworkKey** launch option. See [configuration](/sdk/ios/configuration/) for more info. 
+
+## Sanitizing data
+
+Bugsee captures network activity from the application and stores headers and in some cases body of the request and response.
+To hide user identifiable and other sensitive data from these network logs, Bugsee sanitizes known sensitive data automatically,
+and also lets you install a custom filter — via a delegate or a block — when you need full control over what gets recorded.
+
+### Automatic sanitization
+
+By default, Bugsee automatically sanitizes sensitive data (PII) from captured network events. The built-in filter redacts values
+for known sensitive keys in:
+
+- URL query parameters
+- HTTP headers
+- JSON request and response bodies
+
+This behavior is controlled by the **BugseeSanitizeNetworkDataKey** launch option (default: **YES**). To disable it, set the option
+to `NO` when launching the SDK. See [configuration](/sdk/ios/configuration/) for more info.
+
+:::info
+Automatic sanitization applies **only when no custom network filter is set**. If you register a filter (via [delegate](#using-delegate)
+or [block](#using-filter-with-block)), the built-in sanitizer is bypassed and your filter becomes fully responsible for scrubbing
+sensitive data.
+:::
+
+### Using a custom filter
+
+When you need full control over which data is captured or redacted, you can install your own filter via a delegate or a block.
+For every event to be recorded, Bugsee will call your filter and provide you with a `BugseeNetworkEvent` object. It is your filter's
+responsibility to clean up all user identifiable data from that structure and call `decisionBlock()` to pass it back to Bugsee.
+
+### Using delegate
+
+Your class should implement **BugseeDelegate** protocol and it must set itself as the delegate for Bugsee.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+-(void)bugseeFilterNetworkEvent:(BugseeNetworkEvent *)event completionHandler:(BugseeNetworkFilterDecisionBlock)decisionBlock{
+    NSError * error;
+    // Below is an example code that will remove access_token from all URLs going through the filter.
+    if (event.url){
+        NSError * error;
+        NSRegularExpression * regex = [NSRegularExpression regularExpressionWithPattern:@"access_token=[0-9a-z\\-]*" options:NSRegularExpressionCaseInsensitive error:&error];
+        event.url = [regex stringByReplacingMatchesInString:event.url
+                                                    options:0
+                                                      range:NSMakeRange(0, event.url.length)
+                                               withTemplate:@""];
+    }
+
+    // Send the event further, call with nil if you want to omit this event altogether.
+    decisionBlock(event);
+}
+
+// ..somewhere within the class
+[Bugsee sharedInstance].delegate = self;
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+func bugseeFilterNetworkEvent(_ event: BugseeNetworkEvent, completionHandler decisionBlock: @escaping BugseeNetworkFilterDecisionBlock) {
+    let regex : NSRegularExpression
+    do {
+        regex = try NSRegularExpression.init(pattern: "&access_token=[0-9a-z\\-]*", options: NSRegularExpression.Options.caseInsensitive)
+        let range = NSMakeRange(0 , (event.url!.count))
+        if (event.url != nil) {
+            event.url = regex.stringByReplacingMatches(in: event.url!, options: .reportProgress, range: range, withTemplate: "")
+        }
+    }catch { print("Somethings went wrong!") }
+
+    decisionBlock(event);
+}
+
+// ..somewhere within the class
+Bugsee.sharedInstance()?.delegate = self;
+```
+
+  </TabItem>
+</Tabs>
+
+### Using filter with block
+
+Alternatively you can set up a filter by registering a block to be executed for every event.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee setNetworkEventFilter:^(BugseeNetworkEvent *event, BugseeNetworkFilterDecisionBlock decisionBlock) {
+
+    // modify BugseeNetworkEvent as you wish here
+
+
+    // Send the event further, call with nil if you want to omit this event altogether.
+    decisionBlock(event);
+}
+
+// Unregister a block before de-allocating a class in which it was registered
+[Bugsee removeNetworkEventFilter];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.setNetworkEventFilter { (event, decisionBlock) in
+
+    // modify BugseeNetworkEvent as you wish
+
+    // Send the event further, call with nil if you want to omit this event altogether.
+    decisionBlock(event)
+}
+
+// always call removeNetworkEventFilter method if you de-allocate class where setNetworkEventFilter: was called
+Bugsee.removeNetworkEventFilter()
+```
+
+  </TabItem>
+</Tabs>
+
+### Network Events
+
+The delegate or hook is going to be called several times for each network request, depending on its life-cycle. Usually for
+successful requests its going to be called twice, once with the request event (request headers and body) and once after
+completion and will contain headers and body of the response.
+
+
+|Property|Description|Type|Read only|Notes
+|---|---|---|---|---|
+|bugseeNetworkEventType|Type of network event|NSString|YES| Can be one of BugseeNetworkEventBegin, BugseeNetworkEventComplete, BugseeNetworkEventCancel or BugseeNetworkEventError|
+|method|HTTP Request Method|NSString|YES|'GET', 'POST', etc...
+|url|Network event URL|NSString|NO|
+|redirectedFromURL|URL of Network event that we were redirected from|NSString|NO|
+|body|Body|NSData|NO|Raw body of the request or response where available.
+|headers|HTTP Headers|NSDictionary|NO|Key-value store of HTTP headers associated with the event.

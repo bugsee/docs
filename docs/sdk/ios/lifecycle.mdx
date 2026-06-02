@@ -1,0 +1,58 @@
+---
+title: "Lifecycle events"
+description: "How to listen for Bugsee iOS SDK internal state changes such as launch, stop, pause, report upload, and feedback controller visibility."
+sidebar_position: 9
+slug: "/sdk/ios/lifecycle"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Bugsee SDK silently works within your app and recording everything to assist you in debugging when something unexpected happens. Our SDK is designed as a black box, but there may be cases when you want to be notified about changes/events within Bugsee itself. Lifecycle events are designed exactly for that. Each time when internal state changes or some important event is raised, lifecycle event is dispatched to the user code.
+
+## Implementing callback
+
+Your class should implement **BugseeDelegate** protocol and it must set itself as the delegate for Bugsee. You should implement the following callback to be notified about lifecycle changes:
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+- (void)bugseeLifecycleEvent:(BugseeLifecycleEventType)eventType {
+    // Handle lifecycle event here...
+}
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+func bugseeLifecycleEvent(eventType: BugseeLifecycleEventType) {
+    // Handle lifecycle event here...
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Available lifecycle events
+
+|Name|Description|
+|-|-|
+|BugseeLifecycleEventLaunched|Event is dispatched when Bugsee was successfully launched|
+|BugseeLifecycleEventStarted|Event is dispatched when Bugsee is started after being stopped|
+|BugseeLifecycleEventStopped|Event is dispatched when Bugsee is stopped|
+|BugseeLifecycleEventResumed|Event is dispatched when Bugsee recording is resumed after being paused|
+|BugseeLifecycleEventPaused|Event is dispatched when Bugsee recording is paused|
+|BugseeLifecycleEventRelaunchedAfterCrash|Event is dispatched when Bugsee is launched and pending crash report is discovered. That usually means that app was relaunched after crash.|
+|BugseeLifecycleEventBeforeReportShown|Event is dispatched before the reporting UI is shown|
+|BugseeLifecycleEventAfterReportShown|Event is dispatched when reporting UI is shown|
+|BugseeLifecycleEventBeforeReportUploaded|Event is dispatched when report is about to be uploaded to the server|
+|BugseeLifecycleEventAfterReportUploaded|Event is dispatched when report was successfully uploaded to the server|
+|BugseeLifecycleEventReportUploadFailedWithFutureRetry|Event is dispatched after bug/error/crash report upload failed and will be retried in the future|
+|BugseeLifecycleEventReportUploadFailed|Event is dispatched after multiple bug/error/crash report upload attempts ended with failure. It indicates no more attempts will be taken and the report will not be uploaded|
+|BugseeLifecycleEventBeforeFeedbackShown|Event is dispatched before the Feedback controller is shown|
+|BugseeLifecycleEventAfterFeedbackShown|Event is dispatched after the Feedback controller is shown|
+|BugseeLifecycleEventBeforeReportAssembled|Event is dispatched right before bug/error/crash report is about to be assembled|
+|BugseeLifecycleEventAfterReportAssembled|Event is dispatched right after bug/error/crash report is assembled|

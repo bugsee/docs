@@ -1,0 +1,67 @@
+---
+title: "Appearance"
+description: "How to customize the colors and placeholder texts of the Bugsee Report Controller and Feedback Controller UI on iOS."
+sidebar_position: 8
+slug: "/sdk/ios/appearance"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+You can always change colors of the **Report Controller** and **Feedback Controller** UI.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// For example
+[[Bugsee appearance] setReportBackgroundColor:[UIColor darkGrayColor]];
+[[Bugsee appearance] setFeedbackBarsColor:[UIColor magentaColor]];
+
+//... Other colors you can find at BugseeTheme class header
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// For example
+Bugsee.appearance().feedbackBackgroundColor = UIColor.black;
+Bugsee.appearance().reportNavigationBarColor = UIColor.magenta;
+
+//... Other colors you can find at BugseeTheme class header
+```
+
+  </TabItem>
+</Tabs>
+
+|Property|Description|
+|---|---|
+| reportCellBackgroundColor | UITableView cells background color |
+| reportVersionColor | UILabel with version number text color |
+| reportTextColor | UILabels text color |
+| reportSendButtonColor | Send UIButton text color |
+| reportPlaceholderColor | UIInputFields placeholder color |
+| reportNavigationBarColor | UINavigation bar background color |
+| reportBackgroundColor | Background color of Report Controller |
+| reportCloseButtonColor | Close UIButton cross color |
+| feedbackBarsColor | Navigation bar and bottom bar colors |
+| feedbackBackgroundColor | Background color of feedback controller |
+| feedbackIncomingBubbleColor | Incoming message bubble background color |
+| feedbackOutgoingBubbleColor | Outgoing message bubble background color |
+| feedbackIncomingTextColor | Incoming message text color |
+| feedbackOutgoingTextColor | Outgoing message text color |
+| feedbackTitleTextColor | UINavigationBar title color |
+| feedbackEmailSkipColor | Ask for email popup skip button text color |
+| feedbackEmailBackgroundColor | Ask for email popup background color |
+| feedbackEmailContinueNotActiveColor | Ask for email continue not active button background color |
+| feedbackEmailContinueActiveColor | Ask for email continue button background color |
+| feedbackInputTextColor | Input message text color |
+| feedbackInputBackgroundColor | Background color for message input |
+| feedbackCloseButtonColor | Close UIButton cross color |
+| feedbackNavigationBarColor | UINavigationBar color |
+| reportSummaryPlaceholder | Placeholder which is displayed in Summary field in built-in bug reporting UI |
+| reportDescriptionPlaceholder | Placeholder which is displayed in Description field in built-in bug reporting UI |
+| reportEmailPlaceholder | Placeholder which is displayed in Email field in built-in bug reporting UI |
+| reportLabelsPlaceholder | Placeholder which is displayed in Labels field in built-in bug reporting UI |

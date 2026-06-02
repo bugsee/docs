@@ -1,0 +1,195 @@
+---
+title: "Performance monitoring (7.x Beta)"
+description: "Application performance monitoring (APM) with transactions, spans, built-in providers, sampling, and upload modes in Bugsee Android SDK 7.x."
+sidebar_position: 13
+slug: "/sdk/android/v7/performance"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::info 7.x Beta
+Application Performance Monitoring (APM) is an entirely new subsystem introduced in Bugsee Android SDK 7.x. It has no 6.x equivalent. The API surface is stable, but the feature is still labelled beta and may evolve.
+:::
+
+## Concept
+
+APM in Bugsee is built around two primitives — **transactions** and **spans**.
+
+- A **Transaction** is the root of a performance trace. It has a name (e.g. `"Checkout"`), an operation type (e.g. `"ui.load"`), optional attributes, and a status.
+- A **Span** represents a unit of work inside a transaction. Spans form a tree: every span may have child spans that describe finer-grained steps. Each span carries its own operation, description, attributes and status.
+
+When a span is started and an active span already exists on the calling thread, the new span is created as its child. This gives you a hierarchical view of what your app was doing, without having to manually thread parent references through your code.
+
+## Built-in providers
+
+The SDK ships several providers that produce spans automatically. All providers are active when `PerformanceMonitoring` is enabled.
+
+**UI performance.** Tracks Activity lifecycle. On the first start of an Activity it emits a `ui.load` span that covers the period from `onCreate` through the first `onResume`. For every subsequent foregrounding it emits a `ui.display` span from `onStart` to `onResume`. Multiple activities in the back stack are tracked independently.
+
+**Startup performance.** Emits a cold-start transaction (`app.start.cold` / `app.start.warm` / `app.start.hot`) covering the interval from SDK provider launch through the first `Activity.onResume`. With the [Gradle plugin](/sdk/android/v7/gradle-plugin)'s `startupTier` set to `MINIMAL` or higher, the transaction's child-span tree gets populated from bytecode-instrumented init methods (`Application.onCreate`, `ContentProvider.onCreate`, `Initializer.create`, etc.) plus the first Activity's lifecycle callbacks — surfacing per-method (and, at higher tiers, per-call / per-loop) latency for the startup path. Operation names on the child spans follow the source kind: `app.startup.application` / `app.startup.provider` / `app.startup.activity` / `app.startup.annotated` / `app.startup.method` / `app.startup.call` / `app.startup.loop`. System-phase boundary spans `app.start.process_init` (process fork → first instrumented event) and `app.start.first_paint` (last lifecycle event → first frame drawn) anchor the timeline. On API 29+ the first Activity's `onStart` / `onResume` spans bracket the full user-method body via the OS `onActivityPreXxx` / `onActivityPostXxx` callbacks; on API 21-28 per-method Activity spans are skipped (the legacy callbacks fire mid-body on those APIs and a degenerate ~0 ms bracket would mislead). See the [Gradle plugin docs](/sdk/android/v7/gradle-plugin#bytecode-instrumentations) for tier configuration.
+
+**Network performance.** Produces `http.client` spans for outbound HTTP requests. Coverage is provided by the Bugsee network extension modules (`bugsee-android-okhttp`, `bugsee-android-ktor-2`, `bugsee-android-ktor-3`, `bugsee-android-cronet`) — add the extension that matches your HTTP client. See [Network capture](/sdk/android/v7/network).
+
+**Database performance.** Emits `db.*` spans around SQLite and Room operations. The provider is fed by bytecode instrumentation injected at build time by the Bugsee Gradle plugin — the plugin is required for database spans to appear.
+
+**File I/O performance.** Emits `file.read` and `file.write` spans around guarded file operations. Like the database provider, it relies on bytecode instrumentation performed by the Bugsee Gradle plugin.
+
+:::note Gradle plugin required for DB and File I/O spans
+`db.*`, `file.read`, and `file.write` spans are produced via bytecode instrumentation. Add the Bugsee Gradle plugin to your build — see [Gradle plugin](/sdk/android/v7/gradle-plugin).
+:::
+
+## Custom transactions and spans
+
+Wrap a business-critical flow in a transaction so you can measure it end-to-end, then break the flow into spans for finer granularity.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+import com.bugsee.library.Bugsee;
+import com.bugsee.library.contracts.performance.Span;
+import com.bugsee.library.contracts.performance.SpanStatus;
+import com.bugsee.library.contracts.performance.Transaction;
+
+Transaction tx = Bugsee.startTransaction("Checkout", "ui.checkout");
+try {
+    Span load = Bugsee.startSpan("db.query", "SELECT cart");
+    try {
+        // ... load cart from DB ...
+    } finally {
+        load.finish();
+    }
+
+    Span charge = Bugsee.startSpan("http.client", "POST /charge");
+    try {
+        // ... call payment endpoint ...
+    } finally {
+        charge.finish();
+    }
+
+    tx.finish(SpanStatus.OK);
+} catch (Throwable t) {
+    tx.finish(SpanStatus.ERROR);
+    throw t;
+}
+```
+
+With initial attributes:
+
+```java
+Map<String, Object> attrs = new HashMap<>();
+attrs.put("cart.items", 3);
+attrs.put("user.tier", "pro");
+Transaction tx = Bugsee.startTransaction("Checkout", "ui.checkout", attrs);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+import com.bugsee.library.Bugsee
+import com.bugsee.library.contracts.performance.SpanStatus
+
+val tx = Bugsee.startTransaction("Checkout", "ui.checkout")
+try {
+    Bugsee.startSpan("db.query", "SELECT cart").use { span ->
+        // ... load cart from DB ...
+        span.finish()
+    }
+
+    Bugsee.startSpan("http.client", "POST /charge").use { span ->
+        // ... call payment endpoint ...
+        span.finish()
+    }
+
+    tx.finish(SpanStatus.OK)
+} catch (t: Throwable) {
+    tx.finish(SpanStatus.ERROR)
+    throw t
+}
+```
+
+With initial attributes:
+
+```kotlin
+val tx = Bugsee.startTransaction(
+    "Checkout",
+    "ui.checkout",
+    mapOf("cart.items" to 3, "user.tier" to "pro")
+)
+```
+
+  </TabItem>
+</Tabs>
+
+To retrieve the currently active span on the calling thread (for example, to attach an extra attribute from deep inside the call stack):
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Span active = Bugsee.getActiveSpan();
+if (active != null) {
+    active.setAttribute("retry.count", 2);
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.getActiveSpan()?.setAttribute("retry.count", 2)
+```
+
+  </TabItem>
+</Tabs>
+
+When `PerformanceMonitoring` is disabled, `startTransaction` and `startSpan` return no-op instances — you do not need to null-check them.
+
+## Span API reference
+
+All methods are defined on `com.bugsee.library.contracts.performance.Span`. The fluent setters return `Span`, so calls can be chained.
+
+| Method | Purpose |
+| --- | --- |
+| `setName(String)` | Override the span's name. |
+| `setDescription(String)` | Set a human-readable description. |
+| `setAttribute(String, Object)` | Attach a key-value attribute. |
+| `setStatus(SpanStatus)` | Set the terminal status (also accepted by `finish`). |
+| `startChildSpan(operation)` / `startChildSpan(operation, description)` | Start a child span explicitly under this span. |
+| `finish()` / `finish(SpanStatus)` | Close the span. Must be called exactly once. |
+
+Introspection is available via `getSpanId()`, `getTraceId()`, `getStatus()`, `getOperation()`, `getDescription()`, `getAttributes()`, and `isFinished()`.
+
+A `Transaction` extends `Span` and adds `getName()` and `isSampled()`.
+
+## `SpanStatus`
+
+Defined in `com.bugsee.library.contracts.performance.SpanStatus`:
+
+```
+OK, ERROR, TIMEOUT, CANCELLED, DEADLINE_EXCEEDED, UNKNOWN
+```
+
+Set the terminal status via `finish(SpanStatus)` (or `setStatus` before calling `finish()`). If a span finishes without an explicit status, it defaults to `OK`.
+
+## Sampling and upload modes
+
+APM emits two independent data streams — see [Two data paths](#two-data-paths) below — which are controlled by four options:
+
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `PerformanceMonitoring` | `true` | Master switch. When `false`, `startTransaction`/`startSpan` return no-op instances and no provider runs. |
+| `PerformanceSampleRate` | `0.01` | Probability (0.0–1.0) that a completed transaction is uploaded through the standalone APM pipeline. Does **not** affect whether transactions appear in issue reports. When `PerformanceAdaptiveSampling` is on, this acts as a ceiling rather than a fixed probability. |
+| `PerformanceAdaptiveSampling` | `true` | Adaptive sampling — the SDK adjusts the effective sample rate based on observed transaction volume so high-traffic operations don't dominate the upload budget. Set to `false` to keep `PerformanceSampleRate` as a fixed probability. _New in 7.0.0-beta6._ |
+| `PerformanceUploadMode` | `"batched"` | How sampled transactions are uploaded. `"batched"` flushes on a 30-second interval; `"realtime"` uploads as soon as a transaction finishes. |
+| `CapturePerformance` | `true` | Controls the capture-pipeline provider that writes transactions into the report buffer. |
+
+All five options can be set programmatically via the `Bugsee.launch(...)` options map or via manifest metadata. See [Configuration](/sdk/android/v7/configuration) for the mapping between `Options.*` constants and `com.bugsee.option.performance.*` manifest keys.
+
+## Two data paths
+
+:::note
+Every transaction is recorded into the capture buffer used for issue reports, regardless of `PerformanceSampleRate`. Sampling only gates the **standalone APM upload pipeline**. That means low sample rates keep APM storage costs down without losing performance context inside bug reports.
+:::

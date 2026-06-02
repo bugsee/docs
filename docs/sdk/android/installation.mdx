@@ -1,0 +1,118 @@
+---
+title: "Installation"
+description: "Step-by-step guide to adding the Bugsee SDK to an Android project via Gradle, including initialization and required permissions."
+sidebar_position: 0
+slug: "/sdk/android/installation"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::info Agent-Assisted Setup
+Ask your AI coding assistant:
+
+```text
+Use curl to download, read and follow: https://docs.bugsee.com/ai/agent-skills/sdk/android/SKILL.md
+```
+
+Works with Claude Code, Cursor, Copilot, Codex, and more. [Learn more](/ai/agent-skills/)
+:::
+
+## Gradle Installation
+
+Add the following dependency to your app module's build.gradle file
+
+```gradle
+dependencies {
+   implementation 'com.bugsee:bugsee-android:+'
+}
+```
+
+:::info
+The statement above will fetch the latest available version. If instead you want to stick to some particular version, replace the plus symbol (+) with desired value. You can find all the released versions in our [release notes](/sdk/android/release-notes/).
+:::
+
+This is the recommended way to install Bugsee. 
+
+If you use Maven (for example, Android Maven Plugin) to build your project, follow the [Maven Installation](/sdk/android/maven-installation/) instructions.
+
+:::warning
+If you're getting an "attribute android:foregroundServiceType not found" error, you should set **compileSdkVersion** in your build.gradle file to 29. Make sure you have that Android SDK installed on your system.
+:::
+
+## Initialization
+If you have no android.app.Application subclass, it is necessary to create it and to specify its name as the "android:name" attribute in your `<application>` tag in AndroidManifest.xml.
+
+```xml
+<application
+    android:name="com.example.MyApplication">
+    <!--...-->
+</application>
+```
+	
+Launch Bugsee from ```onCreate()``` method of your Application subclass.
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+import com.bugsee.library.Bugsee;
+
+public class MyApplication extends Application {
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        Bugsee.launch(this, "<your_app_token>");
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+import com.bugsee.library.Bugsee
+
+class MyApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        Bugsee.launch(this, "<your_app_token>")
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+If you want to launch Bugsee from some other place (e.g., after a particular user action), you must use another variant of ```Bugsee.launch()``` which accepts ```Activity``` as the first argument. You must pass the current top activity into it.
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+import com.bugsee.library.Bugsee;
+
+public class MyCustomActivity extends Activity {
+    public void onUserClick() {
+        Bugsee.launch(this, "<your_app_token>");
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+import com.bugsee.library.Bugsee
+
+class MyCustomActivity : Activity() {
+    override fun onUserClick() {
+        Bugsee.launch(this, "<your_app_token>")
+    }
+}
+```
+
+  </TabItem>
+</Tabs>

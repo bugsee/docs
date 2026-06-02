@@ -1,0 +1,315 @@
+---
+title: "Issue-based recipes"
+description: "Reference for writing Bugsee issue-based custom recipes, covering the create/update JavaScript functions, full context schema, and output field customization."
+sidebar_position: 1
+slug: "/integrations/recipes/recipes_issues"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The system provides a full context (issue details, environment) as the input and expects a specific object on the output. Example of a recipe for JIRA that populates specific fields:
+
+
+<Tabs groupId="code-tabs">
+  <TabItem value="create-method" label="Create method">
+
+```javascript
+function create(context) {
+    const issue = context.issue;
+    const device = context.device;
+    const platform = context.platform;
+    let summary;
+
+    // Change summary string based on the type of the issue
+    if (issue.type == 'crash') {
+    	summary = `CRASH: ${issue.key}: ${issue.summary || 'No summary'}`
+    } else {
+    	summary = `USER BUG: ${issue.key}: ${issue.summary || 'No summary'}`
+    }
+
+    let description = issue.description || '';
+    if (description) {
+        // Add two newlines to separate other data from the description
+        description += '\n\n';
+    }
+
+    if (issue.reporter) {
+        description += `Reported by ${issue.reporter}\n`;
+    }
+
+    description += `Device: ${device.manufacturer} ${device.model}\n`;
+    description += `OS: ${platform.version} (${platform.build})\n`;
+
+
+    description += `View full Bugsee session at: ${issue.url}`;
+
+    return {
+        summary: summary,
+        description: description,
+        description_format: 'markdown', // Optional
+        custom: {
+            components: [{id: 1234}], // Automatically set JIRA component
+        }
+    };
+}
+```
+
+  </TabItem>
+  <TabItem value="update-method" label="Update method">
+
+```javascript
+function update(context, changes) {
+    const issue = context.issue;
+    const platform = context.platform;
+    const device = context.device;
+    const app = context.app;
+    const result = {};
+
+    if (changes.description) {
+        let description = changes.description.to || '';
+
+        if (description) {
+            // Add two newlines to separate other data from the description
+            description += '\n\n';
+        }
+
+        if (issue.reporter) {
+            description += `Reported by ${issue.reporter}\n`;
+        }
+
+        description += `View full Bugsee session at: ${issue.url}`;
+
+        result.description = description;
+    }
+
+    if (changes.summary) {
+		// Change summary string based on the type of the issue
+		if (issue.type == 'crash') {
+			result.summary = `CRASH: ${issue.key}: ${changes.summary.to || 'No summary'}`
+		} else {
+			result.summary = `USER BUG: ${issue.key}: ${changes.summary.to || 'No summary'}`
+		}
+    }
+
+    if (changes.state) {
+        // Override state with a specific value, otherwise it will be mapped
+        // automatically from Bugsee issue state ('open', 'closed')
+        // result.state = 'completed';
+    }
+
+    return {
+        issue: {
+            description_format: 'markdown', // Optional
+            custom: {
+                // Optional
+            }
+        },
+        changes: result
+    };
+}
+```
+
+  </TabItem>
+</Tabs>
+
+The basic structure of a recipe is:
+
+```javascript
+function create(context) {
+	// ....
+
+    return {
+    	// return object with fields that need to be overridden
+    	// allowed properties: 'summary', 'description', 'reporter', 'priority', 'labels'
+    	custom: {
+    		// custom, service specific fields, refer to the documentation of a particular service for custom fields
+    		// for a specific service.
+    	}
+    };
+}
+
+function update(context, changes) {
+	const result = {};
+	// ...
+	
+
+	if (changes.description) {
+		// 'changes' object contains fields that were changed with old and new values ({ from: <old_value>, to: <new_value> }).
+		// Simply ensure any of them is within 'changes' and react accordingly
+	}
+
+	return {
+        issue: {
+            custom: {
+                // custom, service specific fields, refer to the documentation of a particular service for custom fields
+		        // for a specific service.
+            }
+        },
+        changes: result
+    };
+}
+```
+
+## Output customization
+
+Services we integrate with, allow you to format the summary/description using some popular markup language - mostly these are Markdown and HTML. We handle these fields accordingly by escaping all the controlling entities in passed strings. This is required to keep the original strings intact.
+
+Consider the following description line as an example:
+
+```text
+Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: '*** -[__NSDictionaryM removeObjectForKey:]: key cannot be nil'
+```
+
+If we pass that string to a service that pre-formats text using Markdown, then we potentially will lose some of the characters from that line (e.g. asterisks will be treated as bold triggers and will not be displayed).
+
+To mitigate this, we let you set the _description\_format_ field. By default, its value is set to ```raw``` which means that target field is not formatted with any of the markup languages and contains a plain string. You can set it to either ```html``` or ```markdown``` depending on the target service formatting support. In our example above, if we set _description\_format_ to ```markdown``` and pass the result of the recipe to JIRA, _description_ field will be kept intact. Setting the "_format" field instructs our algorithm to omit escaping the data if it matches the supported markup in remote service. Below is a table with all the services and what format they expect when is set in recipe result.
+
+|Service|Supported markup|
+|---|---|
+|Aha|html|
+|Asana|raw|
+|Basecamp|html|
+|BitBucket|markdown|
+|BugZilla|raw|
+|Freshdesk|html|
+|GitHub|markdown|
+|GitLab|markdown|
+|Hipchat|html|
+|Jira|markdown|
+|Monday|html|
+|Nozbe|markdown|
+|Odoo|html|
+|Pivotal|markdown|
+|Redmine|raw|
+|Shortcut|markdown|
+|Slack|raw|
+|Targetprocess|html|
+|Testlio|raw|
+|Trello|raw|
+|VSTS|html|
+|Wrike|raw|
+|YouTrack|raw|
+|Zendesk|html|
+|ZohoDesk|raw|
+|ZohoProjects|raw|
+
+## Context
+
+The input to the _create()_ and _update()_ methods is a full context of the issue about to be created:
+```javascript
+{
+	integration: {
+		provider: 'github'   // provider name that current recipe is executed for
+	},
+    org: {
+        name: 'My Awesome Organization'
+    },
+    app: {
+        _id: '5fe309e2b87c320a48000000', // ID of the application
+		name: 'My Awesome App', // Application name
+		version: '1.0.2',
+		build: '12345'
+	},
+	issue: {
+        _id: '5fe309e2b87c320a48000000', // ID of the issue
+        key: 'IOS-123', // Unique key of the issue,
+		summary: 'Something does not work', // Short summary of the issue
+		description: '', // Description of the issue,
+		created_on: '2017-01-19 23:29:32.021Z', // Date of creation
+		type: 'bug', // Type of the issue, 'bug', 'crash' or 'error'
+		state: 'open', // Issue state. Either 'open' or 'closed'
+		labels: [], // String labels assigned to the issue
+		url: 'https://app.bugsee.com/#/apps/IOS/issues/IOS-123', // URL of the issue
+        shared_url: 'https://app.bugsee.com/#/issues/d504e2ba101b47509797eca7b7df229c', // URL for shared issue. Present only if issue sharing is enabled
+		priority: 5, // Automatically guessed priority for the current remote service provider (JIRA, GitHub, etc.)
+        severity: 5, // Original Bugsee severity (1 through 5)
+		reporter: 'John Smith (john.smith@example.com)', // User who reported an issue
+		attributes: {
+			// Session/user attributes
+		},
+        attachments: [  // May be null if there are no attachments in the issue
+            {
+                name: 'additionalData',
+                url: 'https://attachment.url/goes/here'
+            }
+        ],
+        last_recording_id: '5fe309e2b87c320a48000000', // ID of the recently added recording (optional)
+        recordings: 1 // Number of recordings within this issue. For bugs it's always equal 1.
+        statistics: {
+            total_count: 1, // Total number of occurrences 
+            unique_devices: 1 // Total number of users (devices) affected by this issue
+        }
+	},
+	device: {
+		name: 'My precious',
+		manufacturer: 'Samsung',
+		model: 'GT-1656',
+        model_name: 'Samsung Galaxy S6',
+        screen: {
+            width: 1440,
+            height: 2560,
+            scale: 1,
+            dpiX: 577,
+            dpiY: 577
+        }
+	},
+	platform: {
+		type: 'android', // Type: 'ios', 'android'
+		version: '7.2.3', // OS version
+		build: 'BG1234', // OS build
+		release: 'Nougat', // Release name
+		locale: 'en-US', // Locale
+		locale_extended_info: {
+			chosen_locales: ['en-US', 'de-GB'],
+			display_locale: 'en-US',
+			format_locale: 'en-US'
+		}
+	},
+	// exists for manually pushed issues
+	submitter: {
+	    name: 'John Doe',
+	    email: 'name@example.com'
+	},
+    // version and build of Bugsee SDK
+    sdk: {
+        version: '1.26.3',
+        build: '10260cc-351'
+    }
+}
+```
+
+## Changes
+
+Method ```update(context, changes)``` along with _context_ receives _changes_ object. It has the following structure:
+```json
+{
+    "<field>": {
+        "from": "<old_value>",
+        "to": "<new_value>"
+    }
+}
+```
+_changes_ object contains the fields (and their values) that were changed. Be aware, that all the changes are related to _issue_ object in _context_. And in turn, _context_ itself contains all the new values that are present in _changes_.
+
+So, when implementing update flow, you should check whether some field was actually changed:
+
+```javascript
+function update(context, changes) {
+	const result = {};
+	// ...
+
+	if (changes.summary) {
+		// summary was changed, update it here according to your needs
+		result.summary = `UPD[summary]: ${changes.summary.from} -> ${changes.summary.to}`;
+	}
+
+	// ...
+	return {
+        issue: {
+            custom: {}
+        },
+        changes: result
+    };
+}
+```

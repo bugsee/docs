@@ -1,0 +1,259 @@
+---
+title: "Installation (7.x Beta)"
+description: "Installing and initializing Bugsee Android SDK 7.x via the Gradle plugin, module-specific artifacts, and manifest-based auto-launch."
+sidebar_position: 0
+slug: "/sdk/android/v7/installation"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning Beta release
+This page documents the **7.x Beta** of the Bugsee Android SDK. The API, option keys, and module layout differ significantly from 6.x. For the stable release, see the [6.x installation guide](/sdk/android/installation). If you are upgrading, read the [migration guide](/sdk/android/v7/migration) first.
+:::
+
+7.x splits the single 6.x AAR into a core artifact plus one extension module per optional capability, and introduces a mandatory Gradle plugin that performs build-time bytecode and Kotlin-compiler instrumentation (APM operation dispatch, log capture, OkHttp injection, Compose secure modifier, etc.). Without the plugin, several features stop working or require manual wiring.
+
+## 1. Apply the Bugsee Gradle plugin
+
+Apply the plugin to your **application** module. Library modules are not instrumented.
+
+<Tabs groupId="build-android">
+  <TabItem value="kts" label="build.gradle.kts">
+
+```kotlin
+// settings.gradle.kts (root)
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        google()
+    }
+}
+
+// app/build.gradle.kts
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("com.bugsee.android.gradle") version "<plugin-version>"
+}
+
+bugsee {
+    appToken("<your-app-token>")
+    // ndk { enabled.set(true) }      // upload NDK symbols
+    // instrumentation { /* ... */ }  // per-feature toggles
+}
+```
+
+  </TabItem>
+  <TabItem value="groovy" label="build.gradle">
+
+```groovy
+// settings.gradle (root)
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        google()
+    }
+}
+
+// app/build.gradle
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.bugsee.android.gradle' version '<plugin-version>'
+}
+
+bugsee {
+    appToken '<your-app-token>'
+    // ndk { enabled.set true }
+    // instrumentation { /* ... */ }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+What the plugin does at build time:
+
+- Injects `BugseeLogAdapter` into every `android.util.Log.*` call site.
+- Injects `BugseeOkHttpInterceptor` into every `OkHttpClient.Builder.build()`.
+- Wraps every `android.net.http.HttpEngine.Builder.build()` (Android 14+).
+- Injects `BugseeThreadAdapter.registerThread()` at the start of every `Runnable.run()` / `Thread.run()` (used by the native crash reporter).
+- Injects APM operation dispatch (`db.*`, `file.*`, `http.client` spans) and optional main-thread-misuse pre-checks.
+- Instruments Jetpack Compose touch dispatch and auto-applies `Modifier.bugseeSecure()` to password `TextField`s.
+- Auto-adds matching `bugsee-android-*` extension modules when it detects OkHttp, Ktor 2/3, Cronet, or Compose in your dependency graph.
+- Injects `BUILD_UUID` into the merged manifest and uploads mapping / NDK symbols on `assemble`/`bundle`.
+
+Each capability can be toggled via the `bugsee { instrumentation { ... } }` block. See the [Gradle plugin reference](/sdk/android/v7/gradle-plugin) for details.
+
+:::caution Plugin 4.x is paired with SDK 7.x
+The Gradle plugin and the runtime library are versioned independently but must
+be matched by line: **SDK 7.x requires plugin 4.x**, and **plugin 3.x requires
+SDK 6.x**. Mixing the two lines will fail at build or runtime.
+
+Both lines are currently in **beta** and are expected to graduate to GA
+together. Pin the plugin to a specific beta version rather than a floating
+range. See the [Gradle plugin requirements](/sdk/android/v7/gradle-plugin#requirements-and-compatibility)
+for the current supported plugin version.
+:::
+
+## 2. Add SDK artifacts
+
+The core artifact is always required. With the Gradle plugin enabled, network-client extensions and the Compose extension are added automatically when the plugin detects the underlying dependency in your build. Extensions that are not dependency-driven (notably `feedback`) must be added manually.
+
+<Tabs groupId="build-android">
+  <TabItem value="kts" label="build.gradle.kts">
+
+```kotlin
+dependencies {
+    // Core (required)
+    implementation("com.bugsee:bugsee-android:7.x.x")
+
+    // Optional — add only the extensions you need.
+    // Auto-added by the plugin when their trigger dependency is present:
+    implementation("com.bugsee:bugsee-android-okhttp:7.x.x")    // auto with com.squareup.okhttp3:*
+    implementation("com.bugsee:bugsee-android-ktor-2:7.x.x")    // auto with io.ktor:* 2.x
+    implementation("com.bugsee:bugsee-android-ktor-3:7.x.x")    // auto with io.ktor:* 3.x
+    implementation("com.bugsee:bugsee-android-cronet:7.x.x")    // auto with org.chromium.net:*
+    implementation("com.bugsee:bugsee-android-compose:7.x.x")   // auto with androidx.compose.*
+
+    // Not auto-added — declare explicitly if needed:
+    implementation("com.bugsee:bugsee-android-feedback:7.x.x")
+    implementation("com.bugsee:bugsee-android-ndk:7.x.x")       // native (NDK) crash capture
+}
+```
+
+  </TabItem>
+  <TabItem value="groovy" label="build.gradle">
+
+```groovy
+dependencies {
+    implementation 'com.bugsee:bugsee-android:7.x.x'
+
+    implementation 'com.bugsee:bugsee-android-okhttp:7.x.x'
+    implementation 'com.bugsee:bugsee-android-ktor-2:7.x.x'
+    implementation 'com.bugsee:bugsee-android-ktor-3:7.x.x'
+    implementation 'com.bugsee:bugsee-android-cronet:7.x.x'
+    implementation 'com.bugsee:bugsee-android-compose:7.x.x'
+    implementation 'com.bugsee:bugsee-android-feedback:7.x.x'
+    implementation 'com.bugsee:bugsee-android-ndk:7.x.x'
+}
+```
+
+  </TabItem>
+</Tabs>
+
+Extensions auto-register via their own `ContentProvider`; no runtime wiring is needed. Ktor and Cronet still require per-client wiring at call sites (see [network](/sdk/android/v7/network)).
+
+:::info
+`com.bugsee:bugsee-android-okhttp` covers OkHttp 3 and 4 (and any library that transitively uses them, including Picasso and Retrofit). OkHttp 2 is no longer supported.
+:::
+
+## 3. Initialize the SDK
+
+7.x supports two initialization paths. Pick one.
+
+### Option A — Manifest auto-launch (recommended)
+
+Add the app token as `<meta-data>` inside `<application>`. The SDK launches automatically at process start via `BugseeInitProvider`. You do **not** need an `Application` subclass and you do **not** need to call `Bugsee.launch(...)`.
+
+```xml
+<application ...>
+    <meta-data
+        android:name="com.bugsee.app-token"
+        android:value="@string/bugsee_app_token" />
+</application>
+```
+
+Any SDK option can also be set via manifest metadata — every `Options.*` constant doubles as a manifest key:
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.crash-ndk"
+           android:value="true" />
+<meta-data android:name="com.bugsee.option.capture.breadcrumbs"
+           android:value="true" />
+<meta-data android:name="com.bugsee.option.config.duration"
+           android:value="120" />
+```
+
+For enum-typed options, pass the enum value name as a string (e.g. `"High"` for `FrameRate.High`). See the full key table in the [configuration reference](/sdk/android/v7/configuration).
+
+### Option B — Programmatic launch
+
+If no token is declared in the manifest, call one of the `Bugsee.launch(...)` overloads. The `Application`/`Activity` requirement from 6.x is dropped — the context is auto-discovered via `BugseeInitProvider`.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+import com.bugsee.library.Bugsee;
+import com.bugsee.library.contracts.options.Options;
+
+// Simplest form — context resolved automatically.
+Bugsee.launch("<your-app-token>");
+
+// Explicit context.
+Bugsee.launch(context, "<your-app-token>");
+
+// With options (keys from com.bugsee.library.contracts.options.Options).
+Map<String, Serializable> options = new HashMap<>();
+options.put(Options.Duration, 60);
+options.put(Options.CaptureNetwork, true);
+Bugsee.launch(context, "<your-app-token>", options);
+
+// With completion callback (may be invoked on a background thread).
+Bugsee.launch(context, "<your-app-token>", options, success -> {
+    // success == true on launch, false on failure
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+import com.bugsee.library.Bugsee
+import com.bugsee.library.contracts.options.Options
+
+// Simplest form — context resolved automatically.
+Bugsee.launch("<your-app-token>")
+
+// Explicit context.
+Bugsee.launch(context, "<your-app-token>")
+
+// With options.
+val options = mapOf<String, java.io.Serializable>(
+    Options.Duration to 60,
+    Options.CaptureNetwork to true
+)
+Bugsee.launch(context, "<your-app-token>", options)
+
+// With completion callback.
+Bugsee.launch(context, "<your-app-token>", options) { success ->
+    // success == true on launch, false on failure
+}
+```
+
+  </TabItem>
+</Tabs>
+
+:::note
+Options passed to `Bugsee.launch(...)` take precedence over values declared in `AndroidManifest.xml`. The 6.x `LaunchOptions` builder is removed.
+:::
+
+For `stop()`, `relaunch()`, and other lifecycle controls, see [lifecycle](/sdk/android/v7/lifecycle).
+
+## 4. ProGuard / R8
+
+Each module ships its own consumer ProGuard rules inside the AAR. No manual rules are required. If you copy-pasted `-keep` rules for 6.x internal classes, remove them — most have been renamed or deleted.
+
+## 5. Verify
+
+Build and run the app. On next launch, the Bugsee floating report button should appear. Trigger a test report (shake the device, or call `Bugsee.showReportDialog()`) to confirm end-to-end delivery to your dashboard.
+
+Next:
+
+- Upgrading from 6.x? See the [migration guide](/sdk/android/v7/migration).
+- Configuring options and triggers? See [configuration](/sdk/android/v7/configuration).
+- Wiring Ktor or Cronet clients? See [network](/sdk/android/v7/network).

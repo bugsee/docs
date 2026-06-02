@@ -1,0 +1,84 @@
+---
+title: "Logging"
+description: "How Bugsee captures iOS console logs automatically and how to send custom log messages with specific levels using the Bugsee logging API or CocoaLumberjack."
+sidebar_position: 5
+slug: "/sdk/ios/logs"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Out of the box Bugsee automatically captures all standard applications console logs (print, NSLog) both from Swift and Objective-C, both on iOS 10 and prior.
+If that behavior is not desired, it can be disabled through Bugsee launch options, see BugseeCaptureLogsKey option in [configuration](/sdk/ios/configuration/).
+
+### OSLog
+:::warning
+Experimental feature.
+:::
+Starting iOS 15 Bugsee can capture OSLog and Logger print statements. Bugsee uses [OSLogStore](https://developer.apple.com/documentation/oslog/oslogstore) to achieve this.
+To capture these logs you need to enable a separate BugseeCaptureOSLogsKey (turned off, by default). See BugseeCaptureOSLogsKey option in [configuration](/sdk/ios/configuration/).
+<br/>
+
+**Note.** This feature requires OSLog.framework to be linked.
+
+
+## Loggers
+
+Alternatively, we provide other methods to log messages directly into Bugsee reports. These methods maintain log levels for each message and later allow filtering
+in Bugsee report viewer.
+
+### CocoaLumberjack logger
+
+If you are using [CocoaLumberjack](https://github.com/CocoaLumberjack/CocoaLumberjack), Bugsee includes a logger that can be hooked to Lumberjack.
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[BugseeLogger install];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+BugseeLogger.install() 
+```
+
+  </TabItem>
+</Tabs>
+
+### Logging API
+
+You can use Bugsee logging interface directly, we provide two API functions for send a message to a log:
+
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// With default log level (normal)
+[Bugsee log:@"Some log message"];
+
+// Set the log level explicitly
+// Levels are BugseeLogLevelLow, BugseeLogLevelError, BugseeLogLevelWarning,
+// BugseeLogLevelInfo, BugseeLogLevelDebug and BugseeLogLevelVerbose
+[Bugsee log:@"Some log message" level:BugseeLogLevelInfo];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// With default log level (normal)
+Bugsee.log("Some log message")
+
+// Set the log level explicitly
+// Levels are BugseeLogLevelLow, BugseeLogLevelError, BugseeLogLevelWarning,
+// BugseeLogLevelInfo, BugseeLogLevelDebug and BugseeLogLevelVerbose
+Bugsee.log("Some log message", level:BugseeLogLevelInfo)
+```
+
+  </TabItem>
+</Tabs>

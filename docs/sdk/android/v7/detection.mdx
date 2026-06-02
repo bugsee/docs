@@ -1,0 +1,269 @@
+---
+title: "Issue detection (7.x Beta)"
+description: "Specialized detection providers for ANR, hang, abnormal exit, and main-thread misuse in Bugsee Android SDK 7.x."
+sidebar_position: 12
+slug: "/sdk/android/v7/detection"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::caution 7.x Beta
+This page documents a subsystem that is **new in 7.x** and has no 6.x equivalent. The 7.x line is currently in beta — APIs and option defaults may still evolve.
+:::
+
+## Overview
+
+7.x introduces a dedicated **detection** subsystem that observes the running app and reports behavior deviations as issues. Five independent providers ship with the SDK:
+
+| Provider | What it detects |
+| --- | --- |
+| **Crash** | Uncaught JVM (Java/Kotlin) exceptions |
+| **Native crash** | Native (NDK) crashes via Breakpad — packaged as the separate `bugsee-android-ndk` extension since 7.0.0-beta6 |
+| **Hang** | UI thread stalls that exceed the hang threshold |
+| **Abnormal exit** | Process terminations reported by `ActivityManager.getHistoricalProcessExitReasons()` — including ANRs, low-memory kills, and other unexpected terminations aligned with the Google Play Console "vitals" model |
+| **Main-thread misuse** | Blocking I/O, network, database, or `SharedPreferences` work performed on the UI thread |
+| **Anomaly** | Per-bucket statistical outliers over completed APM transactions — surface as error reports or breadcrumbs depending on severity. New in 7.0.0-beta6. |
+
+Every provider is independently toggleable through SDK options or the `AndroidManifest.xml` `<meta-data>` equivalents. Crash and native crash configuration are covered on the dedicated [crash reports](/sdk/android/v7/crashes) page — **this page focuses on the non-crash providers** (hang, abnormal exit, main-thread misuse) and the shared reference table.
+
+:::info
+Because each provider is gated by its own option, you can enable or disable any of them in isolation without affecting the rest of the SDK. Defaults are conservative — several providers are **off by default** in 7.x Beta and must be explicitly enabled.
+:::
+
+## Hang detection
+
+The hang provider watches for situations where the main thread becomes unresponsive long enough to degrade the user experience, but the OS has not yet raised an ANR. When a hang is detected, Bugsee captures a stack trace of the main thread along with the usual video, logs, and network context, and produces an issue.
+
+### Enable hang detection
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.hang"
+           android:value="true" />
+```
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(Options.DetectAndReportHang, true);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+  </TabItem>
+</Tabs>
+
+:::tip
+Hang detection is disabled by default. Enable it on internal / beta builds first to tune for your app's real-world main-thread behavior before rolling out to production.
+:::
+
+**Option keys:** `DetectAndReportHang` (`com.bugsee.option.detect.hang`).
+
+## Abnormal exit detection
+
+Abnormal exit detection surfaces process terminations that the user would otherwise never see — ANRs, low-memory kills, excessive-resource-usage kills, and other unexpected ends of the app process. It is powered by Android's `ActivityManager.getHistoricalProcessExitReasons()` API and aligns with the termination reasons reported by the **Google Play Console** Android vitals dashboard.
+
+:::note
+Abnormal exit detection is layered: the master switch `DetectAndReportExit` enables the provider, and a set of **per-reason sub-flags** lets you narrow down which termination reasons are reported. The sub-flags are only consulted when the master switch is on.
+:::
+
+### Enable abnormal exit detection
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<!-- Master switch -->
+<meta-data android:name="com.bugsee.option.detect.exit"
+           android:value="true" />
+
+<!-- Optional: opt into additional exit reasons -->
+<meta-data android:name="com.bugsee.option.detect.exit.excessive_resource_usage"
+           android:value="true" />
+<meta-data android:name="com.bugsee.option.detect.exit.user_requested"
+           android:value="true" />
+```
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(Options.DetectAndReportExit, true);
+options.put(Options.DetectAndReportExitExcessiveResourceUsage, true);
+options.put(Options.DetectAndReportExitUserRequested, true);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+  </TabItem>
+</Tabs>
+
+By default, when the master switch is enabled, two reasons are reported: **low memory kills** (`DetectAndReportExitLowMemory`, `true`) and **not responding / ANR** (`DetectAndReportExitNotResponding`, `true`). All other per-reason flags default to `false` and must be opted in.
+
+The full set of per-reason sub-flags is listed in the [reference table](#all-detection-option-keys) below.
+
+## Main-thread misuse
+
+Main-thread misuse detects I/O, network, database, or `SharedPreferences` operations executed on the UI thread — the kind of work that directly causes jank, hangs, and ANRs. When a violation is observed, Bugsee reports an issue with the offending stack trace.
+
+:::important Requires the Bugsee Gradle plugin
+Main-thread misuse is powered by **bytecode instrumentation** performed by the Bugsee Gradle plugin's `mainThreadMisuse` transform. The plugin injects lightweight pre-call checks before guarded I/O, network, DB, and `SharedPreferences` operations, and the checks bridge to `BugseeMainThreadGuardAdapter` at runtime. Without the Gradle plugin, setting the option alone has no effect.
+
+See the [Gradle plugin](/sdk/android/gradle-plugin) page for setup instructions.
+:::
+
+### Enable main-thread misuse detection
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.main_thread_misuse"
+           android:value="true" />
+```
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(Options.DetectAndReportMainThreadMisuse, true);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+  </TabItem>
+</Tabs>
+
+**Option keys:** `DetectAndReportMainThreadMisuse` (`com.bugsee.option.detect.main_thread_misuse`).
+
+## Anomaly detection
+
+Anomaly detection is new in **7.0.0-beta6**. It piggybacks on the SDK's APM subsystem: every completed transaction is fed through a per-bucket statistical baseline (exponentially weighted mean and variance, with a z-score threshold), and outliers are reported back into the standard issue / breadcrumb pipelines. The shipped detector is purely statistical — no machine-learning models are used.
+
+:::important Requires APM
+Anomaly detection consumes APM transactions, so it does nothing unless `Options.PerformanceMonitoring` is also enabled (it is on by default). The provider refuses to start when APM is disabled.
+:::
+
+### How outliers are surfaced
+
+| Severity | What you get |
+| --- | --- |
+| `> 0.9` | An **error report** with `ExceptionOptions.Domain` set to `anomaly.duration` or `anomaly.throughput` so the backend can group anomalies by kind. (`anomaly.model` is reserved for a future AI-based detector and is not emitted by the built-in detector.) |
+| `0.5`–`0.9` | A `bugsee_event:"anomaly"` **breadcrumb** with the bucket key and severity. |
+| `< 0.5` | Silent — the sample only updates the underlying baseline. |
+
+Reports are deduplicated per session per bucket; subsequent occurrences fall through to the breadcrumb path.
+
+### Bucketing
+
+Baselines are maintained **per bucket**, not per raw operation, so requests to different hosts/paths or queries with different shapes do not dilute each other. Bundled bucket-key builders:
+
+| Builder | Bucket key |
+| --- | --- |
+| `HttpClientBucketKeyBuilder` | `method` + host + templated path (numeric segments → `{id}`, UUIDs → `{uuid}`, long hex → `{hex}`) |
+| `DbBucketKeyBuilder` | `op` + normalized SQL (literals → `?`) |
+| `UiActivityBucketKeyBuilder` | `op` + activity class |
+
+A `BucketKeyResolver.standard()` ships with all three pre-registered. Apps that build their own custom transactions can implement `BucketKeyBuilder` and register additional resolvers.
+
+EWMA baselines are persisted across sessions, so the detector stabilizes quickly even on cold launches.
+
+### Enable anomaly detection
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.anomaly"
+           android:value="true" />
+```
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(Options.DetectAndReportAnomaly, true);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+  </TabItem>
+</Tabs>
+
+**Option keys:** `DetectAndReportAnomaly` (`com.bugsee.option.detect.anomaly`). Disabled by default.
+
+## Early detection
+
+Some crashes happen so early in process startup that they occur **before** the SDK's regular `launch()` has completed wiring up its handlers. `DetectAndReportEarlyCrash` installs the crash handler in the SDK's auto-init phase (via `BugseeInitProvider`) so that these very-early failures can still be captured.
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.early-crash"
+           android:value="true" />
+```
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(Options.DetectAndReportEarlyCrash, true);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+  </TabItem>
+</Tabs>
+
+**Option keys:** `DetectAndReportEarlyCrash` (`com.bugsee.option.detect.early-crash`). Disabled by default.
+
+## HTTP errors as issues
+
+When enabled, the SDK treats failed HTTP responses (e.g. `4xx` / `5xx`) as reportable issues in their own right, in addition to being recorded as breadcrumbs on regular reports. Use this to surface backend regressions without relying on a user submitting a bug.
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.http-errors"
+           android:value="true" />
+```
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(Options.DetectAndReportHttpErrors, true);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+  </TabItem>
+</Tabs>
+
+**Option keys:** `DetectAndReportHttpErrors` (`com.bugsee.option.detect.http-errors`). Disabled by default.
+
+## All detection option keys
+
+The table below is the complete set of detection options recognized by the 7.x Beta SDK. Any of them can be set programmatically via `Options.*` constants or in `AndroidManifest.xml` as `<meta-data>` entries. Programmatic values take precedence. For the general option mechanism see [configuration](/sdk/android/v7/configuration).
+
+| `Options` constant | Manifest key | Type | Default |
+| --- | --- | --- | --- |
+| `DetectAndReportCrash` | `com.bugsee.option.detect.crash` | boolean | `true` |
+| `NdkOptions.DetectAndReport` _(in `bugsee-android-ndk`)_ | `com.bugsee.option.detect.crash-ndk` | boolean | `false` |
+| `DetectAndReportEarlyCrash` | `com.bugsee.option.detect.early-crash` | boolean | `false` |
+| `DetectAndReportHang` | `com.bugsee.option.detect.hang` | boolean | `false` |
+| `DetectAndReportMainThreadMisuse` | `com.bugsee.option.detect.main_thread_misuse` | boolean | `false` |
+| `DetectAndReportAnomaly` | `com.bugsee.option.detect.anomaly` | boolean | `false` |
+| `DetectAndReportHttpErrors` | `com.bugsee.option.detect.http-errors` | boolean | `false` |
+| `DetectAndReportExit` | `com.bugsee.option.detect.exit` | boolean | `false` |
+| `DetectAndReportExitLowMemory` | `com.bugsee.option.detect.exit.low_memory` | boolean | `true` |
+| `DetectAndReportExitNotResponding` | `com.bugsee.option.detect.exit.not_responding` | boolean | `true` |
+| `DetectAndReportExitExcessiveResourceUsage` | `com.bugsee.option.detect.exit.excessive_resource_usage` | boolean | `false` |
+| `DetectAndReportExitDependencyDied` | `com.bugsee.option.detect.exit.dependency_died` | boolean | `false` |
+| `DetectAndReportExitUserRequested` | `com.bugsee.option.detect.exit.user_requested` | boolean | `false` |
+| `DetectAndReportExitUserWasStopped` | `com.bugsee.option.detect.exit.user_was_stopped` | boolean | `false` |
+| `DetectAndReportExitPermissionChanged` | `com.bugsee.option.detect.exit.permission_changed` | boolean | `false` |
+| `DetectAndReportExitPackageUpdated` | `com.bugsee.option.detect.exit.package_updated` | boolean | `false` |
+| `DetectAndReportExitPackageStateChanged` | `com.bugsee.option.detect.exit.package_state_changed` | boolean | `false` |
+| `DetectAndReportExitOther` | `com.bugsee.option.detect.exit.other` | boolean | `false` |
+| `DetectAndReportExitUnknown` | `com.bugsee.option.detect.exit.unknown` | boolean | `false` |
+
+:::tip See also
+- [Crash reports](/sdk/android/v7/crashes) — Java/Kotlin and NDK crash setup, ProGuard/R8 mapping uploads.
+- [Configuration](/sdk/android/v7/configuration) — how options are read at launch.
+- [Gradle plugin](/sdk/android/gradle-plugin) — required for main-thread misuse detection.
+:::

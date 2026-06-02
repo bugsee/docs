@@ -1,0 +1,144 @@
+---
+title: "Configuration"
+description: "Reference for all Bugsee Cordova SDK launch options for iOS and Android, including video, network, and reporting settings."
+sidebar_position: 1
+slug: "/sdk/cordova/configuration"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Launching with options
+
+:::warning
+iOS/iPadOS: Since v7.0.0 the underlying Bugsee iOS SDK supports the simulator; crash capture is excluded. For full functionality, launch your app with Bugsee on a real device.
+:::
+
+Bugsee behavior is very customizable. If the default configuration does not satisfy your needs, you can launch the SDK with additional parameters. Use an instance of ```IOSLaunchOptions``` or ```AndroidLaunchOptions``` for the corresponding platform to change Bugsee behavior.
+
+
+<Tabs groupId="platform">
+  <TabItem value="ios" label="iOS">
+
+```javascript
+var bugseeOptions = new Bugsee.IOSLaunchOptions();
+
+bugseeOptions.shakeToReport = true;
+bugseeOptions.reportPrioritySelector = true;
+bugseeOptions.defaultBugPriority = Bugsee.BugseeSeverityLevel.Critical;
+
+Bugsee.launch("<your token>", bugseeOptions);
+```
+
+  </TabItem>
+  <TabItem value="android" label="Android">
+
+```javascript
+var bugseeOptions = new Bugsee.AndroidLaunchOptions();
+
+bugseeOptions.shakeToReport = true;
+bugseeOptions.notificationBarTrigger = false;
+
+Bugsee.launch("<your token>", bugseeOptions);
+```
+
+  </TabItem>
+</Tabs>
+
+### Available Options
+
+#### For iOS
+
+|Key|Default|Notes
+|---|---|---|
+|captureDeviceAndNetworkNames|true|Capture device name, wifi SSID and mobile carrier name.|
+|captureLogs|true|Automatically capture all console logs|
+|crashReport|true|Catch and report application crashes (\*)|
+|defaultBugPriority|Low|Default priority for bugs|
+|defaultCrashPriority|Blocker|Default priority for crashes|
+|killDetection|false|Detect abnormal termination (experimental, [read more](/sdk/ios/app-kills/))|
+|maxRecordingTime|60|Maximum recording duration|
+|monitorNetwork|true|Capture network traffic|
+|reportPrioritySelector|false|Allow user to modify priority when reporting manual|
+|screenshotToReport|true|Screenshot key to trigger report|
+|shakeToReport|false|Shake gesture to trigger report|
+|style|Default|Enumeration of Default, Dark and BasedOnStatusBar
+|videoEnabled|true|Enable video recording|
+|frameRate|High|Specifies how often frames are captured|
+|screenshotEnabled|true|Attach screenshot to a report|
+|wifiOnlyUpload|false|Upload reports only when a device is connected to a WiFi network|
+|maxDataSize|50|Bugsee will avoid using more disk space than specified (in MB). If total Bugsee data size exceeds specified value, oldest recordings (even not sent) will be removed. Value should not be smaller than 10|
+
+:::warning
+* iOS allows only one crash detector to be active at a time. If you insist on using an alternative solution for handling crashes, you might want to use this option and disable Bugsee from taking over.
+:::
+
+
+#### For Android
+
+|Key|Default|Notes
+|---|---|---|
+|captureDeviceAndNetworkNames|true|Capture device name, wifi SSID and mobile carrier name.|
+|captureLogs|true|Automatically capture all console logs|
+|crashReport|true|Catch and report application crashes|
+|defaultBugPriority|Low|Default priority for bugs|
+|defaultCrashPriority|Blocker|Default priority for crashes|
+|extendedVideoMode|true|Enables or disables the use of MediaProjection API (\*\*)|
+|frameRate|High|Specifies how often frames are captured|
+|logLevel|Verbose|Minimal log level of Logcat messages, which will be attached to report|
+|maxDataSize|50|Maximum disk space consumed by Bugsee|
+|maxRecordingTime|60|Maximum recording duration|
+|monitorNetwork|true|Capture network traffic|
+|notificationBarTrigger|true|Trigger report from notification bar|
+|reportPrioritySelector|false|Allow user to modify priority when reporting manual|
+|screenshotEnabled|true|Attach screenshot to a report|
+|serviceMode|false|Used, when Bugsee is launched from service. No video and no visual controls available. Recording continues even in background.|
+|shakeToReport|false|Shake gesture to trigger report|
+|videoEnabled|true|Enable video recording|
+|wifiOnlyUpload|false|Upload reports only when a device is connected to a WiFi network|
+
+:::warning
+** If extendedVideoMode is set to true, the MediaProjection API is used while recording video. In this case, all types of views are recorded, but the user is asked to allow video recording. If false (experimental), the view drawing cache is used to capture the screen. In this case, the user is not asked to allow video recording, but the frame rate is lower and some special views like the status bar, soft keyboard, and views that contain Surface (MapView, VideoView, GlSurfaceView, etc.) are not recorded. This option has no effect if the VideoEnabled option is set to false.
+:::
+
+
+## Stop, Relaunch 
+
+It is also possible to relaunch Bugsee with other options later.
+
+
+<Tabs groupId="platform">
+  <TabItem value="ios" label="iOS">
+
+```javascript
+// Relaunch with other options.
+var options = new Bugsee.IOSLaunchOptions();
+
+// Set other launch options
+//...
+
+Bugsee.relaunch(options);
+```
+
+  </TabItem>
+  <TabItem value="android" label="Android">
+
+```javascript
+// Relaunch with other options.
+var options = new Bugsee.AndroidLaunchOptions();
+
+// Set other launch options
+//...
+
+Bugsee.relaunch(options);
+```
+
+  </TabItem>
+</Tabs>
+
+Alternatively, you can stop the events and video recording.
+
+```javascript
+// Stop recording completely
+Bugsee.stop()
+```
