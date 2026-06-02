@@ -7,7 +7,7 @@ slug: "/ai/plugins"
 
 # Plugins
 
-The Bugsee plugin gives your AI coding assistant everything it needs to work with Bugsee in a single install: the official **agent skills** (SDK setup wizards and debugging workflows) plus a connection to the read-only **Bugsee MCP server**. It is open source at [github.com/bugsee/bugsee-for-ai](https://github.com/bugsee/bugsee-for-ai).
+The Bugsee plugin gives your AI coding assistant everything it needs to work with Bugsee in a single install: the official **agent skills** (SDK setup wizards and debugging workflows) plus a connection to the **Bugsee MCP server**. It is open source at [github.com/bugsee/bugsee-for-ai](https://github.com/bugsee/bugsee-for-ai).
 
 ## What the plugin provides
 
