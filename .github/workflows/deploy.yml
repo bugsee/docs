@@ -3,6 +3,15 @@ name: Build and Deploy
 on:
   push:
     branches: [main]
+    # Skip deploys for changes that can't affect the built site.
+    # (workflow_dispatch below always deploys, regardless of paths.)
+    paths-ignore:
+      - '.github/**'
+      - '.claude/**'
+      - '.vscode/**'
+      - 'README.md'
+      - 'LICENSE'
+      - '.gitignore'
   workflow_dispatch:
 
 # Required for GitHub OIDC -> AWS IAM role assumption (no stored AWS keys).
