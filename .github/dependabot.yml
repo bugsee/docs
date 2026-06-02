@@ -1,0 +1,41 @@
+# Dependabot — automated dependency-update PRs.
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+version: 2
+updates:
+  # JavaScript / npm dependencies (the Docusaurus site)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      # All @docusaurus/* packages are version-locked and must bump together.
+      docusaurus:
+        patterns:
+          - "@docusaurus/*"
+      # React core moves as a pair.
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+      # Bundle remaining minor/patch updates into one PR to cut noise;
+      # major bumps still get their own PR for careful review.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions used by the deploy workflow (.github/workflows/)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      actions:
+        patterns:
+          - "*"
