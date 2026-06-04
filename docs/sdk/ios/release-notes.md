@@ -5,6 +5,11 @@ sidebar_position: 12
 slug: "/sdk/ios/release-notes"
 ---
 
+## 6.1.6 (May 30 2026)
+- Fix: Customized "Done" button could be invisible or unresponsive when the host app applies custom navigation-bar button styling.
+- Fix: Crash when handling malformed network data from WebViews (non-string URL values).
+- Feat: Internal improvements for WebView.
+
 ## 6.1.5 (May 13 2026)
 - Feat: Build info & size analysis support. Every Archive now registers a build record on Bugsee with version, configuration, VCS context, timings, and the main executable's Mach-O `LC_UUID` — joining every crash report deterministically to the build that produced it. See [Build size analysis](/sdk/ios/build-size-analysis) for setup.
 - Feat: Optional IPA upload for server-side size analysis (download / install size, per-category breakdown, per-file diffs). Opt in via `BUGSEE_SIZE_ANALYSIS_ENABLED=1` in the scheme's Environment Variables.
