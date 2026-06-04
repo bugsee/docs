@@ -5,7 +5,7 @@ sidebar_position: 0
 slug: "/sdk/unity/installation"
 ---
 
-:::info Agent-Assisted Setup
+:::info[Agent-Assisted Setup]
 Ask your AI coding assistant:
 
 ```text

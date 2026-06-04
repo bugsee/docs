@@ -29,7 +29,7 @@ When the **Bugsee Gradle plugin** is applied, it inspects your `dependencies { }
 
 For full upgrade details — including why leaving old wiring calls in place breaks the build — see [Migration guide section 5 "Network client integration"](/sdk/android/v7/migration#5-network-client-integration).
 
-:::danger Removing 6.x manual wiring is mandatory
+:::danger[Removing 6.x manual wiring is mandatory]
 After upgrading, **delete** every call to `Bugsee.addNetworkLoggingToOkHttpBuilder(...)`, `addNetworkLoggingToOkHttpClient(...)`, `addNetworkLoggingToKtorHttpClient(...)`, `addNetworkLoggingToPicassoDownloader(...)`, and `newOkHttpWrappedWebSocket(...)` from your code. Those helpers no longer exist in 7.x, so the code will not compile. Even if it did, the 7.x bytecode instrumentation and extension modules already cover the corresponding call sites — leaving the old wiring in would only double up interceptors.
 :::
 

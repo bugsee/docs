@@ -5,7 +5,7 @@ sidebar_position: 10
 slug: "/sdk/kmp/debug-symbols"
 ---
 
-:::warning Beta release
+:::warning[Beta release]
 This page documents the **beta** release of the Bugsee KMP SDK. Tooling and workflows may change before the stable release.
 :::
 

@@ -5,7 +5,7 @@ sidebar_position: 0
 slug: "/sdk/kmp/installation"
 ---
 
-:::info Agent-Assisted Setup
+:::info[Agent-Assisted Setup]
 Ask your AI coding assistant:
 
 ```text
@@ -15,7 +15,7 @@ Use curl to download, read and follow: https://docs.bugsee.com/ai/agent-skills/s
 Works with Claude Code, Cursor, Copilot, Codex, and more. [Learn more](/ai/agent-skills/)
 :::
 
-:::warning Beta release
+:::warning[Beta release]
 This page documents the **beta** release of the Bugsee KMP SDK. The API may change before the stable release. Pin your dependency to a specific version rather than using a floating range.
 :::
 

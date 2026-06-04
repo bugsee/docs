@@ -8,7 +8,7 @@ slug: "/sdk/android/v7/custom"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-:::info 7.x Beta
+:::info[7.x Beta]
 This page documents the Bugsee Android SDK **7.x (beta)**. APIs and behavior may change before general availability. For the stable 6.x documentation, see [Adding custom data](/sdk/android/custom/).
 :::
 
@@ -145,7 +145,7 @@ Bugsee.clearAllAttributes()
 
 ## User identity
 
-:::info New in 7.x
+:::info[New in 7.x]
 7.x introduces a dedicated user identity API. It replaces the 6.x `Bugsee.setEmail(...)` / `Bugsee.getEmail()` pair, which has been removed.
 :::
 
@@ -184,7 +184,7 @@ Bugsee.clearUserIdentifier()
 
 ## Logging unhandled exceptions
 
-:::info New in 7.x
+:::info[New in 7.x]
 `Bugsee.logUnhandledException(Throwable)` is new in 7.x. The existing `Bugsee.logException(...)` API is preserved for non-terminal, handled errors.
 :::
 

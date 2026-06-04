@@ -12,7 +12,7 @@ There are two ways to connect an MCP client to the Bugsee MCP server. Pick which
 
 The base URL `https://api.bugsee.com/mcp` is the same for both flows; only the auth differs.
 
-:::warning Treat token-bearing URLs like a password
+:::warning[Treat token-bearing URLs like a password]
 The token-embedded form (`/mcp/<token>`) carries credentials in the URL. Anyone who obtains that URL gets the same access to your Bugsee data as you do. Never share it, never commit it to a repository, and prefer OAuth where the client supports it.
 :::
 

@@ -5,7 +5,7 @@ sidebar_position: 17
 slug: "/sdk/android/v7/release-notes"
 ---
 
-:::caution Beta
+:::caution[Beta]
 Bugsee Android SDK 7.x is currently in beta. APIs, options, and the Gradle plugin contract may still change before the stable release. For production workloads, consider staying on the [6.x line](/sdk/android/release-notes). See the [migration guide](/sdk/android/v7/migration) when planning your upgrade.
 :::
 

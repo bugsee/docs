@@ -8,7 +8,7 @@ slug: "/sdk/android/v7/installation"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-:::warning Beta release
+:::warning[Beta release]
 This page documents the **7.x Beta** of the Bugsee Android SDK. The API, option keys, and module layout differ significantly from 6.x. For the stable release, see the [6.x installation guide](/sdk/android/installation). If you are upgrading, read the [migration guide](/sdk/android/v7/migration) first.
 :::
 
@@ -88,7 +88,7 @@ What the plugin does at build time:
 
 Each capability can be toggled via the `bugsee { instrumentation { ... } }` block. See the [Gradle plugin reference](/sdk/android/v7/gradle-plugin) for details.
 
-:::caution Plugin 4.x is paired with SDK 7.x
+:::caution[Plugin 4.x is paired with SDK 7.x]
 The Gradle plugin and the runtime library are versioned independently but must
 be matched by line: **SDK 7.x requires plugin 4.x**, and **plugin 3.x requires
 SDK 6.x**. Mixing the two lines will fail at build or runtime.

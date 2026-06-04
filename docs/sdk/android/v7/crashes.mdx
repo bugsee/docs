@@ -8,7 +8,7 @@ slug: "/sdk/android/v7/crashes"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-:::caution 7.x Beta
+:::caution[7.x Beta]
 This page documents the **7.x beta** of the Bugsee Android SDK. APIs and
 defaults may change before the stable release. For the production API, see
 the [6.x crash reports guide](/sdk/android/crashes).
@@ -30,7 +30,7 @@ Java crash detection is on by default.
 
 ### Native (NDK) crash detection
 
-:::caution Separate extension module since 7.0.0-beta6
+:::caution[Separate extension module since 7.0.0-beta6]
 NDK crash detection lives in its own extension module — `com.bugsee:bugsee-android-ndk` — and is not pulled in by `bugsee-android` itself. Add the dependency explicitly if your app includes native code:
 
 ```kotlin

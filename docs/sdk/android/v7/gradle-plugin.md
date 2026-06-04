@@ -5,7 +5,7 @@ sidebar_position: 15
 slug: "/sdk/android/v7/gradle-plugin"
 ---
 
-:::caution 7.x Beta
+:::caution[7.x Beta]
 This document describes the Bugsee Android SDK **7.x (beta)**. In 6.x, no Gradle plugin was required — the SDK worked purely as a runtime library. In 7.x, the `com.bugsee:bugsee-android-gradle-plugin` is **mandatory** even when you only depend on the core `bugsee-android` artifact. The plugin is what unlocks:
 
 - **APM** — DB, file-I/O, and network operation instrumentation that feeds `db.*` / `file.*` / `http.client` spans.
@@ -85,7 +85,7 @@ Each instrumentation runs against every class in the application variant via AGP
 | `okhttp` | `bugsee-android-okhttp` | Injects `BugseeOkHttpInterceptor` into every `OkHttpClient.Builder.build()` call site (frame computation: `COPY_FRAMES`). | Makes the OkHttp extension fully transparent — embedders never call any wiring API. |
 | `composeInput` | `bugsee-android` **and** `androidx.compose.ui:ui` | Instruments `AndroidComposeView.dispatchTouchEvent(MotionEvent)` to call `BugseeComposeInputAdapter.onComposeTouch(view, event)` at the start of the method. | Captures touch events inside Jetpack Compose UI. `AndroidComposeView` overrides `dispatchTouchEvent` without calling `super`, so neither overlay views nor `OnTouchListener` see Compose touches. |
 
-:::note Cronet and Ktor are not bytecode-instrumented
+:::note[Cronet and Ktor are not bytecode-instrumented]
 The plugin **does not** bytecode-instrument Cronet (`org.chromium.net.CronetEngine`). Cronet has no interceptor pipeline and the `Builder.build()` call site sits inside the Cronet artifact, so the only mechanism that works is wrapping the engine. The plugin auto-pulls `bugsee-android-cronet` when it detects a Cronet dependency, but the embedder still has to call `BugseeCronet.instrument(engine)` once per engine instance. The same pattern applies to Ktor 2 / Ktor 3 — the plugin auto-pulls the artifact, but the embedder must `install(...)` the plugin in each `HttpClient` because Ktor's pipeline is opt-in per client.
 :::
 
@@ -118,7 +118,7 @@ If you already declared the matching Bugsee artifact yourself, the plugin leaves
 
 Auto-install is also suppressed when the plugin is applied to a project that is itself a Bugsee SDK module (avoiding circular dependencies on `:library`, `:okhttp`, etc.).
 
-:::note When the plugin is absent
+:::note[When the plugin is absent]
 Auto-install happens only when the Bugsee Gradle plugin is applied. In Maven builds, or in Gradle builds where you have chosen not to apply the plugin, **every extension module must be added manually** to your `dependencies { }` / `pom.xml` — nothing is pulled in for you, even when the third-party dependency (OkHttp, Ktor, Cronet, Compose) is present. See [Extensions — Without the Bugsee Gradle plugin](/sdk/android/v7/extensions#without-the-bugsee-gradle-plugin) for the full manual declaration set.
 :::
 
@@ -533,7 +533,7 @@ Each key path mirrors the DSL field name (camelCase, dotted-path).
 | `plugin.instrumentation.cronet` | Boolean | `true` |
 | `plugin.instrumentation.startupTier` | Enum (`OFF`, `MINIMAL`, `STANDARD`, `DETAILED`, `FULL`) | `STANDARD` |
 
-:::note App token uses an unprefixed key
+:::note[App token uses an unprefixed key]
 The app token is set via the unprefixed `app_token=…` key, **not**
 `plugin.appToken=…`. The DSL provides richer token-resolution forms
 (closure, provider, per-variant resolver) that have no
@@ -655,7 +655,7 @@ plugin expects the exact runtime-library shape shipped alongside it.
 | 3.x | 6.x | Stable | — | — |
 | **4.x** | **7.x** | **Beta** | 8.6.0 | 8.7+ |
 
-:::caution Compatibility is strict between lines
+:::caution[Compatibility is strict between lines]
 - Use **plugin 4.x only with SDK 7.x**, and **plugin 3.x only with SDK 6.x**. Mixing lines will fail at build or runtime.
 - Plugin 4.x introduces new instrumentation hooks and auto-install rules keyed on the `bugsee-android-*` artifact names introduced in SDK 7.x; it cannot target the single-AAR 6.x layout.
 - Plugin 3.x has no knowledge of the 7.x module split, APM operation dispatch, Compose transforms, or the new manifest-metadata auto-launch, so SDK 7.x will not function correctly under it.

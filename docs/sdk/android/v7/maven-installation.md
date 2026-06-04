@@ -5,7 +5,7 @@ sidebar_position: 16
 slug: "/sdk/android/v7/maven-installation"
 ---
 
-:::caution 7.x is in beta
+:::caution[7.x is in beta]
 Bugsee Android SDK 7.x is currently in **beta**. APIs and artifact layout may still change before the stable release.
 
 **Gradle is strongly recommended for 7.x.** A large portion of 7.x functionality is delivered through the Bugsee Gradle plugin (`com.bugsee:bugsee-android-gradle-plugin`): bytecode instrumentation for APM, main-thread misuse detection, automatic network-client interception, Compose secure-modifier auto-injection, and mapping / native-symbol uploads. **None of those features are available under a plain Maven build** — you will need to wire equivalents manually, or accept that they are disabled.

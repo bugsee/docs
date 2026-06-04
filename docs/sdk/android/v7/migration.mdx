@@ -8,13 +8,13 @@ slug: "/sdk/android/v7/migration"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-:::warning Bugsee Android SDK 7.x (beta)
+:::warning[Bugsee Android SDK 7.x (beta)]
 This guide targets the 7.x release line, which is currently in **beta**. If you are setting up a brand-new project, start from the [7.x installation guide](/sdk/android/v7/installation) instead. For stable (6.x) installs, see the main [installation guide](/sdk/android/installation).
 :::
 
 This guide walks SDK embedders through every public-API change between Bugsee Android SDK 6.x (`bugsee-android` AAR) and 7.x (`bugsee-android` + extension modules).
 
-:::note TL;DR
+:::note[TL;DR]
 7.x is a near-total rewrite. Many 6.x methods still exist with the same name but the dependency layout, the option keys, the listener shapes, and the network-client integration model have all changed. You will need code changes; an annotation-only upgrade is not possible.
 :::
 
@@ -26,7 +26,7 @@ This guide walks SDK embedders through every public-API change between Bugsee An
 
 7.x relies on bytecode and Kotlin-compiler instrumentation provided by the Bugsee Gradle plugin. It is **mandatory** even if you only use the core artifact — without it, several features stop working entirely.
 
-:::caution Use plugin 4.x with SDK 7.x
+:::caution[Use plugin 4.x with SDK 7.x]
 The Bugsee Gradle plugin is versioned independently of the SDK runtime library. **Plugin 4.x is paired with SDK 7.x** (both currently in beta); **plugin 3.x is paired with SDK 6.x**. The two lines are not interchangeable — if you pull the 7.x SDK into a project that still references a 3.x plugin version, the build or runtime will fail. See [Gradle plugin — Requirements and compatibility](/sdk/android/v7/gradle-plugin#requirements-and-compatibility) for the supported plugin version.
 :::
 
@@ -77,7 +77,7 @@ Every instrumentation and auto-install rule can be toggled individually through 
 Bytecode instrumentation is only applied to **application** modules (`com.android.application`). Library modules are not instrumented.
 :::
 
-:::warning Cronet and Ktor are *not* fully transparent
+:::warning[Cronet and Ktor are *not* fully transparent]
 Even with the Gradle plugin doing dependency auto-install, you still need to wrap your `CronetEngine` (`BugseeCronet.instrument(engine)`) and `install(...)` the Bugsee plugin into every Ktor `HttpClient` you create. The "manual wiring" rows in [§5](#5-network-client-integration) cover the exact call sites.
 :::
 

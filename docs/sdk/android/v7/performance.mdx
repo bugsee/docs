@@ -8,7 +8,7 @@ slug: "/sdk/android/v7/performance"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-:::info 7.x Beta
+:::info[7.x Beta]
 Application Performance Monitoring (APM) is an entirely new subsystem introduced in Bugsee Android SDK 7.x. It has no 6.x equivalent. The API surface is stable, but the feature is still labelled beta and may evolve.
 :::
 
@@ -35,7 +35,7 @@ The SDK ships several providers that produce spans automatically. All providers 
 
 **File I/O performance.** Emits `file.read` and `file.write` spans around guarded file operations. Like the database provider, it relies on bytecode instrumentation performed by the Bugsee Gradle plugin.
 
-:::note Gradle plugin required for DB and File I/O spans
+:::note[Gradle plugin required for DB and File I/O spans]
 `db.*`, `file.read`, and `file.write` spans are produced via bytecode instrumentation. Add the Bugsee Gradle plugin to your build — see [Gradle plugin](/sdk/android/v7/gradle-plugin).
 :::
 

@@ -5,7 +5,7 @@ sidebar_position: 1
 slug: "/sdk/kmp/configuration"
 ---
 
-:::warning Beta release
+:::warning[Beta release]
 This page documents the Bugsee KMP SDK **beta**. Option names, defaults, and behavior may change before the stable release.
 :::
 

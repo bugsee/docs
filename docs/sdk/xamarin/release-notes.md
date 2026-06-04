@@ -5,7 +5,7 @@ sidebar_position: 11
 slug: "/sdk/xamarin/release-notes"
 ---
 
-:::caution Deprecated
+:::caution[Deprecated]
 Microsoft ended support for Xamarin on May 1, 2024. The Bugsee Xamarin SDK is no longer actively maintained. For new projects, use the [Bugsee .NET SDK](/sdk/dotnet/installation/), which supports .NET MAUI and modern .NET workloads.
 :::
 

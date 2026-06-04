@@ -5,7 +5,7 @@ sidebar_position: 1
 slug: "/sdk/android/v7/privacy/overview"
 ---
 
-:::warning 7.x Beta
+:::warning[7.x Beta]
 This page documents the 7.x beta line. For the stable release, see the
 [6.x privacy overview](/sdk/android/privacy/overview/).
 :::

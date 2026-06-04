@@ -8,7 +8,7 @@ slug: "/sdk/android/v7/privacy/breadcrumbs"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-:::warning 7.x Beta
+:::warning[7.x Beta]
 This page documents the 7.x beta line. Breadcrumb filtering is **new in 7.0.0-beta6**; there is no equivalent on the 6.x stable line.
 :::
 
@@ -44,7 +44,7 @@ Most apps should keep capture on and use the filter below to scrub or drop only 
 
 The filter shape mirrors [`setLogEventFilter`](/sdk/android/v7/privacy/logs) and [`setNetworkEventFilter`](/sdk/android/v7/privacy/network) — same generic `EventFilter<T>` interface, single synchronous method, no completion callback.
 
-:::caution Producer-side URL sanitization removed
+:::caution[Producer-side URL sanitization removed]
 Before 7.0.0-beta6, HTTP-request breadcrumbs had hardcoded URL sanitization baked into the producer (query-string masking, `*` substitution on certain segments). That logic has been **removed**: HTTP-request URLs are now emitted verbatim and you opt into masking, PII redaction, or drop semantics through this filter. If you depended on the old producer-side behavior, install a filter that reproduces it.
 :::
 

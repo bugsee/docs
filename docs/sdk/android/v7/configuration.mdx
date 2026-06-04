@@ -8,7 +8,7 @@ slug: "/sdk/android/v7/configuration"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-:::warning 7.x is currently in beta
+:::warning[7.x is currently in beta]
 This page documents Bugsee Android SDK **7.x (beta)**. The stable 6.x
 configuration reference is available at [/sdk/android/configuration](/sdk/android/configuration)
 for comparison. Option names, defaults, and behavior may still change
@@ -32,7 +32,7 @@ to `Bugsee.launch()` take precedence over values declared in the manifest.
    `OptionsContainer` interface, and is what extensions receive inside their
    `launch(OptionsContainer)` callback.
 
-:::note LaunchOptions builder removed in 7.x
+:::note[LaunchOptions builder removed in 7.x]
 The legacy `LaunchOptions` class from 6.x has been removed. All
 configuration in 7.x flows through either the manifest or the
 `Map<String, Serializable>` passed to `launch()`. See the

@@ -91,7 +91,7 @@ end
 
 ## Build info & Size analysis
 
-:::info Requires Bugsee iOS SDK 6.1.5 or newer
+:::info[Requires Bugsee iOS SDK 6.1.5 or newer]
 The full build-publish flow (build info, size analysis, in-build size check, chunked upload) ships in **6.1.5** ([release notes](/sdk/ios/release-notes#615-may-13-2026)). On older SDKs the post-action only handles dSYM upload and silently ignores the `BUGSEE_BUILD_INFO_*` / `BUGSEE_SIZE_*` env vars described below.
 :::
 
@@ -149,11 +149,11 @@ All variables read by `BugseeAgent`'s build-publish flow. Empty-string values (e
 | `BUGSEE_SIZE_CHECK_WARNING_BYTES` | unset | int | Warn at absolute growth ≥ N bytes (e.g. `500000` → +500 KB). |
 | `BUGSEE_SIZE_CHECK_FAIL_BYTES` | unset | int | Fail at absolute growth ≥ N bytes. |
 
-:::warning Build artefacts ≠ Archive artefacts
+:::warning[Build artefacts ≠ Archive artefacts]
 A Debug ⌘R `.app` is unsigned, unthinned, and contains debug-only assets — its `artifact_size` is not comparable to a Release archive's size. The size-check feature scopes its baseline by `(package_id, format, build_configuration)` so cross-configuration comparisons never happen, but every Build & Run will produce a build record when `BUGSEE_BUILD_INFO_ALL_ACTIONS=1`. Use deliberately (CI registration, not developer iteration).
 :::
 
-:::warning iOS asymmetry
+:::warning[iOS asymmetry]
 Post-action `error:` lines surface in the daemon's log file (`$PROJECT_TEMP_DIR/BugseeAgent.log`), **not** the `xcodebuild` build log — Xcode does not retroactively fail an already-signed build from a post-action. CI runs that need hard gating on size growth should grep the daemon log for the `error: Bugsee size check` prefix.
 :::
 
@@ -367,7 +367,7 @@ should see a `Bugsee: build upload complete` line in
 do it when I'm ready.
 ```
 
-:::warning Don't paste the app token into the prompt
+:::warning[Don't paste the app token into the prompt]
 The prompt deliberately asks the agent to prompt you for the app token rather than guess. Don't substitute the literal token in the text you paste — agents that log conversations may surface it later in transcripts or shared training data.
 :::
 

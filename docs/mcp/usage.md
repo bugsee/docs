@@ -84,7 +84,7 @@ Get a single issue by its key (e.g., `"MYAPP-123"`). Returns a plain-text report
 | `errors_surrounding` | object | Context around error entries (only with `entries="errors"`). Fields: `entries_before`, `entries_after` (number of entries), `time_before`, `time_after` (milliseconds). |
 | `range` | object | Range specification (only with `entries="range"`). Fields: `from_index`, `to_index` (entry positions), `from_time`, `to_time` (timestamps in ms). |
 
-:::tip Recommended workflow
+:::tip[Recommended workflow]
 1. Call `get_issue` **without** `include_logs` to inspect the issue first.
 2. If logs are needed, use `entries="errors"` with `deduplicate_errors=true` or `max_log_entries` to limit output.
 3. Use `entries="all"` only when you specifically need the full session log.
@@ -257,7 +257,7 @@ Prefer this over `get_build` + `include: ["vuln_scan_summary"]` when the questio
 
 Queue a vulnerability scan against a specific build's resolved dependency graph (OSV + GitHub Advisory). The scan runs asynchronously in the worker; this tool returns as soon as the build is admitted to the queue.
 
-:::caution Mutating tool
+:::caution[Mutating tool]
 This is the only mutating tool the MCP server exports today. It writes the build doc and enqueues a worker message. It is **not** idempotent — repeated calls within the cooldown window are rejected, not no-op. Trigger only when the agent (or the user) has a concrete reason: the user explicitly asks for a re-scan, the advisory databases were just refreshed, or the build has never been scanned and the user wants vulnerability data.
 :::
 

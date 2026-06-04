@@ -5,7 +5,7 @@ sidebar_position: 11
 slug: "/sdk/kmp/release-notes"
 ---
 
-:::caution Beta
+:::caution[Beta]
 Bugsee KMP SDK is currently in beta. APIs and options may change before the stable release.
 :::
 

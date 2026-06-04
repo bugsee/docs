@@ -8,7 +8,7 @@ slug: "/sdk/android/v7/detection"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-:::caution 7.x Beta
+:::caution[7.x Beta]
 This page documents a subsystem that is **new in 7.x** and has no 6.x equivalent. The 7.x line is currently in beta — APIs and option defaults may still evolve.
 :::
 
@@ -106,7 +106,7 @@ The full set of per-reason sub-flags is listed in the [reference table](#all-det
 
 Main-thread misuse detects I/O, network, database, or `SharedPreferences` operations executed on the UI thread — the kind of work that directly causes jank, hangs, and ANRs. When a violation is observed, Bugsee reports an issue with the offending stack trace.
 
-:::important Requires the Bugsee Gradle plugin
+:::important[Requires the Bugsee Gradle plugin]
 Main-thread misuse is powered by **bytecode instrumentation** performed by the Bugsee Gradle plugin's `mainThreadMisuse` transform. The plugin injects lightweight pre-call checks before guarded I/O, network, DB, and `SharedPreferences` operations, and the checks bridge to `BugseeMainThreadGuardAdapter` at runtime. Without the Gradle plugin, setting the option alone has no effect.
 
 See the [Gradle plugin](/sdk/android/gradle-plugin) page for setup instructions.
@@ -138,7 +138,7 @@ Bugsee.launch(this, "<APP_TOKEN>", options);
 
 Anomaly detection is new in **7.0.0-beta6**. It piggybacks on the SDK's APM subsystem: every completed transaction is fed through a per-bucket statistical baseline (exponentially weighted mean and variance, with a z-score threshold), and outliers are reported back into the standard issue / breadcrumb pipelines. The shipped detector is purely statistical — no machine-learning models are used.
 
-:::important Requires APM
+:::important[Requires APM]
 Anomaly detection consumes APM transactions, so it does nothing unless `Options.PerformanceMonitoring` is also enabled (it is on by default). The provider refuses to start when APM is disabled.
 :::
 
@@ -262,7 +262,7 @@ The table below is the complete set of detection options recognized by the 7.x B
 | `DetectAndReportExitOther` | `com.bugsee.option.detect.exit.other` | boolean | `false` |
 | `DetectAndReportExitUnknown` | `com.bugsee.option.detect.exit.unknown` | boolean | `false` |
 
-:::tip See also
+:::tip[See also]
 - [Crash reports](/sdk/android/v7/crashes) — Java/Kotlin and NDK crash setup, ProGuard/R8 mapping uploads.
 - [Configuration](/sdk/android/v7/configuration) — how options are read at launch.
 - [Gradle plugin](/sdk/android/gradle-plugin) — required for main-thread misuse detection.

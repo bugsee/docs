@@ -5,7 +5,7 @@ sidebar_position: 18
 slug: "/sdk/android/v7/faq"
 ---
 
-:::caution Beta
+:::caution[Beta]
 This FAQ covers the 7.x beta line. For the current stable release, see the [6.x FAQ](/sdk/android/faq). See the [migration guide](/sdk/android/v7/migration) if you are upgrading from 6.x.
 :::
 
