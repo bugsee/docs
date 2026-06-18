@@ -760,7 +760,10 @@ svg[class*="iconExternalLink"] {
   line-height: 1.4;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--ifm-color-emphasis-600);
+  /* Dimmer than the item links (which sit at the bright end of the emphasis
+     scale in both themes) so the headers read as muted section labels. */
+  color: var(--ifm-color-emphasis-500);
+  opacity: 0.8;
   pointer-events: none;
   user-select: none;
 }
