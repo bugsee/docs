@@ -1,0 +1,47 @@
+---
+title: "Issue detection — Overview (7.x Beta)"
+description: "The 7.x detection subsystem — built-in detectors, extension-shipped detectors, and the option keys that gate each one."
+sidebar_position: 1
+slug: "/sdk/android/v7/issue-detection"
+---
+
+:::caution[7.x Beta]
+The detection subsystem is **new in 7.x** and has no 6.x equivalent. Several detectors are off by default in the beta and must be explicitly enabled. Defaults may still evolve before the stable release.
+:::
+
+7.x introduces a dedicated **detection** subsystem that observes the running app and turns behavior deviations into Bugsee issue reports. Each detector is an independent provider — enable or disable any of them in isolation without affecting the rest of the SDK.
+
+## Built-in detectors
+
+| Detector | What it observes | Default | Documentation |
+| --- | --- | --- | --- |
+| **Crashes** | Uncaught JVM (Java / Kotlin) exceptions | On | [Crashes](/sdk/android/v7/issue-detection/crashes) |
+| **Hangs** | Main-thread stalls long enough to degrade UX, but short enough that the OS hasn't raised an ANR | Off | [Hangs](/sdk/android/v7/issue-detection/hangs) |
+| **Exits** | Process terminations reported by `ActivityManager.getHistoricalProcessExitReasons()` — ANRs, low-memory kills, dependency death, and more | On (master) / per-reason mix | [Exits](/sdk/android/v7/issue-detection/exits) |
+| **Main-thread misuse** | Blocking I/O, network, DB, or `SharedPreferences` work performed on the UI thread | Off | [Main-thread misuse](/sdk/android/v7/issue-detection/main-thread-misuse) |
+| **HTTP errors** | 5xx server responses surfaced as standalone issues | Off | [HTTP errors](/sdk/android/v7/issue-detection/http-errors) |
+| **Anomaly** | Per-bucket statistical outliers over completed APM transactions | Off | [Anomaly](/sdk/android/v7/issue-detection/anomaly) |
+| **Frustration** | UX-frustration patterns: rage taps, error taps, stuck loading, frozen UI | Off | [Frustration](/sdk/android/v7/issue-detection/frustration) |
+
+## Extension-shipped detectors
+
+| Detector | Extension | What it observes | Default | Documentation |
+| --- | --- | --- | --- | --- |
+| **Native crashes** | `bugsee-android-ndk` | Native (NDK) crashes via Crashpad, with `ApplicationExitInfo` tombstone matching | On (when module present) | [Native crashes](/sdk/android/v7/issue-detection/native-crashes) |
+| **Memory leaks** | `bugsee-android-leak` | Retained `Activity` / `Fragment` / `ViewModel` / Compose nodes via watch-source instrumentation; Shark heap-dump for deep modes | On (when module present) | [Leaks](/sdk/android/v7/issue-detection/leaks) |
+| **Thread leaks** | `bugsee-android-leak` | Thread-group growth over time as a proxy for leaking `ThreadPoolExecutor` / unbounded task scheduling (Java-only Phase 1) | Off | [Leaks](/sdk/android/v7/issue-detection/leaks) |
+
+Extension detectors register themselves with the detection coordinator at process start via their module's `ContentProvider` — adding the Gradle dependency (or DSL toggle, for `ndk` / `leak`) is the only setup required.
+
+## How options work
+
+Every detector is gated by a single `Options.*` constant from `com.bugsee.library.contracts.options`. The same string key can be set in two equivalent ways:
+
+- **As `AndroidManifest.xml` meta-data** — `<meta-data android:name="com.bugsee.option.detect.hang" android:value="true" />` under `<application>`.
+- **As an entry in the `Bugsee.launch(...)` options map** — `options.put(Options.DetectAndReportHang, true)`.
+
+Programmatic values take precedence over manifest values, so a meta-data default can be overridden at launch time per-build-flavor / per-environment. See [Configuration](/sdk/android/v7/configuration) for the full options pipeline.
+
+## All detection option keys
+
+The authoritative table of detection option keys — `Options` constants, manifest keys, types, and defaults — lives in the [Configuration → Detection](/sdk/android/v7/configuration#detection) reference, alongside the core options for capture, reporting, and APM. Extension-specific options are documented on the matching extension pages: [NDK options](/sdk/android/v7/configuration/ndk) and [Leak options](/sdk/android/v7/configuration/leak).

@@ -97,6 +97,10 @@ The full build-publish flow (build info, size analysis, in-build size check, chu
 
 The same `BugseeAgent` script that uploads dSYMs also runs a build-publish flow. Three optional layers, each controlled by environment variables you set in the scheme's "Run Script" post-action (or export in a CI step before invoking `xcodebuild`).
 
+:::tip[Powered by the Bugsee CLI]
+This whole flow is the **[Bugsee CLI](/cli/)**'s `xcode post-action` command — `BugseeAgent` shells out to it. The `BUGSEE_*` environment variables below each have a matching CLI flag (a command-line flag wins over its env var), and the same flow can run directly in CI without Xcode. See [iOS build publishing](/cli/xcode/) for the full flag reference.
+:::
+
 ### Build info — default ON
 
 Every matching build registers a record on Bugsee servers carrying:
@@ -398,6 +402,10 @@ open the file browser:
 ![Manual upload](manual-upload.png)
 
 Once a dSYM file is uploaded manually, we are going to re-process old issues related to that specific build, the process might take some time, usually several minutes.
+
+:::tip[Scripted dSYM upload]
+To upload dSYMs from a script or CI step instead of the dashboard, point the [Bugsee CLI](/cli/) at an archive's `dSYMs/` folder: `bugsee-cli debug-files upload "$ARCHIVE/dSYMs" --type dsym --version <v> --build <b>`. It discovers every bundle recursively and skips ones the server already has. See [Debug information files](/cli/debug-files/#apple-dsym).
+:::
 
 
 ## Fastlane dSYM upload

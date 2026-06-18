@@ -668,8 +668,11 @@ table#overview svg {
 .tabs__item {
   font-size: 1em;
   padding: 5px 25px;
-  border-radius: 0;
-  border-bottom: 2px solid transparent;
+  /* Reserve a 1px border on every tab so promoting one to active never
+     nudges its label by a pixel — only the active tab colours it in. */
+  border: solid 1px transparent;
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
   color: var(--ifm-font-color-base);
   opacity: 0.7;
 }
@@ -686,11 +689,18 @@ li[role="tab"]::before,
   display: none !important;
 }
 
+/* The active tab reads as one shape with the code block below it: same
+   fill, the panel's border wrapping its top + sides, and (via the panel
+   pull-up below) its bottom edge sitting over the panel's top border so
+   the border flows around the tab instead of cutting straight under it. */
 .tabs__item--active {
   background-color: var(--bugsee-code-block-bg);
-  border-bottom-color: var(--bugsee-code-block-bg);
+  border: var(--bugsee-code-block-border);
+  border-bottom: 0;
   color: var(--ifm-font-color-base);
   opacity: 1;
+  position: relative;
+  z-index: 1;
 }
 
 /* Override Prism theme background to match tabs */
@@ -706,18 +716,24 @@ div[class^="codeBlockContent"] {
   overflow: hidden;
 }
 
-/* Remove gap between tabs and code block */
-.tabs-container>.tabs {
-  margin-bottom: -16px;
-}
-
-/* Make code block inside tabs seamless with tab bar */
-.tabs-container .margin-top--md>div {
-  border-top-left-radius: 0;
+/* Seat the tab row on the panel. The panel wrapper carries Infima's
+   `.margin-top--md` (`margin-top: 1rem !important`); rather than fight that
+   `!important` on the same property, pull the panel up from the tab list with
+   a negative bottom margin — `1rem` cancels Infima's gap and the extra `1px`
+   makes the active tab overlap (and hide) the panel's top border, so the
+   border wraps the active tab instead of cutting under it. */
+.tabs-container > .tabs {
+  margin-bottom: calc(-1rem - 1px);
 }
 
 .tabs-container .margin-top--md pre {
   margin-top: 0;
+}
+
+/* When the first tab is the active one it occupies the panel's top-left, so
+   square that corner of the panel — the active tab's own rounded top-left
+   becomes the shape's corner and the left edge reads as one straight line. */
+.tabs-container:has(> .tabs > .tabs__item:first-child.tabs__item--active) div[class^="codeBlockContent"] {
   border-top-left-radius: 0;
 }
 

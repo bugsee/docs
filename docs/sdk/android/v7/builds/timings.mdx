@@ -1,0 +1,151 @@
+---
+title: "Build timings (7.x Beta)"
+description: "Per-task wall-clock spans, category buckets, regression deltas, and the Gantt waterfall view in Bugsee's build detail page."
+sidebar_position: 2
+slug: "/sdk/android/v7/builds/timings"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::caution[7.x Beta]
+Build-timings capture is **new in 7.x**. The Gradle plugin installs a build-listener `BuildService` that records every task's wall-clock span and uploads a categorised summary plus an optional detail blob with every build.
+:::
+
+## What gets captured
+
+The plugin's `BuildTimingService` registers as a `BuildOperationListener` and records `TaskFinishEvent`s as they fire. For every executed task it captures:
+
+- The **fully qualified task path** (`:app:bundleRelease`, `:library:kotlinCompileRelease`, …).
+- The **start and end timestamps** as monotonic offsets from build start.
+- The **category** assigned by `TaskCategoryClassifier`. Five buckets:
+  - **managed_code** — Kotlin/Java compilation, KAPT, R8, dexing, mapping generation
+  - **native** — CMake, NDK compilation, native stripping
+  - **resources** — AAPT2, asset processing, manifest merging
+  - **packaging** — bundle / APK assembly, signing, alignment
+  - **other** — everything else (clean, validation, custom Gradle tasks)
+
+Excluded by design: configuration-phase work (which Gradle doesn't expose as task events) and tasks shorter than the noise floor.
+
+## What gets uploaded
+
+Every build POST carries an inline `build_metadata.timings` summary regardless of detail-blob status. The summary is small (under 1 KiB) and renders the dashboard's chip strip directly:
+
+```json
+{
+  "managed_code_ms": 12340,
+  "native_ms": 3120,
+  "resources_ms": 4080,
+  "packaging_ms": 1860,
+  "other_ms": 520,
+  "total_ms": 19620,
+  "top_tasks": [
+    { "name": ":app:bundleRelease", "duration_ms": 8200 },
+    { "name": ":library:kotlinCompileRelease", "duration_ms": 3100 },
+    { "name": ":app:processReleaseResources", "duration_ms": 2700 }
+  ]
+}
+```
+
+`total_ms` is the **wall-clock span** of build execution (max-end minus min-start), not the arithmetic sum of per-task durations — parallel tasks overlap.
+
+The detail blob is a separately gzipped JSON shipped to a dedicated presigned PUT URL when `timings.enabled` is `true`:
+
+```json
+{
+  "schema_version": 1,
+  "build_started_at_ms": 1717423200000,
+  "wall_clock_ms": 19620,
+  "tasks": [
+    {
+      "path": ":app:bundleRelease",
+      "category": "packaging",
+      "start_ms": 12420,
+      "end_ms": 20620
+    },
+    {
+      "path": ":library:kotlinCompileRelease",
+      "category": "managed_code",
+      "start_ms": 1200,
+      "end_ms": 4300
+    }
+  ]
+}
+```
+
+Offsets are relative to `build_started_at_ms` (millis since epoch), keeping the per-task entries compact. The blob is capped at 10 000 entries — when a build has more tasks, the **slowest** entries are retained so the waterfall stays representative.
+
+## Configuration
+
+<Tabs groupId="build-android">
+  <TabItem value="kts" label="build.gradle.kts">
+
+```kotlin
+bugsee {
+    buildInfo {
+        // Master gate for the entire buildInfo block — must be true
+        // for any of the below to apply. Default: true.
+        // enabled.set(true)
+
+        timings {
+            // Enable wall-clock timing capture + detail-blob upload.
+            // The inline summary is always shipped when the master
+            // `buildInfo.enabled` is true; this knob only gates the
+            // detail blob and the Gantt waterfall view.
+            // Default: true.
+            enabled.set(true)
+        }
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="groovy" label="build.gradle">
+
+```groovy
+bugsee {
+    buildInfo {
+        // enabled.set true        // master gate, default: true
+        timings {
+            enabled.set true        // default: true
+        }
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+Disabling `timings.enabled` keeps the inline summary intact (so the dashboard's chip strip still shows category totals) but skips the detail-blob upload — the Gantt waterfall tab falls back to a stacked-bar fallback derived from the summary.
+
+The same defaults apply across CI and local builds. To suppress timings on a specific build, pass `-Pbugsee.buildInfo.timings.enabled=false` on the Gradle invocation.
+
+## What you see in the dashboard
+
+The build detail page's **Timings** tab is rendered when the build record has `timings_status == 'ready'`. Three sections, top to bottom:
+
+### Stat chip strip
+
+One chip for **Total** (wall-clock), then one per category with a colored swatch. Each chip is labelled with the absolute duration (`12.3 s`) and, when a previous build is available, a delta from the previous build (`+0.4 s` or `−1.2 s`).
+
+### Regression summary
+
+A second strip — visible only when a previous build is available — summarising the diff:
+
+- **Total delta** — wall-clock change vs the previous build.
+- **Regressed** — count of tasks that got slower by more than the noise floor (100 ms).
+- **Improved** — count of tasks that got faster by more than the noise floor.
+
+This lets you spot single-commit timing regressions without scanning the waterfall.
+
+### Gantt waterfall
+
+When the detail blob is present, the tab renders a **per-task Gantt waterfall** — tasks plotted on a horizontal time axis with category-colored bars. Parallel tasks share rows so the visualisation captures Gradle's actual execution shape, not a stacked total.
+
+When the detail blob is absent (timings disabled, build still uploading, or worker job not yet complete), the waterfall is replaced by a stacked-bar fallback derived from the inline summary — still useful, but lacks per-task drill-down.
+
+## Worker pipeline
+
+A successful upload triggers `jobs.timings.Process` on the Bugsee worker. The job validates the schema, re-uploads the same gzipped bytes to the customer's per-build S3 prefix (`{org}/{app}/builds/{build}/timings.json`) with `Content-Encoding: gzip`, computes a diff vs the previous build (matching task paths only), and PATCHes `timings_ref` + `timings_status='ready'` on the build record.
+
+Failure paths (oversize blob, schema mismatch, S3 transient errors) PATCH `timings_status='failed'` and surface a "Timings unavailable" state on the dashboard rather than hanging the rest of the build pipeline.

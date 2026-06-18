@@ -1,0 +1,105 @@
+---
+title: "Bugsee CLI"
+description: "The Bugsee CLI is a cross-platform command-line tool for uploading debug information files, source maps, and build artefacts, and for resolving build metadata in CI."
+sidebar_position: 0
+slug: "/cli"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Bugsee CLI
+
+`bugsee-cli` is a single, cross-platform command-line tool that handles the
+build-time side of Bugsee: it uploads **debug information files** (R8/ProGuard
+mappings, native ELF symbols, Apple dSYMs, JavaScript source maps), uploads
+**build artefacts** for size analysis, packages **build-info** metadata, and
+resolves **build-environment metadata** (VCS, CI provider, iOS dependency graph,
+Xcode version, Mach-O UUIDs) — all from one binary.
+
+It is the canonical origin for everything Bugsee needs at build time. The
+per-build-system integrations (the Android Gradle plugin, the iOS SDK's build
+script, the fastlane plugin, and others) shell out to it rather than each
+re-implementing HTTP, compression, retry, chunking, and the presigned-upload
+handshake.
+
+:::note
+You usually don't run `bugsee-cli` by hand. The Bugsee SDKs and build plugins
+download and invoke it for you. This section documents the CLI directly for CI
+pipelines, custom build systems, and anyone who wants to script uploads
+themselves.
+:::
+
+## What it does
+
+| Area | Commands |
+|---|---|
+| Debug information files | [`debug-files upload`](/cli/debug-files/) |
+| JavaScript source maps | [`sourcemaps inject`](/cli/sourcemaps/) + `debug-files upload --type sourcemaps` |
+| Build artefacts & metadata | [`upload build`](/cli/builds/), [`upload build-info`](/cli/builds/), [`pack`](/cli/builds/) |
+| iOS build publishing | [`xcode post-action`](/cli/xcode/) |
+| Build metadata resolvers | [`vcs-metadata`, `ios-deps`, `build-env`, `dsym`](/cli/metadata/) |
+| Self-update | [`update`](/cli/update/) |
+
+## Quick start
+
+Install the latest release (downloads and **SHA-256-verifies** the binary for
+your host from `download.bugsee.com`):
+
+<Tabs groupId="os">
+  <TabItem value="unix" label="Linux, macOS" default>
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSfL https://download.bugsee.com/cli/install.sh | sh
+```
+
+  </TabItem>
+  <TabItem value="windows" label="Windows">
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://download.bugsee.com/cli/install.ps1 | iex"
+```
+
+  </TabItem>
+</Tabs>
+
+Upload an Android R8/ProGuard mapping:
+
+<Tabs groupId="token-style">
+  <TabItem value="inline" label="Inline token" default>
+
+```bash
+bugsee-cli debug-files upload ./app/build/outputs/mapping/release \
+    --app-token "your-app-token" \
+    --version 1.4.0 --build 1400
+```
+
+  </TabItem>
+  <TabItem value="env" label="Environment variable">
+
+```bash
+export BUGSEE_APP_TOKEN="your-app-token"
+
+bugsee-cli debug-files upload ./app/build/outputs/mapping/release \
+    --version 1.4.0 --build 1400
+```
+
+  </TabItem>
+</Tabs>
+
+See [Installation](/cli/installation/) for every install channel and
+[Configuration](/cli/configuration/) for tokens, endpoints, and environment
+variables.
+
+## Design notes
+
+- **Exit codes are a contract.** Metadata resolvers exit `0` even when they find
+  nothing (callers inspect the JSON shape, not the exit code); upload commands
+  use a [structured exit-code contract](/cli/exit-codes/) so an integrator can
+  decide whether to fall back to its own uploader.
+- **Output is JSON on stdout** for every resolver subcommand, so the tool
+  composes cleanly into scripts.
+- **No telemetry beyond an uploader header.** The only thing the CLI reports
+  about itself is an `X-Bugsee-Uploader: cli` header on metadata POSTs, so the
+  backend can distinguish CLI uploads from legacy in-language uploads. See
+  [Exit codes & telemetry](/cli/exit-codes/#telemetry-header).

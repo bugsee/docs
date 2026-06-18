@@ -1,0 +1,77 @@
+---
+title: "Abnormal exits (7.x Beta)"
+description: "Process terminations reported by ActivityManager.getHistoricalProcessExitReasons() — ANRs, low-memory kills, and unexpected ends of the app process."
+sidebar_position: 5
+slug: "/sdk/android/v7/issue-detection/exits"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::caution[7.x Beta]
+APIs and defaults may still change before the 7.0 stable release. Requires API 30+ (Android 11+); the detector is silently inert on older OS versions.
+:::
+
+The **exit detector** surfaces process terminations that the user would otherwise never see — ANRs, low-memory kills, excessive-resource-usage kills, and other unexpected ends of the app process. It's powered by Android's `ActivityManager.getHistoricalProcessExitReasons()` API and aligns with the termination reasons reported on the Google Play Console **Android vitals** dashboard.
+
+On the first launch each session, the detector queries the historical exit list on a background thread, deduplicates against the previously-processed timestamp, and maps each new record to one of the per-reason domains documented below. The matching ANR trace file is attached to ANR reports when present.
+
+## Configuration
+
+The detector is **layered**: a master switch enables the provider, then per-reason sub-flags decide which termination reasons are actually reported. Sub-flags are only consulted when the master switch is on. The master defaults to `true`, and two sub-flags also default to `true`, so out of the box the detector already reports the most important cases (low-memory kills + ANR exits).
+
+### Master switch
+
+| Form | Setting |
+| --- | --- |
+| Manifest meta-data | `<meta-data android:name="com.bugsee.option.detect.exit" android:value="false" />` |
+| `Bugsee.launch()` map | `options.put(Options.DetectAndReportExit, false)` |
+| Default | `true` |
+
+Opting **in** to additional exit reasons beyond the defaults:
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<!-- Master is on by default — no need to declare it. -->
+<meta-data android:name="com.bugsee.option.detect.exit.excessive_resource_usage"
+           android:value="true" />
+<meta-data android:name="com.bugsee.option.detect.exit.user_requested"
+           android:value="true" />
+```
+
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(Options.DetectAndReportExitExcessiveResourceUsage, true);
+options.put(Options.DetectAndReportExitUserRequested, true);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+
+  </TabItem>
+</Tabs>
+
+### Per-reason sub-flags
+
+| Reason | `Options` constant | Manifest key | Default |
+| --- | --- | --- | --- |
+| Low-memory kill | `DetectAndReportExitLowMemory` | `com.bugsee.option.detect.exit.low_memory` | `true` |
+| ANR / not responding | `DetectAndReportExitNotResponding` | `com.bugsee.option.detect.exit.not_responding` | `true` |
+| Excessive resource usage | `DetectAndReportExitExcessiveResourceUsage` | `com.bugsee.option.detect.exit.excessive_resource_usage` | `false` |
+| Dependency died | `DetectAndReportExitDependencyDied` | `com.bugsee.option.detect.exit.dependency_died` | `false` |
+| User requested | `DetectAndReportExitUserRequested` | `com.bugsee.option.detect.exit.user_requested` | `false` |
+| User was stopped | `DetectAndReportExitUserWasStopped` | `com.bugsee.option.detect.exit.user_was_stopped` | `false` |
+| Permission changed | `DetectAndReportExitPermissionChanged` | `com.bugsee.option.detect.exit.permission_changed` | `false` |
+| Package updated | `DetectAndReportExitPackageUpdated` | `com.bugsee.option.detect.exit.package_updated` | `false` |
+| Package state changed | `DetectAndReportExitPackageStateChanged` | `com.bugsee.option.detect.exit.package_state_changed` | `false` |
+| Other | `DetectAndReportExitOther` | `com.bugsee.option.detect.exit.other` | `false` |
+| Unknown | `DetectAndReportExitUnknown` | `com.bugsee.option.detect.exit.unknown` | `false` |
+
+The reasons map directly onto `ApplicationExitInfo.getReason()` codes — see [the platform reference](https://developer.android.com/reference/android/app/ApplicationExitInfo) for the upstream documentation.
+
+## See also
+
+- [Configuration → Detection](/sdk/android/v7/configuration#detection) — the option-key reference for all detection options including the per-reason exit sub-flags.

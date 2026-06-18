@@ -27,12 +27,12 @@ via `Bugsee.deleteCollectedDataOnDevice(...)`.
 
 | Page | Covers |
 | --- | --- |
-| [Video and touch](/sdk/android/v7/privacy/video/) | `addSecureActivity`, `addSecureView`, `addSecureRectangle`, `addSecureWebView`, `startBlackout` / `endBlackout`, Compose `Modifier.bugseeSecure()`. |
-| [Console logs](/sdk/android/v7/privacy/logs/) | `Bugsee.setLogEventFilter(EventFilter<LogEvent>)`. |
-| [Network traffic](/sdk/android/v7/privacy/network/) | `Bugsee.setNetworkEventFilter(EventFilter<NetworkEvent>)`. |
-| [Breadcrumbs](/sdk/android/v7/privacy/breadcrumbs/) | `Bugsee.setBreadcrumbFilter(EventFilter<Breadcrumb>)` — _new in 7.0.0-beta6._ |
-| [Report fields](/sdk/android/v7/privacy/report/) | `Bugsee.setReportHandler(ReportHandler)` for pre/post report mutation. |
-| [Cleanup](/sdk/android/v7/privacy/cleanup/) | `Bugsee.deleteCollectedDataOnDevice(...)`, `clearAllAttributes()`. |
+| [Video and touch](/sdk/android/v7/privacy/video) | `addSecureActivity`, `addSecureView`, `addSecureRectangle`, `addSecureWebView`, `startBlackout` / `endBlackout`, Compose `Modifier.bugseeSecure()`. |
+| [Console logs](/sdk/android/v7/privacy/logs) | `Bugsee.setLogEventFilter(EventFilter<LogEvent>)`. |
+| [Network traffic](/sdk/android/v7/privacy/network) | `Bugsee.setNetworkEventFilter(EventFilter<NetworkEvent>)`. |
+| [Breadcrumbs](/sdk/android/v7/privacy/breadcrumbs) | `Bugsee.setBreadcrumbFilter(EventFilter<Breadcrumb>)` — _new in 7.0.0-beta6._ |
+| [Report fields](/sdk/android/v7/privacy/report) | `Bugsee.setReportHandler(ReportHandler)` for pre/post report mutation. |
+| [Cleanup](/sdk/android/v7/privacy/cleanup) | `Bugsee.deleteCollectedDataOnDevice(...)`, `clearAllAttributes()`. |
 
 It remains the responsibility of the application developer to scrub any
 sensitive data from reports before they leave the device.

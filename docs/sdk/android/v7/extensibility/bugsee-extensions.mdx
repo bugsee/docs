@@ -1,20 +1,20 @@
 ---
-title: "Extensions (7.x Beta)"
-description: "The Bugsee extension framework — auto-registered optional modules (feedback, OkHttp, Ktor 2/3, Cronet, Compose), retrieval via Bugsee.ext(), and custom extension authoring."
-sidebar_position: 14
-slug: "/sdk/android/v7/extensions"
+title: "Bugsee extensions (7.x Beta)"
+description: "First-party extension modules — feedback, NDK, OkHttp, Ktor 2/3, Cronet, Compose — and how the Bugsee Gradle plugin auto-installs them."
+sidebar_position: 2
+slug: "/sdk/android/v7/extensibility/bugsee-extensions"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 :::caution[7.x Beta]
-This page documents the **7.x beta** of the Bugsee Android SDK. The extension framework is **new in 7.x**: capabilities that used to live inside the monolithic AAR (feedback UI, HTTP-client network capture, Compose integration) are now optional modules you pull in only if you need them.
+This page documents the **7.x beta** of the Bugsee Android SDK. Capabilities that used to live inside the monolithic 6.x AAR — feedback UI, HTTP-client network capture, Compose integration — are now optional modules you pull in only if you need them.
 :::
 
-## What is an extension?
+## What is a Bugsee extension?
 
-An **extension** is an optional Bugsee SDK capability shipped as a separate Gradle module. There is no manual initialization code: each extension module ships its own `ContentProvider` that the Android manifest merger pulls into your app, and that provider registers the extension with the core SDK at process startup.
+A **Bugsee extension** is an optional SDK capability shipped by Bugsee as a separate Gradle module. There is no manual initialization code: each extension module ships its own `ContentProvider` that the Android manifest merger pulls into your app, and that provider registers the extension with the core SDK at process startup.
 
 In practice this means **adding the Gradle dependency is all that's needed**. When `Bugsee.launch(...)` runs, every registered extension is launched automatically; when `Bugsee.stop()` runs, they are stopped.
 
@@ -25,7 +25,8 @@ Extensions are keyed in the SDK registry by their **contract interface** type (f
 | Artifact | Purpose | Documentation |
 | --- | --- | --- |
 | `com.bugsee:bugsee-android-feedback` | In-app feedback messenger UI. | [Feedback](/sdk/android/v7/feedback) |
-| `com.bugsee:bugsee-android-ndk` | Native (NDK) crash detection via Breakpad, with `ApplicationExitInfo` matching. | [Crashes](/sdk/android/v7/crashes) |
+| `com.bugsee:bugsee-android-ndk` | Native (NDK) crash detection via Crashpad, with `ApplicationExitInfo` matching. | [Native crashes](/sdk/android/v7/issue-detection/native-crashes) |
+| `com.bugsee:bugsee-android-leak` | Memory- and thread-leak detection via watch-source instrumentation and Shark heap dumps. | [Memory & thread leaks](/sdk/android/v7/issue-detection/leaks) |
 | `com.bugsee:bugsee-android-okhttp` | Transparent network capture for OkHttp 3/4 clients. | [Network](/sdk/android/v7/network) |
 | `com.bugsee:bugsee-android-ktor-2` | Network capture plugin for Ktor 2.x `HttpClient`. | [Network](/sdk/android/v7/network) |
 | `com.bugsee:bugsee-android-ktor-3` | Network capture plugin for Ktor 3.x `HttpClient`. | [Network](/sdk/android/v7/network) |
@@ -49,6 +50,27 @@ When the [Bugsee Gradle plugin](/sdk/android/v7/gradle-plugin) is applied, it in
 If you already declared the matching artifact yourself, the plugin leaves your declaration alone. Each auto-install rule can be disabled individually via the `bugsee { instrumentation { … } }` DSL block (`okhttp`, `ktor`, `cronet`, `compose`). See the [Gradle plugin reference](/sdk/android/v7/gradle-plugin#auto-install-of-extension-modules) for the full list.
 
 Auto-install only covers artifacts that are dependency-driven. Extensions with no corresponding third-party trigger — notably **`bugsee-android-feedback`** and **`bugsee-android-ndk`** — must always be declared explicitly in your `dependencies { }` block.
+
+### Core SDK pulled by extension declaration
+
+When the Bugsee Gradle plugin is applied, declaring **only** an extension is sufficient — the plugin auto-pulls the matching `com.bugsee:bugsee-android` core SDK if it isn't already declared. So either of these is a complete setup:
+
+```kotlin
+dependencies {
+    implementation("com.bugsee:bugsee-android-feedback:7.x.x")
+    // core SDK auto-pulled by the Bugsee Gradle plugin
+}
+```
+
+```kotlin
+dependencies {
+    implementation("com.bugsee:bugsee-android:7.x.x")
+    implementation("com.bugsee:bugsee-android-feedback:7.x.x")
+    // both declared explicitly — the plugin sees the core is present and skips auto-load
+}
+```
+
+The auto-pulled version is the latest patch of the same `MAJOR.MINOR` series the plugin was released against (e.g. `[7.0.0-beta12, 7.1.0)`), so you pick up patch updates without bumping the plugin and never silently cross a minor boundary. Opt out via `bugsee { sdkAutoLoad.set(false) }` if you ship the core SDK from a manual classpath path or a locally-published artefact — see the [Gradle plugin reference](/sdk/android/v7/gradle-plugin#auto-load-of-the-core-sdk).
 
 For OkHttp, installation is fully transparent: the plugin's bytecode instrumentation injects the Bugsee interceptor at every `OkHttpClient.Builder.build()` call site. For **Ktor 2 / Ktor 3 / Cronet**, the plugin adds the artifact but your code still needs an explicit `install(BugseeKtorPlugin...)` / `BugseeCronet.instrument(engine)` call — these clients do not expose a transparent interception point.
 
@@ -101,7 +123,7 @@ The exact signatures on `Bugsee`:
 
 ```java
 static <T extends Extension> T    ext(Class<T> extensionType);
-static <T extends Extension> void registerExt(Class<T> extensionType, T instance);
+static <T extends Extension> void registerExt(Class<T> extInterface, Extension extension);
 ```
 
 <Tabs groupId="lang-android">
@@ -143,22 +165,6 @@ Extensions participate in the core SDK lifecycle automatically:
 
 Each extension's `launch` / `stop` call is isolated: a failure in one extension never affects the others or the core SDK.
 
-## Custom extensions
+## Writing your own
 
-The extension framework is open — third-party code (including your own app or an internal library) can ship a custom extension that registers itself alongside the first-party ones.
-
-A custom extension is a class that implements the base `Extension` contract from the core SDK:
-
-```java
-package com.bugsee.library.contracts.extensions;
-
-public interface Extension {
-    Class<? extends Extension> getType();
-    void launch(OptionsContainer options);
-    void stop();
-}
-```
-
-Your extension defines its own sub-interface that extends `Extension`, implements a facade class that implements that sub-interface, and registers itself at app startup via a `ContentProvider` declared in its module's `AndroidManifest.xml`. Consumers then retrieve it with `Bugsee.ext(YourInterface.class)` exactly like the first-party extensions.
-
-The authoring rules for a clean extension module — package layout, manifest `initOrder`, naming conventions, and how to hook into the core SDK's capture/lifecycle/appearance subsystems — ship with the Bugsee Android SDK source tree. Contact Bugsee support if you are building a custom extension and need the detailed authoring guide.
+The extension framework is open: anything Bugsee ships, you can ship too. For instructions on authoring your own generic extension module, custom capture provider, custom detection provider, or custom APM provider, see **[Custom extensions](/sdk/android/v7/extensibility/custom-extensions)**.

@@ -1,0 +1,90 @@
+---
+title: "Build vulnerabilities (iOS)"
+description: "Server-side OSV scan over your captured CocoaPods / SPM / Carthage dependencies, severity buckets, manual re-scan, and advisory drill-down."
+sidebar_position: 4
+slug: "/sdk/ios/builds/vulnerabilities"
+---
+
+:::info[Requires Bugsee iOS SDK 6.1.5 or newer]
+Vulnerability scanning is fully **server-side** — the `BugseeAgent` post-action does no scanning of its own and adds no env var of its own. The scan runs against the [dependencies blob](/sdk/ios/builds/dependencies) the agent uploads, so the only producer-side requirement is that dependency capture be enabled (it is, by default, in **6.1.5+**).
+:::
+
+## How the scan runs
+
+Bugsee's worker fires the vulnerability-scan job automatically as soon as the build's `dependencies_status` flips to `'ready'`. The job:
+
+1. Downloads the dependency blob the agent just uploaded.
+2. Filters to scannable entries — CocoaPods and SPM packages, plus Git-based Carthage entries. `binary` Carthage entries are skipped (no Git URL to map to an advisory) and `project` / `file` entries are skipped (no published package identity).
+3. Queries **OSV.dev** in batches for matching advisories. iOS packages map to OSV's `SwiftURL` ecosystem — the query keys off each package's Git `url` (which is why SPM and Carthage entries carry it, and why CocoaPods pods are resolved to their source repository).
+4. For every advisory ID returned, fetches the full record so the dashboard can show summary text, severity, fixed-in versions, and references.
+5. Cross-references **GitHub Security Advisory** (GHSA) when a backend GitHub token is configured, to pick up severity and freshness data that OSV sometimes lacks.
+6. Derives a numeric **CVSS base score** from the v3 / v3.1 vector when present.
+
+The scan is automatic. There is no producer-side toggle to enable or disable it; to suppress it, disable the parent dependency capture (`BUGSEE_DEPENDENCIES_ENABLED=0`).
+
+## What gets stored
+
+The build record's vulnerability summary is an inline aggregate that drives the dashboard's chip strip:
+
+```json
+{
+  "vuln_count": 5,
+  "affected_entries_count": 3,
+  "scanned_at": "2026-06-10T14:32:18Z",
+  "critical_count": 0,
+  "high_count": 2,
+  "medium_count": 2,
+  "low_count": 1,
+  "info_count": 0
+}
+```
+
+The full per-vulnerability blob — advisory ID, aliases (CVE / GHSA / OSV), severity, CVSS base score, summary, fixed-in versions, references, and the list of affected dependency IDs — lives in S3 under the customer's per-build prefix and is loaded on demand when you open a vuln-detail dialog.
+
+## What you see in the dashboard
+
+Vulnerabilities surface **inside the Dependencies tab** of the build detail page, between the dependencies chip strip and the per-dependency table.
+
+### Strip states
+
+The strip's render depends on the scan summary and status:
+
+- **In progress** — a small inline progress hint; if the most recent successful scan is stale (older than the current dependencies upload), a "scan is out of date" note appears.
+- **Failed** — a retry prompt appears (subject to the cooldown below).
+- **Ready, with findings** — chips appear for **Vulnerabilities** (total), **Affected** (number of dependency entries flagged), and severity-counted chips: **Critical**, **High**, **Medium**, **Low**, **Info**. Each severity chip uses the same color scheme as the rest of the Bugsee dashboard.
+- **Ready, no findings** — a green confirmation pill is shown.
+
+### Per-vulnerability dialog
+
+Click a severity chip or a row in the affected-deps list to open the vuln-details dialog. It surfaces:
+
+- Severity badge (colored by Critical / High / Medium / Low / Info).
+- Advisory ID and aliases (`GHSA-…`, `CVE-…`, `OSV-…`).
+- CVSS base score (when derived from a v3 / v3.1 vector).
+- Plain-language summary.
+- Fixed-in version range.
+- Reference URLs (advisory pages, commits, mailing-list threads).
+- The list of dependency entries in this build that are affected.
+
+### Manual re-scan
+
+The build detail header's overflow menu offers a "Scan for vulnerabilities" action that re-runs the OSV scan against the same dependencies blob. Two cooldowns guard this:
+
+- **3-hour cooldown** on the last *successful* scan. If the most recent successful scan is younger than 3 h, the menu item is disabled with a tooltip explaining when the next re-scan is allowed. This prevents accidental bursts of OSV.dev traffic from rapid clicks.
+- **1-hour cooldown** on the last *attempt* (successful or not), so a failing scan can't loop at high frequency.
+
+Use the manual re-scan when you know an advisory was published recently and want to confirm it's now flagged on an older build, or when a previous scan landed `failed` for a transient reason. The same action is exposed programmatically via the [`trigger_build_vuln_scan` MCP tool](/mcp/usage).
+
+## How it interacts with build comparisons
+
+When you view a build that has a previous neighbour, Bugsee shows the **vuln diff** alongside the dependencies diff:
+
+- **New vulnerabilities** — findings that weren't flagged on the previous build but are flagged here. These are the highest-signal entries — they correlate with a recent dependency bump and are worth gating release on.
+- **Resolved** — findings that were flagged previously and no longer are. Useful for confirming a dependency upgrade actually closed the issue.
+- **Unchanged** — findings carried over from the previous build. Typically transitives you can't easily upgrade — the diff view lets you de-prioritise them when triaging.
+
+## Caveats
+
+- **Public advisories only.** OSV.dev mirrors public advisory databases (GitHub Security Advisory, NVD, distro security teams). Vulnerabilities disclosed only in private channels don't appear here.
+- **Binary Carthage frameworks aren't scanned.** A `binary "…"` Carthage entry has no Git URL, so it can't be mapped to an advisory — it's listed in the dependency table but skipped by the scanner.
+- **Severity sometimes blank.** When neither OSV nor GHSA exposes a CVSS vector for an advisory (common for ancient CVEs or vendor-only disclosures), the entry lands in the **Info** bucket rather than being silently dropped, so you can still see the advisory exists.

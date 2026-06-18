@@ -1,0 +1,158 @@
+---
+title: "Build dependencies (7.x Beta)"
+description: "Resolved-runtime classpath capture, DSL knobs for scope and selection-reason capture, and how dependencies show up in the dashboard."
+sidebar_position: 3
+slug: "/sdk/android/v7/builds/dependencies"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::caution[7.x Beta]
+Build-dependencies capture is **new in 7.x**. The Gradle plugin walks the resolved classpath at task execution and uploads a normalised DFS-ordered list. The same blob feeds Bugsee's [vulnerability scan](/sdk/android/v7/builds/vulnerabilities), so capturing dependencies is also the gate for OSV-backed CVE reporting.
+:::
+
+## What gets captured
+
+The plugin's `DependencyCollector` resolves a Gradle configuration (`runtime` by default), walks it in **depth-first pre-order**, and emits a `DependencyEntry` for every node:
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Stable identifier — `group:name:version` for libraries, project path for project deps, file name for file deps |
+| `group` / `name` / `version` | Maven coordinates (library entries only) |
+| `direct` | `true` if the entry is in your `build.gradle` directly; `false` for transitive entries |
+| `scope` | The configuration the entry was resolved from (e.g. `"runtime"`) |
+| `type` | `"library"` (Maven artefact), `"project"` (multi-module project dep), `"file"` (local jar/aar) |
+| `parents` | The list of `id`s that pulled this entry in — useful for "why is this here?" debugging |
+| `selected_reason` | Gradle's resolution reason string (e.g. "between versions 1.2 and 1.4 chose 1.4 by conflict resolution"); only populated when explicitly requested via DSL |
+| `ecosystem` | Always `"maven"` on library entries — required so the vulnerability scanner can query OSV against the correct package universe |
+
+The walk is bounded by `maxCount` (default 5000); entries past the cap are dropped and the upload is flagged `truncated: true`.
+
+## What gets uploaded
+
+The inline `dependencies_summary` is a top-level key on the build POST body — a compact aggregate that always ships with the build POST:
+
+```json
+{
+  "total": 312,
+  "direct": 24,
+  "transitive": 288,
+  "by_type": {
+    "library": 296,
+    "project": 12,
+    "file": 4
+  },
+  "truncated": false,
+  "collected_at": "2026-06-10T14:30:00Z",
+  "collection_config": {
+    "scope": "runtime",
+    "include_selected_reason": false,
+    "max_count": 5000
+  }
+}
+```
+
+The detail blob — gzipped JSON — is shipped to a separate presigned PUT URL when `dependencies.enabled` is `true`:
+
+```json
+{
+  "schema_version": 1,
+  "truncated": false,
+  "collection_config": { "scope": "runtime", "include_selected_reason": false, "max_count": 5000 },
+  "dependencies": [
+    {
+      "id": "androidx.compose.ui:ui:1.6.4",
+      "group": "androidx.compose.ui",
+      "name": "ui",
+      "version": "1.6.4",
+      "direct": true,
+      "scope": "runtime",
+      "type": "library",
+      "ecosystem": "maven",
+      "parents": []
+    }
+  ]
+}
+```
+
+The `collection_config` block is captured **on every blob** so the worker's diff logic can refuse to compare apples-to-oranges: a build collected with `max_count=5000` is never diffed against one collected with `max_count=1000`.
+
+## Configuration
+
+<Tabs groupId="build-android">
+  <TabItem value="kts" label="build.gradle.kts">
+
+```kotlin
+bugsee {
+    buildInfo {
+        dependencies {
+            // Enable the upload of the gzipped detail blob (and
+            // therefore the dashboard's per-dependency table and
+            // the vulnerability scan). The inline summary always
+            // ships when `buildInfo.enabled` is true.
+            // Default: true.
+            enabled.set(true)
+
+            // Gradle configuration to walk. Default: "runtime".
+            // Use "compileClasspath" or a custom configuration name
+            // to capture compile-only or annotation-processor deps.
+            // scope.set("runtime")
+
+            // Include Gradle's `selectedReason` string on each
+            // entry. Useful for diagnosing version-conflict
+            // resolution but bloats the blob significantly.
+            // Default: false.
+            // includeSelectedReason.set(false)
+
+            // Hard cap on entries. Entries past the cap are
+            // dropped and `truncated: true` is set on the blob.
+            // Default: 5000.
+            // maxCount.set(5000)
+        }
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="groovy" label="build.gradle">
+
+```groovy
+bugsee {
+    buildInfo {
+        dependencies {
+            enabled.set true                  // default: true
+            // scope.set 'runtime'             // default: 'runtime'
+            // includeSelectedReason.set false // default: false
+            // maxCount.set 5000               // default: 5000
+        }
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## What you see in the dashboard
+
+The build detail page's **Dependencies** tab is rendered when `dependencies_status == 'ready'`. Two parts:
+
+### Stat chip strip
+
+Across the top: **Total**, **Direct**, **Transitive**, **Library**, **Project**, **File**. When `truncated` is true, a warning chip appears so the cap doesn't silently hide the tail.
+
+When the worker job is still in flight, a status pill replaces the chips — `uploading` (blob in transit), `processing` (worker normalising and diffing), or `failed` (schema mismatch / oversize / S3 transient).
+
+### Vulnerability strip
+
+The Dependencies tab is also where Bugsee's vulnerability findings show up — see the dedicated [Vulnerabilities](/sdk/android/v7/builds/vulnerabilities) page for the details. The strip renders between the chip row and the table whenever `vuln_scan_summary` is populated.
+
+### Per-dependency table
+
+A scrollable, sortable, filterable table listing every captured entry. Columns: `id`, `direct/transitive`, `type`, `parents` count, and (when present) `selected_reason`. Click a row to expand the full parents path — useful for tracing "why is this transitive dep here?" through the import graph.
+
+## Worker pipeline
+
+The S3 ObjectCreated event for the uploaded dependencies blob is routed to `jobs.dependencies.Process` on the Bugsee worker. The pipeline mirrors timings: bootstrap PATCH (`dependencies_status='processing'`) → download with cap (32 MiB inflated, 100 000 entries) → validate `schema_version` → re-upload the gzipped bytes to the per-build S3 prefix → run a diff vs the previous build (gated on identical `collection_config` so the diff stays meaningful) → final PATCH (`dependencies_ref`, `dependencies_status='ready'`).
+
+When `dependencies_status` flips to `'ready'`, the worker also enqueues the [vulnerability scan job](/sdk/android/v7/builds/vulnerabilities) for the same build — vulnerabilities are derived from the dependencies list, so the scan can't run before the dependencies blob lands.

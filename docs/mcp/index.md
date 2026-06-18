@@ -14,7 +14,7 @@ The Bugsee MCP server gives any MCP-aware AI agent secure, scoped access to your
 ## What you can do with it
 
 - **Triage**: ask the agent which crashes are spiking, blocking the most users, or newly appearing in a specific app version.
-- **Root-cause analysis**: pull a single issue with its stack trace and surrounding log entries, and have the agent map it to source files and explain the failure.
+- **Root-cause analysis**: pull a single issue with its stack trace and surrounding log entries, and have the agent map it to source files and explain the failure — including memory/thread-leak analysis (leaking class, retained size, GC-root reference chain) for leak issues.
 - **Regression hunting**: diff issues across releases to spot what's new in the next build.
 - **Bug-report to PR**: turn a user-submitted bug report into a proposed code change without leaving the IDE.
 - **Build health**: check a build's app/install size, see what a release added or removed, and catch size, dependency, or build-timing regressions against the baseline.

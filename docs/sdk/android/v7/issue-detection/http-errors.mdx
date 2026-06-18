@@ -1,0 +1,55 @@
+---
+title: "HTTP errors (7.x Beta)"
+description: "Surface 5xx server responses as standalone Bugsee issues."
+sidebar_position: 7
+slug: "/sdk/android/v7/issue-detection/http-errors"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::caution[7.x Beta]
+APIs and defaults may still change before the 7.0 stable release.
+:::
+
+The **HTTP error detector** treats failed HTTP responses as reportable issues in their own right, in addition to being recorded as breadcrumbs on regular reports. Use it to surface backend regressions without relying on a user submitting a bug report — the detector fires automatically when a 5xx response is observed in the SDK's network event stream.
+
+Reports are deduplicated per `(method, normalised URL, status)` so a flapping endpoint doesn't flood Bugsee with one report per request.
+
+## Configuration
+
+| Form | Setting |
+| --- | --- |
+| Manifest meta-data | `<meta-data android:name="com.bugsee.option.detect.http-errors" android:value="true" />` |
+| `Bugsee.launch()` map | `options.put(Options.DetectAndReportHttpErrors, true)` |
+| Default | `false` |
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.http-errors"
+           android:value="true" />
+```
+
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(Options.DetectAndReportHttpErrors, true);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+
+  </TabItem>
+</Tabs>
+
+## What gets flagged
+
+Only **5xx server errors** are flagged today — `500`, `502`, `503`, `504`, and similar. 4xx responses are intentionally excluded; they typically reflect client-side issues (auth, validation, missing resource) that are part of normal operation and would otherwise dominate the noise.
+
+The detector subscribes to the same network event stream the SDK uses for the network breadcrumbs / request capture. Coverage is therefore equivalent to whatever network library you've wired into Bugsee — OkHttp, Ktor 2/3, Cronet, or the platform `HttpURLConnection`.
+
+## See also
+
+- [Configuration → Detection](/sdk/android/v7/configuration#detection) — the option-key reference for all detection options.

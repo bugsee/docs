@@ -1,0 +1,121 @@
+---
+title: "Native crashes — NDK (7.x Beta)"
+description: "Native crash detection via Crashpad, tombstone matching, and native debug-symbol upload — shipped in the bugsee-android-ndk extension."
+sidebar_position: 3
+slug: "/sdk/android/v7/issue-detection/native-crashes"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::caution[7.x Beta]
+Native crash detection is shipped as the **`bugsee-android-ndk` extension module** since 7.0.0-beta6. The core `bugsee-android` artefact does not include it — you must add the extension explicitly (or via the Gradle plugin DSL).
+:::
+
+The **native crash detector** captures crashes that originate in native code — SIGSEGV / SIGABRT / SIGBUS / other fatal signals — via Google's Crashpad library. The handler runs out of process so a corrupted heap or stack doesn't prevent the report from being written; on the next launch the SDK parses Crashpad's minidump and uploads it as a fatal Bugsee report.
+
+## Add the extension
+
+The simplest path is the DSL toggle in the Gradle plugin — it pulls in `bugsee-android-ndk` at the matching version:
+
+```kotlin title="app/build.gradle.kts"
+bugsee {
+    appToken("<your-app-token>")
+
+    ndk {
+        enabled.set(true)
+    }
+}
+```
+
+Without the Gradle plugin, declare the extension manually:
+
+<Tabs groupId="build-android">
+  <TabItem value="kts" label="build.gradle.kts">
+
+```kotlin
+dependencies {
+    implementation("com.bugsee:bugsee-android-ndk:7.x.x")
+}
+```
+
+  </TabItem>
+  <TabItem value="groovy" label="build.gradle">
+
+```groovy
+dependencies {
+    implementation 'com.bugsee:bugsee-android-ndk:7.x.x'
+}
+```
+
+  </TabItem>
+</Tabs>
+
+The extension auto-registers its detection provider at process start via its own `ContentProvider` — no code changes in `Application.onCreate()`.
+
+## Configuration
+
+| Form | Setting |
+| --- | --- |
+| Manifest meta-data | `<meta-data android:name="com.bugsee.option.detect.crash-ndk" android:value="false" />` |
+| `Bugsee.launch()` map | `options.put(NdkOptions.DetectAndReport, false)` |
+| Default | `true` (when the `bugsee-android-ndk` module is on the classpath) |
+
+The default flips to `true` once you add the extension — there is no second knob to flip after the dependency. The example below shows the *opt-out* form. The programmatic constant lives in the extension's own package: `com.bugsee.library.ndk.contracts.options.NdkOptions`.
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.crash-ndk"
+           android:value="false" />
+```
+
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+import com.bugsee.library.ndk.contracts.options.NdkOptions;
+
+HashMap<String, Object> options = new HashMap<>();
+options.put(NdkOptions.DetectAndReport, false);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+
+  </TabItem>
+</Tabs>
+
+## Tombstone matching
+
+Starting in 7.0.0-beta6, Bugsee correlates Crashpad minidumps with the matching system tombstone from `ApplicationExitInfo.REASON_CRASH_NATIVE` (API 30+). When a matching tombstone is found, it's attached to the report alongside the minidump as a `ReportFile.TYPE_CRASH_TOMBSTONE` entry — useful when triaging crashes whose Crashpad-side trace is incomplete (for example, stack-pointer corruption).
+
+The matching is automatic and requires no configuration.
+
+## Symbolication and native debug-symbol upload
+
+Symbolicating a Crashpad minidump requires per-build native debug symbols (`libfoo.so.dbg`, `libfoo.so` with `.debug_info`, etc.). The Bugsee Gradle plugin registers a task to upload them automatically when the NDK lane is enabled:
+
+| Task | When it runs | Purpose |
+| --- | --- | --- |
+| `uploadBugsee<Variant>Native` | After `assemble<Variant>` / `bundle<Variant>` | Uploads native debug symbols (`.so.dbg` / unstripped `.so`) so Crashpad minidumps are symbolicated on the dashboard. |
+
+Plugin DSL:
+
+```kotlin
+bugsee {
+    ndk {
+        enabled.set(true)
+        // forceDebugSymbolsUpload.set(true)  // re-upload symbols even when the build UUID hasn't changed
+    }
+}
+```
+
+Maven-based builds can't register the task; upload native symbols manually through the Bugsee dashboard or REST API.
+
+## ProGuard / R8 interaction
+
+Native crash detection is independent of Java/Kotlin obfuscation — Crashpad doesn't see the JVM stack. The matching tombstone (when present) contains a JVM stack trace that **does** need the mapping for full deobfuscation; that's covered by the regular mapping upload — see [Crashes](/sdk/android/v7/issue-detection/crashes#symbolication-and-mapping-uploads).
+
+## See also
+
+- [Configuration → NDK extension](/sdk/android/v7/configuration/ndk) — the option-key reference for the NDK extension.

@@ -1,0 +1,116 @@
+---
+title: "Build timings (iOS)"
+description: "Per-section build spans extracted from Xcode's .xcactivitylog, category buckets, regression deltas, and the Gantt waterfall view in Bugsee's build detail page."
+sidebar_position: 2
+slug: "/sdk/ios/builds/timings"
+---
+
+:::info[Requires Bugsee iOS SDK 6.1.5 or newer]
+Build-timings capture ships with the `BugseeAgent` post-action in **6.1.5+**. It is **on by default** — the agent reads Xcode's `.xcactivitylog` after each Archive and uploads a categorised summary plus an optional detail blob with every build.
+:::
+
+## What gets captured
+
+After the build finishes, the agent locates the Archive's `.xcactivitylog` (the structured log Xcode writes for every build), decodes it, and records every build section as a span. For each section it captures:
+
+- The **section title** (`CompileSwiftSources`, `Ld …`, `CompileAssetCatalog`, `ProcessProductPackaging`, …).
+- The **start and end timestamps** as monotonic offsets from build start.
+- The **category** assigned by the per-section classifier. The wire shape is identical to the Android Gradle plugin's, so the backend and dashboard render both platforms from a single schema. Five buckets, with iOS semantics:
+  - **managed_code** — *never emitted on iOS.* Reserved for JVM-bytecode pipelines (`kotlinc` / `javac` / R8 / desugar) on Android. Everything iOS compiles is native code.
+  - **native** — Swift, Obj-C, C and C++ compile units, plus Swift module planning / emission and clang module building. **Dominates almost every iOS build.** (On Android this same bucket holds JNI / C++ compiled via CMake / NDK.)
+  - **resources** — asset catalogs, storyboards, xibs, strings, plist processing, resource copies.
+  - **packaging** — linking, code signing, framework embedding, strip, touch, dSYM generation, and Swift standard-library embedding ("get the runtime into the bundle").
+  - **other** — build-graph dependency computation, tool-version discovery, auxiliary file generation, and Swift Package Manager resolution steps. Typically under 1% on a simple app, but SPM-heavy projects push it higher as `Computing package information`, `Copying Package.resolved`, and `Resolve Package Graph` all land here.
+
+Container/wrapper sections are filtered out first so they don't double-count their children; among the remaining sections precedence is **native → resources → packaging**, first match wins.
+
+## What gets uploaded
+
+Every build POST carries an inline `build_metadata.timings` summary regardless of detail-blob status. The summary is small (under 1 KiB) and renders the dashboard's chip strip directly:
+
+```json
+{
+  "managed_code_ms": 0,
+  "native_ms": 41280,
+  "resources_ms": 5120,
+  "packaging_ms": 7360,
+  "other_ms": 1840,
+  "total_ms": 52310,
+  "top_tasks": [
+    { "name": "CompileSwiftSources", "duration_ms": 28400 },
+    { "name": "Ld MyApp normal arm64", "duration_ms": 5200 },
+    { "name": "CompileAssetCatalog Assets.xcassets", "duration_ms": 3100 }
+  ]
+}
+```
+
+`total_ms` is the **wall-clock span** of the build (max-end minus min-start), not the arithmetic sum of per-section durations — Xcode runs sections in parallel and they overlap. On a typical iOS build `managed_code_ms` is `0` and `native_ms` carries the bulk of the time.
+
+The detail blob is a separately gzipped JSON shipped to a dedicated presigned PUT URL (`timings_upload_endpoint`) when timings are enabled:
+
+```json
+{
+  "schema_version": 1,
+  "build_started_at_ms": 1747145400000,
+  "wall_clock_ms": 52310,
+  "tasks": [
+    {
+      "path": "CompileSwiftSources",
+      "category": "native",
+      "start_ms": 1840,
+      "end_ms": 30240
+    },
+    {
+      "path": "Ld MyApp normal arm64",
+      "category": "packaging",
+      "start_ms": 44900,
+      "end_ms": 50100
+    }
+  ]
+}
+```
+
+Offsets are relative to `build_started_at_ms` (millis since epoch), keeping the per-section entries compact. The blob is bounded — when a build has very many sections, the **slowest** entries are retained so the waterfall stays representative.
+
+## Configuration
+
+Timings are **on by default**. The only knob is a single environment variable, set on the scheme's Archive action or exported in CI:
+
+```bash
+# Opt out — keeps the rest of build-info, drops only timings:
+export BUGSEE_BUILD_INFO_TIMINGS_ENABLED=0
+```
+
+This mirrors the Android Gradle plugin's `bugsee.buildInfo.timings.enabled` DSL flag. Disable it on privacy-sensitive builds where you don't want target / section names leaving the machine — the rest of the build record (version, VCS, size, dependencies) still uploads. See [Where to set the env vars](/sdk/ios/symbolication#where-to-set-the-env-vars) for the three placement options.
+
+If the agent can't find a usable `.xcactivitylog` (for example, a `clean` build with logging suppressed), it simply omits the timings block — the build still registers.
+
+## What you see in the dashboard
+
+The build detail page's **Timings** tab is rendered when the build record has `timings_status == 'ready'`. Three sections, top to bottom:
+
+### Stat chip strip
+
+One chip for **Total** (wall-clock), then one per category with a colored swatch. Each chip is labelled with the absolute duration (`52.3 s`) and, when a previous build is available, a delta from that build (`+0.4 s` or `−1.2 s`). The `managed_code` chip is omitted on iOS builds since the bucket is always zero.
+
+### Regression summary
+
+A second strip — visible only when a previous build is available — summarising the diff:
+
+- **Total delta** — wall-clock change vs the previous build.
+- **Regressed** — count of sections that got slower by more than the noise floor.
+- **Improved** — count of sections that got faster by more than the noise floor.
+
+This lets you spot single-commit timing regressions without scanning the waterfall.
+
+### Gantt waterfall
+
+When the detail blob is present, the tab renders a **per-section Gantt waterfall** — sections plotted on a horizontal time axis with category-colored bars. Parallel sections share rows so the visualisation captures Xcode's actual execution shape, not a stacked total.
+
+When the detail blob is absent (timings disabled, build still uploading, or worker job not yet complete), the waterfall is replaced by a stacked-bar fallback derived from the inline summary — still useful, but lacks per-section drill-down.
+
+## Worker pipeline
+
+A successful upload triggers the timings-processing job on the Bugsee worker. The job validates the schema, re-uploads the same gzipped bytes to the customer's per-build S3 prefix, computes a diff vs the previous build (matching section titles only), and marks `timings_status='ready'` on the build record.
+
+Failure paths (oversize blob, schema mismatch, S3 transient errors) mark `timings_status='failed'` and surface a "Timings unavailable" state on the dashboard rather than hanging the rest of the build pipeline.

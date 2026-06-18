@@ -14,7 +14,7 @@ This page documents the Bugsee Android SDK **7.x (beta)**. APIs and behavior may
 
 In addition to the data that Bugsee captures automatically, you can enrich reports with your own signals: custom events, time-series traces, user/session attributes, a stable user identifier, and manually-logged unhandled exceptions. These APIs live on the `Bugsee` facade and are safe to call before or after `Bugsee.launch(...)` — calls made before launch are buffered.
 
-For automatic log capture and the manual `Bugsee.log(...)` API, see [Logs](/sdk/android/v7/logs/). For automatic crash reporting, see [Crashes](/sdk/android/v7/crashes/).
+For automatic log capture and the manual `Bugsee.log(...)` API, see [Logs](/sdk/android/v7/logs). For automatic crash reporting, see [Crashes](/sdk/android/v7/issue-detection/crashes).
 
 ## Custom events
 
@@ -217,4 +217,4 @@ try {
   </TabItem>
 </Tabs>
 
-For handled exceptions that should be recorded as non-terminal errors (and optionally customized with type, severity, or extra parameters), keep using `Bugsee.logException(...)` instead. Automatic crash and ANR capture does not require either API — see [Crashes](/sdk/android/v7/crashes/) for details.
+For handled exceptions that should be recorded as non-terminal errors (and optionally customized with type, severity, or extra parameters), keep using `Bugsee.logException(...)` instead. Automatic crash and ANR capture does not require either API — see [Crashes](/sdk/android/v7/issue-detection/crashes) for details.

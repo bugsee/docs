@@ -1,0 +1,157 @@
+---
+title: "Memory & thread leaks (7.x Beta)"
+description: "Memory-leak and thread-leak detection — shipped in the bugsee-android-leak extension."
+sidebar_position: 10
+slug: "/sdk/android/v7/issue-detection/leaks"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::caution[7.x Beta]
+Leak detection is shipped as the **`bugsee-android-leak` extension module** and is new in 7.x. The core `bugsee-android` artefact does not include it — you must add the extension explicitly (or via the Gradle plugin DSL).
+:::
+
+The `bugsee-android-leak` extension ships two detectors that share a single Gradle module:
+
+- **[Memory leaks](#memory-leaks)** — retained `Activity` / `Fragment` / `ViewModel` / Compose nodes. Default: **on** once the module is on the classpath.
+- **[Thread leaks](#thread-leaks)** — thread-group growth as a proxy for leaking `ThreadPoolExecutor` / unbounded task scheduling. Default: **off**; Phase 1 is Java-only.
+
+## Add the extension
+
+The simplest path is the DSL toggle on the Bugsee Gradle plugin — it pulls in `bugsee-android-leak` at the matching version:
+
+```kotlin title="app/build.gradle.kts"
+bugsee {
+    appToken("<your-app-token>")
+
+    leak {
+        enabled.set(true)
+    }
+}
+```
+
+Without the Gradle plugin, declare the extension manually:
+
+<Tabs groupId="build-android">
+  <TabItem value="kts" label="build.gradle.kts">
+
+```kotlin
+dependencies {
+    implementation("com.bugsee:bugsee-android-leak:7.x.x")
+}
+```
+
+  </TabItem>
+  <TabItem value="groovy" label="build.gradle">
+
+```groovy
+dependencies {
+    implementation 'com.bugsee:bugsee-android-leak:7.x.x'
+}
+```
+
+  </TabItem>
+</Tabs>
+
+Both detectors auto-register at process start via the extension's `ContentProvider` — no code changes in `Application.onCreate()`.
+
+## Memory leaks
+
+The memory-leak detector watches the four most common Android leak surfaces and reports when an object is retained past its expected lifetime:
+
+- **Activities** — watch-source instrumentation hooks `Application.ActivityLifecycleCallbacks.onActivityDestroyed`. After a short grace period and a forced GC, any still-retained `Activity` is reported.
+- **Fragments** — `FragmentManager.FragmentLifecycleCallbacks.onFragmentDestroyed`.
+- **`ViewModel`s** — `ViewModel.onCleared()`.
+- **Compose** — composables retained beyond their disposal hook.
+
+Confirmed leaks are reported as **non-fatal issues**, each carrying the leak signature (in `FAST` mode) or a full leak trace (in `DEEP_*` modes).
+
+### Modes
+
+Three modes trade off reporting fidelity against runtime cost:
+
+| Mode | What you get | When to use |
+| --- | --- | --- |
+| **`FAST`** _(default)_ | A dump-free leak signature: the class name of the retained object and its watch-source category, enough to surface "this Activity leaked" in the dashboard. | Production builds — minimal runtime cost. |
+| **`DEEP_DEBUG_ONLY`** | A Shark-powered heap-dump + leak trace, but only on debug builds. | Internal / QA channels where you want full leak traces but no production overhead. |
+| **`DEEP_EVERYWHERE`** | Shark heap-dump + leak trace on every variant. Gated by battery (≥ 20%) and a frequency cap so the same surface isn't dumped repeatedly. | Pre-release smoke tests where you want production-shape coverage. Beware: heap-dumps are tens of seconds long and freeze the process. |
+
+### Configuration
+
+| Option | Manifest meta-data key | Type | Default |
+| --- | --- | --- | --- |
+| Master switch | `com.bugsee.option.detect.memory_leaks` | boolean | `true` (when module present) |
+| Mode | `com.bugsee.option.detect.memory_leaks.mode` | enum | `FAST` |
+| Deep-dump sample rate | `com.bugsee.option.detect.memory_leaks.deep_sample_rate` | float `[0, 1]` | `1.0` |
+
+The mode is the `MemoryLeakMode` enum (`FAST`, `DEEP_DEBUG_ONLY`, `DEEP_EVERYWHERE`). The manifest meta-data form accepts either the enum constant name (`FAST`) or its camelCase wire alias (`Fast`); the programmatic `Bugsee.launch(...)` map must use the typed `MemoryLeakMode` enum value.
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.memory_leaks.mode"
+           android:value="DEEP_DEBUG_ONLY" />
+<meta-data android:name="com.bugsee.option.detect.memory_leaks.deep_sample_rate"
+           android:value="0.25" />
+```
+
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+import com.bugsee.library.leak.contracts.options.LeakOptions;
+import com.bugsee.library.leak.MemoryLeakMode;
+
+HashMap<String, Object> options = new HashMap<>();
+options.put(LeakOptions.DetectMemoryLeaks, true);
+options.put(LeakOptions.DetectMemoryLeaksMode, MemoryLeakMode.DEEP_DEBUG_ONLY);
+options.put(LeakOptions.DetectMemoryLeaksDeepSampleRate, 0.25f); // dump only 25% of eligible leaks
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+
+  </TabItem>
+</Tabs>
+
+The deep-dump sample rate gates **per-leak eligibility** for the heap dump. The frequency caps and battery threshold still apply on top — a low sample rate compounds with them, so use it primarily to budget heap-dump cost on `DEEP_EVERYWHERE`.
+
+## Thread leaks
+
+The thread-leak detector watches the JVM's thread-group population and reports groups whose count grows steadily across snapshots — a proxy for a leaking `ThreadPoolExecutor`, an unbounded task scheduler, or a worker that never shuts down.
+
+This is the **Phase 1 Java-only implementation**. A native pthread hook is planned for a later phase; today the detector only sees JVM threads.
+
+A snapshot is taken every 30 s on the SDK's pool thread; thread groups whose count has grown across enough snapshots fire a single non-fatal issue report under the `ThreadLeak` domain. Dedup is per-group so a steadily-leaking pool is reported once, not on every snapshot.
+
+### Configuration
+
+| Option | Manifest meta-data key | Type | Default |
+| --- | --- | --- | --- |
+| Master switch | `com.bugsee.option.detect.thread_leaks` | boolean | `false` |
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.thread_leaks"
+           android:value="true" />
+```
+
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(LeakOptions.DetectThreadLeaks, true);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+
+  </TabItem>
+</Tabs>
+
+Thread-leak detection is off by default because well-tuned background queues sit at a steady-state thread count that doesn't trip the detector, but ad-hoc thread creation patterns (`new Thread(...)` in a callback) commonly produce false positives during early integration. Enable it on internal / QA channels first to tune.
+
+## See also
+
+- [Configuration → Leak extension](/sdk/android/v7/configuration/leak) — the option-key reference for the leak extension.

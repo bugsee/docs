@@ -285,6 +285,6 @@ Check the Bugsee dashboard for the incoming report. If APM is enabled, hit a few
 - [Configuration (7.x)](https://docs.bugsee.com/sdk/android/v7/configuration/)
 - [Gradle plugin (7.x)](https://docs.bugsee.com/sdk/android/v7/gradle-plugin/)
 - [Network events (7.x)](https://docs.bugsee.com/sdk/android/v7/network/)
-- [Detection (7.x)](https://docs.bugsee.com/sdk/android/v7/detection/)
+- [Issue detection (7.x)](https://docs.bugsee.com/sdk/android/v7/issue-detection)
 - [Performance / APM (7.x)](https://docs.bugsee.com/sdk/android/v7/performance/)
 - [Migration from 6.x](https://docs.bugsee.com/sdk/android/v7/migration/)

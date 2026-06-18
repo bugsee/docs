@@ -1,0 +1,270 @@
+---
+title: "Custom extensions (7.x Beta)"
+description: "Authoring your own Bugsee Android SDK 7.x extensions — generic extension modules, capture providers, detection providers, and APM providers."
+sidebar_position: 3
+slug: "/sdk/android/v7/extensibility/custom-extensions"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::caution[7.x Beta]
+This page documents the **7.x beta** of the Bugsee Android SDK. The provider-level extension points (capture, detection, performance) are **new in 7.x** and may still evolve.
+:::
+
+The 7.x extension framework is open. Anything Bugsee ships, your app — or an internal library, or a third-party — can ship too, using the same registration paths and the same lifecycle. Four kinds of custom extensions are supported.
+
+If you're new to Bugsee's extensibility model, start with the [Overview](/sdk/android/v7/extensibility) first — it explains which surface to pick for what kind of capability.
+
+## Custom generic extension
+
+A **generic extension** is the right choice for an optional, self-contained capability with its own dependencies or native code — for example, a wrapper around a third-party SDK, a feature with platform-specific permissions, or a capability you only want loaded in some build flavors.
+
+A custom generic extension is a class that implements the base `Extension` contract from the core SDK:
+
+```java
+package com.bugsee.library.contracts.extensions;
+
+public interface Extension {
+    Class<? extends Extension> getType();
+    void launch(OptionsContainer options);
+    void stop();
+}
+```
+
+The pattern in full:
+
+1. **Define a contract interface** that extends `Extension`. This is the type consumers will pass to `Bugsee.ext(...)` — keep it minimal and stable.
+2. **Implement a facade class** that implements your contract interface. The facade lives in the `com.bugsee.library` package so it can reach the package-private SDK internals it needs (extension registry, lifecycle, frame interception, capture-coordinator contracts).
+3. **Add a `ContentProvider`** to your module's `AndroidManifest.xml` with `android:initOrder="200"`. The provider's `onCreate()` calls `BugseeExtensions.registerExtension(yourFacade)`. The high init-order guarantees your provider boots before the core SDK's `BugseeInitProvider`.
+4. **Consume from your app** with `Bugsee.ext(YourInterface.class)`. The result is `null` when your extension module isn't on the classpath.
+
+Late registration (after `Bugsee.launch(...)` already ran) is fully supported: the extensions registry calls your `launch(options)` immediately if the SDK is already running.
+
+The detailed authoring guide — exact manifest snippet, naming conventions, lifecycle hooks available to facades, how to interact with the capture coordinator and the appearance system — is maintained inside the Bugsee Android SDK source tree under `.claude/rules/extensions.md`. Contact Bugsee support if you need it for a serious custom-extension effort.
+
+## Custom capture provider
+
+A **capture provider** feeds the SDK's session-replay pipeline. Every recorded data type in 7.x — screen frames, input events, breadcrumbs, network requests, system events, view-hierarchy snapshots, performance spans — is implemented as a capture provider. Register your own to record a data type the core SDK doesn't already cover.
+
+### Provider contract
+
+Extend:
+
+```text
+com.bugsee.library.capture.BugseeCaptureDataProviderBase<T extends BugseeCaptureDataEntryBase>
+```
+
+Constructor signature: `protected BugseeCaptureDataProviderBase(BugseeCaptureDataProviderInit componentInit)`. The init bundle supplies the data aggregator and parts manager the SDK uses to ingest your provider's entries.
+
+Four annotations on your provider class declare its metadata to the coordinator and registry:
+
+| Annotation | Purpose |
+| --- | --- |
+| `@BugseeCaptureComponentName("my-data")` | Short, unique provider identifier used in logs and the registry |
+| `@BugseeCaptureDataEntryClass(MyDataEntry.class)` | The `BugseeCaptureDataEntryBase` subclass your provider produces |
+| `@BugseeCaptureExporterClass(MyExporter.class)` | The exporter that serializes your entries when a report is assembled |
+| `@BugseeCaptureControllingOptions(Options.MyOption)` | Options keys that gate the provider on or off |
+
+Lifecycle hooks `start(OptionsContainer, long)` and `stop(long, boolean)` are inherited from `CommonControllableComponent`. Override them to wire up your data source and tear it down.
+
+### Registration
+
+Programmatic registration, with `Bugsee.launch(...)` still ahead of you:
+
+<Tabs groupId="lang-android">
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+import com.bugsee.library.capture.BugseeCaptureCoordinator
+
+BugseeCaptureCoordinator.getInstance()
+    .addProvider(MyCustomCaptureProvider::class.java)
+
+Bugsee.launch(application, "your-app-token")
+```
+
+  </TabItem>
+  <TabItem value="java" label="Java">
+
+```java
+import com.bugsee.library.capture.BugseeCaptureCoordinator;
+
+BugseeCaptureCoordinator.getInstance()
+        .addProvider(MyCustomCaptureProvider.class);
+
+Bugsee.launch(application, "your-app-token");
+```
+
+  </TabItem>
+</Tabs>
+
+Or declaratively via your app's (or your library's) `AndroidManifest.xml` — useful when the provider class is added by a library and you don't want consuming apps to write any boilerplate:
+
+```xml
+<application>
+    <meta-data
+        android:name="com.bugsee.components.capture.my-data"
+        android:value="com.example.MyCustomCaptureProvider" />
+</application>
+```
+
+The Bugsee SDK walks `ApplicationInfo.metaData` at startup for entries whose key begins with `com.bugsee.components.capture` and instantiates each value as a provider class. Missing classes are tolerated — the SDK logs and continues, so an optional manifest-declared provider that wasn't on the classpath doesn't abort startup.
+
+### Late registration
+
+Capture providers added *after* `Bugsee.launch(...)` **are** auto-started with the `OptionsContainer` cached at launch, matching the late-registration semantics of the detection and extension surfaces. This means an extension module whose `ContentProvider` runs after core has already booted can register a capture provider safely — the coordinator brings it up immediately on the capture-events thread. If you'd rather register an already-instantiated provider (for example because your provider needs constructor arguments other than `BugseeCaptureDataProviderInit`), use the `addProvider(instance)` overload.
+
+### Threading
+
+All provider lifecycle calls run on the capture-events thread. Custom providers must not block this thread; for heavy work, offload to `BugseeHandlerWrapper` or your own pool.
+
+### Built-in example
+
+`capture/providers/screen/BugseeCaptureDataProviderVideo.java` is the canonical reference: annotated, pool-backed entries, lifecycle hooked to the screen-capture pipeline. Skim it before writing your own.
+
+## Custom detection provider
+
+A **detection provider** observes the running app and turns behavior anomalies into Bugsee issue reports. Crash, hang, abnormal-exit, and main-thread-misuse providers all ship in core; the NDK native-crash provider ships in the `bugsee-android-ndk` extension. Register your own to detect failure modes specific to your app — a frame-drop watchdog, a queue depth alarm, a business-rule assertion.
+
+### Provider contract
+
+Extend:
+
+```text
+com.bugsee.library.detection.BugseeDetectionProviderBase
+```
+
+Constructor signature: `protected BugseeDetectionProviderBase(BugseeDetectionDataHandler dataHandler)`. The data handler is how your provider hands off a detected issue to the reporting pipeline — call `handleReportingRequest(boolean, ReportingRequest)` from your detection code.
+
+Two annotations declare metadata:
+
+| Annotation | Purpose |
+| --- | --- |
+| `@BugseeDetectionProviderName("my-detector")` | Short, unique identifier |
+| `@BugseeDetectionProviderControllingOption(Options.MyDetectionOption)` | The options key that gates your provider on or off |
+
+Optional override `onJavaCrashHandled()` lets the provider react when another provider already produced a crash report — used by the NDK provider to avoid duplicate reporting.
+
+### Registration
+
+Programmatic registration accepts a class, an FQN string, or an already-instantiated provider:
+
+<Tabs groupId="lang-android">
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+import com.bugsee.library.detection.BugseeDetectionCoordinator
+
+BugseeDetectionCoordinator.getInstance()
+    .addProvider(MyCustomDetectionProvider::class.java)
+
+Bugsee.launch(application, "your-app-token")
+```
+
+  </TabItem>
+  <TabItem value="java" label="Java">
+
+```java
+import com.bugsee.library.detection.BugseeDetectionCoordinator;
+
+BugseeDetectionCoordinator.getInstance()
+        .addProvider(MyCustomDetectionProvider.class);
+
+Bugsee.launch(application, "your-app-token");
+```
+
+  </TabItem>
+</Tabs>
+
+Or declaratively in the manifest, mirroring the capture convention:
+
+```xml
+<application>
+    <meta-data
+        android:name="com.bugsee.components.detection.my-detector"
+        android:value="com.example.MyCustomDetectionProvider" />
+</application>
+```
+
+The SDK walks `ApplicationInfo.metaData` at startup for entries whose key begins with `com.bugsee.components.detection` and instantiates each.
+
+### Late registration
+
+Unlike capture providers, detection providers passed to `addProvider(instance)` *after* `Bugsee.launch(...)` **are** auto-started with the last-used `OptionsContainer`. This is what lets the NDK extension self-install: its `ContentProvider` runs after core has already booted, and the detection coordinator brings the new provider up immediately. If you ship a detection provider from a library or a deferred-init code path, you don't have to worry about ordering.
+
+### Early-crash window
+
+Detection providers may call `BugseeDetectionCoordinator.getInstance().notifyEarlyCrash()` to flag that a crash occurred during the early-startup window (before the SDK's normal pipeline is ready to flush). NDK and other low-level crash detectors do this explicitly because the native handler runs out of process. App-level providers rarely need this hook.
+
+### Built-in example
+
+`detection/providers/crash/BugseeDetectionCrash.java` is the canonical small reference — installs a JVM uncaught-exception handler, hands the crash off to the data handler, opts in via `Options.DetectAndReportCrash`.
+
+## Custom performance (APM) provider
+
+A **performance provider** feeds the APM pipeline with spans. The built-ins emit `db.*` spans for database operations, `file.read` / `file.write` for I/O, `http.client` for network, `ui.load` / `ui.display` for activity lifecycle, and a single `startup` span for cold start. Register your own to emit spans for a custom RPC layer, a GPU stage, a background worker, or any other subsystem you want represented in the APM waterfall.
+
+### Provider contract
+
+Performance providers implement an interface directly — there is no base class:
+
+```text
+com.bugsee.library.contracts.performance.PerformanceProvider
+```
+
+Required methods:
+
+| Method | When called |
+| --- | --- |
+| `String getId()` | Once, at registration. Must return a unique string identifier |
+| `void launch(OptionsContainer options, SpanFactory spanFactory)` | When the performance coordinator is started. `SpanFactory` is how you create transactions and spans |
+| `void stop()` | When the performance coordinator is stopped |
+| `boolean isRunning()` | Optional. Default returns `true` between `launch` and `stop` |
+
+Inside `launch`, store the `SpanFactory` reference. Whenever your provider observes a measurable operation, call `spanFactory.startSpan(...)` or `spanFactory.startTransaction(...)`, then `finish()` on the returned `Span` / `Transaction` when the operation completes. The coordinator routes finished transactions into the capture pipeline (so they appear in reports) and, separately, into the standalone APM upload queue (subject to the `PerformanceSampleRate` option).
+
+### Registration
+
+Programmatic only — there is no manifest discovery for performance providers:
+
+<Tabs groupId="lang-android">
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+import com.bugsee.library.performance.BugseePerformanceCoordinator
+
+BugseePerformanceCoordinator.getInstance()
+    .registerProvider(MyCustomPerformanceProvider())
+
+Bugsee.launch(application, "your-app-token")
+```
+
+  </TabItem>
+  <TabItem value="java" label="Java">
+
+```java
+import com.bugsee.library.performance.BugseePerformanceCoordinator;
+
+BugseePerformanceCoordinator.getInstance()
+        .registerProvider(new MyCustomPerformanceProvider());
+
+Bugsee.launch(application, "your-app-token");
+```
+
+  </TabItem>
+</Tabs>
+
+If your provider ships from an extension module, the natural place to register is the extension's own `launch(OptionsContainer)` — that runs after the core has wired up the performance coordinator but before the first user transaction.
+
+### Late registration
+
+Providers added *after* `BugseePerformanceCoordinator.launch()` are **not** auto-launched (this differs from detection). The integrator must call `provider.launch(options, spanFactory)` manually — or, preferably, register early enough that the coordinator's own launch sweep picks the provider up. Use the same `SpanFactory` instance you would receive in `launch` (it's the coordinator itself).
+
+### Sampling boundary
+
+The `PerformanceSampleRate` option gates **standalone APM uploads** only. Every transaction still flows into the capture pipeline so APM data shows up in issue reports regardless of sampling. `NoOpTransaction` is returned only when `PerformanceMonitoring` is disabled outright — never as a side-effect of sampling.
+
+### Built-in example
+
+`performance/providers/database/DatabasePerformanceProvider.java` is the smallest end-to-end reference: registers as an `OperationObserver` on the SDK's shared dispatch layer, emits `db.*` spans bracketed around observed database calls, no custom thread management.

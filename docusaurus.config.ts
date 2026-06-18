@@ -95,6 +95,7 @@ const config: Config = {
       },
       style: 'dark',
       items: [
+        { to: '/cli/', label: 'CLI', position: 'left' },
         { href: 'https://bugsee.com/pricing/', label: 'Pricing', position: 'left' },
         { href: 'https://bugsee.com/faq/', label: 'FAQ', position: 'left' },
         { href: 'https://bugsee.com/blog/is-bugsee-any-good/', label: 'Is Bugsee Any Good?', position: 'left' },

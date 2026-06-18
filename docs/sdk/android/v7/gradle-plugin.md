@@ -114,15 +114,50 @@ During `withDependencies` evaluation of the `implementation` configuration, the 
 | `io.ktor:* (3.x)` | `com.bugsee:bugsee-android-ktor-3` |
 | `org.chromium.net:*` | `com.bugsee:bugsee-android-cronet` |
 
-If you already declared the matching Bugsee artifact yourself, the plugin leaves your declaration alone. Each auto-install rule can be disabled via the corresponding DSL property — for example `instrumentation.ktor.set(false)` suppresses Ktor auto-install, and `instrumentation.cronet.set(false)` suppresses Cronet auto-install.
+If you already declared the matching Bugsee artifact yourself, the plugin leaves your declaration alone. Each auto-install rule can be disabled via the corresponding DSL property — for example `instrumentation.ktor.set(false)` suppresses Ktor auto-install, and `instrumentation.cronet.set(false)` suppresses Cronet auto-install. The same DSL toggles can also be set via Gradle properties (`-Pbugsee.instrumentation.ktor=false`) or `bugsee.properties` (`plugin.instrumentation.ktor=false`).
 
 Auto-install is also suppressed when the plugin is applied to a project that is itself a Bugsee SDK module (avoiding circular dependencies on `:library`, `:okhttp`, etc.).
 
+### Auto-load of the core SDK
+
+The plugin also auto-pulls the core `com.bugsee:bugsee-android` SDK when it is not already declared. This means you can depend on an extension module alone (for example `bugsee-android-feedback`, `bugsee-android-ndk`, or `bugsee-android-okhttp`) and the matching core SDK is added for you:
+
+```kotlin
+dependencies {
+    implementation("com.bugsee:bugsee-android-feedback:7.x.x")
+    // core SDK is pulled in automatically when the Bugsee Gradle plugin is applied
+}
+```
+
+The plugin reads its bundled `sdk-min-version` (the lowest SDK release the plugin was tested against), parses it as SemVer, and emits a Gradle dynamic-version range bounded to the **same `MAJOR.MINOR` series** — so consumers automatically pick up the latest patch on that line but never cross a minor boundary that could carry breaking changes:
+
+| `sdk-min-version` | Emitted range | Pulls |
+| --- | --- | --- |
+| `7.0.0` | `[7.0.0, 7.1.0)` | latest `7.0.x` patch |
+| `7.0.0-beta12` | `[7.0.0-beta12, 7.1.0)` | latest `7.0.x` patch (including stable `7.0.0` once it ships) |
+| `7.2.5` | `[7.2.5, 7.3.0)` | latest `7.2.x` patch |
+
+If you have declared `com.bugsee:bugsee-android` yourself on any configuration (`api`, `implementation`, `compileOnly`, per-variant configs, …), the auto-load skips and your declaration wins — the dynamic range is never layered on top.
+
+Opt out via the top-level `sdkAutoLoad` DSL flag:
+
+```kotlin
+bugsee {
+    sdkAutoLoad.set(false)  // do not auto-pull bugsee-android even if absent
+}
+```
+
+Set this when you ship the core SDK from a manual classpath path or a locally-published artefact and the dynamic version range would conflict with your declaration. Also settable via `bugsee.properties` (`plugin.sdkAutoLoad=false`). Default: `true`.
+
 :::note[When the plugin is absent]
-Auto-install happens only when the Bugsee Gradle plugin is applied. In Maven builds, or in Gradle builds where you have chosen not to apply the plugin, **every extension module must be added manually** to your `dependencies { }` / `pom.xml` — nothing is pulled in for you, even when the third-party dependency (OkHttp, Ktor, Cronet, Compose) is present. See [Extensions — Without the Bugsee Gradle plugin](/sdk/android/v7/extensions#without-the-bugsee-gradle-plugin) for the full manual declaration set.
+Auto-install happens only when the Bugsee Gradle plugin is applied. In Maven builds, or in Gradle builds where you have chosen not to apply the plugin, **every extension module must be added manually** to your `dependencies { }` / `pom.xml` — nothing is pulled in for you, even when the third-party dependency (OkHttp, Ktor, Cronet, Compose) is present. See [Bugsee extensions — Without the Bugsee Gradle plugin](/sdk/android/v7/extensibility/bugsee-extensions#without-the-bugsee-gradle-plugin) for the full manual declaration set.
 :::
 
 ## Build-time tasks
+
+:::note[Uploads are handled by the Bugsee CLI]
+The mapping, native-symbol, and build-info / size-analysis upload tasks shell out to the **[Bugsee CLI](/cli/)** rather than embedding their own HTTP, compression, retry, and chunking stack. You don't install or invoke it — the plugin downloads and pins a compatible version automatically. If you need to upload outside Gradle (a custom pipeline, a separate CI step), you can drive the same uploads directly: see [Debug information files](/cli/debug-files/) for mappings and native symbols, and [Builds & artefacts](/cli/builds/) for the build record and size-analysis artefact.
+:::
 
 The plugin registers per-variant tasks:
 
@@ -333,6 +368,7 @@ bugsee {
     debug.set(false)                              // default
     feedback.set(false)                           // default
     optimizeExtensionsLoading.set(true)           // default — merges Bugsee extension ContentProviders into the SDK's single BugseeInitProvider to shave cold-start overhead
+    sdkAutoLoad.set(true)                         // default — auto-pull com.bugsee:bugsee-android when an extension is declared but the core isn't
 
     ndk {                                         // native crash / NDK symbol upload
         enabled.set(true)                         // turn on NDK support
@@ -395,6 +431,7 @@ bugsee {
     debug.set false
     feedback.set false
     optimizeExtensionsLoading.set true       // default — merges extension ContentProviders into BugseeInitProvider
+    sdkAutoLoad.set true                     // default — auto-pull com.bugsee:bugsee-android when an extension is declared but the core isn't
 
     ndk {
         enabled.set true
@@ -502,6 +539,7 @@ Each key path mirrors the DSL field name (camelCase, dotted-path).
 | `plugin.debug` | Boolean | `false` |
 | `plugin.feedback` | Boolean | `false` |
 | `plugin.optimizeExtensionsLoading` | Boolean | `true` |
+| `plugin.sdkAutoLoad` | Boolean | `true` |
 | `plugin.ndk.enabled` | Boolean | `false` |
 | `plugin.ndk.forceDebugSymbolsUpload` | Boolean | `false` |
 | `plugin.buildInfo.enabled` | Boolean | `true` |

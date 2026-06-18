@@ -1,0 +1,113 @@
+---
+title: "Build dependencies (iOS)"
+description: "How Bugsee captures your CocoaPods, Swift Package Manager, and Carthage dependency graph from the resolved lockfiles, and how it surfaces in the dashboard."
+sidebar_position: 3
+slug: "/sdk/ios/builds/dependencies"
+---
+
+:::info[Requires Bugsee iOS SDK 6.1.5 or newer]
+Dependency capture ships with the `BugseeAgent` post-action in **6.1.5+** and is **on by default**. The same blob feeds Bugsee's [vulnerability scan](/sdk/ios/builds/vulnerabilities), so capturing dependencies is also the gate for OSV-backed CVE reporting.
+:::
+
+## What gets captured
+
+iOS projects resolve dependencies through one (or more) of three package managers. The agent reads the **resolved lockfiles** at the project root — it never re-resolves, so it captures exactly what your build linked. It parses each manager that's present, in order (CocoaPods → SPM → Carthage):
+
+| Manager | File parsed | Notes |
+| --- | --- | --- |
+| **CocoaPods** | `Podfile.lock` | The `DEPENDENCIES:` section lists the **direct** pods your `Podfile` declared; the full lock lists every resolved pod. Subspecs (`Pod/Sub`) collapse to their root pod — one entry per pod. |
+| **Swift Package Manager** | `Package.resolved` | Handles v1 (`object.pins`) and v2 (`pins`) layouts. Each entry carries the package's **Git URL**, which the vulnerability scanner needs. Found at the project root, or under `*.xcodeproj` / `*.xcworkspace` `xcshareddata/swiftpm/`. |
+| **Carthage** | `Cartfile.resolved` | The full resolved set. `github` / `git` entries carry a Git URL and are scannable; `binary` entries are listed but can't be scanned (no Git URL to map to an advisory database). |
+
+Each entry the agent emits is a `DependencyEntry`:
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Stable identifier for the package |
+| `name` / `version` | Package name and resolved version |
+| `direct` | `true` if the entry is one your project declares directly; `false` for transitive entries (CocoaPods is the only iOS manager that distinguishes the two) |
+| `type` | `"library"` (an external package), `"project"`, or `"file"` |
+| `ecosystem` | `"cocoapods"` or `"spm"` — required so the vulnerability scanner queries OSV against the correct package universe. `binary` Carthage entries have no ecosystem and are not scanned |
+| `url` | The package's Git URL (SPM and Git-based Carthage entries) — OSV's `SwiftURL` query keys off this |
+
+After parsing every manager, the agent **de-duplicates** (on a collision it keeps the entry carrying a `url`, since dropping it would silently exclude the package from the vuln scan) and sorts **direct entries first**. The list is bounded by a max-count cap; entries past the cap are dropped and the upload is flagged `truncated: true`.
+
+## What gets uploaded
+
+The inline `dependencies_summary` is a compact aggregate that always ships with the build POST:
+
+```json
+{
+  "total": 94,
+  "direct": 12,
+  "transitive": 82,
+  "by_type": {
+    "library": 94,
+    "project": 0,
+    "file": 0
+  },
+  "truncated": false,
+  "collected_at": "2026-06-10T14:30:00Z",
+  "collection_config": {
+    "scope": "resolved",
+    "include_selected_reason": false,
+    "max_count": 5000
+  }
+}
+```
+
+The detail blob — gzipped JSON — is shipped to a separate presigned PUT URL (`dependencies_upload_endpoint`) when dependency capture is enabled:
+
+```json
+{
+  "schema_version": 1,
+  "truncated": false,
+  "collection_config": { "scope": "resolved", "include_selected_reason": false, "max_count": 5000 },
+  "dependencies": [
+    {
+      "id": "github.com/Alamofire/Alamofire",
+      "name": "Alamofire",
+      "version": "5.9.1",
+      "direct": true,
+      "type": "library",
+      "ecosystem": "spm",
+      "url": "https://github.com/Alamofire/Alamofire.git"
+    }
+  ]
+}
+```
+
+The `collection_config` block is captured **on every blob** so the worker's diff logic can refuse to compare apples-to-oranges builds.
+
+## Configuration
+
+Dependency capture is **on by default**. The only knob is a single environment variable, set on the scheme's Archive action or exported in CI:
+
+```bash
+# Opt out — also disables the vulnerability scan, which derives from this blob:
+export BUGSEE_DEPENDENCIES_ENABLED=0
+```
+
+This mirrors the Android Gradle plugin's `bugsee.buildInfo.dependencies.enabled` DSL flag. Unlike Android there are no `scope` / `maxCount` knobs to set — the graph comes from the resolved lockfiles, not a Gradle configuration. See [Where to set the env vars](/sdk/ios/symbolication#where-to-set-the-env-vars) for placement options.
+
+## What you see in the dashboard
+
+The build detail page's **Dependencies** tab is rendered when `dependencies_status == 'ready'`. Three parts:
+
+### Stat chip strip
+
+Across the top: **Total**, **Direct**, **Transitive**, and counts by type. When `truncated` is true, a warning chip appears so the cap doesn't silently hide the tail. While the worker job is still in flight, a status pill replaces the chips — `uploading`, `processing`, or `failed`.
+
+### Vulnerability strip
+
+The Dependencies tab is also where Bugsee's vulnerability findings show up — see the dedicated [Vulnerabilities](/sdk/ios/builds/vulnerabilities) page for the details. The strip renders between the chip row and the table whenever a scan summary is populated.
+
+### Per-dependency table
+
+A scrollable, sortable, filterable table listing every captured entry. Columns include `id`, `direct`/`transitive`, `type`, ecosystem, and resolved version. Because the same wire schema backs both platforms, this is the [same table as on Android](/sdk/android/v7/builds/dependencies).
+
+## Worker pipeline
+
+The uploaded dependencies blob is routed to the dependency-processing job on the Bugsee worker: bootstrap (`dependencies_status='processing'`) → download with caps → validate `schema_version` → re-upload the gzipped bytes to the per-build S3 prefix → diff vs the previous build (gated on identical `collection_config`) → final `dependencies_status='ready'`.
+
+When `dependencies_status` flips to `'ready'`, the worker also enqueues the [vulnerability scan](/sdk/ios/builds/vulnerabilities) for the same build — vulnerabilities are derived from the dependencies list, so the scan can't run before the dependencies blob lands.

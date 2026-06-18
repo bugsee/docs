@@ -99,6 +99,7 @@ Get a single issue by its key (e.g., `"MYAPP-123"`). Returns a plain-text report
 - **Description** — bug reports only
 - **Exception** — crash/error type, signal, reason, stack trace of the crashed/target thread
 - **All threads** — only when `include_all_threads=true`; one subsection per thread with the crashed thread marked
+- **Memory leak analysis** — only when the issue carries a memory/thread-leak bundle (leaks arrive as `error`-type issues); covers the leaking class, retained size, GC-root reference chain, and a memory snapshot
 - **Logs** — only when `include_logs` is provided
 
 ### get_issue_resource
@@ -112,9 +113,9 @@ For `"attachment"` the response always contains a **list** (an issue may carry m
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `issue_key` | string | Yes | The issue key in `"APPKEY-NUMBER"` format. |
-| `resource_type` | string | Yes | One of: `"video"`, `"screenshot"`, `"log"`, `"network"`, `"breadcrumbs"`, `"viewtree"`, `"input"`, `"events.system"`, `"events.user"`, `"traces.system"`, `"traces.user"`, `"attachment"`, `"crash"`, `"minidump"`, `"crash.trace"`, `"crash.tombstone"`, `"performance"`. |
+| `resource_type` | string | Yes | One of: `"video"`, `"screenshot"`, `"log"`, `"network"`, `"breadcrumbs"`, `"viewtree"`, `"input"`, `"events.system"`, `"events.user"`, `"traces.system"`, `"traces.user"`, `"attachment"`, `"crash"`, `"minidump"`, `"crash.trace"`, `"crash.tombstone"`, `"performance"`, `"memory.leak"`. |
 
-For text-based log analysis prefer `get_issue` with `include_logs` — it returns filtered log entries inline without an HTTP fetch round trip.
+For text-based log analysis prefer `get_issue` with `include_logs` — it returns filtered log entries inline without an HTTP fetch round trip. The `"memory.leak"` bundle is also rendered inline by `get_issue` (the **Memory leak analysis** section); fetch it via this tool only when you need the raw structured JSON.
 
 ### list_builds
 

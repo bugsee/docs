@@ -116,7 +116,7 @@ This release adds an exchange factory for constructing `Breadcrumb` and `Network
   - `Options.DetectAndReportHangMediumLevel` (default `5000`)
   - `Options.DetectAndReportHangSevereLevel` (default `10000`)
 
-  Thresholds must be strictly increasing and positive; invalid configurations fall back to the documented defaults. Detection resolution is approximately 1 second — values smaller than that are rounded up by the watchdog tick. See [Detection → Hang detection](/sdk/android/v7/detection#hang-detection).
+  Thresholds must be strictly increasing and positive; invalid configurations fall back to the documented defaults. Detection resolution is approximately 1 second — values smaller than that are rounded up by the watchdog tick. See [Issue detection → Hangs](/sdk/android/v7/issue-detection/hangs).
 
 **Improvements**
 - The fallback `NetworkEvent` allocation path used when no capture-side pool entry is available now reuses instances via an intrusive 15-slot free list. Producers see no API change; the SDK's network coordinator recycles each instance after dispatch, eliminating allocation churn for hub-only consumers (APM, extension listeners) when the network capture provider isn't running.
@@ -145,7 +145,7 @@ This release adds three small public APIs for inspecting blackout state and inje
 This release introduces anomaly detection, splits NDK crash reporting into its own optional module, and consolidates how the SDK captures logs, network, input, and WebView events.
 
 **Breaking changes**
-- Native (NDK) crash detection now ships as a separate `bugsee-android-ndk` extension. Apps that need native crash capture must add `implementation("com.bugsee:bugsee-android-ndk:7.x.x")` and switch from `Options.DetectAndReportCrashNdk` to `NdkOptions.DetectAndReport`. The underlying option key is unchanged. See the updated [Crashes guide](/sdk/android/v7/crashes).
+- Native (NDK) crash detection now ships as a separate `bugsee-android-ndk` extension. Apps that need native crash capture must add `implementation("com.bugsee:bugsee-android-ndk:7.x.x")` and switch from `Options.DetectAndReportCrashNdk` to `NdkOptions.DetectAndReport`. The underlying option key is unchanged. See the updated [Native crashes guide](/sdk/android/v7/issue-detection/native-crashes).
 - The legacy WebView capture provider has been removed. WebView content now flows through the new unified interception layer, so no action is needed beyond updating to this version.
 
 **New features**

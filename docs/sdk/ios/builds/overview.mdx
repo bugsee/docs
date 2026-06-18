@@ -1,0 +1,71 @@
+---
+title: "Builds — Overview (iOS)"
+description: "Build-time data Bugsee captures from your iOS Archives — timings, dependencies, vulnerabilities, size — and how it surfaces in the dashboard."
+sidebar_position: 1
+slug: "/sdk/ios/builds/overview"
+---
+
+:::info[Requires Bugsee iOS SDK 6.1.5 or newer]
+Build info, timings, dependencies, vulnerability scanning, and size analysis all flow through the `BugseeAgent` post-action that ships with **6.1.5+** ([release notes](/sdk/ios/release-notes#615-may-13-2026)). Earlier versions only ship the dSYM-upload half of the post-action and silently ignore the build-info env vars.
+:::
+
+Bugsee turns each iOS build into a first-class signal alongside crashes, ANRs, and session replay. Everything runs inside the **same `BugseeAgent` post-action that already uploads your dSYMs** — there's no second build phase to add. Once the post-action is wired up (see [Crash symbolication → Auto dSYM upload](/sdk/ios/symbolication#auto-dsym-upload)), every Release Archive emits a **single build record** to Bugsee. That one record carries up to four independent payloads:
+
+| Surface | What it carries | Where it shows up | Documentation |
+| --- | --- | --- | --- |
+| **Timings** | Per-section build spans extracted from Xcode's `.xcactivitylog`, bucketed into native / resources / packaging / other; "vs previous build" regression deltas | Build detail → **Timings** tab | [Timings](/sdk/ios/builds/timings) |
+| **Dependencies** | Resolved CocoaPods / Swift Package Manager / Carthage graph — every package with direct-vs-transitive provenance | Build detail → **Dependencies** tab | [Dependencies](/sdk/ios/builds/dependencies) |
+| **Vulnerabilities** | Server-side OSV.dev scan over the dependencies list, with CVSS-scored CVE findings cross-referenced against GitHub Security Advisory | Build detail → **Dependencies** tab (vuln strip above the table) | [Vulnerabilities](/sdk/ios/builds/vulnerabilities) |
+| **Size analysis** | IPA uploaded for server-side breakdown; download vs install size, per-category treemap, per-file diffs, in-build size check | Build detail → **Size** tab | [Build size analysis](/sdk/ios/build-size-analysis) |
+
+The Bugsee dashboard renders both iOS and Android builds from one shared schema, so these tabs look and behave the same as their [Android counterparts](/sdk/android/v7/builds).
+
+## The upload pipeline
+
+From your CI's perspective, all four payloads are **one upload per Archive**. At the end of the post-action, the agent issues a single:
+
+```http
+POST /v2/apps/{app_token}/builds
+```
+
+with flags `request_artifact_upload`, `request_dependencies_upload`, and `request_timings_upload` reflecting which surfaces you have enabled. The Bugsee backend creates the build record and returns up to three presigned S3 PUT URLs — `endpoint` (the IPA artefact), `dependencies_upload_endpoint`, and `timings_upload_endpoint` — alongside the new `build_id`. The agent then streams the blobs (a gzipped JSON for the dependency graph, a gzipped JSON for the timing details, and — only when size analysis is on — the IPA itself) with independent best-effort `try`/`except`: one failed PUT never breaks the others.
+
+No artefact bytes are uploaded by default. The build-info record on its own already carries the IPA's `artifact_size`, the main executable's Mach-O `LC_UUID` (the same identifier the runtime SDK reports with every crash, so **every crash deterministically joins to the build that produced it**), VCS context, machine label, and Xcode / SDK / agent versions.
+
+Worker jobs then process each blob asynchronously. Each surface flips its own `_status` field on the build record (`uploading` → `processing` → `ready` / `failed`), and the dashboard's per-tab visibility gates on those fields, so data appears progressively over tens of seconds rather than waiting for the slowest dimension. Vulnerability scanning typically takes the longest because it depends on OSV.dev round-trips.
+
+## What you opt into
+
+On iOS, build data is controlled by **environment variables** set on the scheme's Archive action (or exported in your CI step) — the same mechanism the size-analysis and size-check features use. This mirrors the Android Gradle plugin's `bugsee { buildInfo { … } }` DSL block, one env var per knob:
+
+| Environment variable | Default | Mirrors (Gradle DSL) | Effect |
+| --- | --- | --- | --- |
+| `BUGSEE_BUILD_INFO_ENABLED` | **ON** | `buildInfo.enabled` | Master gate. Set to `0` / `false` / `no` / `off` and no build record is uploaded at all. |
+| `BUGSEE_BUILD_INFO_TIMINGS_ENABLED` | **ON** | `buildInfo.timings.enabled` | Per-section build timings from the `.xcactivitylog`. |
+| `BUGSEE_DEPENDENCIES_ENABLED` | **ON** | `buildInfo.dependencies.enabled` | Resolved CocoaPods / SPM / Carthage graph. Also the gate for the OSV vulnerability scan. |
+| `BUGSEE_SIZE_ANALYSIS_ENABLED` | OFF | `buildInfo.sizeAnalysis.enabled` | Upload the IPA for the treemap and per-file size diffs. |
+| `BUGSEE_BUILD_INFO_ALL_CONFIGURATIONS` | OFF | `buildInfo.allBuildTypes` | Register non-Release configurations too (Release-only by default). |
+
+The defaults are tuned so that simply wiring up the post-action gets you build history, timings, dependencies, and vulnerability scanning with no extra configuration — you opt **in** to size analysis (it ships IPA bytes) and opt **out** of any surface you don't want. See the [full env-var reference](/sdk/ios/symbolication#environment-variables-reference) for every variable, including the size-check thresholds and chunked-upload switch.
+
+```bash
+# Disable a single surface on a privacy-sensitive build:
+export BUGSEE_BUILD_INFO_TIMINGS_ENABLED=0   # no target/section names leave the machine
+# Opt into size analysis (ships the IPA):
+export BUGSEE_SIZE_ANALYSIS_ENABLED=1
+```
+
+## When data becomes visible
+
+The dashboard's build detail page renders each tab the moment its `_status` flips to `ready`. Typical timing on a healthy build:
+
+- **Dependencies + Timings**: a few seconds after upload — the worker jobs are pure JSON normalisation + diff.
+- **Size analysis**: tens of seconds to a few minutes, depending on IPA size — the worker decomposes the archive and builds the treemap.
+- **Vulnerabilities**: typically under a minute, sometimes longer when OSV.dev is rate-limited or returns many findings. A manual "Re-scan" affordance is available with a 3-hour cooldown.
+
+## What's next
+
+- **[Timings](/sdk/ios/builds/timings)** — per-section build spans, categories, regression deltas, the Gantt waterfall view.
+- **[Dependencies](/sdk/ios/builds/dependencies)** — CocoaPods / SPM / Carthage capture, direct-vs-transitive provenance, the per-dependency table.
+- **[Vulnerabilities](/sdk/ios/builds/vulnerabilities)** — OSV scan, severity buckets, manual re-scan, advisory drill-down.
+- **[Build size analysis](/sdk/ios/build-size-analysis)** — the dedicated page for IPA breakdown, baseline comparison, in-build size check, and chunked upload.

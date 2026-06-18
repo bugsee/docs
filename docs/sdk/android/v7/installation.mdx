@@ -8,7 +8,7 @@ slug: "/sdk/android/v7/installation"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-:::warning[Beta release]
+:::caution[7.x Beta]
 This page documents the **7.x Beta** of the Bugsee Android SDK. The API, option keys, and module layout differ significantly from 6.x. For the stable release, see the [6.x installation guide](/sdk/android/installation). If you are upgrading, read the [migration guide](/sdk/android/v7/migration) first.
 :::
 
@@ -101,27 +101,41 @@ for the current supported plugin version.
 
 ## 2. Add SDK artifacts
 
-The core artifact is always required. With the Gradle plugin enabled, network-client extensions and the Compose extension are added automatically when the plugin detects the underlying dependency in your build. Extensions that are not dependency-driven (notably `feedback`) must be added manually.
+With the Gradle plugin applied, **the core `com.bugsee:bugsee-android` artifact is pulled automatically** as soon as any Bugsee dependency (including an extension module) is in your build, and **dependency-driven extensions** (OkHttp, Ktor 2/3, Cronet, Compose) are auto-installed when the plugin detects the matching third-party library.
+
+The three extensions that aren't dependency-driven — **feedback**, **NDK**, and **leak** — are enabled via DSL toggles in the `bugsee { … }` block. Setting the toggle is all you need; the plugin pulls in the artefact at the same version as itself so extension and core versions never drift apart:
+
+```kotlin
+bugsee {
+    appToken("<your-app-token>")
+
+    // In-app feedback messenger UI (default: off)
+    feedback.set(true)
+
+    // Native (NDK) crash capture (default: off)
+    ndk {
+        enabled.set(true)
+    }
+
+    // Memory & thread leak detection (default: off)
+    leak {
+        enabled.set(true)
+    }
+}
+```
+
+In this typical setup, **your `dependencies { … }` block needs no Bugsee entries at all** — the plugin handles core and extensions for you.
+
+### Pinning a specific extension version
+
+When you need to lock an extension to a specific version (for example, to downgrade against a regression while waiting for a fix), declare it explicitly alongside the DSL toggle. The explicit declaration wins:
 
 <Tabs groupId="build-android">
   <TabItem value="kts" label="build.gradle.kts">
 
 ```kotlin
 dependencies {
-    // Core (required)
-    implementation("com.bugsee:bugsee-android:7.x.x")
-
-    // Optional — add only the extensions you need.
-    // Auto-added by the plugin when their trigger dependency is present:
-    implementation("com.bugsee:bugsee-android-okhttp:7.x.x")    // auto with com.squareup.okhttp3:*
-    implementation("com.bugsee:bugsee-android-ktor-2:7.x.x")    // auto with io.ktor:* 2.x
-    implementation("com.bugsee:bugsee-android-ktor-3:7.x.x")    // auto with io.ktor:* 3.x
-    implementation("com.bugsee:bugsee-android-cronet:7.x.x")    // auto with org.chromium.net:*
-    implementation("com.bugsee:bugsee-android-compose:7.x.x")   // auto with androidx.compose.*
-
-    // Not auto-added — declare explicitly if needed:
-    implementation("com.bugsee:bugsee-android-feedback:7.x.x")
-    implementation("com.bugsee:bugsee-android-ndk:7.x.x")       // native (NDK) crash capture
+    implementation("com.bugsee:bugsee-android-feedback:7.0.0-beta11")
 }
 ```
 
@@ -130,20 +144,28 @@ dependencies {
 
 ```groovy
 dependencies {
-    implementation 'com.bugsee:bugsee-android:7.x.x'
-
-    implementation 'com.bugsee:bugsee-android-okhttp:7.x.x'
-    implementation 'com.bugsee:bugsee-android-ktor-2:7.x.x'
-    implementation 'com.bugsee:bugsee-android-ktor-3:7.x.x'
-    implementation 'com.bugsee:bugsee-android-cronet:7.x.x'
-    implementation 'com.bugsee:bugsee-android-compose:7.x.x'
-    implementation 'com.bugsee:bugsee-android-feedback:7.x.x'
-    implementation 'com.bugsee:bugsee-android-ndk:7.x.x'
+    implementation 'com.bugsee:bugsee-android-feedback:7.0.0-beta11'
 }
 ```
 
   </TabItem>
 </Tabs>
+
+The same pinning rule applies to the core: declaring `com.bugsee:bugsee-android` yourself on any configuration suppresses the plugin's auto-pull and your version wins.
+
+### Opting out of the core auto-pull
+
+To opt out of the core SDK auto-pull entirely — for example when shipping the core from a manual classpath path or a locally-published artefact — set the top-level `sdkAutoLoad` flag to `false`:
+
+```kotlin
+bugsee {
+    sdkAutoLoad.set(false)
+}
+```
+
+The dynamic-version range used for the auto-pulled core is bounded to the same `MAJOR.MINOR` series as the plugin's `sdk-min-version` (e.g. `[7.0.0-beta12, 7.1.0)`), so you pick up patches automatically without crossing a minor boundary.
+
+The full list of dependency-driven auto-installs lives on the [Gradle plugin](/sdk/android/v7/gradle-plugin#auto-install-of-extension-modules) page.
 
 Extensions auto-register via their own `ContentProvider`; no runtime wiring is needed. Ktor and Cronet still require per-client wiring at call sites (see [network](/sdk/android/v7/network)).
 
