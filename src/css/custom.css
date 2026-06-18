@@ -749,6 +749,22 @@ svg[class*="iconExternalLink"] {
   display: none !important;
 }
 
+/* ===== Sidebar section headers (type:'html' group labels in sidebars.ts) =====
+   Non-clickable labels that segment the top-level item list (SDKs / Dashboard
+   & Integrations / Tools / AI) without adding another collapse level. */
+.sidebar-section {
+  margin: 1.5rem 0 0.25rem;
+  padding: 0 var(--ifm-menu-link-padding-horizontal, 0.75rem);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ifm-color-emphasis-600);
+  pointer-events: none;
+  user-select: none;
+}
+
 
 /* ===== Footer ===== */
 .footer {

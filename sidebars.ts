@@ -3,6 +3,8 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 const sidebars: SidebarsConfig = {
   docs: [
     {type: 'doc', id: 'index', label: 'Overview'},
+
+    {type: 'html', value: 'SDKs', className: 'sidebar-section'},
     {
       type: 'category',
       label: 'iOS SDK',
@@ -376,6 +378,7 @@ const sidebars: SidebarsConfig = {
         {type: 'doc', id: 'sdk/xamarin/release-notes', label: 'Release notes'}
       ],
     },
+    {type: 'html', value: 'Dashboard & Integrations', className: 'sidebar-section'},
     {
       type: 'category',
       label: 'Dashboard',
@@ -485,6 +488,7 @@ const sidebars: SidebarsConfig = {
         {type: 'doc', id: 'webhooks/events', label: 'Events'}
       ],
     },
+    {type: 'html', value: 'Tools', className: 'sidebar-section'},
     {
       type: 'category',
       label: 'Bugsee CLI',
@@ -503,14 +507,9 @@ const sidebars: SidebarsConfig = {
         {type: 'doc', id: 'cli/commands', label: 'Command reference'},
       ],
     },
-    {
-      type: 'category',
-      label: 'Tools',
-      collapsed: true,
-      items: [
-        {type: 'doc', id: 'tools/sourcemaps', label: 'Source maps'}
-      ],
-    },
+    {type: 'doc', id: 'tools/sourcemaps', label: 'Source maps'},
+
+    {type: 'html', value: 'AI', className: 'sidebar-section'},
     {
       type: 'category',
       label: 'Bugsee for AI',
