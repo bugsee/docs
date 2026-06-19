@@ -5,6 +5,13 @@ sidebar_position: 12
 slug: "/sdk/ios/release-notes"
 ---
 
+## 6.2.0 (June 19 2026)
+- Feat: Application Performance Monitoring (APM) — first iteration. A new in-process span/trace pipeline that auto-instruments NSURLSession HTTP requests, NSData file reads/writes, NSFileManager file operations, UIViewController lifecycle, and app startup. Adds a public `Bugsee.startTransaction(...)` / `Bugsee.startSpan(...)` API for manual instrumentation. Captured transactions are attached to every report. Controlled by the `performanceMonitoring` option (`BugseePerformanceMonitoringKey`, default: YES). APM auto-instrumentation for SwiftUI is coming in an upcoming release.
+- Feat: WYSIWYG markdown formatting in the feedback chat.
+- Feat: Ship the BugseeSwiftUI source module via the SPM mixed package (binary SDK + Swift source module).
+- Fix: Rare crashes in video recording.
+- Perf: Internal improvements.
+
 ## 6.1.6 (May 30 2026)
 - Fix: Customized "Done" button could be invisible or unresponsive when the host app applies custom navigation-bar button styling.
 - Fix: Crash when handling malformed network data from WebViews (non-string URL values).
