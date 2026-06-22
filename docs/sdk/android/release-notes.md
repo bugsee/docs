@@ -5,6 +5,12 @@ sidebar_position: 13
 slug: "/sdk/android/release-notes"
 ---
 
+## 6.0.4 (June 22 2026)
+- Fix: Screenshot-to-report was not triggered on some devices (specifically on Samsung, and possibly certain other manufacturers) running Android 14 and newer
+
+## 6.0.3 (April 28 2026)
+- Feat: Added compatibility with Ktor 3.x for network request capturing
+
 ## 6.0.2 (March 11 2026)
 - Fix: Stripped tags in console logs
 
