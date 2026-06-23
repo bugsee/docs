@@ -1,14 +1,15 @@
 ---
-title: "Manual invocation"
-description: "Showing the Bugsee report dialog programmatically, uploading silent reports, configuring shake/screenshot triggers, and hooking ReportHandler."
-sidebar_position: 4
-slug: "/sdk/android/manual"
+title: "Bug reporting"
+description: "Let users and your code file bug reports with the Bugsee Android SDK — shake and screenshot triggers, the report dialog, silent upload, programmatic report creation, and the ReportHandler hook."
+slug: "/sdk/android/manual/bug-reporting"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 This page documents the Bugsee Android SDK **7.0.0**. For the previous major version, see the [6.x documentation](/sdk/android/v6/manual).
+
+Bug reports cover something that is wrong but did not crash the app. Your users can raise one with a gesture, or you can open the report dialog — or submit a report silently — from your own code. (Crashes and handled errors are covered separately, in [Crash & error reporting](/sdk/android/manual/crash-error-reporting).)
 
 ## Built-in report triggers
 
@@ -54,9 +55,9 @@ Bugsee.launch(application, "<your-app-token>", options)
   </TabItem>
 </Tabs>
 
-## `Bugsee.showReportDialog(...)`
+## Show the report dialog
 
-Opens the standard reporting UI. The user can edit any pre-filled values before submitting.
+`Bugsee.showReportDialog(...)` opens the standard reporting UI. The user can edit any pre-filled values before submitting.
 
 ```java
 static void showReportDialog();
@@ -104,9 +105,9 @@ Bugsee.showReportDialog(
 There is no severity-only overload. To set severity without pre-filling the text fields, pass `null` for both `summary` and `description`.
 :::
 
-## `Bugsee.upload(...)` — silent upload
+## Silent upload
 
-Submits a report without showing any UI. Use this when you already collected the details in your own UI.
+`Bugsee.upload(...)` submits a report without showing any UI. Use this when you already collected the details in your own UI.
 
 ```java
 static void upload(String summary, String description);
@@ -141,7 +142,7 @@ Bugsee.upload("Checkout frozen", "Spinner never stops", IssueSeverity.High, labe
 </Tabs>
 
 :::warning
-Do not call `upload(...)` from automated error paths. For programmatic exception reporting use `Bugsee.logException(...)` — this keeps traces grouped and rate-limited correctly.
+Do not call `upload(...)` from automated error paths. For programmatic exception reporting use [`Bugsee.logException(...)`](/sdk/android/manual/crash-error-reporting#reporting-handled-errors) — this keeps traces grouped and rate-limited correctly.
 :::
 
 ## Default severities
@@ -154,9 +155,9 @@ Crash, error, and bug reports get a default severity unless one is specified or 
 | `ReportingDefaultErrorPriority`   | `com.bugsee.option.reporting.defaults.error-priority`     | `IssueSeverity.High`      |
 | `ReportingDefaultBugPriority`     | `com.bugsee.option.reporting.defaults.bug-priority`       | `IssueSeverity.High`      |
 
-## `ReportHandler` — mutate every outgoing report
+## Customize reports with `ReportHandler`
 
-`ReportHandler` is the idiomatic way to inspect or rewrite reports before they are uploaded.
+`ReportHandler` is the idiomatic way to inspect or rewrite reports before they are uploaded. It runs for **every** outgoing report — crashes and errors included, not just bug reports.
 
 Two callbacks are provided as default methods on the interface:
 
@@ -289,75 +290,6 @@ Bugsee.createReport { report ->
 
   </TabItem>
 </Tabs>
-
-## Breadcrumbs
-
-Breadcrumbs are small contextual entries that record the sequence of events leading up to an issue. Bugsee captures many automatically; `Bugsee.addBreadcrumb(Breadcrumb)` records one you build yourself (a navigation event, a business-domain checkpoint, a breadcrumb forwarded from a wrapper SDK).
-
-Construct a `Breadcrumb` via `Bugsee.getExchangeFactory()` rather than implementing the interface — the factory returns a pooled SDK container ready to populate:
-
-```java
-static BugseeExchangeFactory getExchangeFactory();   // never null
-static void addBreadcrumb(Breadcrumb breadcrumb);    // no-op if null / not launched
-```
-
-`getExchangeFactory()` always returns the shared factory, but its `create*` methods may return `null` before the SDK is launched (or after it is stopped) — always null-check. The `Breadcrumb` it returns exposes `setCategory(String)`, `setMessage(String)`, `setType(String)`, `setLevel(Breadcrumb.Level)`, and `setData(...)`. `Level` is one of `DEBUG`, `INFO`, `WARNING`, `ERROR`, `FATAL`.
-
-The breadcrumb runs through the filter registered via `Bugsee.setBreadcrumbFilter(...)` before being recorded.
-
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-BugseeExchangeFactory factory = Bugsee.getExchangeFactory();
-Breadcrumb crumb = factory.createBreadcrumb();
-if (crumb != null) {
-    crumb.setCategory("navigation");
-    crumb.setMessage("Opened checkout");
-    crumb.setType("default");
-    crumb.setLevel(Breadcrumb.Level.INFO);
-    crumb.setData("cart_size", 3);
-    Bugsee.addBreadcrumb(crumb);
-}
-
-// Or build it fully in one call:
-Breadcrumb prebuilt = factory.createBreadcrumb(
-    System.currentTimeMillis(),
-    "navigation",            // category
-    "Opened checkout",       // message
-    Breadcrumb.Level.INFO,   // level (null for default)
-    "default",               // type
-    null);                   // optional data map
-Bugsee.addBreadcrumb(prebuilt);
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-val factory = Bugsee.getExchangeFactory()
-factory.createBreadcrumb()?.let { crumb ->
-    crumb.setCategory("navigation")
-    crumb.setMessage("Opened checkout")
-    crumb.setType("default")
-    crumb.setLevel(Breadcrumb.Level.INFO)
-    crumb.setData("cart_size", 3)
-    Bugsee.addBreadcrumb(crumb)
-}
-```
-
-  </TabItem>
-</Tabs>
-
-`getExchangeFactory()` also builds `NetworkEvent` instances for `Bugsee.addNetworkEvent(...)` — see [Network events → Recording custom network events](/sdk/android/network#recording-custom-network-events).
-
-## Testing crash reporting
-
-`Bugsee.testCrash()` throws a `RuntimeException` to verify that crash detection and reporting are wired up correctly. Use it only in QA / debug builds — it terminates the process.
-
-```java
-Bugsee.testCrash();
-```
 
 ## Severity values
 

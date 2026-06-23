@@ -177,7 +177,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
   	<tr>
   		<th>Custom events</th>
 		<td><a href="/sdk/ios/custom/">View</a></td>
-		<td><a href="/sdk/android/custom/">View</a></td>
+		<td><a href="/sdk/android/events-and-traces#custom-events">View</a></td>
 		<td><a href="/sdk/cordova/custom/">View</a></td>
 		<td><a href="/sdk/react_native/custom/#custom-events">View</a></td>
 		<td><a href="/sdk/flutter/custom/#custom-events">View</a></td>
@@ -189,7 +189,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
    	<tr>
 		<th>Custom traces</th>
 		<td><a href="/sdk/ios/custom/">View</a></td>
-		<td><a href="/sdk/android/custom/">View</a></td>
+		<td><a href="/sdk/android/events-and-traces#custom-traces">View</a></td>
 		<td><a href="/sdk/cordova/custom/">View</a></td>
 		<td><a href="/sdk/react_native/custom/#custom-traces">View</a></td>
 		<td><a href="/sdk/flutter/custom/#custom-traces">View</a></td>
@@ -201,7 +201,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
     <tr>
 		<th>Custom attributes</th>
 		<td><a href="/sdk/ios/custom/">View</a></td>
-		<td><a href="/sdk/android/custom/">View</a></td>
+		<td><a href="/sdk/android/user-session-data#user-and-session-attributes">View</a></td>
 		<td><a href="/sdk/cordova/custom/#usersession-attributes">View</a></td>
 		<td><a href="/sdk/react_native/custom/#usersession-attributes">View</a></td>
 		<td><a href="/sdk/flutter/custom/#usersession-attributes">View</a></td>
@@ -213,7 +213,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
    	<tr>
 		<th>File attachments</th>
 		<td><a href="/sdk/ios/custom/">View</a></td>
-		<td><a href="/sdk/android/custom/">View</a></td>
+		<td><a href="/sdk/android/manual/bug-reporting#attachments">View</a></td>
 		<td><a href="/sdk/cordova/custom/">View</a></td>
 		<td><a href="/sdk/react_native/custom/#file-attachments">View</a></td>
 		<td><a href="/sdk/flutter/custom/#file-attachments">View</a></td>

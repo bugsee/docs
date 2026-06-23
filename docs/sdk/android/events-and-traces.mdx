@@ -1,0 +1,83 @@
+---
+title: "Custom events & traces"
+description: "Recording custom events and time-series traces into the Bugsee Android SDK report timeline."
+slug: "/sdk/android/events-and-traces"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+This page documents the Bugsee Android SDK **7.0.0**. For the previous major version, see [Adding custom data](/sdk/android/v6/custom).
+
+In addition to the data Bugsee captures automatically, you can enrich reports with your own signals. Custom events and traces live on the `Bugsee` facade and are safe to call before or after `Bugsee.launch(...)` — calls made before launch are buffered.
+
+## Custom events
+
+Events are identified by a string and can optionally carry a `HashMap` of parameters. They are attached to the report and indexed on the Bugsee dashboard.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+// Without any additional parameters
+Bugsee.event("payment_processed");
+
+// ...or with additional custom parameters
+HashMap<String, Object> params = new HashMap<>();
+params.put("amount", 125);
+params.put("currency", "USD");
+Bugsee.event("event with params", params);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+// Without any additional parameters
+Bugsee.event("payment_processed")
+
+// ...or with additional custom parameters
+val params: HashMap<String, Any> = hashMapOf(
+    "amount" to 125,
+    "currency" to "USD"
+)
+Bugsee.event("event with params", params)
+```
+
+  </TabItem>
+</Tabs>
+
+## Custom traces
+
+Traces are useful when you want to track how a specific variable or state changes over time right before a problem occurs. Each call records a new value for the given trace name; the value can be a number, string, or boolean.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+// Number value
+Bugsee.trace("credit_balance", 15);
+
+// String value
+Bugsee.trace("current_location", "USA");
+
+// Boolean value
+Bugsee.trace("logged_in", true);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+// Number value
+Bugsee.trace("credit_balance", 15)
+
+// String value
+Bugsee.trace("current_location", "USA")
+
+// Boolean value
+Bugsee.trace("logged_in", true)
+```
+
+  </TabItem>
+</Tabs>

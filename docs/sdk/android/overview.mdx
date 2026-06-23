@@ -27,7 +27,7 @@ The SDK turns problems into reports automatically:
 
 - **Crashes** — unhandled Java/Kotlin exceptions and [native (NDK) crashes](/sdk/android/issue-detection/native-crashes).
 - **ANRs, hangs, app exits, HTTP errors**, and more — see [Issue detection](/sdk/android/issue-detection).
-- **Manual reports** — let users [shake, screenshot, or tap to report](/sdk/android/manual), or trigger a report from code.
+- **Manual reports** — let users [shake, screenshot, or tap to report](/sdk/android/manual/bug-reporting), or trigger a report from code.
 
 ## How it works
 
@@ -85,7 +85,7 @@ The SDK is the same everywhere, but a few capabilities depend on hardware or pla
 
 - **Shake to report** needs an **accelerometer**, which is standard on phones and tablets but typically absent on TV and Automotive head units. On a device without an accelerometer, the shake trigger simply doesn't arm — it no-ops gracefully rather than failing — so it's effectively a phone/tablet-oriented trigger.
 - **Screenshot to report** relies on the platform's own screenshot mechanism. Where the platform exposes one (as phones and tablets do), the trigger works; on form factors that don't surface a user screenshot gesture, use a different trigger.
-- **Notification trigger** and **programmatic reporting** ([`Bugsee.showReportDialog()`](/sdk/android/manual)) work everywhere, and are the most reliable way to open the report flow on TV and Automotive. On TV and Automotive, the reporting UI is driven with the **D-pad / restricted input model** of those platforms rather than touch, but the report flow itself functions normally.
+- **Notification trigger** and **programmatic reporting** ([`Bugsee.showReportDialog()`](/sdk/android/manual/bug-reporting)) work everywhere, and are the most reliable way to open the report flow on TV and Automotive. On TV and Automotive, the reporting UI is driven with the **D-pad / restricted input model** of those platforms rather than touch, but the report flow itself functions normally.
 
 Pick triggers that match your target hardware — see [reporting triggers](/sdk/android/configuration#reporting-triggers) for the full list and how to toggle each one.
 

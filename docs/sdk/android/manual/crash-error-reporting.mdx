@@ -1,0 +1,99 @@
+---
+title: "Crash & error reporting"
+description: "Crashes are captured automatically by the Bugsee Android SDK; this page covers reporting handled errors with logException, manual crash reporting, and verifying the crash pipeline with testCrash."
+slug: "/sdk/android/manual/crash-error-reporting"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Crashes — both Java/Kotlin exceptions and [native (NDK) crashes](/sdk/android/issue-detection/native-crashes) — are captured **automatically**; you do not need to call anything. See [Crashes](/sdk/android/issue-detection/crashes) for what is detected and how reports are assembled.
+
+This page covers the cases where you report something yourself: handled errors, manual crash reporting, and verifying that the pipeline is wired up.
+
+## Reporting handled errors
+
+`Bugsee.logException(Throwable)` records a caught, **non-terminal** exception as an error report without crashing the app. Unlike a one-off `upload(...)`, logged exceptions are grouped by signature and rate-limited, so a recurring error does not flood your dashboard.
+
+```java
+static void logException(Throwable ex);
+static void logException(Throwable ex, Map<String, Object> options);   // type, severity, and extra params
+```
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+try {
+    riskyOperation();
+} catch (IOException e) {
+    Bugsee.logException(e);
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+try {
+    riskyOperation()
+} catch (e: IOException) {
+    Bugsee.logException(e)
+}
+```
+
+  </TabItem>
+</Tabs>
+
+:::warning
+Do not call `Bugsee.upload(...)` from automated error paths — use `logException(...)` so traces stay grouped and rate-limited correctly.
+:::
+
+## Logging unhandled exceptions
+
+:::info[New in 7.0.0]
+`Bugsee.logUnhandledException(Throwable)` is new in 7.0.0. The existing `Bugsee.logException(...)` API (above) is preserved for non-terminal, handled errors.
+:::
+
+`logUnhandledException(Throwable)` is a fire-and-forget entry point for reporting a `Throwable` that your app treats as an unhandled crash but which Bugsee's automatic crash handler did not see — for example, when you integrate with a third-party crash reporter that intercepts `Thread.UncaughtExceptionHandler` before Bugsee, or when you rethrow a background-thread failure onto a crash pipeline of your own.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+try {
+    runCriticalTask();
+} catch (Throwable thrown) {
+    Bugsee.logUnhandledException(thrown);
+    throw thrown;
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+try {
+    runCriticalTask()
+} catch (thrown: Throwable) {
+    Bugsee.logUnhandledException(thrown)
+    throw thrown
+}
+```
+
+  </TabItem>
+</Tabs>
+
+For handled, non-terminal errors, use [`logException`](#reporting-handled-errors) instead. Automatic crash and ANR capture does not require either API — see [Crashes](/sdk/android/issue-detection/crashes) for details.
+
+## Testing crash reporting
+
+`Bugsee.testCrash()` throws a `RuntimeException` to verify that crash detection and reporting are wired up correctly. Use it only in QA / debug builds — it terminates the process.
+
+```java
+Bugsee.testCrash();
+```
+
+## Report severity
+
+Crash and error reports receive a default severity — `IssueSeverity.Blocker` for crashes and `IssueSeverity.High` for errors — unless you override it. Change the defaults under [Default severities](/sdk/android/manual/bug-reporting#default-severities), set a severity per call via the `logException(ex, options)` overload, or adjust any report from a [`ReportHandler`](/sdk/android/manual/bug-reporting#customize-reports-with-reporthandler). See [Severity values](/sdk/android/manual/bug-reporting#severity-values) for the full list.

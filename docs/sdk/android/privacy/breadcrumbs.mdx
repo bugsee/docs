@@ -239,40 +239,7 @@ and [logs](/sdk/android/privacy/logs#declaring-the-filter-in-the-manifest).
 
 ## Recording custom breadcrumbs
 
-:::note
-`Bugsee.addBreadcrumb(...)` is **new in 7.0.0**.
-:::
-
-The four built-in sources cover most apps, but you can also record domain-specific breadcrumbs — business checkpoints (`"checkout.paid"`, `"trial.expired"`), navigation events from a wrapper SDK, or breadcrumbs forwarded from a non-Android subsystem — into the same timeline:
-
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-import com.bugsee.library.Bugsee;
-import com.bugsee.library.contracts.exchange.Breadcrumb;
-
-Breadcrumb crumb = /* construct or obtain a Breadcrumb */;
-Bugsee.addBreadcrumb(crumb);
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-import com.bugsee.library.Bugsee
-import com.bugsee.library.contracts.exchange.Breadcrumb
-
-val crumb: Breadcrumb = /* construct or obtain a Breadcrumb */
-Bugsee.addBreadcrumb(crumb)
-```
-
-  </TabItem>
-</Tabs>
-
-Custom breadcrumbs are routed through the same filter the SDK applies to built-in ones — the [filter](#filtering-breadcrumbs) you registered with `setBreadcrumbFilter(...)` will run on every call, with the same semantics described above.
-
-The call no-ops silently when the SDK has not been launched, when `CaptureBreadcrumbs` is disabled, or when `breadcrumb` is `null`.
+Beyond the built-in sources, you can record your own breadcrumbs with `Bugsee.addBreadcrumb(...)` — see [Breadcrumbs → Recording custom breadcrumbs](/sdk/android/breadcrumbs#recording-custom-breadcrumbs). Custom breadcrumbs run through the [filter](#filtering-breadcrumbs) you register here, exactly like the built-in ones.
 
 ## Notes
 
