@@ -5,6 +5,9 @@ sidebar_position: 11
 slug: "/sdk/react_native/release-notes"
 ---
 
+## 6.0.3 (June 23 2026)
+- Feat: Updated native SDKs to their latest versions (Android: [6.0.4](/sdk/android/v6/release-notes/#604-june-22-2026), iOS: [6.1.2](/sdk/ios/release-notes/#612-march-4-2026))
+
 ## 6.0.2 (March 20 2026)
 - Feat: Updated native SDKs to their latest versions (Android: [6.0.2](/sdk/android/v6/release-notes/#602-march-11-2026), iOS: [6.1.2](/sdk/ios/release-notes/#612-march-4-2026))
 
