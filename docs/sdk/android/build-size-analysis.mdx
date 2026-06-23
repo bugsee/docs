@@ -1,0 +1,254 @@
+---
+title: "Build size analysis (Android)"
+description: "Track every release build's download size, install size, and per-file deltas on the Bugsee dashboard. Optional CI gates against size regressions; chunked upload cuts CI upload time by 70–90% on incremental builds."
+sidebar_position: 16
+slug: "/sdk/android/build-size-analysis"
+---
+
+Bugsee Build Size Analysis turns app size into a first-class CI signal alongside crashes, ANRs, and session replay. It ships in two layers, configured independently, and works on both Android and iOS — this page covers the Android setup; see the [iOS counterpart](/sdk/ios/build-size-analysis) for parity.
+
+## Two layers
+
+**Build info** — *default ON, Release-only.* Every Release build registers a tiny metadata record with Bugsee: bundle id, version, configuration, VCS context (commit, branch, base branch, PR, repo), build timings, machine label, plugin / Gradle / SDK versions, raw artefact byte count, and the injected `BUILD_UUID` from the manifest. No artefact bytes are sent on this path. The record unlocks crash-context enrichment, build-history navigation in the dashboard, and the baseline lookup the size-check feature uses.
+
+**Size analysis** — *default OFF, sub-feature of build info.* Opt in via the DSL and the same task additionally uploads the AAB/APK for server-side analysis: download vs install size, per-category breakdown (DEX, native libs per ABI, resources, assets), and per-file diffs against the prior build. The dashboard shows the regression at PR review time.
+
+## Quick start
+
+In your app module's `build.gradle.kts`, inside the existing `bugsee { ... }` extension block:
+
+```kotlin title="app/build.gradle.kts"
+bugsee {
+    buildInfo {
+        sizeAnalysis {
+            enabled.set(true)
+        }
+    }
+}
+```
+
+That's the minimum. On the next CI release build the plugin will upload the artefact and the dashboard's **Builds** tab will show the size breakdown. `buildInfo` itself is on by default — you only need to nest `sizeAnalysis` inside it.
+
+Groovy DSL equivalent:
+
+```groovy title="app/build.gradle"
+bugsee {
+    buildInfo {
+        sizeAnalysis {
+            enabled = true
+        }
+    }
+}
+```
+
+## AI-assisted setup
+
+If you use a local AI coding assistant (Claude Code, Cursor, GitHub Copilot, Windsurf, …), paste the prompt below into it. The agent locates your app module's Gradle config, adds the `sizeAnalysis` block, and walks you through each optional tweak interactively — you say yes/no per option, the agent shows you the resulting block before saving, and you can skip straight through if none apply. End-to-end takes about 90 seconds.
+
+:::tip[Hand the whole page to your AI agent]
+Use the **View as markdown** option in the drop-down menu at the top of this page to grab the raw markdown source. Paste that into your AI assistant and it has the prompt — plus the surrounding context — without any copy-paste from the code block below.
+:::
+
+```text
+Enable Bugsee build size analysis for my Android app, then walk me
+through optional tweaks.
+
+PART 1 — required setup
+========================
+
+1. Find the app module's Gradle build script. Look for the
+   `com.android.application` plugin in `*/build.gradle.kts` (Kotlin DSL)
+   or `*/build.gradle` (Groovy DSL) — the file that contains it is the
+   app module's build script.
+
+2. Confirm the Bugsee Gradle plugin is applied in that file
+   (`id("com.bugsee.android.gradle")` in Kotlin DSL, or
+   `apply plugin: 'com.bugsee.android.gradle'` /
+   `id 'com.bugsee.android.gradle'` in Groovy). If it isn't, STOP and
+   tell me — I need to follow the SDK installation instructions first.
+   Do not add the plugin yourself.
+
+3. Locate the existing `bugsee { ... }` extension block. Add (or merge)
+   the `buildInfo.sizeAnalysis` sub-block with `enabled.set(true)`
+   (Kotlin DSL) or `enabled = true` (Groovy DSL). End state for Kotlin
+   DSL:
+
+       bugsee {
+           buildInfo {
+               sizeAnalysis {
+                   enabled.set(true)
+               }
+           }
+       }
+
+   Note: the Bugsee app token is wired up at SDK installation time
+   (in `AndroidManifest.xml` meta-data, or via `appToken(...)` inside
+   the `bugsee` DSL block). Size analysis re-uses it — do NOT add a
+   separate token to the Gradle config.
+
+PART 2 — optional tweaks
+========================
+
+Now walk me through each option below ONE AT A TIME. For each option:
+
+  a. Read me the full description so I know what it does and why I
+     might want it. Don't summarise — read it as written.
+  b. Ask yes/no.
+  c. If no, move on without editing anything.
+  d. If yes, apply the change and show me the resulting
+     `bugsee { ... }` block before moving to the next option.
+
+When all four options are done, summarise what changed (or say
+"no changes" if I said no to everything).
+
+----------------------------------------------------------------------
+Option 1 — Override the configuration label
+
+  What it does: Builds sharing a "configuration label" are diffed
+  against each other on the Bugsee dashboard. By default the plugin
+  uses the Gradle variant name (`release`, `freeRelease`, `proRelease`,
+  etc.), which means different flavours appear as separate timelines.
+
+  When you want it: Your CI produces multiple comparable flavours
+  (e.g. `freeRelease` + `proRelease` that ship the same way) and you'd
+  rather see them in a single timeline so size diffs are meaningful.
+
+  When you skip it: You only ship one release flavour, or your flavours
+  legitimately have different size footprints and shouldn't be diffed.
+
+  If yes: ask me which label string to use, then inside the
+  `buildInfo.sizeAnalysis` sub-block add
+  `buildConfiguration.set("<my-label>")` (Kotlin DSL) or
+  `buildConfiguration = "<my-label>"` (Groovy DSL).
+
+----------------------------------------------------------------------
+Option 2 — Speed up CI with chunked upload
+
+  What it does: Enables a deduplicated chunk-upload protocol. The
+  artifact is split into content-addressed chunks; on subsequent
+  builds only the chunks that actually changed get re-uploaded.
+
+  When you want it: Your CI runs frequently and most builds are
+  incremental — chunked upload typically cuts upload time by 70–90%
+  on subsequent builds. The big win is on long pipelines where upload
+  bandwidth dominates.
+
+  When you skip it: One-off / infrequent builds, or you've already
+  hit some chunked-upload-specific issue in the past.
+
+  If yes: inside the `buildInfo.sizeAnalysis` sub-block (same block
+  as `enabled`, NOT a separate sibling), add
+  `chunkedUpload.set(true)` (Kotlin DSL) or `chunkedUpload = true`
+  (Groovy DSL).
+
+----------------------------------------------------------------------
+Option 3 — In-build size regression check
+
+  What it does: Compares each build's artifact size against the
+  most-recent prior build for the same configuration. Crossing the
+  warning threshold prints a warning in Gradle output; crossing the
+  fail threshold fails the build. Either gate is independently
+  optional (`0` disables it).
+
+  When you want it: You want a guardrail that catches size
+  regressions before they ship — especially useful on PR pipelines
+  so reviewers see "this PR adds 4% download size" alongside test
+  results.
+
+  When you skip it: You're still establishing a baseline (the very
+  first builds), or you'd rather watch size on the dashboard than
+  block CI on it.
+
+  If yes: ask me for the warning percentage (default 5.0) and the
+  fail percentage (default 10.0) — either can be `0` to disable. Then
+  add a nested `sizeCheck` block under `buildInfo` (alongside
+  `sizeAnalysis`):
+
+      bugsee {
+          buildInfo {
+              sizeCheck {
+                  enabled.set(true)
+                  warningPercent.set(<value>)
+                  failPercent.set(<value>)
+              }
+              sizeAnalysis {
+                  enabled.set(true)
+              }
+          }
+      }
+
+  `buildInfo` itself is ON by default — do NOT set `buildInfo.enabled`
+  explicitly.
+
+----------------------------------------------------------------------
+Option 4 — ProGuard / R8 mapping
+
+  No question to ask — just inform me: if my build produces a
+  `mapping.txt`, the plugin uploads it alongside the bundle
+  automatically. The dashboard shows deobfuscated class names in the
+  size breakdown. Nothing to configure.
+
+----------------------------------------------------------------------
+
+Do not run Gradle yourself — I'll verify by building when I'm ready.
+```
+
+## In-build size check
+
+A CI guardrail that fails the build when the artefact grows beyond a configured threshold versus the previous build for the same `(package_id, format, build_configuration)` tuple:
+
+```kotlin title="app/build.gradle.kts"
+bugsee {
+    buildInfo {
+        sizeCheck {
+            enabled.set(true)
+            warningPercent.set(5.0)   // warn at +5% vs the prior build
+            failPercent.set(10.0)     // fail the task at +10%
+            // warningBytes.set(500_000L)
+            // failBytes.set(2_000_000L)
+        }
+        sizeAnalysis {
+            enabled.set(true)
+        }
+    }
+}
+```
+
+Rules the check follows:
+
+- Each gate (warn / fail, percent / bytes) is independently optional — `0` or unset disables it. Set only what you want.
+- Negative deltas never trigger. An artefact that shrunk vs the baseline always PASSes.
+- Fail wins over warn at the same severity; percent is checked before bytes when both fire at the same severity (so the log message names the percent threshold).
+- The baseline is scoped to the same `build_configuration` — `release` is never compared to `debug`.
+
+The same gates can also be driven from environment variables — useful for CI-only rollouts that prefer not to mutate the Gradle DSL. See [Gradle plugin reference → In-build size check](/sdk/android/gradle-plugin/builds-upload).
+
+## Fast CI: chunked upload
+
+When enabled, the plugin splits the artefact into 8 MiB content-addressed chunks, asks the server which chunks it already has, and uploads only the missing ones — typically cutting upload time by **70–90%** on incremental CI runs.
+
+```kotlin title="app/build.gradle.kts"
+bugsee {
+    buildInfo {
+        sizeAnalysis {
+            enabled.set(true)
+            chunkedUpload.set(true)
+        }
+    }
+}
+```
+
+`chunkedUpload` lives inside the `sizeAnalysis` block — it has no effect when `sizeAnalysis.enabled = false`, since build-info-only uploads carry no bytes. Any failure in the chunked path falls back to the single-PUT upload automatically, so flipping the switch can't break CI.
+
+## What you'll see in the dashboard
+
+- **Per-app size history chart.** Download vs install size over time, grouped by configuration.
+- **PR-time size delta.** When the build's VCS context resolves a PR number, the dashboard threads builds together so you can see "+4.2% download size since main" alongside the test results.
+- **Per-file diff view.** For each Release build, the breakdown of which files grew, which shrank, and by how much — surfaced both in absolute bytes and percentage.
+- **Crash join.** Each build's record carries the same `BUILD_UUID` the SDK reports with every crash, so the dashboard ties every report deterministically to the build that produced it.
+
+## See also
+
+- [Gradle plugin reference](/sdk/android/gradle-plugin/builds-upload) — full DSL, all configurable knobs, ProGuard mapping integration.
+- [iOS Build size analysis](/sdk/ios/build-size-analysis) — same feature on the iOS side; same data model on the server.
+- [Webhook events → build.created](/webhooks/events#buildcreated) — automation hook fired on every registered build.

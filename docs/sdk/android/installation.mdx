@@ -1,6 +1,6 @@
 ---
 title: "Installation"
-description: "Step-by-step guide to adding the Bugsee SDK to an Android project via Gradle, including initialization and required permissions."
+description: "Installing and initializing Bugsee Android SDK 7.0 via the Gradle plugin, module-specific artifacts, and manifest-based auto-launch."
 sidebar_position: 0
 slug: "/sdk/android/installation"
 ---
@@ -8,64 +8,241 @@ slug: "/sdk/android/installation"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-:::info[Agent-Assisted Setup]
-Ask your AI coding assistant:
-
-```text
-Use curl to download, read and follow: https://docs.bugsee.com/ai/agent-skills/sdk/android/SKILL.md
-```
-
-Works with Claude Code, Cursor, Copilot, Codex, and more. [Learn more](/ai/agent-skills/)
+:::note
+This page documents Bugsee Android SDK 7.0. For the previous release, see the [6.x installation guide](/sdk/android/v6/installation).
 :::
 
-## Gradle Installation
+Bugsee ships as a core artifact plus one extension module per optional capability, and requires the Gradle plugin, which performs build-time bytecode and Kotlin-compiler instrumentation (APM operation dispatch, log capture, OkHttp injection, Compose secure modifier, etc.). Without the plugin, several features stop working or require manual wiring.
 
-Add the following dependency to your app module's build.gradle file
+## 1. Apply the Bugsee Gradle plugin
 
-```gradle
-dependencies {
-   implementation 'com.bugsee:bugsee-android:+'
+Apply the plugin to your **application** module. Library modules are not instrumented.
+
+<Tabs groupId="build-android">
+  <TabItem value="kts" label="build.gradle.kts">
+
+```kotlin
+// settings.gradle.kts (root)
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        google()
+    }
+}
+
+// app/build.gradle.kts
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("com.bugsee.android.gradle") version "<plugin-version>"
+}
+
+bugsee {
+    appToken("<your-app-token>")
+    // ndk { enabled.set(true) }      // upload NDK symbols
+    // instrumentation { /* ... */ }  // per-feature toggles
 }
 ```
+
+  </TabItem>
+  <TabItem value="groovy" label="build.gradle">
+
+```groovy
+// settings.gradle (root)
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        google()
+    }
+}
+
+// app/build.gradle
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.bugsee.android.gradle' version '<plugin-version>'
+}
+
+bugsee {
+    appToken '<your-app-token>'
+    // ndk { enabled.set true }
+    // instrumentation { /* ... */ }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+What the plugin does at build time:
+
+- Injects `BugseeLogAdapter` into every `android.util.Log.*` call site.
+- Injects `BugseeOkHttpInterceptor` into every `OkHttpClient.Builder.build()`.
+- Wraps every `android.net.http.HttpEngine.Builder.build()` (Android 14+).
+- Injects `BugseeThreadAdapter.registerThread()` at the start of every `Runnable.run()` / `Thread.run()` (used by the native crash reporter).
+- Injects APM operation dispatch (`db.*`, `file.*`, `http.client` spans) and optional main-thread-misuse pre-checks.
+- Instruments Jetpack Compose touch dispatch and auto-applies `Modifier.bugseeSecure()` to password `TextField`s.
+- Auto-adds matching `bugsee-android-*` extension modules when it detects OkHttp, Ktor 2/3, Cronet, or Compose in your dependency graph.
+- Injects `BUILD_UUID` into the merged manifest and uploads mapping / NDK symbols on `assemble`/`bundle`.
+
+Each capability can be toggled via the `bugsee { instrumentation { ... } }` block. See the [Gradle plugin reference](/sdk/android/gradle-plugin) for details.
+
+:::caution[Plugin 4.x is paired with SDK 7.x]
+The Gradle plugin and the runtime library are versioned independently but must
+be matched by line: **SDK 7.x requires plugin 4.x**, and **plugin 3.x requires
+SDK 6.x**. Mixing the two lines will fail at build or runtime.
+
+Pin the plugin to a specific version rather than a floating range. See the
+[Gradle plugin requirements](/sdk/android/gradle-plugin/requirements)
+for the current supported plugin version.
+:::
+
+## 2. Add SDK artifacts
+
+With the Gradle plugin applied, **the core `com.bugsee:bugsee-android` artifact is pulled automatically** as soon as any Bugsee dependency (including an extension module) is in your build, and **dependency-driven extensions** (OkHttp, Ktor 2/3, Cronet, Compose) are auto-installed when the plugin detects the matching third-party library.
+
+The three extensions that aren't dependency-driven — **feedback**, **NDK**, and **leak** — are enabled via DSL toggles in the `bugsee { … }` block. Setting the toggle is all you need; the plugin pulls in the artefact at the same version as itself so extension and core versions never drift apart:
+
+```kotlin
+bugsee {
+    appToken("<your-app-token>")
+
+    // In-app feedback messenger UI (default: off)
+    feedback.set(true)
+
+    // Native (NDK) crash capture (default: off)
+    ndk {
+        enabled.set(true)
+    }
+
+    // Memory & thread leak detection (default: off)
+    leak {
+        enabled.set(true)
+    }
+}
+```
+
+In this typical setup, **your `dependencies { … }` block needs no Bugsee entries at all** — the plugin handles core and extensions for you.
+
+### Pinning a specific extension version
+
+When you need to lock an extension to a specific version (for example, to downgrade against a regression while waiting for a fix), declare it explicitly alongside the DSL toggle. The explicit declaration wins:
+
+<Tabs groupId="build-android">
+  <TabItem value="kts" label="build.gradle.kts">
+
+```kotlin
+dependencies {
+    implementation("com.bugsee:bugsee-android-feedback:7.0.0")
+}
+```
+
+  </TabItem>
+  <TabItem value="groovy" label="build.gradle">
+
+```groovy
+dependencies {
+    implementation 'com.bugsee:bugsee-android-feedback:7.0.0'
+}
+```
+
+  </TabItem>
+</Tabs>
+
+The same pinning rule applies to the core: declaring `com.bugsee:bugsee-android` yourself on any configuration suppresses the plugin's auto-pull and your version wins.
+
+### Opting out of the core auto-pull
+
+To opt out of the core SDK auto-pull entirely — for example when shipping the core from a manual classpath path or a locally-published artefact — set the top-level `sdkAutoLoad` flag to `false`:
+
+```kotlin
+bugsee {
+    sdkAutoLoad.set(false)
+}
+```
+
+The dynamic-version range used for the auto-pulled core is bounded to the same `MAJOR.MINOR` series as the plugin's `sdk-min-version` (e.g. `[7.0.0, 7.1.0)`), so you pick up patches automatically without crossing a minor boundary.
+
+The full list of dependency-driven auto-installs lives on the [Gradle plugin](/sdk/android/gradle-plugin/auto-load) page.
+
+Extensions auto-register via their own `ContentProvider`; no runtime wiring is needed. Ktor and Cronet still require per-client wiring at call sites (see [network](/sdk/android/network)).
 
 :::info
-The statement above will fetch the latest available version. If instead you want to stick to some particular version, replace the plus symbol (+) with desired value. You can find all the released versions in our [release notes](/sdk/android/release-notes/).
+`com.bugsee:bugsee-android-okhttp` covers OkHttp 3 and 4 (and any library that transitively uses them, including Picasso and Retrofit). OkHttp 2 is no longer supported.
 :::
 
-This is the recommended way to install Bugsee. 
+## 3. Initialize the SDK
 
-If you use Maven (for example, Android Maven Plugin) to build your project, follow the [Maven Installation](/sdk/android/maven-installation/) instructions.
+7.0 supports two initialization paths. Pick one.
 
-:::warning
-If you're getting an "attribute android:foregroundServiceType not found" error, you should set **compileSdkVersion** in your build.gradle file to 29. Make sure you have that Android SDK installed on your system.
-:::
+### Option A — Manifest auto-launch (recommended)
 
-## Initialization
-If you have no android.app.Application subclass, it is necessary to create it and to specify its name as the "android:name" attribute in your `<application>` tag in AndroidManifest.xml.
+Add the app token as `<meta-data>` inside `<application>`. The SDK launches automatically at process start via `BugseeInitProvider`. You do **not** need an `Application` subclass and you do **not** need to call `Bugsee.launch(...)`.
 
 ```xml
-<application
-    android:name="com.example.MyApplication">
-    <!--...-->
+<application ...>
+    <meta-data
+        android:name="com.bugsee.app-token"
+        android:value="@string/bugsee_app_token" />
 </application>
 ```
-	
-Launch Bugsee from ```onCreate()``` method of your Application subclass.
 
+Any SDK option can also be set via manifest metadata — every `Options.*` constant doubles as a manifest key:
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.crash-ndk"
+           android:value="true" />
+<meta-data android:name="com.bugsee.option.capture.breadcrumbs"
+           android:value="true" />
+<meta-data android:name="com.bugsee.option.config.duration"
+           android:value="120" />
+```
+
+For enum-typed options, pass the enum value name as a string (e.g. `"High"` for `FrameRate.High`). See the full key table in the [configuration reference](/sdk/android/configuration).
+
+### Option B — Programmatic launch
+
+If no token is declared in the manifest, call one of the `Bugsee.launch(...)` overloads. The context is auto-discovered via `BugseeInitProvider`.
+
+If you **do** keep the token in the manifest but still want to launch from code (for example to compute options at runtime), disable the manifest auto-launch by adding the `com.bugsee.auto-init` meta-data, set to `false`:
+
+```xml
+<application ...>
+    <meta-data
+        android:name="com.bugsee.app-token"
+        android:value="@string/bugsee_app_token" />
+
+    <!-- Auto-init disabled — launch from code instead. -->
+    <meta-data
+        android:name="com.bugsee.auto-init"
+        android:value="false" />
+</application>
+```
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
 import com.bugsee.library.Bugsee;
+import com.bugsee.library.contracts.options.Options;
 
-public class MyApplication extends Application {
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        Bugsee.launch(this, "<your_app_token>");
-    }
-}
+// Simplest form — context resolved automatically.
+Bugsee.launch("<your-app-token>");
+
+// Explicit context.
+Bugsee.launch(context, "<your-app-token>");
+
+// With options (keys from com.bugsee.library.contracts.options.Options).
+Map<String, Serializable> options = new HashMap<>();
+options.put(Options.Duration, 60);
+options.put(Options.CaptureNetwork, true);
+Bugsee.launch(context, "<your-app-token>", options);
+
+// With completion callback (may be invoked on a background thread).
+Bugsee.launch(context, "<your-app-token>", options, success -> {
+    // success == true on launch, false on failure
+});
 ```
 
   </TabItem>
@@ -73,46 +250,46 @@ public class MyApplication extends Application {
 
 ```kotlin
 import com.bugsee.library.Bugsee
+import com.bugsee.library.contracts.options.Options
 
-class MyApplication : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        Bugsee.launch(this, "<your_app_token>")
-    }
+// Simplest form — context resolved automatically.
+Bugsee.launch("<your-app-token>")
+
+// Explicit context.
+Bugsee.launch(context, "<your-app-token>")
+
+// With options.
+val options = mapOf<String, java.io.Serializable>(
+    Options.Duration to 60,
+    Options.CaptureNetwork to true
+)
+Bugsee.launch(context, "<your-app-token>", options)
+
+// With completion callback.
+Bugsee.launch(context, "<your-app-token>", options) { success ->
+    // success == true on launch, false on failure
 }
 ```
 
   </TabItem>
 </Tabs>
 
-If you want to launch Bugsee from some other place (e.g., after a particular user action), you must use another variant of ```Bugsee.launch()``` which accepts ```Activity``` as the first argument. You must pass the current top activity into it.
+:::note[Manifest and programmatic options are mutually exclusive, not merged]
+The two initialization paths do **not** combine on a per-key basis. Whichever path launches the SDK first wins and runs with **its own options object only**. When you pass a `Map` to `Bugsee.launch(...)`, that map is the complete option set for the session — any option you leave out of the map falls back to its **registered default**, not to the value you declared in `AndroidManifest.xml`. Treat the programmatic map as a full override, not a patch on top of the manifest. The same model is described in the [configuration overview](/sdk/android/configuration#two-configuration-channels).
+:::
 
+For `stop()`, `relaunch()`, and other lifecycle controls, see [lifecycle](/sdk/android/lifecycle).
 
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
+## 4. ProGuard / R8
 
-```java
-import com.bugsee.library.Bugsee;
+Each module ships its own consumer ProGuard rules inside the AAR. No manual rules are required.
 
-public class MyCustomActivity extends Activity {
-    public void onUserClick() {
-        Bugsee.launch(this, "<your_app_token>");
-    }
-}
-```
+## 5. Verify
 
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
+Build and run the app. On next launch, the Bugsee floating report button should appear. Trigger a test report (shake the device, or call `Bugsee.showReportDialog()`) to confirm end-to-end delivery to your dashboard.
 
-```kotlin
-import com.bugsee.library.Bugsee
+Next:
 
-class MyCustomActivity : Activity() {
-    override fun onUserClick() {
-        Bugsee.launch(this, "<your_app_token>")
-    }
-}
-```
-
-  </TabItem>
-</Tabs>
+- Configuring options and triggers? See [configuration](/sdk/android/configuration).
+- Wiring Ktor or Cronet clients? See [network](/sdk/android/network).
+- Targeting TV, Wear OS, or Automotive? See [device types & form factors](/sdk/android/overview#device-types--form-factors).

@@ -1,0 +1,336 @@
+---
+title: "Gradle plugin — Configuration"
+description: "The bugsee { } DSL, every plugin option, and the bugsee.properties file with its precedence rules."
+sidebar_position: 2
+slug: "/sdk/android/gradle-plugin/configuration"
+---
+
+## Configuring the plugin
+
+```kotlin title="app/build.gradle.kts"
+plugins {
+    id("com.android.application")
+    id("com.bugsee.android.gradle")
+}
+
+bugsee {
+    appToken("…")                                 // or: appToken { variantName -> resolveToken(variantName) }
+    endpoint.set("https://api.bugsee.com")        // default
+    debug.set(false)                              // default
+    feedback.set(false)                           // default
+    optimizeExtensionsLoading.set(true)           // default — merges Bugsee extension ContentProviders into the SDK's single BugseeInitProvider to shave cold-start overhead
+    sdkAutoLoad.set(true)                         // default — auto-pull com.bugsee:bugsee-android when an extension is declared but the core isn't
+
+    ndk {                                         // native crash / NDK symbol upload
+        enabled.set(true)                         // turn on NDK support
+        forceDebugSymbolsUpload.set(false)        // re-upload symbols even when the build UUID hasn't changed
+    }
+
+    buildInfo {                                   // default ON, Release-only
+        // enabled.set(true)                      // default
+        // allBuildTypes.set(false)               // default — only release variants register
+
+        sizeAnalysis {                            // opt-in size analysis (server-side AAB/APK upload)
+            enabled.set(true)
+            buildConfiguration.set("release")     // defaults to variant name
+            chunkedUpload.set(false)              // opt-in deduplicated chunk-upload protocol; on subsequent builds only changed chunks are re-uploaded (typically 70–90% faster on CI)
+        }
+
+        sizeCheck {                               // opt-in size regression gates
+            enabled.set(true)
+            warningPercent.set(5.0)               // warn at +5% vs the prior build
+            failPercent.set(10.0)                 // fail the task at +10%
+            // warningBytes.set(500_000L)
+            // failBytes.set(2_000_000L)
+        }
+
+        dependencies {
+            // enabled defaults to true
+        }
+        timings {
+            // enabled defaults to true
+        }
+    }
+
+    instrumentation {
+        // enabled defaults to true (via Gradle-property/manifest fallback chain)
+        log.set(true)               // android.util.Log redirection
+        thread.set(true)            // Thread/Runnable registration
+        operationDispatch.set(true) // I/O, network, DB operation tracking
+        mainThreadMisuse.set(true)  // main-thread misuse detection
+        httpEngine.set(true)        // HttpEngine (Cronet-derived) instrumentation
+        okhttp.set(true)            // OkHttp interceptor injection
+        composeInput.set(true)      // Compose touch input capture
+        compose.set(true)           // Compose tag injection (compiler plugin)
+        composeSecure.set(true)     // password TextField auto-redaction (compiler plugin)
+        ktor.set(true)              // Ktor extension auto-install
+        cronet.set(true)            // Cronet extension auto-install
+        startupTier.set(StartupTier.STANDARD) // cold-start tracing tier
+    }
+}
+```
+
+```groovy title="app/build.gradle"
+plugins {
+    id 'com.android.application'
+    id 'com.bugsee.android.gradle'
+}
+
+bugsee {
+    appToken '…'
+    endpoint.set 'https://api.bugsee.com'
+    debug.set false
+    feedback.set false
+    optimizeExtensionsLoading.set true       // default — merges extension ContentProviders into BugseeInitProvider
+    sdkAutoLoad.set true                     // default — auto-pull com.bugsee:bugsee-android when an extension is declared but the core isn't
+
+    ndk {
+        enabled.set true
+        forceDebugSymbolsUpload.set false
+    }
+
+    buildInfo {
+        // enabled.set true                 // default
+        // allBuildTypes.set false          // default
+
+        sizeAnalysis {
+            enabled.set true
+            buildConfiguration.set 'release'
+            chunkedUpload.set false
+        }
+
+        sizeCheck {
+            enabled.set true
+            warningPercent.set 5.0
+            failPercent.set 10.0
+        }
+
+        dependencies {
+            // enabled defaults to true
+        }
+        timings {
+            // enabled defaults to true
+        }
+    }
+
+    instrumentation {
+        log.set true
+        thread.set true
+        operationDispatch.set true
+        mainThreadMisuse.set true
+        httpEngine.set true
+        okhttp.set true
+        composeInput.set true
+        compose.set true
+        composeSecure.set true
+        ktor.set true
+        cronet.set true
+        startupTier.set StartupTier.STANDARD
+    }
+}
+```
+
+:::note
+Bytecode instrumentation is only applied to **application** modules (i.e. modules with `com.android.application`). Library modules are not instrumented.
+:::
+
+The `instrumentation` toggles map directly onto the bytecode and compiler-plugin transforms documented in [Instrumentation](/sdk/android/gradle-plugin/instrumentation). The `buildInfo` / `sizeAnalysis` / `sizeCheck` blocks drive the [build & upload tasks](/sdk/android/gradle-plugin/builds-upload). The `sdkAutoLoad` / `optimizeExtensionsLoading` flags govern [auto-load & extensions](/sdk/android/gradle-plugin/auto-load).
+
+## Configuring via `bugsee.properties`
+
+Every plugin option is also settable through a `bugsee.properties` file
+at the **root project** directory, using keys prefixed `plugin.`. The
+same file already hosts the `app_token=` key used by the plugin's
+token resolver — the new `plugin.*` namespace coexists with it.
+
+This is the recommended surface for CI-specific configuration: it lets
+each CI runner ship a different config without touching the build
+script.
+
+### Precedence
+
+```
+DSL .set(…)  >  bugsee.properties plugin.X  >  built-in default
+```
+
+A DSL `.set(…)` call in the `bugsee { … }` block always wins. The
+properties file then fills in any keys the DSL didn't touch, and
+anything still unset falls through to the plugin's built-in defaults.
+The two layers are additive — DSL can override a single key from
+properties without invalidating the rest.
+
+The plugin reads the file via `providers.fileContents(...)` so editing
+`bugsee.properties` invalidates Gradle's configuration cache and
+triggers a re-load on the next build.
+
+### File location and shape
+
+`<rootProject>/bugsee.properties` — at the top-level directory of your
+Gradle build (the parent of `settings.gradle.kts`), **not** inside each
+`:app` module.
+
+```properties title="<rootProject>/bugsee.properties"
+# App token used by the plugin's token resolver (unprefixed — not a plugin.* key)
+app_token=YOUR_APP_TOKEN_HERE
+
+# Plugin options — every DSL field has a matching `plugin.<dotted-path>` key
+plugin.debug=true
+plugin.ndk.enabled=true
+plugin.buildInfo.sizeAnalysis.enabled=true
+plugin.buildInfo.sizeCheck.warningPercent=10.0
+plugin.buildInfo.sizeCheck.failPercent=25.0
+plugin.instrumentation.startupTier=DETAILED
+```
+
+### Key reference
+
+Each key path mirrors the DSL field name (camelCase, dotted-path).
+
+| Key | Type | Default |
+| --- | --- | --- |
+| `plugin.endpoint` | String | `https://api.bugsee.com` |
+| `plugin.debug` | Boolean | `false` |
+| `plugin.feedback` | Boolean | `false` |
+| `plugin.optimizeExtensionsLoading` | Boolean | `true` |
+| `plugin.sdkAutoLoad` | Boolean | `true` |
+| `plugin.ndk.enabled` | Boolean | `false` |
+| `plugin.ndk.forceDebugSymbolsUpload` | Boolean | `false` |
+| `plugin.buildInfo.enabled` | Boolean | `true` |
+| `plugin.buildInfo.allBuildTypes` | Boolean | `false` |
+| `plugin.buildInfo.sizeAnalysis.enabled` | Boolean | `false` |
+| `plugin.buildInfo.sizeAnalysis.buildConfiguration` | String | unset — falls back to the Gradle variant name |
+| `plugin.buildInfo.sizeAnalysis.chunkedUpload` | Boolean | `false` |
+| `plugin.buildInfo.sizeCheck.enabled` | Boolean | unset — gate disabled |
+| `plugin.buildInfo.sizeCheck.warningPercent` | Double | unset — threshold disabled |
+| `plugin.buildInfo.sizeCheck.failPercent` | Double | unset — threshold disabled |
+| `plugin.buildInfo.sizeCheck.warningBytes` | Long (bytes) | unset — threshold disabled |
+| `plugin.buildInfo.sizeCheck.failBytes` | Long (bytes) | unset — threshold disabled |
+| `plugin.buildInfo.dependencies.enabled` | Boolean | `true` |
+| `plugin.buildInfo.dependencies.scope` | String | `runtime` |
+| `plugin.buildInfo.dependencies.includeSelectedReason` | Boolean | `false` |
+| `plugin.buildInfo.dependencies.maxCount` | Int | `5000` |
+| `plugin.buildInfo.timings.enabled` | Boolean | `true` |
+| `plugin.instrumentation.enabled` | Boolean | `true` |
+| `plugin.instrumentation.okhttp` | Boolean | `true` |
+| `plugin.instrumentation.httpEngine` | Boolean | `true` |
+| `plugin.instrumentation.log` | Boolean | `true` |
+| `plugin.instrumentation.thread` | Boolean | `true` |
+| `plugin.instrumentation.mainThreadMisuse` | Boolean | `true` |
+| `plugin.instrumentation.operationDispatch` | Boolean | `true` |
+| `plugin.instrumentation.compose` | Boolean | `true` |
+| `plugin.instrumentation.composeSecure` | Boolean | `true` |
+| `plugin.instrumentation.composeInput` | Boolean | `true` |
+| `plugin.instrumentation.ktor` | Boolean | `true` |
+| `plugin.instrumentation.cronet` | Boolean | `true` |
+| `plugin.instrumentation.startupTier` | Enum (`OFF`, `MINIMAL`, `STANDARD`, `DETAILED`, `FULL`) | `STANDARD` |
+
+:::note[App token uses an unprefixed key]
+The app token is set via the unprefixed `app_token=…` key, **not**
+`plugin.appToken=…`. The DSL provides richer token-resolution forms
+(closure, provider, per-variant resolver) that have no
+properties-file equivalent — `app_token=` covers only the literal
+default-token case.
+:::
+
+### Type coercion
+
+| Property type | Accepted forms |
+| --- | --- |
+| Boolean | `true` / `false`, `yes` / `no`, `on` / `off`, `1` / `0` (case-insensitive) |
+| Int / Long | Standard integer literal |
+| Double | Standard decimal literal |
+| String | Trimmed; empty / whitespace-only is rejected with a warn (default holds) |
+| Enum | Case-insensitive match against the enum's constant names |
+
+Malformed values emit a `warn` naming the key + bad value, then fall
+back to the built-in default — the plugin never crashes the build on
+a typo in `bugsee.properties`.
+
+### Diagnostics
+
+| Event | Log level | Why |
+| --- | --- | --- |
+| File absent | (silent) | Most consumers don't use the file. |
+| File present, no `plugin.*` keys | (silent) | Coexisting with `app_token=` is the common shape. |
+| File malformed | `warn` | User error — surface always. |
+| Value malformed | `warn` | User error; the key + bad value are named. |
+| Empty/whitespace string value | `warn` | Likely a half-edited line; default holds. |
+| Unknown `plugin.*` key | `info` | Forward-compat — run with `--info` to surface typos. |
+| Successful apply | `warn`, only if `plugin.debug=true` | Echoes each applied key when verbose mode is on. |
+
+To debug what was actually applied, run with `--info`:
+
+```bash
+./gradlew assembleRelease --info | grep Bugsee
+```
+
+### Worked example — DSL + properties together
+
+```properties title="<rootProject>/bugsee.properties"
+app_token=YOUR_APP_TOKEN_HERE
+
+plugin.debug=true
+plugin.ndk.enabled=true
+plugin.buildInfo.sizeAnalysis.enabled=true
+plugin.buildInfo.sizeCheck.warningPercent=10.0
+plugin.buildInfo.sizeCheck.failPercent=25.0
+plugin.instrumentation.startupTier=DETAILED
+```
+
+```kotlin title="app/build.gradle.kts"
+bugsee {
+    // (1) Overrides plugin.endpoint from bugsee.properties (DSL > properties).
+    endpoint.set("https://api.bugsee-internal.example.com")
+
+    // (2) Sets a key that bugsee.properties did NOT touch — additive.
+    feedback.set(true)
+}
+```
+
+**Effective configuration** for the example above:
+
+| Key | Effective value | From |
+| --- | --- | --- |
+| `endpoint` | `https://api.bugsee-internal.example.com` | DSL (overrides properties) |
+| `feedback` | `true` | DSL (additive — no properties value) |
+| `debug` | `true` | `bugsee.properties` |
+| `ndk.enabled` | `true` | `bugsee.properties` |
+| `ndk.forceDebugSymbolsUpload` | `false` | built-in default |
+| `buildInfo.sizeAnalysis.enabled` | `true` | `bugsee.properties` |
+| `buildInfo.sizeCheck.warningPercent` | `10.0` | `bugsee.properties` |
+| `instrumentation.startupTier` | `DETAILED` | `bugsee.properties` |
+
+### CI gotcha — instrumentation chain bypass
+
+Boolean instrumentation flags (and `startupTier`) have a deeper
+resolution chain than other options because they pre-date the
+properties-file feature:
+
+```
+DSL .set(…)  >  plugin.instrumentation.X (bugsee.properties)  >  -Pbugsee.instrumentation.X (legacy Gradle property)  >  manifest <meta-data com.bugsee.android.instrumentation.X />  >  default
+```
+
+Setting an instrumentation flag in `bugsee.properties` makes the
+underlying DSL property "present" (`isPresent == true`), and the
+plugin's resolver short-circuits at the highest layer — so
+`plugin.instrumentation.X` **bypasses** the legacy
+`-Pbugsee.instrumentation.X` Gradle-property and the manifest
+meta-data fallback for that key. The user's DSL `.set(…)` still wins
+over both sources.
+
+**If your CI relies on `-Pbugsee.instrumentation.X` overrides**, either:
+
+- Don't put the same key in `bugsee.properties`, or
+- Read the `-P` flag explicitly in your DSL so it flows through the
+  highest-priority layer:
+
+  ```kotlin title="app/build.gradle.kts"
+  bugsee {
+      instrumentation {
+          okhttp.set(findProperty("bugsee.instrumentation.okhttp") as? Boolean ?: true)
+      }
+  }
+  ```
+
+This pattern keeps the CLI override authoritative and matches the
+idiom recommended by other major Android tooling plugins.

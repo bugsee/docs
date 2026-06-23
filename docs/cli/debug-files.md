@@ -56,7 +56,7 @@ bugsee-cli debug-files upload ./app/build/outputs/mapping/release \
 ```
 
 :::tip
-For Android apps, the [Bugsee Gradle plugin](/sdk/android/v7/gradle-plugin/)
+For Android apps, the [Bugsee Gradle plugin](/sdk/android/gradle-plugin/)
 runs this upload for you as part of the build. Run the CLI directly only when
 you upload mappings outside Gradle.
 :::

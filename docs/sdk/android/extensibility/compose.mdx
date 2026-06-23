@@ -1,0 +1,149 @@
+---
+title: "Compose integration"
+description: "Jetpack Compose support in the Bugsee Android SDK — automatic password redaction, the bugseeSecure / bugseeTag modifiers, and Compose touch capture."
+sidebar_position: 4
+slug: "/sdk/android/extensibility/compose"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Jetpack Compose support is shipped as the **`bugsee-android-compose`** extension
+module. It teaches Bugsee's privacy and capture pipelines about the Compose
+semantics tree so that:
+
+- stock password fields are redacted **automatically**,
+- you can mark any composable as sensitive with `Modifier.bugseeSecure()`,
+- you can name composables in the view hierarchy with `Modifier.bugseeTag()`,
+- touches on Compose surfaces are recorded alongside classic-View touches.
+
+The core `bugsee-android` SDK records the screen frame-by-frame regardless of
+whether your UI is built with Views or Compose — this module adds the
+Compose-aware redaction and input handling on top.
+
+## Setup
+
+The simplest path is the [Bugsee Gradle plugin](/sdk/android/gradle-plugin): when
+it detects an `androidx.compose.*` dependency in your project it
+**auto-adds** `com.bugsee:bugsee-android-compose` at the matching version. No
+manual declaration is required.
+
+Without the Gradle plugin, declare the extension yourself:
+
+<Tabs groupId="build-android">
+  <TabItem value="kts" label="build.gradle.kts">
+
+```kotlin
+dependencies {
+    implementation("com.bugsee:bugsee-android-compose:7.x.x")
+}
+```
+
+  </TabItem>
+  <TabItem value="groovy" label="build.gradle">
+
+```groovy
+dependencies {
+    implementation 'com.bugsee:bugsee-android-compose:7.x.x'
+}
+```
+
+  </TabItem>
+</Tabs>
+
+The module registers itself at process start via its own `ContentProvider` —
+there is no initialization code to add to your `Application` class. Compose
+runtime classes are referenced via `compileOnly`, so the module never bundles
+its own copy of Compose; it uses whatever Compose your app already ships.
+
+:::note
+Full functionality (the autofill `contentType` detection described below)
+needs **Compose 1.8.0+**. On older Compose versions the SDK falls back
+gracefully — manual modifiers and stock `Password`-semantics redaction still
+work, the 1.8-only detection branch is simply skipped.
+:::
+
+## Automatic password redaction
+
+Once the module is on the classpath, Bugsee scans the Compose semantics tree
+on the main thread and blacks out any composable whose region is marked
+sensitive — **no modifier required for the common cases**. A node is treated
+as sensitive when it carries any of:
+
+| Detected via | Catches |
+| --- | --- |
+| `SemanticsProperties.Password` | Stock password fields — a `TextField` using `PasswordVisualTransformation`, which Compose marks with this property automatically. |
+| `SemanticsProperties.contentType` (Compose 1.8+) | Fields whose autofill content type is one of the sensitive hints: `Password`, `NewPassword`, `CreditCardNumber`, `CreditCardSecurityCode`, or any of the credit-card expiration hints (date / month / year / day). |
+| `Modifier.bugseeSecure()` | Anything you mark manually (see below). |
+
+Non-sensitive autofill content types — `EmailAddress`, `Username`,
+`PostalAddress`, `PostalCode`, `PhoneNumber` — are **not** auto-redacted. If
+you consider any of those sensitive in your app, mark them explicitly with
+`Modifier.bugseeSecure()`.
+
+## `Modifier.bugseeSecure()`
+
+Apply `Modifier.bugseeSecure()` to any composable that displays passwords,
+credit-card numbers, personal identifiers, or other content that must not
+appear in a report. The marked region is obscured in captured screenshots and
+video before upload.
+
+```kotlin
+import androidx.compose.ui.Modifier
+import com.bugsee.library.compose.bugseeSecure
+
+Text(
+    text = state.fullSsn,
+    modifier = Modifier.bugseeSecure()
+)
+```
+
+Use it for custom sensitive fields, or to be explicit about intent even on a
+stock password field that would already be auto-detected.
+
+## `Modifier.bugseeTag()`
+
+`Modifier.bugseeTag(tag: String)` attaches a human-readable name to a
+composable so it's identifiable in the captured view hierarchy. This makes
+the dashboard's hierarchy view easier to read when composables would
+otherwise be anonymous.
+
+```kotlin
+import androidx.compose.ui.Modifier
+import com.bugsee.library.compose.bugseeTag
+
+Button(
+    onClick = { /* … */ },
+    modifier = Modifier.bugseeTag("checkout.pay")
+) {
+    Text("Pay")
+}
+```
+
+Both `bugseeSecure` and `bugseeTag` live in the
+`com.bugsee.library.compose` package and return a `Modifier`, so they chain
+like any other modifier.
+
+## Compose touch capture
+
+Touches on Compose surfaces are recorded into the same input timeline as
+classic-View touches. This is wired by the [Bugsee Gradle plugin's](/sdk/android/gradle-plugin)
+bytecode instrumentation, which hooks Compose's internal
+`AndroidComposeView.dispatchTouchEvent(...)` and forwards each event to the
+SDK's input collector.
+
+Because it relies on the plugin's bytecode instrumentation, **Compose touch
+capture requires the Bugsee Gradle plugin** — it is not available in
+plugin-less (Maven-only) builds. The visual screen recording itself does not
+depend on the plugin; only the per-touch indicators on Compose surfaces do.
+See [Maven installation](/sdk/android/maven-installation#features-that-require-the-gradle-plugin)
+for the full list of plugin-gated features.
+
+## See also
+
+- [Video privacy](/sdk/android/privacy/video) — the full set of secure-area
+  APIs (`addSecureView`, `addSecureActivity`, `addSecureRectangle`, blackout).
+- [Bugsee extensions](/sdk/android/extensibility/bugsee-extensions) — how the
+  extension framework works and how the Gradle plugin auto-installs modules.
+- [Gradle plugin](/sdk/android/gradle-plugin) — instrumentation that enables
+  Compose touch capture and the `compose` auto-install toggle.

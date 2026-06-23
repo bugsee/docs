@@ -1,0 +1,44 @@
+---
+title: "Gradle plugin — Requirements & compatibility"
+description: "Version requirements for the Bugsee Android Gradle plugin: AGP, Gradle, and the matched SDK line."
+sidebar_position: 6
+slug: "/sdk/android/gradle-plugin/requirements"
+---
+
+## Requirements
+
+| Requirement | Minimum version |
+| --- | --- |
+| Plugin (`com.bugsee:bugsee-android-gradle-plugin`) | **4.0.0** |
+| Bugsee Android SDK (`com.bugsee:bugsee-android`) | **7.0.0** (min-compatible) |
+| Android Gradle Plugin (AGP) | **8.6.0** |
+| Gradle | **8.7+** |
+
+The Gradle plugin and the SDK runtime library are versioned independently but
+released as a **matched pair**. There is no cross-line compatibility — the
+plugin expects the exact runtime-library shape shipped alongside it.
+
+| Plugin line | SDK line | Status | Min AGP | Min Gradle |
+| --- | --- | --- | --- | --- |
+| 3.x | 6.x | Stable | — | — |
+| **4.x** | **7.x** | **Stable** | 8.6.0 | 8.7+ |
+
+:::caution[Compatibility is strict between lines]
+- Use **plugin 4.x only with SDK 7.x**, and **plugin 3.x only with SDK 6.x**. Mixing lines will fail at build or runtime.
+- Plugin 4.x introduces new instrumentation hooks and auto-install rules keyed on the `bugsee-android-*` artifact names introduced in SDK 7.x; it cannot target the single-AAR 6.x layout.
+- Plugin 3.x has no knowledge of the 7.x module split, APM operation dispatch, Compose transforms, or the new manifest-metadata auto-launch, so SDK 7.x will not function correctly under it.
+:::
+
+## Minimum-compatible SDK version
+
+The plugin auto-loads the core SDK on the `[7.0.0, 7.1.0)` range and gates
+app-startup tracing on the SDK shipping
+`com.bugsee.library.adapters.BugseeAppStartupDispatcher` — a class introduced
+in SDK `7.0.0`. Pairing the plugin with an SDK older than `7.0.0` is
+unsupported and will fail. See [Instrumentation — App-startup tracing](/sdk/android/gradle-plugin/instrumentation#app-startup-tracing--sdk-version-gate)
+for how the plugin guards against this at configuration time, and
+[Auto-load & extensions](/sdk/android/gradle-plugin/auto-load) for how the
+SDK version range is resolved.
+
+If you are still on the 6.x line, see the [6.x Gradle plugin guide](/sdk/android/v6/gradle-plugin)
+and the [migration guide](/sdk/android/migration).

@@ -33,4 +33,4 @@ For iOS, by default the script is treating the build outputs to be produced for 
 python3 symbols.py -t <your-application-token> -d <path-to-debug-symbols> -g ipa
 ```
 
-To properly symbolicate native crashes and errors, you will need to configure native debug information uploading as described in [iOS](/sdk/ios/symbolication/) and [Android](/sdk/android/crashes/) documentation.
+To properly symbolicate native crashes and errors, you will need to configure native debug information uploading as described in [iOS](/sdk/ios/symbolication/) and [Android](/sdk/android/issue-detection/crashes/) documentation.

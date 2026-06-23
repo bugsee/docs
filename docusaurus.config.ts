@@ -148,7 +148,7 @@ const config: Config = {
             { label: 'Email', href: 'mailto:support@bugsee.com' },
             {
               label: 'Chat',
-              href: '#chat',
+              href: 'https://bugsee.com/',
               className: 'bs-toggle-chat',
             },
           ],

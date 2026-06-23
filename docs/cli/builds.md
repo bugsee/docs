@@ -112,7 +112,7 @@ The output is the exact ZIP the worker's size-analysis job consumes: the
 artefact STORED, the mapping zstd-compressed.
 
 :::tip
-For Android, the [Gradle plugin](/sdk/android/v7/gradle-plugin/) drives these
+For Android, the [Gradle plugin](/sdk/android/gradle-plugin/) drives these
 commands as part of the build. For iOS, [`xcode post-action`](/cli/xcode/)
 wraps the whole flow. Call `upload` / `pack` directly only for custom build
 pipelines.

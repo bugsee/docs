@@ -13,7 +13,7 @@ Bugsee needs platform-specific debug symbols to turn mangled or obfuscated stack
 
 ## Android
 
-Follow the Android symbolication instructions: [Android / Crash reports](/sdk/android/crashes/).
+Follow the Android symbolication instructions: [Android / Crash reports](/sdk/android/issue-detection/crashes/).
 
 In short:
 

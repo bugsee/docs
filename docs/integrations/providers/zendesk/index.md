@@ -10,7 +10,7 @@ slug: "/integrations/providers/zendesk"
 ### Supported authentication methods
 
 - [Basic (username and password)](#basic-authentication)
-- [Personal token](#personal-token)
+- [Personal token](#personal-tokens)
 - [OAuth](#oauth)
 
 

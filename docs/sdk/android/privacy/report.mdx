@@ -1,44 +1,60 @@
 ---
-title: "Privacy and Report fields"
-description: "How to pre- and post-process bug report fields in the Bugsee Android SDK to strip sensitive data before submission."
-sidebar_position: 4
+title: "Privacy and report fields"
+description: "Scrub or enrich every Bugsee report before upload with ReportHandler in Android SDK 7.0."
+sidebar_position: 6
 slug: "/sdk/android/privacy/report"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-You can use both pre and postprocessing for report fields. This is useful when you want to strip any sensitive data user may enter into it or when you want to apply some specific formatting.
+:::note
+Looking for the previous SDK? See the
+[6.x report privacy page](/sdk/android/v6/privacy/report).
+:::
 
-The principle is simple, for every generated report, Bugsee will call the corresponding method from provided ```ReportFieldsFilter``` object.
-You should then perform all the required fields manipulations and call ```listener.onChanged(reportFields)``` to pass it back to Bugsee. ```listener.onChanged(reportFields)``` can be called in other thread than calling thread.
+A single `ReportHandler` lets you inspect or rewrite reports before they are
+uploaded. It exposes two callbacks that fire around every report — including
+crashes and manual reports:
 
+- `onBeforeReportCreated(Report, isTerminating, completionCallback)` — runs
+  before the report is assembled. Use it to rewrite the summary /
+  description / severity / labels, or to drop sensitive user-entered text.
+- `onAfterReportCreated(Report, isTerminating, completionCallback)` — runs
+  after assembly. Use it to attach logs, config snapshots, or other extras.
+
+Both callbacks **must** invoke `completionCallback.run()` to release the
+pipeline — except when `isTerminating == true` (the process is about to
+exit, e.g. unhandled crash), in which case the pipeline continues
+regardless.
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
-Bugsee.setReportFieldsFilter(new ReportFieldsFilter() {
+Bugsee.setReportHandler(new ReportHandler() {
     @Override
-    public void addFieldsBeforeReportCreated(ReportFields reportFields, OnChangeReportFieldsListener listener) {
-        reportFields.setSummary("Before: " + reportFields.getSummary());
-        reportFields.setDescription("Before: " + reportFields.getDescription());
-        ArrayList labels = reportFields.getLabels();
-        labels.add("before");
-        reportFields.setLabels(labels);
-        reportFields.setSeverity(IssueSeverity.VeryLow);
-        listener.onChanged(reportFields);
+    public void onBeforeReportCreated(Report report, boolean isTerminating,
+                                      Runnable completionCallback) {
+        report.setSummary("[" + BuildConfig.FLAVOR + "] " + report.getSummary());
+        // Scrub anything the user may have typed into the report form:
+        String desc = report.getDescription();
+        if (desc != null) {
+            report.setDescription(desc.replaceAll("\\d{16}", "[CARD]"));
+        }
+        report.setSeverity(IssueSeverity.High);
+        completionCallback.run();
     }
 
     @Override
-    public void changeFieldsAfterReportCreated(ReportFields reportFields, OnChangeReportFieldsListener listener) {
-        reportFields.setSummary(reportFields.getSummary() + " :After");
-        reportFields.setDescription(reportFields.getDescription() + " :After");
-        ArrayList labels = reportFields.getLabels();
-        labels.add("after");
-        reportFields.setLabels(labels);
-        reportFields.setSeverity(IssueSeverity.Blocker);
-        listener.onChanged(reportFields);
+    public void onAfterReportCreated(Report report, boolean isTerminating,
+                                     Runnable completionCallback) {
+        // max 3 attachments × 3 MB — write your data via openStream()
+        Attachment attachment = report.createAndAddAttachment("config")
+                .setFileName("config.json")
+                .setMimeType("application/json");
+        writeConfigSnapshot(attachment);
+        completionCallback.run();
     }
 });
 ```
@@ -47,34 +63,40 @@ Bugsee.setReportFieldsFilter(new ReportFieldsFilter() {
   <TabItem value="kotlin" label="Kotlin">
 
 ```kotlin
-Bugsee.setReportFieldsFilter(object : ReportFieldsFilter {
-    override fun addFieldsBeforeReportCreated(
-        reportFields: ReportFields,
-        listener: OnChangeReportFieldsListener
+Bugsee.setReportHandler(object : ReportHandler {
+    override fun onBeforeReportCreated(
+        report: Report,
+        isTerminating: Boolean,
+        completionCallback: Runnable
     ) {
-        reportFields.summary = "Begin:" + reportFields.summary
-        reportFields.description = "Begin:" + reportFields.description
-        val labels: ArrayList<String> = reportFields.labels
-        labels.add("begin")
-        reportFields.labels = labels
-        reportFields.severity = IssueSeverity.VeryLow
-        listener.onChanged(reportFields)
+        report.summary = "[${BuildConfig.FLAVOR}] ${report.summary}"
+        report.description = report.description?.replace(Regex("\\d{16}"), "[CARD]")
+        report.severity = IssueSeverity.High
+        completionCallback.run()
     }
 
-    override fun changeFieldsAfterReportCreated(
-        reportFields: ReportFields,
-        listener: OnChangeReportFieldsListener
+    override fun onAfterReportCreated(
+        report: Report,
+        isTerminating: Boolean,
+        completionCallback: Runnable
     ) {
-        reportFields.summary = reportFields.summary + ":After"
-        reportFields.description = reportFields.description + ":After"
-        val labels: ArrayList<String> = reportFields.labels
-        labels.add("after")
-        reportFields.labels = labels
-        reportFields.severity = IssueSeverity.Blocker
-        listener.onChanged(reportFields)
+        // max 3 attachments × 3 MB — write your data via openStream()
+        val attachment = report.createAndAddAttachment("config")
+            .setFileName("config.json")
+            .setMimeType("application/json")
+        writeConfigSnapshot(attachment)
+        completionCallback.run()
     }
 })
 ```
 
   </TabItem>
 </Tabs>
+
+The previous quota of **3 attachments × 3 MB each** is preserved — enforce
+it inside your own `ReportHandler` if needed.
+
+For programmatic report creation see
+[manual reports](/sdk/android/manual). For the complete list of
+listener interfaces see the
+[public API reference](/sdk/android/configuration).

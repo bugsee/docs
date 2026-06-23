@@ -1,19 +1,38 @@
 ---
 title: "Privacy overview"
-description: "Overview of what data the Bugsee Android SDK collects and the available tools to protect user privacy before reports are sent."
-sidebar_position: 0
+description: "Overview of privacy primitives in the Bugsee Android SDK 7.x: secure areas, blackout, content filters, report scrubbing, and data cleanup."
+sidebar_position: 1
 slug: "/sdk/android/privacy/overview"
 ---
 
-Bugsee SDK does not continuously stream any personal data. The reports are stored locally on the phone in cyclical buffer. Reports are being sent only when triggered by a crash, through a bug reporting UI or from an applications code.
-Data sent along with the reports may include video recording of screen, network and console logs. These may potentially contain personal data (usernames, passwords, emails, etc).
+:::note
+Looking for the previous SDK? See the
+[6.x privacy overview](/sdk/android/v6/privacy/overview).
+:::
 
-It is the sole responsibility of the application developers to remove any such data from the reports before it leaves the users’ device.
+Bugsee does not continuously stream any personal data. Reports are stored
+locally on the device in a cyclical buffer, and are sent only when triggered
+by a crash, through the bug reporting UI, or from application code. The data
+packaged with a report — screen video, touch events, logcat, network traffic
+— may contain user-identifiable information, so the SDK ships a full set of
+primitives to keep sensitive data off the wire.
 
-Bugsee provides the tools and means to either prevent some data of being collected or clean the data during the collection process:
+7.0.0 consolidates those primitives around three ideas: **secure areas** that
+blank out parts of the screen (by `View`, `Fragment`, `Rect`, `Activity`
+class name, or `WebView`), a generic **`EventFilter<T>`** that scrubs or
+drops log, network, and breadcrumb events before they are persisted, and a
+**`ReportHandler`** that inspects and mutates every report (fields,
+attachments, severity) before upload. Collected on-device data can be wiped
+via `Bugsee.deleteCollectedDataOnDevice(...)`.
 
-* [Video and Touch](/sdk/android/privacy/video/)
-* [Console logs](/sdk/android/privacy/logs/)
-* [Network logs](/sdk/android/privacy/network/)
-* [Report](/sdk/android/privacy/report/)
-* [Cleanup](/sdk/android/privacy/cleanup/)
+| Page | Covers |
+| --- | --- |
+| [Video and touch](/sdk/android/privacy/video) | `addSecureActivity`, `addSecureView`, `addSecureRectangle`, `addSecureWebView`, `startBlackout` / `endBlackout`, Compose `Modifier.bugseeSecure()`. |
+| [Console logs](/sdk/android/privacy/logs) | `Bugsee.setLogEventFilter(EventFilter<LogEvent>)`. |
+| [Network traffic](/sdk/android/privacy/network) | `Bugsee.setNetworkEventFilter(EventFilter<NetworkEvent>)`. |
+| [Breadcrumbs](/sdk/android/privacy/breadcrumbs) | `Bugsee.setBreadcrumbFilter(EventFilter<Breadcrumb>)` — _new in 7.0.0._ |
+| [Report fields](/sdk/android/privacy/report) | `Bugsee.setReportHandler(ReportHandler)` for pre/post report mutation. |
+| [Cleanup](/sdk/android/privacy/cleanup) | `Bugsee.deleteCollectedDataOnDevice(...)`, `clearAllAttributes()`. |
+
+It remains the responsibility of the application developer to scrub any
+sensitive data from reports before they leave the device.

@@ -1,0 +1,278 @@
+---
+title: "Network events"
+description: "How Bugsee captures Android network traffic and how to add support for OkHttp, Retrofit, and other HTTP clients."
+sidebar_position: 5
+slug: "/sdk/android/v6/network"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## HttpURLConnection, HttpsURLConnection
+
+Bugsee automatically intercepts network requests made with the following clients and libraries, which use these clients as underlying HTTP stack. For other HTTP clients additional actions are required.
+
+## OkHttpClient
+
+OkHttp 2.2+ is supported. For OkHttp of versions 2.2 - 2.7.5 you need to call method addNetworkLoggingToOkHttpClient():
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+OkHttpClient client = new OkHttpClient();
+Bugsee.addNetworkLoggingToOkHttpClient(client);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+val client = OkHttpClient()
+Bugsee.addNetworkLoggingToOkHttpClient(client)
+```
+
+  </TabItem>
+</Tabs>
+
+For OkHttp 3.x you need to call method addNetworkLoggingToOkHttpBuilder():
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+OkHttpClient.Builder builder = new OkHttpClient.Builder();
+OkHttpClient client = Bugsee.addNetworkLoggingToOkHttpBuilder(builder)
+	.build();
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+val builder: OkHttpClient.Builder = OkHttpClient.Builder()
+val client: OkHttpClient = Bugsee.addNetworkLoggingToOkHttpBuilder(builder)
+	.build()
+```
+
+  </TabItem>
+</Tabs>
+
+## Ktor
+
+Ktor 2.3+ is supported. You need to call method addNetworkLoggingToKtorHttpClient():
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+HttpClient client = new HttpClient(engine, clientConfig);
+Bugsee.addNetworkLoggingToKtorHttpClient(client);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+val client = HttpClient(engine, clientConfig)
+Bugsee.addNetworkLoggingToKtorHttpClient(client)
+```
+
+  </TabItem>
+</Tabs>
+
+## Retrofit
+Retrofit 1.9+ is supported. For Retrofit 1.9, which uses OkHttp 2.x, you need to set wrapped OkHttpClient to RestAdapter.Builder:
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+OkHttpClient client = new OkHttpClient();
+Bugsee.addNetworkLoggingToOkHttpClient(client);
+RestAdapter restAdapter = new RestAdapter.Builder()                  
+	.setClient(new OkClient(client))
+	.build();
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+val client = OkHttpClient()
+Bugsee.addNetworkLoggingToOkHttpClient(client)
+val restAdapter: RestAdapter = RestAdapter.Builder()
+	.setClient(OkClient(client))
+	.build()
+```
+
+  </TabItem>
+</Tabs>
+
+For Retrofit 2.x, which uses OkHttp 3.x you need to set wrapped OkHttpClient to Retrofit.Builder:
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+OkHttpClient.Builder builder = new OkHttpClient.Builder();
+OkHttpClient client = Bugsee.addNetworkLoggingToOkHttpBuilder(builder)
+	.build();
+Retrofit retrofit = new Retrofit.Builder()               
+    .client(client)
+    .build();
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+val builder: OkHttpClient.Builder = OkHttpClient.Builder()
+val client: OkHttpClient = Bugsee.addNetworkLoggingToOkHttpBuilder(builder)
+	.build()
+val retrofit = Retrofit.Builder()
+	.client(client)
+	.build()
+```
+
+  </TabItem>
+</Tabs>
+
+## Picasso
+
+For Picasso 1.x it is necessary to call loader() method:
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Picasso picasso = new Picasso.Builder(context) //context - activity or application instance.
+	.loader(new UrlConnectionLoader(context))
+	.build();
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+val picasso: Picasso = Picasso.Builder(context) //context - activity or application instance.
+	.loader(UrlConnectionLoader(context))
+	.build()
+```
+
+  </TabItem>
+</Tabs>
+
+For Picasso 2.0-2.5.2 it is necessary to call downloader() method with an instance of UrlConnectionDownloader as a parameter: 
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Picasso picasso = new Picasso.Builder(context) //context - activity or application instance.
+	.downloader(new UrlConnectionDownloader(context))
+	.build();
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+val picasso = Picasso.Builder(context) //context - activity or application instance.
+	.downloader(UrlConnectionDownloader(context))
+	.build()
+```
+
+  </TabItem>
+</Tabs>
+
+For Picasso 2.7+ some additional actions are required comparing with the previous case:
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+OkHttp3Downloader okHttp3Downloader = new OkHttp3Downloader(context); //context - activity or application instance.
+Bugsee.addNetworkLoggingToPicassoDownloader(okHttp3Downloader);
+Picasso picasso = new Picasso.Builder(context)
+	.downloader(okHttp3Downloader)
+	.build();
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+val okHttp3Downloader = OkHttp3Downloader(context) //context - activity or application instance.
+
+Bugsee.addNetworkLoggingToPicassoDownloader(okHttp3Downloader)
+val picasso = Picasso.Builder(context)
+	.downloader(okHttp3Downloader)
+	.build()
+```
+
+  </TabItem>
+</Tabs>
+
+## Glide
+Glide uses HttpUrlConnection by default, so its network events are intercepted automatically. 
+
+But if you use OkHttpClient as underlying HTTP stack for Glide, additional actions are required.
+First, add class, which extends OkHttpGlideModule class, with overridden registerComponents() method.
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+class CustomGlideModule extends OkHttpGlideModule {
+    @Override
+    public void registerComponents(Context context, Glide glide, Registry registry) {
+        OkHttpClient client = new OkHttpClient();
+        Bugsee.addNetworkLoggingToOkHttpClient(client);
+        OkHttpUrlLoader.Factory factory = new OkHttpUrlLoader.Factory(client);
+        registry.replace(GlideUrl.class, InputStream.class, factory);
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+class CustomGlideModule : OkHttpGlideModule() {
+    override fun registerComponents(context: Context, glide: Glide, registry: Registry) {
+        val client = OkHttpClient()
+        Bugsee.addNetworkLoggingToOkHttpClient(client)
+        val factory = OkHttpUrlLoader.Factory(client)
+        registry.replace(
+            GlideUrl::class.java,
+            InputStream::class.java,
+            factory
+        )
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+Then register this class in &lt;application&gt; node in application manifest.
+
+```xml
+<application>
+<meta-data
+	android:name="com.example.CustomGlideModule"
+	android:value="GlideModule"/>
+</application>
+```
+
+Replace "com.example" by package of your class, which extends OkHttpGlideModule.

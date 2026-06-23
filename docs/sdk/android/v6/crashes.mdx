@@ -1,0 +1,357 @@
+---
+title: "Crash reports"
+description: "How Bugsee captures uncaught exceptions on Android and how to upload ProGuard/R8 mapping files to deobfuscate stack traces."
+sidebar_position: 11
+slug: "/sdk/android/v6/crashes"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Bugsee automatically intercepts uncaught exceptions and sends crash reports on app restart.
+
+## ProGuard/R8
+
+When ProGuard/R8 is used, crash reports are likely to have obfuscated parts in them. In order to process them a matching mapping.txt has to be uploaded to Bugsee servers. The mapping can be uploaded manually at any time, but Bugsee also provides a special mechanism to upload mapping files automatically at build time using a gradle plugin.
+
+### With classpath
+
+Add the following code to your build.gradle or build.gradle.kts in the root of your project (your project's or app module's build.gradle file) to initiate Bugsee gradle plugin when appropriate:
+
+
+<Tabs groupId="lang-gradle">
+  <TabItem value="groovy" label="Groovy">
+
+```groovy
+buildscript {
+    repositories {
+        mavenCentral()
+        google()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.4.1'
+
+        // Add Bugsee plugin as a dependency
+        classpath 'com.bugsee:bugsee-android-gradle-plugin:3+' 
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="kts" label="KTS">
+
+```kotlin
+buildscript {
+    repositories {
+        mavenCentral()
+        google()
+    }
+
+    dependencies {
+        classpath("com.android.tools.build:gradle:7.4.1")
+
+        // Add Bugsee plugin as a dependency
+        classpath("com.bugsee:bugsee-android-gradle-plugin:3+") 
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+And now add the following line to your build.gradle or build.gradle.kts in app folder (app/feature module's build.gradle file)
+
+
+<Tabs groupId="lang-gradle">
+  <TabItem value="groovy" label="Groovy">
+
+```groovy
+// !!! This line is already in your app/feature module's build.gradle file
+apply plugin: 'com.android.application'
+
+// Activate Bugsee plugin
+
+apply plugin: 'com.bugsee.android.gradle'
+
+// With "com.bugsee:bugsee-android-gradle-plugin" version 3.3 and below,
+// you should use
+//
+// apply plugin: 'bugsee'
+```
+
+  </TabItem>
+  <TabItem value="kts" label="KTS">
+
+```kotlin
+// Add Bugsee plugin to "plugins" section in your app/feature module's build.gradle.kts file
+plugins {
+    // Other plugins
+    //...
+    
+    // Activate Bugsee plugin
+    id("com.bugsee.android.gradle")
+
+    // With "com.bugsee:bugsee-android-gradle-plugin" version 3.3 and below,
+    // you should use
+    //
+    // id("bugsee")
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Plugins block with ID
+
+If you want to load plugin by "id" then you should use the following constructs. Note that support for it was added in version ```3.4``` of ```Bugsee Android Gradle Plugin```:
+
+
+<Tabs groupId="lang-gradle">
+  <TabItem value="groovy" label="Groovy">
+
+```groovy
+plugins {
+    id "com.bugsee.android.gradle" version "3+"
+}
+```
+
+  </TabItem>
+  <TabItem value="kts" label="KTS">
+
+```kotlin
+// Activate Bugsee plugin
+plugins {
+    id("com.bugsee.android.gradle") version "3+"
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Using the plugin
+
+Application token is required to associate the uploaded mapping file with the right application. If you have the single app token for all build variants, you might add the following section to the app/feature module's build.gradle file
+
+
+<Tabs groupId="lang-gradle">
+  <TabItem value="groovy" label="Groovy">
+
+```groovy
+bugsee {
+    appToken '<your_app_token>'
+}
+```
+
+  </TabItem>
+  <TabItem value="kts" label="KTS">
+
+```kotlin
+bugsee {
+    appToken("<your_app_token>")
+}
+```
+
+  </TabItem>
+</Tabs>
+
+But if you have several app tokens for different build variants, you can provide Bugsee plugin with closure
+
+
+<Tabs groupId="lang-gradle">
+  <TabItem value="groovy" label="Groovy">
+
+```groovy
+bugsee {
+    appToken { com.android.build.gradle.api.BaseVariant variant ->
+        switch (variant.buildType.name) { // Check build type or any other condition based on a given BaseVariant.
+            case 'release': '<release app token>'
+                break
+            case 'qa': '<qa app token>'
+                break
+        }
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="kts" label="KTS">
+
+```kotlin
+class MyAppTokenProvider : com.bugsee.android.gradle.AppTokenProvider {
+    override fun getAppToken(variant : com.android.build.gradle.api.BaseVariant) : String? {
+        return when (variant.buildType.name) {
+            "release" -> "<release app token>"
+            "qa" -> "<qa app token>"
+            else -> null
+        }
+    }
+}
+
+bugsee {
+    appToken(MyAppTokenProvider())
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Proguard optimization
+
+If you enable ProGuard optimization by, for example, adding 'proguard-android-optimize.txt' to proguardFiles list, it is necessary to add the following ProGuard rule:
+
+```proguard
+-optimizations !code/simplification/arithmetic,!code/simplification/cast,!field/*,!class/merging/*,!code/allocation/variable 
+```
+
+First part is taken from standard 'proguard-android-optimize.txt' file and last part '!code/allocation/variable' is added in order to compile with Bugsee.
+
+## Special cases
+
+If you use other libraries, which intercept uncaught exceptions, Bugsee.launch() method should be called after all these libraries are initialized. When uncaught exceptions occurs, Bugsee will inform these libraries about exception.
+
+If you set uncaught exceptions handler in your app using Thread.setDefaultUncaughtExceptionHandler() method after calling Bugsee.launch(), you should call Bugsee.onUncaughtException() method from your handler:
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Thread.setDefaultUncaughtExceptionHandler(mExceptionHandler);
+//...
+private final Thread.UncaughtExceptionHandler mExceptionHandler = new Thread.UncaughtExceptionHandler() {
+        @Override
+        public void uncaughtException(Thread thread, Throwable ex) {
+            Bugsee.onUncaughtException(thread, ex);
+            
+            // App specific exception handling.
+            System.exit(1);
+        }
+    };
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Thread.setDefaultUncaughtExceptionHandler(mExceptionHandler)
+//...
+private val mExceptionHandler = Thread.UncaughtExceptionHandler { thread, ex ->
+    Bugsee.onUncaughtException(thread, ex)
+
+    // App specific exception handling.
+    System.exit(1)
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Native crashes (NDK)
+
+Starting with version [5.7.0](/sdk/android/v6/release-notes/#570-february-12-2025) of Bugsee Android SDK, Bugsee supports native crashes interception. It's an experimental feature and should be used with caution in production builds.
+
+### Native symbols collection
+
+:::warning
+To collect native symbols you need to install Bugsee Gradle plugin version 3.6 or above. Please see the instructions in the sections above on how to install it.
+:::
+
+Once installed, you need to instruct the plugin to collect native symbols. To do this, you need to add the following property to your app/feature module's build.gradle file:
+
+
+<Tabs groupId="lang-gradle">
+  <TabItem value="groovy" label="Groovy">
+
+```groovy
+bugsee {
+    appToken '<your_app_token>'
+    ndk true // <--- add this line
+}
+```
+
+  </TabItem>
+  <TabItem value="kts" label="KTS">
+
+```kotlin
+bugsee {
+    appToken("<your_app_token>")
+    ndk(true) // <--- add this line
+}
+```
+
+  </TabItem>
+</Tabs>
+
+Next, you need to tweak your build process to make it produce the native symbols. This is done by setting `debugSymbolLevel` to the appropriate value. There are two possible values:
+
+- `symbol_table` - Smaller symbol files are generated without files and line numbers. When you specify this value, only method names will be shown in the Bugsee web dashboard after symbolication
+- `full` - Produces a full debug info. With this value, files and line numbers will be shown in the Bugsee web dashboard after symbolication.
+
+`debugSymbolLevel` should be set in your build.gradle file like follows:
+
+
+<Tabs groupId="lang-gradle">
+  <TabItem value="groovy" label="Groovy">
+
+```groovy
+buildTypes {
+    release {
+        // ... other build type settings ...
+
+        ndk {
+            debugSymbolLevel 'FULL'
+        }
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="kts" label="KTS">
+
+```kotlin
+buildTypes {
+    release {
+        // ... other build type settings ...
+
+        ndk {
+            debugSymbolLevel = "FULL"
+        }
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+You can also set `debugSymbolLevel` globally by setting it in the `defaultConfig` block:
+
+
+<Tabs groupId="lang-gradle">
+  <TabItem value="groovy" label="Groovy">
+
+```groovy
+android {
+defaultConfig {
+    ndk {
+            debugSymbolLevel = "FULL"
+        }
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="kts" label="KTS">
+
+```kotlin
+android {
+    defaultConfig {
+        ndk {
+            debugSymbolLevel = "full"
+        }
+    }
+}
+```
+
+  </TabItem>
+</Tabs>

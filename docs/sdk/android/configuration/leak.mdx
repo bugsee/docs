@@ -1,0 +1,88 @@
+---
+title: "Configuration — Leak extension"
+description: "Runtime options exposed by the bugsee-android-leak extension — memory and thread leak detection."
+sidebar_position: 3
+slug: "/sdk/android/configuration/leak"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::note
+Leak detection is shipped as the **`bugsee-android-leak` extension module**. The core SDK doesn't include it — see [Memory & thread leaks](/sdk/android/issue-detection/leaks) for installation.
+:::
+
+The Leak extension exposes four runtime options: a master switch for each of memory and thread leak detection, plus two tuning knobs for the memory-leak mode and the deep-dump sample rate.
+
+The programmatic constants live in the extension's own package:
+
+```java
+import com.bugsee.library.leak.contracts.options.LeakOptions;
+import com.bugsee.library.leak.MemoryLeakMode;
+```
+
+## Memory leaks
+
+| Constant | Manifest key | Type | Default |
+| --- | --- | --- | --- |
+| `LeakOptions.DetectMemoryLeaks` | `com.bugsee.option.detect.memory_leaks` | boolean | `true` (when module present) |
+| `LeakOptions.DetectMemoryLeaksMode` | `com.bugsee.option.detect.memory_leaks.mode` | `MemoryLeakMode` | `FAST` |
+| `LeakOptions.DetectMemoryLeaksDeepSampleRate` | `com.bugsee.option.detect.memory_leaks.deep_sample_rate` | float `[0, 1]` | `1.0` |
+
+The manifest meta-data form accepts either the `MemoryLeakMode` enum constant name (`FAST`, `DEEP_DEBUG_ONLY`, `DEEP_EVERYWHERE`) or its camelCase wire alias (`Fast`, `DeepDebugOnly`, `DeepEverywhere`). The programmatic `Bugsee.launch(...)` map must use the typed enum value. See [Memory & thread leaks → Modes](/sdk/android/issue-detection/leaks#modes) for what each mode buys you.
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.memory_leaks"
+           android:value="true" />
+<meta-data android:name="com.bugsee.option.detect.memory_leaks.mode"
+           android:value="DEEP_DEBUG_ONLY" />
+<meta-data android:name="com.bugsee.option.detect.memory_leaks.deep_sample_rate"
+           android:value="0.25" />
+```
+
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(LeakOptions.DetectMemoryLeaks, true);
+options.put(LeakOptions.DetectMemoryLeaksMode, MemoryLeakMode.DEEP_DEBUG_ONLY);
+options.put(LeakOptions.DetectMemoryLeaksDeepSampleRate, 0.25f);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+
+  </TabItem>
+</Tabs>
+
+The deep-dump sample rate gates **per-leak eligibility** for the heap dump. The frequency caps and battery threshold still apply on top — a low sample rate compounds with them, so use it primarily to budget heap-dump cost on `DEEP_EVERYWHERE`.
+
+## Thread leaks
+
+| Constant | Manifest key | Type | Default |
+| --- | --- | --- | --- |
+| `LeakOptions.DetectThreadLeaks` | `com.bugsee.option.detect.thread_leaks` | boolean | `false` |
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.thread_leaks"
+           android:value="true" />
+```
+
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(LeakOptions.DetectThreadLeaks, true);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+
+  </TabItem>
+</Tabs>
+
+Thread-leak detection is off by default — see [Memory & thread leaks → Thread leaks](/sdk/android/issue-detection/leaks#thread-leaks) for why and when to flip it on.

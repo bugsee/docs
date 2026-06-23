@@ -1,0 +1,61 @@
+---
+title: "Privacy and console logs"
+description: "How to disable or sanitize logcat log capture in the Bugsee Android SDK to prevent PII from appearing in reports."
+sidebar_position: 2
+slug: "/sdk/android/v6/privacy/logs"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Bugsee captures Logcat logs. The feature can be either completely disabled or logs can be sanitized during recording to strip any PII data.
+
+## Disabling log collection
+
+Console log collection can be disabled completely using **CaptureLogs** launch option. See [configuration](/sdk/android/v6/configuration/) for more info.
+
+## Sanitizing logs 
+
+In order to allow you to hide user identifiable and other sensitive data from these logs, we provide a way to register a filter and process each log message before it's being recorded into Bugsee logs. Bugsee will call your method for every event to be recorded and provide you with ```BugseeLog``` object. 
+It is your method's responsibility to clean up all user identifiable data from that structure and call ```listener.onLog(log)``` to pass it back to Bugsee. ```listener.onLog(log)``` can be called in other thread than calling thread.
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.setLogFilter(new LogFilter() {
+    @Override
+    public void filter(BugseeLog log, LogListener listener) {
+        String message  = log.getMessage();
+        if (message != null) {
+            // ..make changes
+            log.setMessage(message);
+        }
+        
+        // Send the sanitized log back to Bugsee to record
+        // Skip this in order to completely omit the log from Bugsee recording!
+        listener.onLog(log);
+    }
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.setLogFilter { log, listener ->
+    val message = log.message
+    if (message != null) {
+        // ..make changes
+        log.message = message
+    }
+
+    // Send the sanitized log back to Bugsee to record
+    // Skip this in order to completely omit the log from Bugsee recording!
+    listener.onLog(log)
+}
+```
+
+  </TabItem>
+</Tabs>

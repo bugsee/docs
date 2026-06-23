@@ -1,0 +1,96 @@
+---
+title: "App launch overhead (Android)"
+description: "How much Bugsee adds to your app's cold start: what runs on the main thread vs. in the background, measured numbers (core SDK vs. each extension) on low-end and high-end hardware, the factors that affect it, and how to measure it in your own app."
+sidebar_position: 16
+slug: "/sdk/android/startup-overhead"
+---
+
+A common question before adding any SDK: *how much will it slow down my app's launch?* This page gives Bugsee's measured cold-start overhead on Android, explains what the SDK does (and deliberately does **not** do) on the main thread during launch, and shows how to measure the impact in your own app.
+
+## Design: heavy work runs off the main thread
+
+Bugsee auto-initializes from a `ContentProvider` that runs **before** your `Application.onCreate()`. The only work the SDK does on the main thread during launch is lightweight wiring — registering lifecycle trackers, installing detection hooks, and reading configuration.
+
+Everything expensive is deferred to background threads and does **not** block your first frame:
+
+- Native library loading and capture-provider instantiation
+- Screen / video capture and view-hierarchy setup
+- The server session handshake (access-token warm-up)
+- Memory-leak deep analysis (heap dump + reference-chain walk)
+- Video encoding
+
+As a result, the latency Bugsee adds to your launch is just the small, bounded amount of **main-thread** time spent on that wiring — not the SDK's total start-up work.
+
+## Measured overhead
+
+All numbers below are the **main-thread time the SDK holds during a cold start** — the part that delays your app's first frame — measured as the median of 12 force-stopped cold starts on **release (R8) builds**. Two devices bracket the range:
+
+- **Low-end** — HONOR with a MediaTek MT6765 (Cortex-A53-class), Android 14.
+- **High-end (reference)** — a fast arm64 reference device, Android 15.
+
+### Core SDK vs. extensions
+
+The core SDK is what you get from the base dependency; extensions (NDK crash reporting, memory-leak detection, network capture, Compose, feedback) are opt-in modules you add per feature.
+
+| | Low-end | High-end (ref) |
+|---|---|---|
+| **Core SDK** (no extensions) | **107 ms** | **16 ms** |
+| **+ all extensions** | **139 ms** | **19 ms** |
+| Extensions' share | +32 ms | +3 ms |
+| Whole-app cold start (context) | ~1.5 s | ~0.3 s |
+| SDK share of cold start | ~10% | ~6% |
+
+So even with **every** extension enabled the SDK adds ~140 ms on a low-end device (≈ a tenth of that device's cold start), and the bulk of that is the core — the seven extensions together add only ~32 ms.
+
+:::note[Read low-end as a conservative bound]
+The low-end column is a deliberately conservative case (Cortex-A53 SoC). Mid-range and flagship devices land far below it — see the high-end column. Absolute timings vary with device, OS version, thermal state, and configuration; treat them as a ballpark and [measure your own app](#measuring-it-in-your-app).
+:::
+
+## Per-extension cost
+
+Each extension is a separate dependency, so you only pay for what you add. Median main-thread cost at launch (release):
+
+| Extension | Low-end | High-end (ref) |
+|---|---|---|
+| **NDK** — native crash reporting | **~24 ms** | ~3 ms |
+| **Memory-leak detection** | ~3 ms | &lt;1 ms |
+| **Network capture** — OkHttp | &lt;1 ms | ~0 ms |
+| **Network capture** — Ktor | &lt;1 ms | ~0 ms |
+| **Network capture** — Cronet | &lt;1 ms | ~0 ms |
+| **In-app feedback** | ~0 ms | ~0 ms |
+| **All extensions combined** | **~32 ms** | **~3 ms** |
+
+**NDK crash reporting is by far the largest extension** — about three-quarters of all extension overhead — because it spawns an out-of-process Crashpad handler at launch. It buys you native (C/C++) crash capture; if your app has no native code you can leave it out. Every other extension is single-digit milliseconds or less.
+
+## What contributes to the core cost
+
+Within the core SDK, the main-thread cost on a low-end device breaks down roughly as:
+
+| Phase | Low-end | High-end (ref) |
+|---|---|---|
+| Lifecycle-tracker registration | ~50 ms | ~6 ms |
+| Component initialization | ~17 ms | ~2 ms |
+| Issue-detection wiring (crash/ANR/hang/exit) | ~13 ms | ~2 ms |
+| Performance-monitoring setup | ~9 ms | ~2 ms |
+| Options / configuration | ~4 ms | &lt;1 ms |
+| Everything else | &lt;5 ms | &lt;1 ms |
+
+Lifecycle-tracker registration is the single largest item — it installs the Activity/Application callbacks the SDK depends on, synchronously, so no early transition is missed.
+
+## How to minimize it
+
+- **Only include the extensions you actually use.** Each extension is a separate Gradle dependency (see [Bugsee extensions](/sdk/android/extensibility/bugsee-extensions)). The core SDK pulls in none of them — you opt in per feature, and you only pay the launch cost of what you add.
+- **Keep the defaults.** The SDK already defers all heavy initialization to background threads; you do not need to move `Bugsee.launch()` off the startup path or call it lazily.
+
+## Measuring it in your app
+
+You don't have to take these numbers on faith — Bugsee can show you its own contribution to your cold start, on your devices:
+
+- **Bugsee APM startup tracing.** With [Performance monitoring](/sdk/android/performance) enabled and the [Gradle plugin](/sdk/android/gradle-plugin)'s `startupTier` set to `MINIMAL` or higher, the cold-start transaction's span tree includes the SDK's own `ContentProvider.onCreate` (shown as `app.startup.provider`) alongside every other initializer in your app — so you can see Bugsee's slice of launch directly in the dashboard waterfall.
+- **Platform tooling.** For whole-app cold start, `adb shell am start -W <pkg>/<activity>` reports `TotalTime`, and Logcat's `ActivityTaskManager: Displayed …` line gives the time to first frame. Compare a build with and without Bugsee to isolate the delta.
+
+## See also
+
+- [Performance monitoring](/sdk/android/performance) — measure your app's own startup and runtime performance.
+- [Build size analysis](/sdk/android/build-size-analysis) — track the SDK's contribution to app size.
+- [Extensibility](/sdk/android/extensibility) — opt into only the features you need.

@@ -153,7 +153,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
   	<tr>
   		<th>Crash reporting</th>
   		<td><a href="/sdk/ios/symbolication/">View</a></td>
-  		<td><a href="/sdk/android/crashes/">View</a></td>
+  		<td><a href="/sdk/android/issue-detection/crashes/">View</a></td>
   		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   		<td><a href="/sdk/react_native/crashes/">View</a></td>
 		<td><a href="/sdk/flutter/symbolication/">View</a></td>

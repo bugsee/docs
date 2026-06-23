@@ -1,0 +1,42 @@
+---
+title: "Logging"
+description: "How to send custom log messages directly to Bugsee on Android, complementing automatic logcat capture included in reports."
+sidebar_position: 6
+slug: "/sdk/android/v6/logs"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+No special setup is required if you just need to retrieve standard logcat logs, Bugsee will extract the logs for the relevant period of time and upload it as part of the report. We provide an additional API to push logs directly into Bugsee without printing them into logcat.
+
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+// With default log level (normal)
+Bugsee.log("Some log message");
+
+// Set the log level explicitly
+// Levels are BugseeLogLevel.Error, BugseeLogLevel.Warning,
+// BugseeLogLevel.Info, BugseeLogLevel.Debug and BugseeLogLevel.Verbose
+Bugsee.log("Some log message", BugseeLogLevel.Warning);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+// With default log level (normal)
+Bugsee.log("Some log message")
+
+// Set the log level explicitly
+// Levels are BugseeLogLevel.Error, BugseeLogLevel.Warning,
+// BugseeLogLevel.Info, BugseeLogLevel.Debug and BugseeLogLevel.Verbose
+Bugsee.log("Some log message", BugseeLogLevel.Warning)
+```
+
+  </TabItem>
+</Tabs>

@@ -9,46 +9,46 @@ slug: "/sdk/flutter/release-notes"
 - Fix: Improper artifacts placement for iOS
 
 ## 9.0.2 (March 20 2026)
-- Feat: Updated native SDKs to their latest versions (Android: [6.0.2](/sdk/android/release-notes/#602-march-11-2026), iOS: [6.1.2](/sdk/ios/release-notes/#612-march-4-2026))
+- Feat: Updated native SDKs to their latest versions (Android: [6.0.2](/sdk/android/v6/release-notes/#602-march-11-2026), iOS: [6.1.2](/sdk/ios/release-notes/#612-march-4-2026))
 
 ## 9.0.0 (March 6 2026)
-- Feat: Updated native SDKs to their latest versions (Android: [6.0.0](/sdk/android/release-notes/#600-december-9-2025), iOS: [6.1.2](/sdk/ios/release-notes/#612-march-4-2026))
+- Feat: Updated native SDKs to their latest versions (Android: [6.0.0](/sdk/android/v6/release-notes/#600-december-9-2025), iOS: [6.1.2](/sdk/ios/release-notes/#612-march-4-2026))
 - Breaking: \[iOS\] Minimum deployment target is iOS 12.0
 - Breaking: \[Android\] Bugsee SDK is now built with Android SDK version 35, hence requires compileSDKVersion 35
 - Breaking: \[Android\] AGP 8.6.0 or newer is now required
 
 ## 8.6.9 (November 18 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.9.1](/sdk/android/release-notes/#591-september-29-2025), iOS: [5.5.9](/sdk/ios/release-notes/#559-november-17-2025))
+- Feat: Updated native SDKs to their latest versions (Android: [5.9.1](/sdk/android/v6/release-notes/#591-september-29-2025), iOS: [5.5.9](/sdk/ios/release-notes/#559-november-17-2025))
 
 ## 8.6.8 (October 15 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.9.1](/sdk/android/release-notes/#591-september-29-2025), iOS: [5.5.8](/sdk/ios/release-notes/#558-august-21-2025))
+- Feat: Updated native SDKs to their latest versions (Android: [5.9.1](/sdk/android/v6/release-notes/#591-september-29-2025), iOS: [5.5.8](/sdk/ios/release-notes/#558-august-21-2025))
 
 ## 8.6.7 (September 23 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.8.7](/sdk/android/release-notes/#587-september-9-2025), iOS: [5.5.8](/sdk/ios/release-notes/#557-august-1-2025))
+- Feat: Updated native SDKs to their latest versions (Android: [5.8.7](/sdk/android/v6/release-notes/#587-september-9-2025), iOS: [5.5.8](/sdk/ios/release-notes/#557-august-1-2025))
 
 ## 8.6.6 (August 21 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.8.4](/sdk/android/release-notes/#584-august-21-2025), iOS: [5.5.8](/sdk/ios/release-notes/#558-august-21-2025))
+- Feat: Updated native SDKs to their latest versions (Android: [5.8.4](/sdk/android/v6/release-notes/#584-august-21-2025), iOS: [5.5.8](/sdk/ios/release-notes/#558-august-21-2025))
 
 ## 8.6.5 (June 12 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.7.5](/sdk/android/release-notes/#575-june-8-2025), iOS: [5.5.6](/sdk/ios/release-notes/#556-march-25-2025))
+- Feat: Updated native SDKs to their latest versions (Android: [5.7.5](/sdk/android/v6/release-notes/#575-june-8-2025), iOS: [5.5.6](/sdk/ios/release-notes/#556-march-25-2025))
 - Fix: \[Android\] In some configurations, application may crash on device with 16KB memory pages
 
 ## 8.6.4 (May 6 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.7.3](/sdk/android/release-notes/#573-may-5-2025), iOS: [5.5.6](/sdk/ios/release-notes/#556-march-25-2025))
+- Feat: Updated native SDKs to their latest versions (Android: [5.7.3](/sdk/android/v6/release-notes/#573-may-5-2025), iOS: [5.5.6](/sdk/ios/release-notes/#556-march-25-2025))
 
 ## 8.6.3 (March 17 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.7.2](/sdk/android/release-notes/#572-march-17-2025), iOS: [5.5.5](/sdk/ios/release-notes/#555-february-13-2025))
+- Feat: Updated native SDKs to their latest versions (Android: [5.7.2](/sdk/android/v6/release-notes/#572-march-17-2025), iOS: [5.5.5](/sdk/ios/release-notes/#555-february-13-2025))
 
 ## 8.6.0 - 8.6.2 (March 10 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.7.1](/sdk/android/release-notes/#571-march-4-2025), iOS: [5.5.5](/sdk/ios/release-notes/#555-february-13-2025))
+- Feat: Updated native SDKs to their latest versions (Android: [5.7.1](/sdk/android/v6/release-notes/#571-march-4-2025), iOS: [5.5.5](/sdk/ios/release-notes/#555-february-13-2025))
 - Feat: Swift Package Manager support added
 
 ## 8.5.0 (February 20 2025)
 - Feat: Full Flutter 3.29 support
-- Feat: Updated native SDKs to their latest versions (Android: [5.7.0](/sdk/android/release-notes/#570-february-12-2025), iOS: [5.5.5](/sdk/ios/release-notes/#555-february-13-2025))
+- Feat: Updated native SDKs to their latest versions (Android: [5.7.0](/sdk/android/v6/release-notes/#570-february-12-2025), iOS: [5.5.5](/sdk/ios/release-notes/#555-february-13-2025))
 
 ## 8.4.3 (February 4 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.6.5](/sdk/android/release-notes/#565-february-3-2025), iOS: [5.5.4](/sdk/ios/release-notes/#554-january-27-2025))
+- Feat: Updated native SDKs to their latest versions (Android: [5.6.5](/sdk/android/v6/release-notes/#565-february-3-2025), iOS: [5.5.4](/sdk/ios/release-notes/#554-january-27-2025))
 - Fix: \[Android\] Built-in UI shifts upwards in some scenarios on Android 15 (specifically, when hosting application itself is targeting Android 15, i.e. target SDK version is 35)
 
 ## 8.4.2 (November 23 2024)
@@ -94,7 +94,7 @@ slug: "/sdk/flutter/release-notes"
 - Feat: Updated native SDKs to their latest versions (Android: 4.2.1, iOS: 4.1.0)
 
 ## 6.0.1 (October 2 2023)
-- Feat: Updated native SDKs to their latest versions (Android: [4.0.1](/sdk/android/release-notes/#401-september-30-2023), iOS: [4.0.1](/sdk/ios/release-notes/#401-september-30-2023))
+- Feat: Updated native SDKs to their latest versions (Android: [4.0.1](/sdk/android/v6/release-notes/#401-september-30-2023), iOS: [4.0.1](/sdk/ios/release-notes/#401-september-30-2023))
 
 ## 6.0.0 (September 25 2023)
 - Feat: Updated native SDKs to their latest versions (Android: 4.0.0, iOS: 4.0.0)
@@ -151,7 +151,7 @@ slug: "/sdk/flutter/release-notes"
 ## 4.0.0 (September 6 2022)
 - Fix: Properly intercept and filter network requests made from native code
 - Feature: Update native SDKs to the latest versions (Android: 3.0.0, iOS: 3.0.0)
-- Note: Please refer to the underlying SDKs release notes to get the detailed list of changes: [Android](/sdk/android/release-notes/#300-august-19-2022) / [iOS](/sdk/ios/release-notes/#300-september-1-2022)
+- Note: Please refer to the underlying SDKs release notes to get the detailed list of changes: [Android](/sdk/android/v6/release-notes/#300-august-19-2022) / [iOS](/sdk/ios/release-notes/#300-september-1-2022)
 
 ## 3.1.0 (July 8 2022)
 - Feat: Update public method types and improve code style

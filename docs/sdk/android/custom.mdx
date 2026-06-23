@@ -1,103 +1,50 @@
 ---
-title: "Adding custom data"
-description: "How to attach user email, custom events, traces, and attributes to Bugsee reports in your Android app."
-sidebar_position: 4
+title: "Custom data"
+description: "Recording custom events, traces, user attributes, user identity, and unhandled exceptions in Bugsee Android SDK 7.x."
+sidebar_position: 5
 slug: "/sdk/android/custom"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-## User email
+This page documents the Bugsee Android SDK **7.0.0**. For the previous major version, see [Adding custom data](/sdk/android/v6/custom).
 
-When you already have your users identified within your app, you might want to automatically attach their email to the bug report. Bugsee provides APIs for setting, getting, and clearing the email.
+In addition to the data that Bugsee captures automatically, you can enrich reports with your own signals: custom events, time-series traces, user/session attributes, a stable user identifier, and manually-logged unhandled exceptions. These APIs live on the `Bugsee` facade and are safe to call before or after `Bugsee.launch(...)` — calls made before launch are buffered.
 
+For automatic log capture and the manual `Bugsee.log(...)` API, see [Logs](/sdk/android/logs). For automatic crash reporting, see [Crashes](/sdk/android/issue-detection/crashes).
+
+## Custom events
+
+Events are identified by a string and can optionally carry a `HashMap` of parameters. They are attached to the report and indexed on the Bugsee dashboard.
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
-// setting email
-Bugsee.setEmail("name@example.com");
+// Without any additional parameters
+Bugsee.event("payment_processed");
 
-// getting email, null will be returned if email was not set.
-String email = Bugsee.getEmail();
-
-// clearing email
-Bugsee.setEmail(null);
+// ...or with additional custom parameters
+HashMap<String, Object> params = new HashMap<>();
+params.put("amount", 125);
+params.put("currency", "USD");
+Bugsee.event("event with params", params);
 ```
 
   </TabItem>
   <TabItem value="kotlin" label="Kotlin">
 
 ```kotlin
-// setting email
-Bugsee.setEmail("name@example.com")
+// Without any additional parameters
+Bugsee.event("payment_processed")
 
-// getting email, null will be returned if email was not set.
-val email = Bugsee.getEmail()
-
-// clearing email
-Bugsee.setEmail(null)
-```
-
-  </TabItem>
-</Tabs>
-
-## User/Session attributes
-
-Besides email, any arbitrary attributes can be attached to the report. Issues are searchable by these attributes in the Bugsee dashboard.
-
-:::warning
-Note that each attribute has a limit of 1kB and the total size of all attributes must not exceed 25kB
-:::
-
-
-
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-Bugsee.setAttribute("name", "John Doe");
-Bugsee.setAttribute("age", 23);
-Bugsee.setAttribute("married", false);
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-Bugsee.setAttribute("name", "John Doe")
-Bugsee.setAttribute("age", 23)
-Bugsee.setAttribute("married", false)
-```
-
-  </TabItem>
-</Tabs>
-
-Once set, attributes persist until the application is uninstalled from the device. However, they can be cleared using the following API.
-
-
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-// Clear a single attribute by name
-Bugsee.clearAttribute("name");
-
-// .. or clear all of them
-Bugsee.clearAllAttributes();
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-// Clear a single attribute by name
-Bugsee.clearAttribute("name")
-
-// .. or clear all of them
-Bugsee.clearAllAttributes()
+// ...or with additional custom parameters
+val params: HashMap<String, Any> = hashMapOf(
+    "amount" to 125,
+    "currency" to "USD"
+)
+Bugsee.event("event with params", params)
 ```
 
   </TabItem>
@@ -105,8 +52,7 @@ Bugsee.clearAllAttributes()
 
 ## Custom traces
 
-Traces may be useful when you want to track how a specific variable or state changes over time right before a problem occurs.
-
+Traces are useful when you want to track how a specific variable or state changes over time right before a problem occurs. Each call records a new value for the given trace name; the value can be a number, string, or boolean.
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
@@ -139,119 +85,159 @@ Bugsee.trace("logged_in", true)
   </TabItem>
 </Tabs>
 
-## Custom events
+## User and session attributes
 
-Events are identified by a string and can have an optional dictionary of parameters that will be stored and passed along with the report.
+Arbitrary key/value attributes can be attached to the report. Issues are searchable by these attributes in the Bugsee dashboard. Attributes persist across sessions until the application is uninstalled or the SDK's storage is cleared.
 
+:::warning
+Each attribute has a limit of 1 kB and the total size of all attributes must not exceed 25 kB.
+:::
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
-// Without any additional parameters
-Bugsee.event("payment_processed");
-
-// ...or with additional custom parameters
-HashMap<String, Object> params = new HashMap<>();
-params.put("amount", 125);
-params.put("currency", "USD");
-Bugsee.event("event with params", params);
+Bugsee.setAttribute("name", "John Doe");
+Bugsee.setAttribute("age", 23);
+Bugsee.setAttribute("married", false);
 ```
 
   </TabItem>
   <TabItem value="kotlin" label="Kotlin">
 
 ```kotlin
-// Without any additional parameters
-Bugsee.event("payment_processed")
-
-// ...or with additional custom parameters
-val params: HashMap<String, Any> = hashMapOf(
-	"amount" to 125,
-	"currency" to "USD"
-)
-Bugsee.event("event with params", params)
+Bugsee.setAttribute("name", "John Doe")
+Bugsee.setAttribute("age", 23)
+Bugsee.setAttribute("married", false)
 ```
 
   </TabItem>
 </Tabs>
 
-## File attachments
-
-File attachments can also be added to the report right before it is sent. The attachment will be available for download directly from the issue viewer.
-Currently both the amount of attachments and their size is limited. Max of 3 attachments, 3MB each (size increased from 1MB starting from v3.5.0).
-
-You should set your implementation of the **ReportAttachmentsProvider** interface to Bugsee using the Bugsee.setReportAttachmentsProvider() method. It is recommended to call this method before Bugsee.launch(), because during Bugsee.launch() method execution, the SDK will start sending reports created earlier. You can attach files, strings, and byte arrays using CustomAttachment.fromDataFilePath(), CustomAttachment.fromDataString(), and CustomAttachment.fromDataBytes(), respectively.
-
+Attributes can be removed individually or all at once:
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
-Bugsee.setReportAttachmentsProvider(new ReportAttachmentsProvider() {
-	@Override
-	public ArrayList<CustomAttachment> getAttachments(Report report) {
-		ArrayList<CustomAttachment> resultList = new ArrayList<>();
+// Clear a single attribute by name
+Bugsee.clearAttribute("name");
 
-		// If it is a Blocker or crash.
-		if (report.getType() == Report.Type.Crash || report.getSeverity() == IssueSeverity.Blocker) {
-			// myFilePath is a path to a file that should be attached to the report. 
-			CustomAttachment attachment = CustomAttachment.fromDataFilePath(myFilePath);
-			attachment.setFileName("detailed_info.txt");
-			attachment.setName("Detailed Info");
-			resultList.add(attachment);
-		}
-		return resultList;
-	}
-});
+// ...or clear all of them
+Bugsee.clearAllAttributes();
 ```
 
   </TabItem>
   <TabItem value="kotlin" label="Kotlin">
 
 ```kotlin
-Bugsee.setReportAttachmentsProvider { report ->
-	val resultList: ArrayList<CustomAttachment> = ArrayList()
+// Clear a single attribute by name
+Bugsee.clearAttribute("name")
 
-	// If it is a Blocker or crash.
-	if (report.type == IssueType.Crash || report.severity == IssueSeverity.Blocker) {
-		// myFilePath is a path to file, which should be attached to the report. 
-		val attachment = CustomAttachment.fromDataFilePath(myFilePath)
-		attachment.setFileName("detailed_info.txt")
-		attachment.name = "Detailed Info"
-		resultList.add(attachment)
-	}
-	resultList
+// ...or clear all of them
+Bugsee.clearAllAttributes()
+```
+
+  </TabItem>
+</Tabs>
+
+Attributes can also be read back. `Bugsee.getAttribute(name)` returns a single value (or `null` if unset); `Bugsee.getAllAttributes()` returns a `Map<String, Serializable>` snapshot of every attribute (or `null` if none are set).
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Object age = Bugsee.getAttribute("age");                       // null if unset
+Map<String, Serializable> all = Bugsee.getAllAttributes();     // null if empty
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+val age: Any? = Bugsee.getAttribute("age")                     // null if unset
+val all: Map<String, Serializable>? = Bugsee.getAllAttributes() // null if empty
+```
+
+  </TabItem>
+</Tabs>
+
+## User identity
+
+:::info[New in 7.0.0]
+Bugsee provides a dedicated user identity API.
+:::
+
+The user identifier is a stable string (such as your backend user ID, an email, or a UUID) that correlates every session and issue for a given user. It is distinct from arbitrary attributes: the identifier is a first-class field on every report and is surfaced prominently in the Bugsee dashboard. Use attributes for additional facts about the user or session; use the identifier for **who** the user is.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+// Set the identifier once the user has signed in
+Bugsee.setUserIdentifier("user-123");
+
+// Read back the currently-set identifier (null if none)
+String currentId = Bugsee.getUserIdentifier();
+
+// Clear on sign-out
+Bugsee.clearUserIdentifier();
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+// Set the identifier once the user has signed in
+Bugsee.setUserIdentifier("user-123")
+
+// Read back the currently-set identifier (null if none)
+val currentId: String? = Bugsee.getUserIdentifier()
+
+// Clear on sign-out
+Bugsee.clearUserIdentifier()
+```
+
+  </TabItem>
+</Tabs>
+
+## Logging unhandled exceptions
+
+:::info[New in 7.0.0]
+`Bugsee.logUnhandledException(Throwable)` is new in 7.0.0. The existing `Bugsee.logException(...)` API is preserved for non-terminal, handled errors.
+:::
+
+`logUnhandledException(Throwable)` is a fire-and-forget entry point for reporting a `Throwable` that your app treats as an unhandled crash but which Bugsee's automatic crash handler did not see — for example, when you integrate with a third-party crash reporter that intercepts `Thread.UncaughtExceptionHandler` before Bugsee, or when you rethrow a background-thread failure onto a crash pipeline of your own.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+try {
+    runCriticalTask();
+} catch (Throwable thrown) {
+    Bugsee.logUnhandledException(thrown);
+    throw thrown;
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+try {
+    runCriticalTask()
+} catch (thrown: Throwable) {
+    Bugsee.logUnhandledException(thrown)
+    throw thrown
 }
 ```
 
   </TabItem>
 </Tabs>
 
-## View hierarchy
+For handled exceptions that should be recorded as non-terminal errors (and optionally customized with type, severity, or extra parameters), keep using `Bugsee.logException(...)` instead. Automatic crash and ANR capture does not require either API — see [Crashes](/sdk/android/issue-detection/crashes) for details.
 
-By default, Bugsee automatically captures view hierarchy upon bug or error report generation. This feature is controlled by the ```ViewHierarchyEnabled``` launch option (Refer to [configuration](/sdk/android/configuration/) section for more details on launch options).
+## Supplying additional data to reports
 
-You can also trigger view hierarchy capture manually using the following API:
-
-
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-Bugsee.captureViewHierarchy();
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-Bugsee.captureViewHierarchy()
-```
-
-  </TabItem>
-</Tabs>
-
-This API can be called multiple times, and all the captured view hierarchies will be attached to the next report. Be aware that depending on the depth of your view hierarchy and the number of snapshots, the resulting size of the report bundle may be significantly increased.
-
-Also note that if the ```ViewHierarchyEnabled``` launch option is set to ```false```, this API will have no effect.
+To attach your own data to reports, use [custom events and traces](#custom-events), [user and session attributes](#user-and-session-attributes), or a [report handler](/sdk/android/privacy/report) that adds attachments at assembly time.

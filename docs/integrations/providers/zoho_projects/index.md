@@ -9,7 +9,7 @@ slug: "/integrations/providers/zoho_projects"
 
 ### Supported authentication methods
 
-- [Personal token](#personal-token)
+- [Personal token](#personal-tokens)
 
 
 ### Personal tokens

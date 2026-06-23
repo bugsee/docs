@@ -1,0 +1,76 @@
+---
+title: "Appearance"
+description: "How to customize the colors of the Bugsee Report View and Feedback Activity UI on Android using the Appearance API properties."
+sidebar_position: 9
+slug: "/sdk/android/v6/appearance"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+You can always change colors of the [Report View](/sdk/android/v6/manual/) and [Feedback Activity](/sdk/android/v6/feedback/) UI.
+
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+// For example
+Bugsee.getAppearance().FeedbackInputTextHintColor = Color.MAGENTA;
+Bugsee.getAppearance().FeedbackInputTextColor = 0xff9999ff;
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+// For example
+Bugsee.getAppearance().FeedbackInputTextHintColor = Color.MAGENTA
+Bugsee.getAppearance().FeedbackInputTextColor = Integer.decode("0xff9999ff")
+```
+
+  </TabItem>
+</Tabs>
+
+|Property|Description|
+|---|---|
+| ReportActionBarColor | Action bar background color in Report UI |
+| ReportEditTextBackgroundColor | EditTexts background color in Report UI |
+| ReportVersionColor | Bugsee version number view text color in Report UI |
+| ReportTextColor | TextViews and EditTexts text color in Report UI |
+| ReportHintColor | EditTexts hint text color in Report UI |
+| ReportActionBarTextColor | Action bar buttons text color in Report UI |
+| ReportActionBarButtonBackgroundClickedColor | Action bar buttons background color in clicked state in Report UI |
+| ReportBackgroundColor | Report UI background color |
+| ReportSeverityLabelActiveColor | Issue severity label text color in active state in Report UI |
+| FeedbackActionBarColor | Action bar background color in Feedback UI |
+| FeedbackActionBarButtonBackgroundClickedColor | Action bar buttons background color in clicked state in Feedback UI |
+| FeedbackBackgroundColor | Feedback UI background color |
+| FeedbackIncomingBubbleColor | Incoming message bubble background color in Feedback UI |
+| FeedbackOutgoingBubbleColor | Outgoing message bubble background color in Feedback UI |
+| FeedbackIncomingTextColor | Incoming message text color in Feedback UI |
+| FeedbackOutgoingTextColor | Outgoing message text color in Feedback UI |
+| FeedbackDateTextColor | Message date text color in Feedback UI |
+| FeedbackTitleTextColor | Action bar title text color in Feedback UI |
+| FeedbackEmailSkipTextColor | Ask for email dialog "Skip" button text color in Feedback UI |
+| FeedbackEmailSkipBackgroundClickedColor | Ask for email dialog "Skip" button background color in clicked state in Feedback UI |
+| FeedbackEmailBackgroundColor | Ask for email dialog background color in Feedback UI |
+| FeedbackEmailContinueNotActiveColor | Ask for email dialog "Continue" button background color in disabled state in Feedback UI |
+| FeedbackEmailContinueActiveColor | Ask for email dialog "Continue" button background color in enabled state in Feedback UI |
+| FeedbackEmailContinueClickedColor | Ask for email dialog "Continue" button background color in clicked state in Feedback UI |
+| FeedbackInputTextColor | Input message text color in Feedback UI |
+| FeedbackInputTextHintColor | Input message hint text color in Feedback UI |
+| FeedbackBottomDelimiterColor | Color of delimiter between message list and EditText for new message inputting in Feedback UI |
+| FeedbackLoadingBarBackgroundColor | Background color of a bar in Feedback UI, which indicates loading state and shows error information if any |
+| FeedbackLoadingTextColor | Text color in a bar, which indicates loading state in Feedback UI |
+| FeedbackErrorTextColor | Error description text color in Feedback UI |
+| FeedbackVersionChangedBackgroundColor | Background color of a bar in Feedback UI, which indicates that app version has changed |
+| FeedbackVersionChangedTextColor | Text color in a bar in Feedback UI, which indicates that app version has changed |
+| NotificationTitleResId | String resource id of Bugsee notification title. NotificationTitle can be set instead. |
+| NotificationTitle | Bugsee notification title. NotificationTitleResId can be set instead |
+| --- | --- |
+| ReportSummaryPlaceholder | Placeholder which is displayed in Summary field in built-in bug reporting UI |
+| ReportDescriptionPlaceholder | Placeholder which is displayed in Description field in built-in bug reporting UI |
+| ReportEmailPlaceholder | Placeholder which is displayed in Email field in built-in bug reporting UI |
+| ReportLabelsPlaceholder | Placeholder which is displayed in Labels field in built-in bug reporting UI |

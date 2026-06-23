@@ -1,0 +1,83 @@
+---
+title: "Configuration — NDK extension"
+description: "Runtime options exposed by the bugsee-android-ndk extension."
+sidebar_position: 2
+slug: "/sdk/android/configuration/ndk"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::note
+Native crash detection is shipped as the **`bugsee-android-ndk` extension module**. The core SDK doesn't include it — see [Native crashes](/sdk/android/issue-detection/native-crashes) for installation.
+:::
+
+The NDK extension exposes two runtime options: the master switch for native crash detection, and a toggle for including the OS tombstone's raw log buffers in native crash reports.
+
+The programmatic constants live in the extension's own package:
+
+```java
+import com.bugsee.library.ndk.contracts.options.NdkOptions;
+```
+
+## Detect and report native crashes
+
+| Constant | Manifest key | Type | Default |
+| --- | --- | --- | --- |
+| `NdkOptions.DetectAndReport` | `com.bugsee.option.detect.crash-ndk` | boolean | `true` (when the `bugsee-android-ndk` module is on the classpath) |
+
+The default flips to `true` automatically once the extension is added — no extra flag to flip after the dependency. The example below shows the **opt-out** form.
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.crash-ndk"
+           android:value="false" />
+```
+
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(NdkOptions.DetectAndReport, false);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+
+  </TabItem>
+</Tabs>
+
+## Include tombstone logs
+
+| Constant | Manifest key | Type | Default |
+| --- | --- | --- | --- |
+| `NdkOptions.IncludeTombstoneLogs` | `com.bugsee.option.crash-ndk.tombstone-logs` | boolean | `false` |
+
+When a native crash produces an OS tombstone, Android's `debuggerd` captures a snapshot of the device's raw log buffers (the `main`, `system`, `crash`, etc. logcat ring buffers) into that tombstone. Enabling `IncludeTombstoneLogs` attaches those raw buffers to the native crash report.
+
+:::caution[Privacy: tombstone log buffers bypass Bugsee's log filters]
+The tombstone's log buffers are taken directly from the OS and are **not** passed through Bugsee's own log-privacy / obfuscation filters (your `setLogEventFilter`, level filtering, or built-in sanitizers). They can also contain log lines from other apps and system components, and largely duplicate the SDK's own (already filtered) log capture. Leave this off unless you specifically need the raw debuggerd buffers for a native-crash investigation, and you understand that any sensitive data in those buffers will be uploaded unredacted.
+:::
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.crash-ndk.tombstone-logs"
+           android:value="true" />
+```
+
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(NdkOptions.IncludeTombstoneLogs, true);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+
+  </TabItem>
+</Tabs>
+
+For the full setup walkthrough — adding the extension, native-symbol upload, tombstone matching — see the dedicated [Native crashes](/sdk/android/issue-detection/native-crashes) page.

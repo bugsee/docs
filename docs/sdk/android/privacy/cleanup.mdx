@@ -1,55 +1,81 @@
 ---
-title: "Privacy and data cleanup"
-description: "How to delete all locally stored Bugsee data from an Android device to comply with user privacy or data-removal requests."
-sidebar_position: 5
+title: "Data cleanup"
+description: "Delete Bugsee's on-device data store and clear session attributes in the Bugsee Android SDK 7.0."
+sidebar_position: 7
 slug: "/sdk/android/privacy/cleanup"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Bugsee SDK does not continuously stream any personal data. The collected data and the reports built from it are stored locally on the device. In some specific cases, there might be a need to clean up the data stored on the disk.
+:::note
+Looking for the previous SDK? See the
+[6.x cleanup page](/sdk/android/v6/privacy/cleanup).
+:::
 
 ## Data cleanup
 
-Bugsee SDK provides a way to clean up the data stored on the disk. This can be useful in cases when you want to remove all the data collected by Bugsee from the device.
+Bugsee stores unsent reports and buffered capture data on disk. The
+`deleteCollectedDataOnDevice(...)` API wipes that store — useful after
+sign-out, account deletion, or when responding to a user data request.
 
-:::warning
-Note that this API does not delete the session-related data, such as [attributes](/sdk/android/custom/#usersession-attributes). To cleanup up those, use corresponding API (e.g. `Bugsee.clearAllAttributes()`)
-:::
-
+The SDK must be **stopped** before calling it. The callback reports whether
+the deletion succeeded.
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
-
-// Bugsee must be stopped before deleting the data
+// Bugsee must be stopped before deleting the data.
 Bugsee.stop();
 
-// Clean up all the data stored on the disk
-Bugsee.deleteCollectedDataOnDevice((success) -> {
-    String message = success ? "Data deleted successfully" : "Failed to delete data";
-    Log.i("CollectedDataDeletion", message);
+// includingIntermediate=true also wipes partially-captured / in-progress data.
+Bugsee.deleteCollectedDataOnDevice(true, success -> {
+    String msg = Boolean.TRUE.equals(success)
+            ? "Data deleted successfully"
+            : "Failed to delete data";
+    Log.i("BugseeCleanup", msg);
 });
-
 ```
 
   </TabItem>
   <TabItem value="kotlin" label="Kotlin">
 
 ```kotlin
-
-// Bugsee must be stopped before deleting the data
+// Bugsee must be stopped before deleting the data.
 Bugsee.stop()
 
-// Clean up all the data stored on the disk
-Bugsee.deleteCollectedDataOnDevice { success ->
-    val message = if (success) "Data deleted successfully" else "Failed to delete data"
-    Log.i("CollectedDataDeletion", message)
+Bugsee.deleteCollectedDataOnDevice(/* includingIntermediate = */ true) { success ->
+    val msg = if (success == true) "Data deleted successfully" else "Failed to delete data"
+    Log.i("BugseeCleanup", msg)
 }
-
 ```
 
   </TabItem>
 </Tabs>
+
+:::warning[Session attributes are separate]
+`deleteCollectedDataOnDevice(...)` does **not** remove session-scoped data
+such as [user attributes](/sdk/android/custom#user-and-session-attributes).
+Clear those explicitly:
+
+```java
+Bugsee.clearAttribute("email");
+Bugsee.clearAllAttributes();
+```
+:::
+
+## Pausing capture without deleting
+
+To stop capture temporarily without wiping anything on disk, bracket the
+sensitive flow with
+[`Bugsee.startBlackout()` / `endBlackout()`](/sdk/android/privacy/video/#blackout--time-bounded-full-redaction). For a full shutdown
+of the SDK rather than visual redaction, use `Bugsee.stop()` and relaunch with
+`Bugsee.launch(...)` later.
+
+## Automatic retention
+
+The on-disk report store is a cyclical buffer — older reports are evicted
+automatically as new ones come in, so collected data does not grow
+unbounded on the device. `deleteCollectedDataOnDevice(...)` is the only API
+needed for an explicit wipe.

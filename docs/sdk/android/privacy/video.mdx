@@ -1,139 +1,65 @@
 ---
 title: "Privacy and video"
-description: "How to disable video recording or mark specific Android activities as secure so they are never captured by Bugsee."
-sidebar_position: 1
+description: "Secure-area APIs in the Bugsee Android SDK 7.0: activities, views, rectangles, WebViews, Compose, and the blackout API."
+sidebar_position: 2
 slug: "/sdk/android/privacy/video"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
+:::note
+Looking for the previous SDK? See the
+[6.x video privacy page](/sdk/android/v6/privacy/video).
+:::
+
 ## Disabling video
 
-Video recording can be disabled completely using **VideoEnabled** launch option. See [configuration](/sdk/android/configuration/) for more info.
+Video recording can be disabled completely via the `CaptureVideo` option —
+see [configuration](/sdk/android/configuration).
 
 ## Protect activities
 
-You can protect any activity and prevent it from being recorded by adding its class to the list of secure activities. Whenever user navigates to such activity,
-we substitute the actual screen content with black frames and stop recording touch events.
-
+Add a fully-qualified activity class name to the list of secure activities.
+When the user navigates to that activity, the screen is substituted with
+black frames and touch events are dropped.
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
 Bugsee.addSecureActivity(MySecretActivity.class.getName());
+// Later:
+Bugsee.removeSecureActivity(MySecretActivity.class.getName());
+boolean secure = Bugsee.isSecureActivity(MySecretActivity.class.getName());
 ```
 
   </TabItem>
   <TabItem value="kotlin" label="Kotlin">
 
 ```kotlin
-Bugsee.addSecureActivity(MySecretActivity::class.java.getName())
+Bugsee.addSecureActivity(MySecretActivity::class.java.name)
+// Later:
+Bugsee.removeSecureActivity(MySecretActivity::class.java.name)
+val secure = Bugsee.isSecureActivity(MySecretActivity::class.java.name)
 ```
 
   </TabItem>
 </Tabs>
 
-Activities with system flag ```FLAG_SECURE``` are protected from video and touches recording without necessity to call any Bugsee methods. This flag can be set to activity in the following way.
-
-
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-@Override
-protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-	getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
-	//...
-}
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
-	//...
-}
-```
-
-  </TabItem>
-</Tabs>
+Activities carrying the system `FLAG_SECURE` flag are protected without any
+Bugsee call.
 
 ## Protecting views
-You can prevent any view from being recorded by adding it to the list of secure views. When such views are visible, we substitute actual view with black rectangle in video frame. 
 
-### Marking view as protected in xml layout
-Protected views can be marked in xml layout by adding ```app:bugsee_secure``` attribute to the protected view. This attribute can be set to boolean or reference to boolean value. In order to prevent showing Lint warning, related to the attribute, you can add ```tools:ignore="MissingPrefix"``` line to your protected view declaration. Protected view must have ```id``` attribute.
-
-```xml
-<!-- LinearLayout is used only for example -->
-<LinearLayout 
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-	xmlns:app="http://schemas.android.com/apk/res-auto" <!-- You can use arbitrary name instead of "app" -->
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
-	
-	<View android:id="@+id/my_secret_view1"
-		android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-		app:bugsee_secure="true" <!-- Boolean value -->
-        tools:ignore="MissingPrefix"/>
-		
-	<View android:id="@+id/my_secret_view2"
-		android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-		app:bugsee_secure="@bool/enable_bugsee_hide" <!-- Reference to boolean value -->
-        tools:ignore="MissingPrefix"/>
-</LinearLayout>
-```
-
-Then it is enough to call one method in code of your activity just after ```setContentView()``` method call.
-
-
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-@Override
-protected void onCreate(Bundle savedInstanceState) {
-	super.onCreate(savedInstanceState);
-	setContentView(R.layout.your_layout_name);
-	
-	Bugsee.addSecureViews(R.layout.your_layout_name, this);
-}
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    setContentView(R.layout.your_layout_name)
-
-    Bugsee.addSecureViews(R.layout.your_layout_name, this)
-}
-```
-
-  </TabItem>
-</Tabs>
-
-### Marking view as protected in code
-The alternative approach is to mark each protected view in code.
-
+### By `View` reference
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
 Bugsee.addSecureView(mySecretView);
-// View is substituted by black rectangle in video.
+// View is substituted by a black rectangle in the video.
 Bugsee.removeSecureView(mySecretView);
 ```
 
@@ -142,58 +68,86 @@ Bugsee.removeSecureView(mySecretView);
 
 ```kotlin
 Bugsee.addSecureView(mySecretView)
-// View is substituted by black rectangle in video.
 Bugsee.removeSecureView(mySecretView)
 ```
 
   </TabItem>
 </Tabs>
 
-### Marking view as protected in Jetpack Compose
-In addition we support a way to mark your custom sensitive views so they will be hidden from the recorded video. We provide ***BugseeProtect*** composable function for this ([BugseeProtect.kt](https://github.com/bugsee/bugsee-compose)).
+### By `Fragment`
 
-```kotlin
-setContent {
-    ...
-    val secureContent = @Composable {
-        Text(text = "Confidential.")
-    }
-
-    BugseeProtect(
-        contentToHide = { secureContent() }
-    )
-    ...
-}
-```
-## Obscuring contents
-
-Sometimes application may contain too many elements with sensitive data. Marking all the views in such app as protected maybe quite overwhelming and time consuming. In these cases you can instruct Bugsee to obscure the whole screen by lowering resolution of the captured video. In this case, you won't be able to see the text on the screen, but you will be able to follow user navigation.
-
-To achieve this, try setting VideoScale to a value between 0.1 and 1.0.
-
-## Protected web page elements
-You can also prevent any web page element, shown in WebView, from being recorded by adding ```class="bugsee-hide"``` to it.
-
-```html
-<input type="text" class="bugsee-hide">
-```
-
-Elements with ```type="password"``` are not recorded by default. If you want such web page element to be recorded, add ```class="bugsee-show"``` to it.
-
-```html
-<input type="password" class="bugsee-show">
-```
-
-Bugsee detects WebViews automatically, but if you use ```WebView.setWebViewClient()``` method, it is necessary to call ```Bugsee.addSecureWebView()``` method to prevent recording of protected web page elements in this WebView.
-
+In 7.x the hosting-Activity argument has been removed — pass the `Fragment`
+directly.
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
-WebView webView;
-// Initialize WebView
-//...
+Bugsee.addSecureView(myFragment);
+Bugsee.removeSecureView(myFragment);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.addSecureView(myFragment)
+Bugsee.removeSecureView(myFragment)
+```
+
+  </TabItem>
+</Tabs>
+
+:::note
+`Bugsee.addSecureViews(int layoutId, Activity)` still exists but is
+deprecated in 7.x and always returns `false`. Walk the view tree yourself
+and call `addSecureView(View)` per node.
+:::
+
+### Jetpack Compose
+
+Add the Compose extension module and apply `Modifier.bugseeSecure()` to any
+sensitive composable:
+
+```kotlin
+// build.gradle.kts
+implementation("com.bugsee:bugsee-android-compose:<version>")
+```
+
+```kotlin
+import com.bugsee.library.compose.bugseeSecure
+
+Text(
+    text = "Confidential",
+    modifier = Modifier.bugseeSecure()
+)
+```
+
+Stock password fields (a `TextField` using `PasswordVisualTransformation`,
+which Compose marks with the `Password` semantics property) are redacted
+**automatically** once the Compose module is on the classpath — no modifier
+needed. See [Compose integration](/sdk/android/extensibility/compose) for the
+full list of auto-detected field types and details.
+
+### WebView elements
+
+Add `class="bugsee-hide"` to any element that must be redacted, or
+`class="bugsee-show"` to opt back in an element that is hidden by default
+(like `type="password"`). For everything else Bugsee captures inside a
+WebView, see [WebView capture](/sdk/android/webview).
+
+```html
+<input type="text" class="bugsee-hide">
+<input type="password" class="bugsee-show">
+```
+
+If you call `WebView.setWebViewClient(...)` yourself, register the WebView
+explicitly:
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
 webView.setWebViewClient(new WebViewClient());
 Bugsee.addSecureWebView(webView);
 ```
@@ -202,9 +156,6 @@ Bugsee.addSecureWebView(webView);
   <TabItem value="kotlin" label="Kotlin">
 
 ```kotlin
-var webView = WebView(activityContext)
-// Initialize WebView
-//...
 webView.webViewClient = WebViewClient()
 Bugsee.addSecureWebView(webView)
 ```
@@ -212,76 +163,15 @@ Bugsee.addSecureWebView(webView)
   </TabItem>
 </Tabs>
 
-There is one more case, when it is necessary to call ```Bugsee.addSecureWebView()``` method - if you add WebView to Activity dynamically and set ```ViewGroup.OnHierarchyChangeListener``` to the WebView parent.
-
-
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-public class WebViewActivity extends BaseActivity {
-  @Override
-    protected void onResume() {
-        super.onResume();
-
-		ViewGroup contentContainer = (ViewGroup)findViewById(R.id.content_container); // ViewGroup in Activity layout.
-		contentContainer.setOnHierarchyChangeListener(mHierarchyChangeListener);
-		WebView webView;
-		// Initialize WebView
-		//...
-		contentContainer.addView(webView);
-		Bugsee.addSecureWebView(webView);
-	}
-	
-	private final ViewGroup.OnHierarchyChangeListener mHierarchyChangeListener = new ViewGroup.OnHierarchyChangeListener() {
-        //...
-    };
-}
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-class WebViewActivity : BaseActivity() {
-    override fun onResume() {
-        super.onResume()
-        val contentContainer =
-            findViewById<View>(R.id.content_container) as ViewGroup // ViewGroup in Activity layout.
-        contentContainer.setOnHierarchyChangeListener(mHierarchyChangeListener)
-        var webView = WebView(this)
-        // Initialize WebView
-        //...
-        contentContainer.addView(webView)
-        Bugsee.addSecureWebView(webView)
-    }
-
-    private val mHierarchyChangeListener: OnHierarchyChangeListener =
-        object : OnHierarchyChangeListener {
-            //...
-    }
-}
-```
-
-  </TabItem>
-</Tabs>
-
 ## Protecting by coordinates
 
-You can also protect rectangle on screen from being recorded by adding it to the list of secure rectangles. It can be especially useful in games, since there are no views there which can be made secure, and objects are drawn on canvas in case of 2D and on surface in case of 3D.
-
-
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
-// Add secure rectangle.
 Bugsee.addSecureRectangle(new Rect(100, 100, 200, 200));
-// Get all secure rectangles.
-ArrayList<Rect> secureRects = Bugsee.getAllSecureRectangles();
-// Remove single rectangle from the list of secure rectangles.
+List<Rect> all = Bugsee.getAllSecureRectangles();
 Bugsee.removeSecureRectangle(new Rect(100, 100, 200, 200));
-// Clear the list of secure rectangles.
 Bugsee.removeAllSecureRectangles();
 ```
 
@@ -289,54 +179,41 @@ Bugsee.removeAllSecureRectangles();
   <TabItem value="kotlin" label="Kotlin">
 
 ```kotlin
-// Add secure rectangle.
 Bugsee.addSecureRectangle(Rect(100, 100, 200, 200))
-// Get all secure rectangles.
-val secureRects: ArrayList<Rect> = Bugsee.getAllSecureRectangles()
-// Remove single rectangle from the list of secure rectangles.
+val all = Bugsee.getAllSecureRectangles()
 Bugsee.removeSecureRectangle(Rect(100, 100, 200, 200))
-// Clear the list of secure rectangles.
 Bugsee.removeAllSecureRectangles()
 ```
 
   </TabItem>
 </Tabs>
 
-Note, that secure rectangle coordinates remain the same after screen orientation change. But if necessary you can remove old secure rectangles and add new ones when, for example, Activity is being recreated on orientation change.
+## Blackout — time-bounded full redaction
 
-## Going dark
-
-In some rare cases you might want to conceal the whole screen and stop recording events completely. The following APIs will come in handy, no data is being gathered
-between the calls to pause and resume.
-
-The following APIs will come in handy, no video or touch events are being gathered between the calls to ```pause()``` and ```resume()``` below:
-
+Bracket a sensitive flow with `startBlackout()` / `endBlackout()` to fully
+blank the video and drop touches for the duration.
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
-// To stop video recording use   
-Bugsee.pause();
-
-// No touches are recorded, black frame is being recorded instead of actual data in the video.
-
-// And to continue
-Bugsee.resume();
+Bugsee.startBlackout();
+// ...render / interact with sensitive content...
+Bugsee.endBlackout();
 ```
 
   </TabItem>
   <TabItem value="kotlin" label="Kotlin">
 
 ```kotlin
-// To stop video recording use   
-Bugsee.pause()
-
-// No touches are recorded, black frame is being recorded instead of actual data in the video.
-
-// And to continue
-Bugsee.resume()
+Bugsee.startBlackout()
+// ...render / interact with sensitive content...
+Bugsee.endBlackout()
 ```
 
   </TabItem>
 </Tabs>
+
+For a hard stop of all capture (including log, network, and event collection),
+call `Bugsee.stop()` and resume later with `Bugsee.launch(...)` — see
+[Lifecycle events](/sdk/android/lifecycle).

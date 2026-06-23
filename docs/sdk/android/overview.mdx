@@ -1,0 +1,130 @@
+---
+title: "Overview"
+description: "What the Bugsee Android SDK records and detects, how it fits into your app, its requirements, and the device types it supports — phones, tablets, Android TV, Wear OS, and Automotive."
+slug: "/sdk/android/overview"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The Bugsee Android SDK captures what happened before a bug — a video of the screen, network traffic, logs, and the user's steps — and attaches it to crash, error, and manual reports you can replay in the Bugsee dashboard. It runs quietly in the background of your app, needs almost no code to set up, and uploads reports on its own.
+
+Add it once and it covers your whole app, on every kind of Android device, with privacy controls so nothing sensitive leaves the device.
+
+## What Bugsee records
+
+Every report carries a synchronized timeline of the session that led up to it:
+
+- **Video** — a rolling recording of the screen, with [sensitive views and WebView content redacted](/sdk/android/privacy/video).
+- **Network** — HTTP requests and responses from [OkHttp, Ktor, Cronet, and in-WebView traffic](/sdk/android/network), with [filtering and scrubbing](/sdk/android/privacy/network).
+- **Logs** — your app's logs and `logcat`; see [Logs](/sdk/android/logs).
+- **Breadcrumbs** — navigation, taps, and system events leading up to the issue; see [Breadcrumbs](/sdk/android/privacy/breadcrumbs).
+- **Performance (APM)** — [transactions and spans](/sdk/android/performance) for app start, screens, network, and I/O.
+
+## What Bugsee detects
+
+The SDK turns problems into reports automatically:
+
+- **Crashes** — unhandled Java/Kotlin exceptions and [native (NDK) crashes](/sdk/android/issue-detection/native-crashes).
+- **ANRs, hangs, app exits, HTTP errors**, and more — see [Issue detection](/sdk/android/issue-detection).
+- **Manual reports** — let users [shake, screenshot, or tap to report](/sdk/android/manual), or trigger a report from code.
+
+## How it works
+
+- **One dependency.** Everything ships in the `com.bugsee:bugsee-android` AAR, plus optional [extension modules](/sdk/android/extensibility/bugsee-extensions) — feedback, NDK crash reporting, network interceptors, Compose, and more — that you opt into.
+- **Near-zero setup.** With the [Bugsee Gradle plugin](/sdk/android/gradle-plugin) the SDK [auto-initializes at app startup](/sdk/android/installation) from your app token in the manifest. You can also [launch it programmatically](/sdk/android/lifecycle).
+- **Privacy by design.** Redact views and WebView elements from the video, and [filter or drop](/sdk/android/privacy/overview) network, log, and breadcrumb data before it is recorded — on-device, before anything is stored.
+- **Automatic upload.** Assembled reports upload to the dashboard in the background; there is nothing to wire up on your servers.
+
+## Get started
+
+Head to [Installation](/sdk/android/installation) to add the SDK — the [Gradle plugin](/sdk/android/installation) is the recommended path, with a [Maven / direct dependency](/sdk/android/maven-installation) option if you prefer. From there, [Configuration](/sdk/android/configuration) covers the options and reporting triggers, and [Privacy](/sdk/android/privacy/overview) covers redaction.
+
+## Requirements
+
+- **Android 5.0 (API level 21)** and newer.
+- Works with both **Java** and **Kotlin** apps.
+
+See the [FAQ](/sdk/android/faq) for the minimum required Gradle / Android Gradle Plugin versions and other compatibility details.
+
+## Device types & form factors
+
+The Bugsee Android SDK is a **single, form-factor-agnostic SDK**. The same artifacts and the same setup that you use on a phone also cover **tablets**, **Android TV**, **Wear OS (wearables)**, and **Android Automotive OS** — there is no separate build, no separate dependency, and no special configuration per device type.
+
+If you've already followed the [installation guide](/sdk/android/installation), you're done: a TV, watch, or car build picks up Bugsee exactly the way a phone build does.
+
+### One SDK, every form factor
+
+Everything ships in the same `com.bugsee:bugsee-android` artifact (plus whatever [extension modules](/sdk/android/extensibility/bugsee-extensions) you opt into). There is nothing form-factor-specific to add:
+
+- **Same dependency / Gradle plugin.** Apply the [Bugsee Gradle plugin](/sdk/android/gradle-plugin) and declare your app token as you would for a phone build.
+- **Same auto-init.** The token in `AndroidManifest.xml` launches the SDK at process start through `BugseeInitProvider`, regardless of device type. Programmatic [`Bugsee.launch(...)`](/sdk/android/lifecycle) works identically too.
+- **Same configuration surface.** Every [option](/sdk/android/configuration) behaves the same way across form factors.
+
+The SDK adapts to the host display and platform at runtime — you don't tell it which kind of device it's running on.
+
+### What works on each form factor
+
+The core pipeline is the same across phones, tablets, TV, Wear OS, and Automotive:
+
+| Capability | Phone / Tablet | Android TV | Wear OS | Automotive |
+| --- | --- | --- | --- | --- |
+| Initialization (auto-init or programmatic) | ✅ | ✅ | ✅ | ✅ |
+| Screen / video capture | ✅ | ✅ | ✅ | ✅ |
+| Crash, ANR, hang, exit, and the rest of [issue detection](/sdk/android/issue-detection) | ✅ | ✅ | ✅ | ✅ |
+| Report assembly (logs, breadcrumbs, network, view hierarchy, video) | ✅ | ✅ | ✅ | ✅ |
+| Upload to the Bugsee dashboard | ✅ | ✅ | ✅ | ✅ |
+
+Because upload is identical networking code on every platform, a report assembled on a watch or a car head unit reaches your dashboard the same way it does from a phone — there is no form-factor-specific delivery path.
+
+### Form-factor notes
+
+The SDK is the same everywhere, but a few capabilities depend on hardware or platform UI conventions that differ by device type. None of these require configuration — the SDK detects what's available and adapts.
+
+#### Report triggers
+
+- **Shake to report** needs an **accelerometer**, which is standard on phones and tablets but typically absent on TV and Automotive head units. On a device without an accelerometer, the shake trigger simply doesn't arm — it no-ops gracefully rather than failing — so it's effectively a phone/tablet-oriented trigger.
+- **Screenshot to report** relies on the platform's own screenshot mechanism. Where the platform exposes one (as phones and tablets do), the trigger works; on form factors that don't surface a user screenshot gesture, use a different trigger.
+- **Notification trigger** and **programmatic reporting** ([`Bugsee.showReportDialog()`](/sdk/android/manual)) work everywhere, and are the most reliable way to open the report flow on TV and Automotive. On TV and Automotive, the reporting UI is driven with the **D-pad / restricted input model** of those platforms rather than touch, but the report flow itself functions normally.
+
+Pick triggers that match your target hardware — see [reporting triggers](/sdk/android/configuration#reporting-triggers) for the full list and how to toggle each one.
+
+#### Input capture
+
+Touch capture records taps on touch devices. On TV and Automotive, where navigation is primarily D-pad / focus-based, there are no touch gestures to record on non-touch surfaces — capture of the rest of the timeline (video, logs, network, breadcrumbs) is unaffected.
+
+### Validation
+
+Bugsee 7.0 was validated end-to-end on emulators for each non-phone form factor:
+
+- **Android TV** (API 36) — initialization, capture, reporting, and **full upload to the server** all confirmed.
+- **Wear OS** (API 36) — initialization, capture, and reporting all confirmed.
+- **Android Automotive OS** (API 35) — initialization, capture, and reporting all confirmed.
+
+Across all three, the SDK initialized, captured the session, and assembled reports correctly. Upload is the same networking code on every platform, so a report that assembles on any of these form factors uploads the same way it does on a phone.
+
+### Manifest tips for non-phone targets
+
+These are standard Android requirements for shipping a single app across form factors, not Bugsee-specific. They ensure your app installs on TV, watch, and car devices in the first place — Bugsee then works without any further changes:
+
+```xml
+<!-- Don't require a touchscreen, so the app installs on TV / Automotive. -->
+<uses-feature
+    android:name="android.hardware.touchscreen"
+    android:required="false" />
+
+<!-- Mark watch / TV support as optional if you ship one APK for all. -->
+<uses-feature
+    android:name="android.hardware.type.watch"
+    android:required="false" />
+<uses-feature
+    android:name="android.software.leanback"
+    android:required="false" />
+```
+
+## Related pages
+
+- [Installation](/sdk/android/installation) — the one-time setup that covers every form factor.
+- [Configuration — Overview](/sdk/android/configuration) — options and reporting triggers.
+- [Issue detection](/sdk/android/issue-detection) — crash, ANR, hang, exit, and more.
+- [Lifecycle](/sdk/android/lifecycle) — launch, stop, relaunch, and querying launch state.

@@ -1,0 +1,37 @@
+---
+title: "Extensibility — Overview"
+description: "The four extension surfaces of the Bugsee Android SDK 7.x — generic extension modules and the capture, detection, and performance provider points."
+sidebar_position: 1
+slug: "/sdk/android/extensibility"
+---
+
+:::note
+The extension model is **new in 7.0.0**: capabilities that used to live inside the monolithic AAR are now optional modules, and three subsystem-level provider points let your app or an internal library plug directly into the SDK's pipelines.
+:::
+
+7.0.0 is built around the idea that any optional capability — whether shipped by Bugsee or by you — should plug into the SDK without forks, reflection tricks, or initialization code in your `Application` class.
+
+## Extension surfaces
+
+The SDK exposes four extension surfaces. Each follows a coordinator-and-provider shape, but they differ in how registration works and what late additions can do.
+
+| Surface | What you ship | Registered with | Manifest discovery | Late registration |
+| --- | --- | --- | --- | --- |
+| **Generic extension** (separate AAR module) | An optional, self-contained capability that wraps third-party SDKs, ships its own native code, or carries dependencies the core shouldn't pull in | `BugseeExtensions.registerExtension(...)` via a `ContentProvider` | A `<provider>` with `initOrder="200"` in the extension's manifest | Auto-launched if registered after `Bugsee.launch(...)` |
+| **Capture provider** | A new source of recorded data (custom screen tap, sensor stream, framework event, third-party log channel) | `BugseeCaptureCoordinator.addProvider(...)` | `<meta-data android:name="com.bugsee.components.capture.…"/>` | Auto-started with the cached `OptionsContainer` |
+| **Detection provider** | A new failure mode to detect (custom watchdog, scheduling stall, frame drop, business-rule assertion) | `BugseeDetectionCoordinator.addProvider(...)` | `<meta-data android:name="com.bugsee.components.detection.…"/>` | Auto-started using the last cached `OptionsContainer` |
+| **Performance (APM) provider** | A new span source for transactions (custom RPC, GPU stage, background service, third-party tracer) | `BugseePerformanceCoordinator.registerProvider(...)` | Programmatic only — no manifest path | Not auto-launched — call `launch(options, spanFactory)` yourself |
+
+## When to use which
+
+- New observable runtime data, recorded for later replay → **capture provider**.
+- New failure mode that should auto-create an issue report → **detection provider**.
+- New span source feeding the APM pipeline → **performance provider**.
+- Optional, self-contained capability with its own dependencies or native code — would bloat core if compiled in by default → **generic extension** in its own Gradle module.
+
+A single extension module commonly registers more than one type. The first-party `bugsee-android-ndk` module is a generic extension that internally registers a detection provider. The `bugsee-android-okhttp` module is a generic extension that registers a capture provider. A hypothetical Apollo GraphQL extension would register both a capture provider (for queries/mutations) and a performance provider (for query timing).
+
+## Where to go next
+
+- **[Bugsee extensions](/sdk/android/extensibility/bugsee-extensions)** — the first-party extension modules that ship with the SDK (feedback, NDK, OkHttp, Ktor 2/3, Cronet, Compose). How to add them, how the Gradle plugin auto-installs the right ones, how to retrieve them at runtime.
+- **[Custom extensions](/sdk/android/extensibility/custom-extensions)** — authoring your own. Covers all four surfaces: a custom generic extension module, a custom capture provider, a custom detection provider, and a custom APM provider.

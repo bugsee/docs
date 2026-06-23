@@ -1,0 +1,86 @@
+---
+title: "Feedback"
+description: "How to enable and customize the in-app feedback messenger in the Bugsee Android SDK for user-to-support communication."
+sidebar_position: 8
+slug: "/sdk/android/v6/feedback"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Bugsee implements built in single threaded messenger to allow your users to communicate with your support and developers. 
+
+## Feedback activity
+
+To start feedback activity from within your application:
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+// context parameter should be either Application or Activity
+Bugsee.showFeedbackActivity(context);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+// context parameter should be either Application or Activity
+Bugsee.showFeedbackActivity(context)
+```
+
+  </TabItem>
+</Tabs>
+
+## Notifications
+
+To receive notifications about new messages arriving from the server, set OnNewFeedbackListener instance to Bugsee:
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.setOnNewFeedbackListener(new OnNewFeedbackListener() {
+	@Override
+	public void onNewFeedback(List<String> newMessages) {
+		// Handle received messages.
+	}
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.setOnNewFeedbackListener { newMessages ->
+	// Handle received messages.
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Default greeting
+
+Default greeting can be set on the server in your application settings. However, for the cases when network is not available, you can set default greeting on the client as well:
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.setDefaultFeedbackGreeting("Hi! How can we help?");
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.setDefaultFeedbackGreeting("Hi! How can we help?")
+```
+
+  </TabItem>
+</Tabs>

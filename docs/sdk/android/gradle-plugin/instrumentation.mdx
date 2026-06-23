@@ -1,0 +1,77 @@
+---
+title: "Gradle plugin — Instrumentation"
+description: "Bytecode instrumentations (OkHttp, log, thread, operation-dispatch, HttpEngine, Compose input) and the Bugsee Kotlin compiler plugin."
+sidebar_position: 4
+slug: "/sdk/android/gradle-plugin/instrumentation"
+---
+
+## Bytecode instrumentations
+
+Each instrumentation runs against every class in the application variant via AGP's `transformClassesWith` pipeline. Each is gated on the presence of a specific dependency, and each can be toggled individually via the `bugsee { instrumentation { … } }` block (see [Configuration](/sdk/android/gradle-plugin/configuration)).
+
+| Key | Gating dependency | What it injects | SDK feature unlocked |
+| --- | --- | --- | --- |
+| `log` | `bugsee-android` | Rewrites every `android.util.Log.*` static call to `BugseeLogAdapter.*`, which forwards the entry to the capture pipeline and then delegates to the original `Log` method. | Logcat capture without requiring embedders to switch logging APIs. |
+| `thread` | `bugsee-android` | Injects `BugseeThreadAdapter.registerThread()` as the first instruction of every `run()` method in classes that implement `Runnable` or extend `Thread`. | JVM ↔ native thread ID map used by NDK crash reporting and thread tracing. |
+| `operationDispatch` | `bugsee-android` | Injects `BugseeOperationDispatcher.onXxxOperationStart/End()` around guarded I/O, network, DB, and `SharedPreferences` operations. | Feeds the APM `DatabasePerformanceProvider`, `FileIOPerformanceProvider`, and `NetworkPerformanceProvider` — emits `db.*` / `file.*` / `http.client` spans without runtime reflection. |
+| `mainThreadMisuse` | `bugsee-android` | Injects lightweight pre-call checks before the same set of guarded operations as `operationDispatch`. The checks bridge to `BugseeMainThreadGuardAdapter`, which reports the violation when the current thread is the main thread. | Powers `Options.DetectAndReportMainThreadMisuse`. |
+| `http_engine` | `bugsee-android` | Wraps every `android.net.http.HttpEngine.Builder.build()` call site with `BugseeHttpEngineAdapter.wrapHttpEngine(...)`. | Captures traffic from the Android 14+ platform `HttpEngine` (Cronet-derived) without requiring embedders to wrap engine builders by hand. |
+| `okhttp` | `bugsee-android-okhttp` | Injects `BugseeOkHttpInterceptor` into every `OkHttpClient.Builder.build()` call site (frame computation: `COPY_FRAMES`). | Makes the OkHttp extension fully transparent — embedders never call any wiring API. |
+| `composeInput` | `bugsee-android` **and** `androidx.compose.ui:ui` | Instruments `AndroidComposeView.dispatchTouchEvent(MotionEvent)` to call `BugseeComposeInputAdapter.onComposeTouch(view, event)` at the start of the method. | Captures touch events inside Jetpack Compose UI. `AndroidComposeView` overrides `dispatchTouchEvent` without calling `super`, so neither overlay views nor `OnTouchListener` see Compose touches. |
+
+:::note[Cronet and Ktor are not bytecode-instrumented]
+The plugin **does not** bytecode-instrument Cronet (`org.chromium.net.CronetEngine`). Cronet has no interceptor pipeline and the `Builder.build()` call site sits inside the Cronet artifact, so the only mechanism that works is wrapping the engine. The plugin auto-pulls `bugsee-android-cronet` when it detects a Cronet dependency, but the embedder still has to call `BugseeCronet.instrument(engine)` once per engine instance. The same pattern applies to Ktor 2 / Ktor 3 — the plugin auto-pulls the artifact, but the embedder must `install(...)` the plugin in each `HttpClient` because Ktor's pipeline is opt-in per client.
+:::
+
+Disabling an instrumentation key only disables the build-time transformation; the corresponding runtime feature still functions but loses whatever the bytecode hook gave it (e.g. disabling `log` means `Bugsee.log(...)` calls still work, but `android.util.Log` calls from your app are no longer captured).
+
+## Kotlin compiler plugin (`com.bugsee.compose.compiler`)
+
+Loaded automatically whenever any Compose dependency is detected. It exposes two independent subfeatures, each gated by its own option:
+
+| Subfeature | Option | Behavior |
+| --- | --- | --- |
+| Compose tag injection | `instrumentation.compose` | Injects element tags into Compose IR so the SDK can correlate captured input/screenshots with composables. |
+| Secure modifier auto-injection | `instrumentation.composeSecure` | Walks the Compose IR for password `TextField` call sites and automatically inserts `Modifier.bugseeSecure()`. Embedders get redaction of password fields without touching their UI code. |
+
+Both subfeatures stay on by default and can be disabled independently in the `bugsee { instrumentation { … } }` block.
+
+## App-startup tracing — SDK version gate
+
+The app-startup tracing instrumentation injects `INVOKESTATIC` calls
+against `com.bugsee.library.adapters.BugseeAppStartupDispatcher` — a
+class that ships in the 7.x SDK. Pairing the plugin with an SDK older
+than the 7.x line would crash the host app at launch with
+`NoClassDefFoundError` inside `InitializationProvider.onCreate`
+(which runs BEFORE `Application.onCreate`, so there is no SDK code
+path to absorb the failure).
+
+The plugin guards against this at configuration time.
+`AppStartupTracingInstrumentation.shouldApply()` parses the declared
+`com.bugsee:bugsee-android` version and refuses instrumentation with a
+Gradle warning if it is older than the minimum SDK version that ships
+`BugseeAppStartupDispatcher` (`7.0.0`):
+
+```
+Bugsee gradle plugin: app-startup tracing requires
+`com.bugsee:bugsee-android` 7.0.0-beta11 or newer (found 6.5.0).
+Skipping instrumentation to avoid NoClassDefFoundError on
+BugseeAppStartupDispatcher at app launch. Upgrade the SDK or
+downgrade the plugin to a compatible release.
+```
+
+Dynamic / range versions (`7.+`, version catalogs that don't resolve
+at configuration time, project deps without a string version) parse
+to `null` and are treated **permissively** — instrumentation
+proceeds. Gradle's lazy model makes strict resolution at configuration
+time too costly to apply universally; the common case is a pinned
+version string that the gate can parse.
+
+The plugin resolves the SDK version at configuration time rather than
+probing each class at transform time, because per-class probes were
+non-deterministic across AGP's artifact-transform isolation boundaries
+— third-party JARs run in contexts where the consumer's `:library`
+dep is not visible, so a probe spuriously returned null and silently
+skipped valid instrumentation targets like
+`androidx.startup.InitializationProvider` and
+`io.sentry.android.core.SentryInitProvider`.

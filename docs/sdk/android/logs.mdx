@@ -1,42 +1,150 @@
 ---
-title: "Logging"
-description: "How to send custom log messages directly to Bugsee on Android, complementing automatic logcat capture included in reports."
-sidebar_position: 6
+title: "Console logs"
+description: "Capturing Logcat output and recording custom log entries with Bugsee Android SDK 7.0.0, including log filtering via EventFilter<LogEvent>."
+sidebar_position: 7
 slug: "/sdk/android/logs"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-No special setup is required if you just need to retrieve standard logcat logs, Bugsee will extract the logs for the relevant period of time and upload it as part of the report. We provide an additional API to push logs directly into Bugsee without printing them into logcat.
+This page documents the Bugsee Android SDK **7.0.0**. For the previous major
+version, see the [6.x Logging page](/sdk/android/v6/logs).
 
+## Automatic Logcat capture
 
+Bugsee automatically captures `android.util.Log.*` calls made by your app and
+includes them in reports. Capture is enabled by default and is controlled by
+the `CaptureLogs` option (together with `CaptureLogsLevel` and
+`CaptureLogsUseAllSources`). See the
+[Configuration page](/sdk/android/configuration) for the full option
+reference.
+
+No special setup is required — as long as the Bugsee Gradle plugin's `log`
+instrumentation is enabled (it is by default), every `android.util.Log.*`
+call is rewritten to flow through the capture pipeline before delegating to
+the original method.
+
+## Pushing log entries manually
+
+`Bugsee.log(...)` pushes a message into the capture buffer **without**
+printing it to Logcat. Useful when you want information to appear in the
+Bugsee report but not in your app's Logcat stream.
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
-// With default log level (normal)
-Bugsee.log("Some log message");
+import com.bugsee.library.Bugsee;
+import com.bugsee.library.contracts.options.LogLevel;
 
-// Set the log level explicitly
-// Levels are BugseeLogLevel.Error, BugseeLogLevel.Warning,
-// BugseeLogLevel.Info, BugseeLogLevel.Debug and BugseeLogLevel.Verbose
-Bugsee.log("Some log message", BugseeLogLevel.Warning);
+// Default level (Info)
+Bugsee.log("User tapped Checkout");
+
+// Explicit level
+Bugsee.log("Payment succeeded", LogLevel.Info);
+Bugsee.log("Retrying request", LogLevel.Warning);
+Bugsee.log("Upload failed", LogLevel.Error);
 ```
 
   </TabItem>
   <TabItem value="kotlin" label="Kotlin">
 
 ```kotlin
-// With default log level (normal)
-Bugsee.log("Some log message")
+import com.bugsee.library.Bugsee
+import com.bugsee.library.contracts.options.LogLevel
 
-// Set the log level explicitly
-// Levels are BugseeLogLevel.Error, BugseeLogLevel.Warning,
-// BugseeLogLevel.Info, BugseeLogLevel.Debug and BugseeLogLevel.Verbose
-Bugsee.log("Some log message", BugseeLogLevel.Warning)
+// Default level (Info)
+Bugsee.log("User tapped Checkout")
+
+// Explicit level
+Bugsee.log("Payment succeeded", LogLevel.Info)
+Bugsee.log("Retrying request", LogLevel.Warning)
+Bugsee.log("Upload failed", LogLevel.Error)
 ```
 
   </TabItem>
 </Tabs>
+
+Both overloads are no-ops if `message` is `null` or the SDK is not launched.
+If `level` is `null`, the SDK defaults to `LogLevel.Info`.
+
+## `LogLevel` values
+
+| Value                |
+|----------------------|
+| `LogLevel.Error`     |
+| `LogLevel.Warning`   |
+| `LogLevel.Info`      |
+| `LogLevel.Debug`     |
+| `LogLevel.Verbose`   |
+
+## Filtering log entries
+
+7.0.0 unifies filtering around the generic `EventFilter<LogEvent>` interface.
+Its single `filter(log, callback)` method hands you the event and a `Callback1`
+to invoke with the result: call `callback.run(log)` to keep the (possibly
+mutated) entry, or `callback.run(null)` to drop it entirely.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+import com.bugsee.library.Bugsee;
+import com.bugsee.library.contracts.exchange.LogEvent;
+
+Bugsee.setLogEventFilter((log, callback) -> {
+    String message = log.getMessage();
+
+    // Drop noisy entries entirely
+    if (message != null && message.startsWith("[heartbeat]")) {
+        callback.run(null);
+        return;
+    }
+
+    // Redact sensitive tokens
+    if (message != null && message.contains("token=")) {
+        log.setMessage(message.replaceAll("token=[^&\\s]+", "token=<redacted>"));
+    }
+
+    callback.run(log);
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+import com.bugsee.library.Bugsee
+
+Bugsee.setLogEventFilter { log, callback ->
+    val message = log.message
+
+    when {
+        // Drop noisy entries entirely
+        message?.startsWith("[heartbeat]") == true -> callback.run(null)
+        // Redact sensitive tokens
+        else -> {
+            if (message?.contains("token=") == true) {
+                log.message = message.replace(Regex("token=[^&\\s]+"), "token=<redacted>")
+            }
+            callback.run(log)
+        }
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+`LogEvent` exposes `getMessage()` / `setMessage(String)` and
+`getLevel()` / `setLevel(LogLevel)`; mutate in place, then pass the event to
+`callback.run(...)` (or `callback.run(null)` to drop it).
+
+`setLogFilter(EventFilter<LogEvent>)` is a deprecated alias for
+`setLogEventFilter(...)`; both resolve to the same registration.
+
+## Privacy
+
+For redaction of sensitive information captured in logs, refer to the
+[Privacy → Logs](/sdk/android/privacy/logs) page.

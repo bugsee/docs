@@ -1,0 +1,198 @@
+---
+title: "Multi-process apps"
+description: "Cover non-main processes by adding a one-line BugseeInitProvider subclass and a matching <provider> entry per process."
+sidebar_position: 17
+slug: "/sdk/android/multi-process"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Android lets an app spread its components across multiple OS processes via the `android:process` attribute on `<activity>`, `<service>`, or `<provider>` declarations. Each declared process is a separate `Application` instance with its own ContentProviders, lifecycle callbacks, and JVM. This page covers how Bugsee behaves in those apps and how to cover non-main processes.
+
+## The default — main process only
+
+Bugsee's auto-init path runs from `BugseeInitProvider`, a `ContentProvider` the SDK declares in its own AAR's manifest **without an `android:process` attribute**. By Android's standard ContentProvider semantics, that means Android instantiates it only in the host app's **default (main) process** — non-main processes never load it, never reach the auto-init code, and pay zero startup cost from Bugsee.
+
+You don't need to do anything for this default to apply — declare the app token in the manifest as usual, and the main process is covered.
+
+## Covering additional processes
+
+If you want Bugsee active in another process (a `:remote` `Service`, a `:push` notification handler, a background `WorkManager` worker, etc.), declare an **additional init provider** for that process so the SDK auto-inits there. This arms everything — including the **NDK crash handler** — **early**, before any of that process's components (or any crash) run.
+
+It takes two small steps: a one-line subclass per process, plus a `<provider>` entry for it.
+
+:::note[Why a subclass, not a second `BugseeInitProvider` entry]
+Android's manifest merger keys `<provider>` declarations by `android:name`, so you **cannot** re-declare `BugseeInitProvider` itself a second time — it conflicts with the SDK's own declaration and fails the build with an authority-conflict error. Giving each process a **distinct subclass** (a distinct `android:name`) is what the merger accepts. The subclass is empty and inherits all auto-init behavior.
+:::
+
+### 1. Add a one-line subclass per process
+
+<Tabs groupId="lang-android">
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+import com.bugsee.library.BugseeInitProvider
+
+// One per opted-in process. Empty — they inherit all auto-init behavior.
+class BugseeRemoteInitProvider : BugseeInitProvider()
+class BugseePushInitProvider : BugseeInitProvider()
+```
+
+  </TabItem>
+  <TabItem value="java" label="Java">
+
+```java
+import com.bugsee.library.BugseeInitProvider;
+
+// One per opted-in process. Empty — they inherit all auto-init behavior.
+public final class BugseeRemoteInitProvider extends BugseeInitProvider {}
+public final class BugseePushInitProvider extends BugseeInitProvider {}
+```
+
+  </TabItem>
+</Tabs>
+
+### 2. Declare each subclass for its process
+
+```xml title="AndroidManifest.xml"
+<application ...>
+
+    <!-- Required: the app token. Read by every Bugsee init provider. -->
+    <meta-data
+        android:name="com.bugsee.app-token"
+        android:value="@string/bugsee_app_token" />
+
+    <!-- Bugsee on the :remote process. -->
+    <provider
+        android:name=".BugseeRemoteInitProvider"
+        android:authorities="${applicationId}.bugseeinitprovider.remote"
+        android:process=":remote"
+        android:exported="false"
+        android:directBootAware="true"
+        android:initOrder="100" />
+
+    <!-- Bugsee on the :push process. Each process needs its own subclass
+         and <provider> entry with a unique authority. -->
+    <provider
+        android:name=".BugseePushInitProvider"
+        android:authorities="${applicationId}.bugseeinitprovider.push"
+        android:process=":push"
+        android:exported="false"
+        android:directBootAware="true"
+        android:initOrder="100" />
+</application>
+```
+
+Android instantiates each provider in its matching process, the provider reads the same app-token meta-data, and Bugsee launches itself in that process — no change to your `Application` subclass required.
+
+Notes:
+
+- **Each additional process needs its own subclass and `<provider>` entry**, with a **unique `android:authorities`** value. Android requires unique authorities across the merged manifest; reusing the AAR's default authority will fail at install time. The convention above suffixes the process tag (`.remote`, `.push`) onto the base authority.
+- **Don't re-declare `BugseeInitProvider` itself** for a second process — the merger keys providers by `android:name`, so two entries with the same class conflict and fail the build. The subclass gives each process a distinct name.
+- **Each opted-in process produces an independent Bugsee session** on the dashboard, with its own session id, storage prefix on disk, and uploads. Two opted-in processes produce two distinct sessions.
+- **You only declare the processes you care about.** Background processes you don't add an entry for stay uncovered — that's usually what you want.
+
+## When you need per-process configuration
+
+When different processes need different `Options` — different capture toggles, different sample rates, a process-specific tag — the additional-provider pattern isn't enough on its own. Disable the SDK's auto-init and launch Bugsee programmatically from a custom `Application` subclass, with per-process logic:
+
+```xml title="AndroidManifest.xml"
+<application
+    android:name=".MyApplication"
+    ...>
+
+    <meta-data
+        android:name="com.bugsee.app-token"
+        android:value="@string/bugsee_app_token" />
+
+    <!-- Auto-init disabled — we launch from MyApplication.onCreate(). -->
+    <meta-data
+        android:name="com.bugsee.auto-init"
+        android:value="false" />
+</application>
+```
+
+<Tabs groupId="lang-android">
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+import android.app.Application
+import com.bugsee.library.Bugsee
+import com.bugsee.library.contracts.options.Options
+import java.io.Serializable
+
+class MyApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+
+        val processName = android.app.Application.getProcessName()
+        val options = HashMap<String, Serializable>()
+
+        when (processName) {
+            packageName -> {
+                // Main process — full capture.
+                Bugsee.launch(this, "<your-app-token>", options)
+            }
+            "$packageName:remote" -> {
+                // Worker — disable video to save battery.
+                options[Options.CaptureVideo] = false
+                Bugsee.launch(this, "<your-app-token>", options)
+            }
+            // Any other process is silently uncovered.
+        }
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="java" label="Java">
+
+```java
+import android.app.Application;
+import com.bugsee.library.Bugsee;
+import com.bugsee.library.contracts.options.Options;
+
+import java.io.Serializable;
+import java.util.HashMap;
+
+public class MyApplication extends Application {
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        final String processName = android.app.Application.getProcessName();
+        final String packageName = getPackageName();
+        final HashMap<String, Serializable> options = new HashMap<>();
+
+        if (packageName.equals(processName)) {
+            Bugsee.launch(this, "<your-app-token>", options);
+        } else if ((packageName + ":remote").equals(processName)) {
+            options.put(Options.CaptureVideo, false);
+            Bugsee.launch(this, "<your-app-token>", options);
+        }
+        // Any other process is silently uncovered.
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+`BugseeProcessInfoProvider.getInstance().isMainProcess()` is also available if you'd rather check "is this the main process" than match an explicit process name string. The helper falls back to walking `ActivityManager.getRunningAppProcesses()` on API levels below 28.
+
+## Decision matrix
+
+| Your setup | What to do |
+| --- | --- |
+| Single-process app | Nothing — declare the app token in the manifest, auto-init covers it. |
+| Multi-process app, only main needs Bugsee | Nothing — the SDK's provider only runs in the main process by default. |
+| Multi-process app, additional processes also need Bugsee with the same config | Add a one-line `BugseeInitProvider` subclass + a `<provider>` entry per process (see above). |
+| Multi-process app, processes need different `Options` | Disable auto-init and launch programmatically from a custom `Application` subclass. |
+| You want full control over `Options` regardless of multi-process | Same as above — opt out of auto-init, launch programmatically. |
+
+## Related pages
+
+- [Installation — Gradle plugin](/sdk/android/installation) — the recommended setup flow.
+- [Installation — Maven / direct](/sdk/android/maven-installation) — when you're not using the Bugsee Gradle plugin.
+- [Configuration — Overview](/sdk/android/configuration) — the auto-init manifest keys and the full option surface.

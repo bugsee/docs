@@ -1,0 +1,118 @@
+---
+title: "WebView capture"
+description: "What Bugsee captures inside Android WebViews — in-WebView network requests, element-level redaction, and the bugsee-hide / bugsee-show attributes."
+sidebar_position: 9
+slug: "/sdk/android/webview"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Bugsee records `WebView` content as part of the normal screen video, and
+additionally reaches **inside** the WebView to capture network requests the
+web content makes and to redact sensitive HTML elements. This page describes
+what is captured, how it surfaces in a report, and how to redact WebView
+content.
+
+## What is captured
+
+When Bugsee is running and the device supports `WebView`, the SDK attaches a
+lightweight bridge to the WebViews in your app. The bridge is installed by
+injecting a small script into each page and exchanging messages with the
+native side. Through it, Bugsee captures:
+
+| Source | What is captured |
+| --- | --- |
+| **In-WebView network** | Requests the page makes via `XMLHttpRequest`, `fetch`, `WebSocket`, and `EventSource` (server-sent events), plus sub-resource loads handled by the WebView. |
+| **Element geometry (for redaction)** | The bounding rectangles of elements that should be hidden, tracked live with a `MutationObserver`. Bugsee does **not** serialize or upload your DOM tree — only the rectangles needed to black out redacted elements are sent natively. |
+
+The visual content of the WebView is recorded the same way as any other part
+of the screen — frame by frame into the session video.
+
+## How it surfaces in a report
+
+WebView data is folded into the existing report panels rather than living in a
+separate "WebView" view:
+
+- **Network** — in-WebView requests appear in the report's network panel
+  alongside your native HTTP traffic. Each carries a `webview` source label so
+  you can tell web-originated requests apart, and a request type of `http`,
+  `ws`, or `sse`.
+- **Video** — the rendered WebView shows up in the session video; redacted
+  elements are blacked out in-place.
+
+## Redacting WebView content
+
+There are two complementary mechanisms: per-element redaction driven by the
+page's own markup, and whole-WebView redaction from native code.
+
+### Per-element: `bugsee-hide` / `bugsee-show`
+
+Add the CSS class **`bugsee-hide`** to any element that must be redacted — its
+on-screen region is blacked out in the video. Use **`bugsee-show`** to opt an
+element back in when it would otherwise be hidden.
+
+```html
+<!-- Redact this field -->
+<input type="text" class="bugsee-hide" />
+
+<!-- A password field is hidden automatically; opt it back in if it must be visible -->
+<input type="password" class="bugsee-show" />
+```
+
+Bugsee automatically hides `input[type="password"]` and credit-card autofill
+fields (`autocomplete` values starting with `cc-`) without any markup on your
+part — `bugsee-show` is the override when you explicitly need one of those
+visible.
+
+### Whole WebView: `addSecureWebView`
+
+To black out an entire WebView region from native code — for example a WebView
+you cannot add CSS classes to — register it as a secure view:
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.addSecureWebView(webView);
+// Later, to un-secure it:
+Bugsee.removeSecureView(webView);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.addSecureWebView(webView)
+// Later, to un-secure it:
+Bugsee.removeSecureView(webView)
+```
+
+  </TabItem>
+</Tabs>
+
+`addSecureWebView(WebView)` marks the whole WebView area as secure, the same
+way [`addSecureView`](/sdk/android/privacy/video#protecting-views) does for a
+classic `View`. There is no separate `removeSecureWebView` — use
+`removeSecureView(View)` to reverse it.
+
+## Enablement
+
+WebView capture is **on by default** whenever the SDK is capturing and the
+device's `WebView` implementation is available — there is no dedicated option
+key to switch it on. The two streams it feeds are still governed by the usual
+capture toggles:
+
+- In-WebView network requests follow the same path as native network capture —
+  scrub or drop them with
+  [`setNetworkEventFilter`](/sdk/android/privacy/network), and disable network
+  capture entirely with the `CaptureNetwork` option.
+- The visual recording follows the `CaptureVideo` option — see
+  [configuration](/sdk/android/configuration).
+
+## See also
+
+- [Video privacy](/sdk/android/privacy/video) — secure-area APIs, including
+  the `bugsee-hide` / `bugsee-show` quick reference and `addSecureWebView`.
+- [Network privacy](/sdk/android/privacy/network) — filtering and scrubbing
+  captured network events, including WebView-originated ones.

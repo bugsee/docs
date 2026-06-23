@@ -7,10 +7,9 @@ slug: "/integrations/auth"
 
 We support three ways to authenticate Bugsee in remote service:
 
-- [Integration authentication types](#integration-authentication-types)
-  - [Basic authentication](#basic-authentication)
-  - [Token based authentication](#token-based-authentication)
-  - [OAuth](#oauth)
+- [Basic authentication](#basic-authentication)
+- [Token based authentication](#token-based-authentication)
+- [OAuth](#oauth)
 
 :::info
 All authentication types imply that you have access to the remote service you're willing to integrate Bugsee with.

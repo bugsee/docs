@@ -1,0 +1,82 @@
+---
+title: "Gradle plugin — Overview"
+description: "The Bugsee Android Gradle plugin — what it does, why it is required, and how to apply it to your application module."
+sidebar_position: 1
+slug: "/sdk/android/gradle-plugin"
+---
+
+The Bugsee Android Gradle plugin (`com.bugsee:bugsee-android-gradle-plugin`) is a **mandatory** part of the 7.x SDK. Even when you only depend on the core `bugsee-android` artifact, the plugin is what unlocks:
+
+- **APM** — DB, file-I/O, and network operation instrumentation that feeds `db.*` / `file.*` / `http.client` spans.
+- **Main-thread misuse detection** — pre-call checks around guarded I/O / network / DB / `SharedPreferences` operations.
+- **Network-client auto-install** — OkHttp, Ktor 2/3, and Cronet extensions pulled in automatically based on your dependency graph.
+- **Feedback auto-install** — extension modules wired by dependency detection.
+- **Compose secure-content transforms** — Kotlin compiler plugin that injects `Modifier.bugseeSecure()` into password `TextField` call sites and tags Compose IR for input/screenshot correlation.
+
+Without the plugin, several of the features above stop working entirely or require manual wiring.
+
+You can find the plugin in the <a rel="noopener noreferrer" href="https://central.sonatype.com/artifact/com.bugsee/bugsee-android-gradle-plugin">Maven repository</a>.
+
+## What's in this section
+
+| Page | Covers |
+| --- | --- |
+| [Configuration](/sdk/android/gradle-plugin/configuration) | The `bugsee { }` DSL, every option, and the `bugsee.properties` file. |
+| [Auto-load & extensions](/sdk/android/gradle-plugin/auto-load) | Auto-pull of the core SDK, auto-install of extension modules, and `optimizeExtensionsLoading`. |
+| [Instrumentation](/sdk/android/gradle-plugin/instrumentation) | Bytecode instrumentations (OkHttp / log / thread / operation-dispatch / HttpEngine / Compose input) and the Kotlin compiler plugin. |
+| [Builds & uploads](/sdk/android/gradle-plugin/builds-upload) | Build-info / size-analysis upload, mapping & native-symbol upload, in-build size checks, and the Bugsee CLI. |
+| [Requirements & compatibility](/sdk/android/gradle-plugin/requirements) | AGP, Gradle, and SDK version requirements. |
+
+## Install
+
+Apply the plugin to your **application** module. Bytecode instrumentation is only applied to modules with `com.android.application` — library modules are not instrumented.
+
+### Using the `plugins` block (recommended)
+
+```kotlin title="app/build.gradle.kts"
+plugins {
+    id("com.android.application")
+    id("com.bugsee.android.gradle") version "<plugin-version>"
+}
+```
+
+```groovy title="app/build.gradle"
+plugins {
+    id 'com.android.application'
+    id 'com.bugsee.android.gradle' version '<plugin-version>'
+}
+```
+
+### Using the legacy buildscript classpath
+
+```kotlin title="build.gradle.kts (root)"
+buildscript {
+    dependencies {
+        classpath("com.bugsee:bugsee-android-gradle-plugin:<plugin-version>")
+    }
+}
+```
+
+```kotlin title="app/build.gradle.kts"
+plugins {
+    id("com.android.application")
+    id("com.bugsee.android.gradle")
+}
+```
+
+```groovy title="build.gradle (root)"
+buildscript {
+    dependencies {
+        classpath 'com.bugsee:bugsee-android-gradle-plugin:<plugin-version>'
+    }
+}
+```
+
+```groovy title="app/build.gradle"
+plugins {
+    id 'com.android.application'
+    id 'com.bugsee.android.gradle'
+}
+```
+
+Once applied, configure the plugin with the `bugsee { }` block — see [Configuration](/sdk/android/gradle-plugin/configuration).

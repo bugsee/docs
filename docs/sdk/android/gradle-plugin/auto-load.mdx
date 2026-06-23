@@ -1,0 +1,74 @@
+---
+title: "Gradle plugin — Auto-load & extensions"
+description: "How the Bugsee Gradle plugin auto-pulls the core SDK and auto-installs matching extension modules from your dependency graph."
+sidebar_position: 3
+slug: "/sdk/android/gradle-plugin/auto-load"
+---
+
+## Auto-install of extension modules
+
+During `withDependencies` evaluation of the `implementation` configuration, the plugin scans the host project's declared dependencies and adds the matching Bugsee extension artifact, unless the embedder has already declared it.
+
+| Detected dependency | Auto-added Bugsee module |
+| --- | --- |
+| `androidx.compose.*` | `com.bugsee:bugsee-android-compose` |
+| `com.squareup.okhttp3:*` | `com.bugsee:bugsee-android-okhttp` |
+| `io.ktor:* (2.x)` | `com.bugsee:bugsee-android-ktor-2` |
+| `io.ktor:* (3.x)` | `com.bugsee:bugsee-android-ktor-3` |
+| `org.chromium.net:*` | `com.bugsee:bugsee-android-cronet` |
+
+:::caution[Auto-added extensions track the SDK version line, not the plugin version]
+Auto-added extension modules are pulled at the **Bugsee SDK version line** — the same min-compatible SDK range the plugin emits for the core `bugsee-android` artifact (e.g. `[7.0.0, 7.1.0)`), **not** the plugin's own 4.x version. The plugin and the SDK runtime are versioned independently, so the extension artifacts (which are SDK modules) always match the SDK line rather than the plugin line. This keeps the core SDK and every auto-added extension on the same coordinated version series.
+:::
+
+If you already declared the matching Bugsee artifact yourself, the plugin leaves your declaration alone. Each auto-install rule can be disabled via the corresponding DSL property — for example `instrumentation.ktor.set(false)` suppresses Ktor auto-install, and `instrumentation.cronet.set(false)` suppresses Cronet auto-install. The same DSL toggles can also be set via Gradle properties (`-Pbugsee.instrumentation.ktor=false`) or `bugsee.properties` (`plugin.instrumentation.ktor=false`). See [Configuration](/sdk/android/gradle-plugin/configuration) for the full toggle list.
+
+Auto-install is also suppressed when the plugin is applied to a project that is itself a Bugsee SDK module (avoiding circular dependencies on `:library`, `:okhttp`, etc.).
+
+## Auto-load of the core SDK
+
+The plugin also auto-pulls the core `com.bugsee:bugsee-android` SDK when it is not already declared. This means you can depend on an extension module alone (for example `bugsee-android-feedback`, `bugsee-android-ndk`, or `bugsee-android-okhttp`) and the matching core SDK is added for you:
+
+```kotlin
+dependencies {
+    implementation("com.bugsee:bugsee-android-feedback:7.x.x")
+    // core SDK is pulled in automatically when the Bugsee Gradle plugin is applied
+}
+```
+
+The plugin reads its bundled `sdk-min-version` (the lowest SDK release the plugin was tested against), parses it as SemVer, and emits a Gradle dynamic-version range bounded to the **same `MAJOR.MINOR` series** — so consumers automatically pick up the latest patch on that line but never cross a minor boundary that could carry breaking changes:
+
+| `sdk-min-version` | Emitted range | Pulls |
+| --- | --- | --- |
+| `7.0.0` | `[7.0.0, 7.1.0)` | latest `7.0.x` patch |
+| `7.2.5` | `[7.2.5, 7.3.0)` | latest `7.2.x` patch |
+
+The same range logic governs the auto-installed extension modules described above — they are pulled on the SDK version line, not the plugin line.
+
+If you have declared `com.bugsee:bugsee-android` yourself on any configuration (`api`, `implementation`, `compileOnly`, per-variant configs, …), the auto-load skips and your declaration wins — the dynamic range is never layered on top.
+
+Opt out via the top-level `sdkAutoLoad` DSL flag:
+
+```kotlin
+bugsee {
+    sdkAutoLoad.set(false)  // do not auto-pull bugsee-android even if absent
+}
+```
+
+Set this when you ship the core SDK from a manual classpath path or a locally-published artefact and the dynamic version range would conflict with your declaration. Also settable via `bugsee.properties` (`plugin.sdkAutoLoad=false`). Default: `true`.
+
+:::note[When the plugin is absent]
+Auto-install happens only when the Bugsee Gradle plugin is applied. In Maven builds, or in Gradle builds where you have chosen not to apply the plugin, **every extension module must be added manually** to your `dependencies { }` / `pom.xml` — nothing is pulled in for you, even when the third-party dependency (OkHttp, Ktor, Cronet, Compose) is present. See [Bugsee extensions — Without the Bugsee Gradle plugin](/sdk/android/extensibility/bugsee-extensions#without-the-bugsee-gradle-plugin) for the full manual declaration set.
+:::
+
+## Optimizing extension loading
+
+By default the plugin merges every Bugsee extension `ContentProvider` into the SDK's single `BugseeInitProvider`, shaving cold-start overhead that would otherwise be incurred by Android instantiating each extension provider separately. This is controlled by the top-level `optimizeExtensionsLoading` DSL flag (default `true`):
+
+```kotlin
+bugsee {
+    optimizeExtensionsLoading.set(true)  // default
+}
+```
+
+Also settable via `bugsee.properties` (`plugin.optimizeExtensionsLoading=true`). Leave it on unless you have a specific reason to keep each extension's provider independent.

@@ -1,0 +1,244 @@
+---
+title: "Manual invocation"
+description: "How to programmatically trigger the Bugsee report dialog, upload reports silently, and log non-fatal exceptions on Android."
+sidebar_position: 3
+slug: "/sdk/android/v6/manual"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Report view
+
+In addition to detection of shake gesture or launching with notification bar item, report view can be trigger programmatically:
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.showReportDialog();
+
+// or pre-fill some fields, user will be able to modify them
+Bugsee.showReportDialog("Pre-filled summary", "Pre-filled description", IssueSeverity.Blocker);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.showReportDialog()
+
+// or pre-fill some fields, user will be able to modify them
+Bugsee.showReportDialog("Pre-filled summary", "Pre-filled description", IssueSeverity.Blocker)
+```
+
+  </TabItem>
+</Tabs>
+
+## Issue create
+
+You can build your own custom UI for collecting summary, description and severity from a user and use the following call to send resulting report to Bugsee.
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.upload("Upload summary", "Upload description", IssueSeverity.High);
+
+// or, if you want, you can provide the list of labels which will be
+// attached to the bug report
+ArrayList<String> labels = new ArrayList<String>();
+Bugsee.upload("Upload summary", "Upload description", IssueSeverity.High, labels);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.upload("Upload summary", "Upload description", IssueSeverity.High)
+
+// or, if you want, you can provide the list of labels which will be
+// attached to the bug report
+val labels = ArrayList<String>()
+Bugsee.upload("Upload summary", "Upload description", IssueSeverity.High, labels)
+```
+
+  </TabItem>
+</Tabs>
+
+> **Note:** You should not use it for reporting errors automatically from within code, use [non-fatal errors](#non-fatal-exceptions) for this instead.
+
+You can also use the ExtendedReport to fill it with information and upload:
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+// Bugsee SDK v5.1.0 and above
+
+Bugsee.createReport(report -> {
+    report.setSummary("UI is broken");
+    report.setDescription("It happened when I pressed the button.");
+    Bitmap screenshot = report.getScreenshot();
+    // Annotate screenshot.
+    report.setScreenshot(screenshot); // Call this method if screenshot was changed somehow.
+    // You can also add custom attributes to a report.
+    report.setAttribute("attr1", "attr1 value");
+
+    // You can request video export to the specified file. This
+    // operation is asynchronous.
+    // 
+    // Note: Do no trigger upload while video export is being performed!
+    // 
+    // Available since Bugsee Android SDK v5.5.0
+    report.exportVideo("full/file/path.mp4", () -> {
+        // Video export completed. Check the file presence. If
+        // export failed, the file will not be created.
+    });
+
+    // Upload formed report.
+    Bugsee.upload(report);    
+});
+
+// Pre v5.1.0
+
+// Stop recording.
+Bugsee.stop();
+// Get report to fill.
+ExtendedReport report = Bugsee.createReport();
+report.setSummary("UI is broken");
+report.setDescription("It happened when I pressed the button.");
+Bitmap screenshot = report.getScreenshot();
+report.setScreenshot(screenshot);
+report.setAttribute("attr1", "attr1 value");
+Bugsee.upload(report);
+
+// Relaunch Bugsee
+Bugsee.relaunch(); // to relaunch with default options.
+//or
+HashMap<String, Object> options = new HashMap<String, Object>();
+// Set custom options.
+//...
+Bugsee.relaunch(options); // to relaunch Bugsee with custom options.
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+// Bugsee SDK v5.1.0 and above
+
+Bugsee.createReport { report -> // Fill report in a custom UI.
+    report.summary = "UI is broken"
+    report.description = "It happened when I pressed the button."
+    val screenshot = report.screenshot
+    // Annotate screenshot.
+    report.screenshot = screenshot // Call this method if screenshot was changed somehow.
+    // You can also add custom attributes to a report.
+    report.setAttribute("attr1", "attr1 value")
+
+    // You can request video export to the specified file. This
+    // operation is asynchronous.
+    // 
+    // Note: Do no trigger upload while video export is being performed!
+    // 
+    // Available since Bugsee Android SDK v5.5.0
+    report.exportVideo("video.mp4") {
+        // Video export completed. Check the file presence. If
+        // export failed, the file will not be created.
+    }
+
+    // Upload formed report.
+    Bugsee.upload(report)
+}
+
+// Pre v5.1.0
+
+// Stop recording.
+Bugsee.stop()
+val report = Bugsee.createReport()
+report.setSummary("UI is broken")
+report.setDescription("It happened when I pressed the button.")
+val screenshot: Bitmap = report.getScreenshot()
+report.setScreenshot(screenshot)
+report.setAttribute("attr1", "attr1 value")
+Bugsee.upload(report)
+
+// Relaunch Bugsee.
+Bugsee.relaunch() // to relaunch with default options.
+//or
+val options : HashMap<String, Any> = hashMapOf()
+// Set custom options.
+//...
+Bugsee.relaunch(options) // to relaunch Bugsee with custom options.
+```
+
+  </TabItem>
+</Tabs>
+
+## Non-fatal exceptions
+
+It is possible to report non-fatal exceptions from code. These reports will get combined similar to crashes, and you will be provided with statistics and a break down by unique devices, Android versions, etc.
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+try {
+	// Code, which can throw exception.
+} catch(Exception e) {
+    Bugsee.logException(e);
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+try {
+    // Code, which can throw exception.
+} catch (e: Exception) {
+    Bugsee.logException(e)
+}
+```
+
+  </TabItem>
+</Tabs>
+
+If you have single method to log all exceptions from the entire application, you may
+end up having all these exceptions grouped together in the Bugsee web dashboard. To avoid this,
+you should use ```logException()``` variant with ```options``` argument.
+
+Specify ```skipFrames``` parameter in ```options.Rules``` to skip the specified number of frames when
+comparing stack traces during reports grouping. Doing so will allow you to group exceptions from different
+origins.
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Exception exception = new AndroidRuntimeException("LogException: SkipFrames test case");
+ExceptionLoggingOptions options = new ExceptionLoggingOptions();
+// skip 1 top frame when comparing stack traces
+options.Rules.setSkipFrames(1);
+Bugsee.logException(exception, options);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+val exception = AndroidRuntimeException("LogException: SkipFrames test case")
+val options = ExceptionLoggingOptions()
+// skip 1 top frame when comparing stack traces
+options.Rules.skipFrames = 1
+Bugsee.logException(exception, options)
+```
+
+  </TabItem>
+</Tabs>

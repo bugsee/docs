@@ -1,0 +1,75 @@
+---
+title: "Anomaly"
+description: "Statistical anomaly detection over completed APM transactions — flags outliers as error reports or breadcrumbs."
+sidebar_position: 8
+slug: "/sdk/android/issue-detection/anomaly"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::note
+Anomaly detection is new in **7.0.0**.
+:::
+
+The **anomaly detector** piggybacks on the SDK's APM subsystem: every completed transaction is fed through a per-bucket statistical baseline (exponentially weighted mean and variance, with a z-score severity), and outliers are reported back into the standard issue / breadcrumb pipelines. The shipped detector is purely statistical — no machine-learning models are used.
+
+:::important[Requires APM]
+Anomaly detection consumes APM transactions, so it does nothing unless `Options.PerformanceMonitoring` is also enabled (it is on by default). The provider refuses to start when APM is disabled.
+:::
+
+## Configuration
+
+| Form | Setting |
+| --- | --- |
+| Manifest meta-data | `<meta-data android:name="com.bugsee.option.detect.anomaly" android:value="true" />` |
+| `Bugsee.launch()` map | `options.put(Options.DetectAndReportAnomaly, true)` |
+| Default | `false` |
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.detect.anomaly"
+           android:value="true" />
+```
+
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(Options.DetectAndReportAnomaly, true);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+
+  </TabItem>
+</Tabs>
+
+## How outliers are surfaced
+
+| Severity | What you get |
+| --- | --- |
+| `> 0.9` | An **error report** with `ExceptionOptions.Domain` set to `anomaly.duration` or `anomaly.throughput` so the backend can group anomalies by kind. |
+| `0.5`–`0.9` | A `bugsee_event:"anomaly"` **breadcrumb** with the bucket key and severity. |
+| `< 0.5` | Silent — the sample only updates the underlying baseline. |
+
+Reports are deduplicated per session per bucket; subsequent occurrences fall through to the breadcrumb path.
+
+## Bucketing
+
+Baselines are maintained **per bucket**, not per raw operation, so requests to different hosts / paths or queries with different shapes don't dilute each other. Bundled bucket-key builders:
+
+| Builder | Bucket key |
+| --- | --- |
+| `HttpClientBucketKeyBuilder` | `method` + host + templated path (numeric segments → `{id}`, UUIDs → `{uuid}`, long hex → `{hex}`) |
+| `DbBucketKeyBuilder` | `op` + normalised SQL (literals → `?`) |
+| `UiActivityBucketKeyBuilder` | `op` + activity class |
+
+A `BucketKeyResolver.standard()` ships with five builders pre-registered — the three above plus `FileIOBucketKeyBuilder` (for `file.*` spans) and a catch-all `DefaultBucketKeyBuilder` (so spans without a dedicated builder still bucket sensibly). Apps that build their own custom transactions can implement `BucketKeyBuilder` and register additional resolvers.
+
+EWMA baselines are persisted across sessions, so the detector stabilises quickly even on cold launches.
+
+## See also
+
+- [Configuration → Detection](/sdk/android/configuration#detection) — the option-key reference for all detection options.

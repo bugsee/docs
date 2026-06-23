@@ -5,7 +5,7 @@ sidebar_position: 11
 slug: "/sdk/ios/build-size-analysis"
 ---
 
-Bugsee Build Size Analysis turns app size into a first-class CI signal alongside crashes, ANRs, and session replay. It ships in two layers, configured independently, and works on both iOS and Android — this page covers the iOS setup; see the [Android counterpart](/sdk/android/v7/build-size-analysis) for parity.
+Bugsee Build Size Analysis turns app size into a first-class CI signal alongside crashes, ANRs, and session replay. It ships in two layers, configured independently, and works on both iOS and Android — this page covers the iOS setup; see the [Android counterpart](/sdk/android/build-size-analysis) for parity.
 
 The whole flow runs inside the same `BugseeAgent` post-action that already uploads dSYMs. You don't need a second build phase; you just turn the right environment variables on.
 
@@ -284,5 +284,5 @@ BUGSEE_CHUNKED_UPLOAD=1
 ## See also
 
 - [Crash symbolication](/sdk/ios/symbolication) — the full env-var reference (every `BUGSEE_BUILD_INFO_*` / `BUGSEE_SIZE_*` variable, plus the post-action script body and SPM-specific path tweaks).
-- [Android Build size analysis](/sdk/android/v7/build-size-analysis) — same feature on the Android side; same data model on the server.
+- [Android Build size analysis](/sdk/android/build-size-analysis) — same feature on the Android side; same data model on the server.
 - [Webhook events → build.created](/webhooks/events#buildcreated) — automation hook fired on every registered build.

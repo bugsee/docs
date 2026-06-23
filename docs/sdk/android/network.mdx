@@ -1,130 +1,41 @@
 ---
 title: "Network events"
-description: "How Bugsee captures Android network traffic and how to add support for OkHttp, Retrofit, and other HTTP clients."
-sidebar_position: 5
+description: "Capture HTTP request/response metadata via OkHttp, Ktor 2/3, and Cronet extension modules for Bugsee Android SDK 7.0.0."
+sidebar_position: 6
 slug: "/sdk/android/network"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-## HttpURLConnection, HttpsURLConnection
+## Network client integration
 
-Bugsee automatically intercepts network requests made with the following clients and libraries, which use these clients as underlying HTTP stack. For other HTTP clients additional actions are required.
+Network capture is provided through **extension modules** — each HTTP client is its own module:
 
-## OkHttpClient
+| HTTP client | Extension module |
+| --- | --- |
+| OkHttp 3 / 4 | `com.bugsee:bugsee-android-okhttp` |
+| Ktor 2.x | `com.bugsee:bugsee-android-ktor-2` |
+| Ktor 3.x | `com.bugsee:bugsee-android-ktor-3` |
+| Cronet | `com.bugsee:bugsee-android-cronet` |
 
-OkHttp 2.2+ is supported. For OkHttp of versions 2.2 - 2.7.5 you need to call method addNetworkLoggingToOkHttpClient():
+When the **Bugsee Gradle plugin** is applied, it inspects your `dependencies { }` block and **auto-adds** the matching extension module whenever it detects OkHttp, Ktor, or Cronet — you do not need to declare these artifacts yourself. Auto-install can be disabled per client through the `bugsee { instrumentation { ... } }` DSL (`okhttp`, `ktor`, `cronet` flags).
 
+## OkHttp
 
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-OkHttpClient client = new OkHttpClient();
-Bugsee.addNetworkLoggingToOkHttpClient(client);
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
+Add the extension (or let the Gradle plugin auto-add it when it sees OkHttp in your build):
 
 ```kotlin
-val client = OkHttpClient()
-Bugsee.addNetworkLoggingToOkHttpClient(client)
+implementation("com.bugsee:bugsee-android-okhttp:7.x.x")
 ```
 
-  </TabItem>
-</Tabs>
-
-For OkHttp 3.x you need to call method addNetworkLoggingToOkHttpBuilder():
-
+**OkHttp capture is fully transparent.** The Bugsee Gradle plugin's `OkHttpInstrumentation` injects `BugseeOkHttpInterceptor` into every `OkHttpClient.Builder.build()` call site at compile time. You do not call any wiring API — constructing an `OkHttpClient` the standard way is enough:
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
-OkHttpClient.Builder builder = new OkHttpClient.Builder();
-OkHttpClient client = Bugsee.addNetworkLoggingToOkHttpBuilder(builder)
-	.build();
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-val builder: OkHttpClient.Builder = OkHttpClient.Builder()
-val client: OkHttpClient = Bugsee.addNetworkLoggingToOkHttpBuilder(builder)
-	.build()
-```
-
-  </TabItem>
-</Tabs>
-
-## Ktor
-
-Ktor 2.3+ is supported. You need to call method addNetworkLoggingToKtorHttpClient():
-
-
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-HttpClient client = new HttpClient(engine, clientConfig);
-Bugsee.addNetworkLoggingToKtorHttpClient(client);
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-val client = HttpClient(engine, clientConfig)
-Bugsee.addNetworkLoggingToKtorHttpClient(client)
-```
-
-  </TabItem>
-</Tabs>
-
-## Retrofit
-Retrofit 1.9+ is supported. For Retrofit 1.9, which uses OkHttp 2.x, you need to set wrapped OkHttpClient to RestAdapter.Builder:
-
-
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-OkHttpClient client = new OkHttpClient();
-Bugsee.addNetworkLoggingToOkHttpClient(client);
-RestAdapter restAdapter = new RestAdapter.Builder()                  
-	.setClient(new OkClient(client))
-	.build();
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-val client = OkHttpClient()
-Bugsee.addNetworkLoggingToOkHttpClient(client)
-val restAdapter: RestAdapter = RestAdapter.Builder()
-	.setClient(OkClient(client))
-	.build()
-```
-
-  </TabItem>
-</Tabs>
-
-For Retrofit 2.x, which uses OkHttp 3.x you need to set wrapped OkHttpClient to Retrofit.Builder:
-
-
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-OkHttpClient.Builder builder = new OkHttpClient.Builder();
-OkHttpClient client = Bugsee.addNetworkLoggingToOkHttpBuilder(builder)
-	.build();
-Retrofit retrofit = new Retrofit.Builder()               
-    .client(client)
+OkHttpClient client = new OkHttpClient.Builder()
     .build();
 ```
 
@@ -132,115 +43,171 @@ Retrofit retrofit = new Retrofit.Builder()
   <TabItem value="kotlin" label="Kotlin">
 
 ```kotlin
-val builder: OkHttpClient.Builder = OkHttpClient.Builder()
-val client: OkHttpClient = Bugsee.addNetworkLoggingToOkHttpBuilder(builder)
-	.build()
-val retrofit = Retrofit.Builder()
-	.client(client)
-	.build()
+val client = OkHttpClient.Builder()
+    .build()
 ```
 
   </TabItem>
 </Tabs>
 
-## Picasso
+WebSocket traffic created via `OkHttpClient.newWebSocket(...)` and image loaders built on top of OkHttp (for example Picasso's `OkHttp3Downloader`, Retrofit backed by OkHttp, Glide's OkHttp integration) are all captured automatically as a result.
 
-For Picasso 1.x it is necessary to call loader() method:
+The extension reads `Options.CaptureNetwork`, `Options.CaptureNetworkBodySizeLimit`, and `Options.CaptureNetworkBodyWithoutType` when it launches and honors those settings at runtime.
 
+## Ktor 2
+
+Add the extension (or let the Gradle plugin auto-add it when it detects `io.ktor` 2.x in your build):
+
+```kotlin
+implementation("com.bugsee:bugsee-android-ktor-2:7.x.x")
+```
+
+**Ktor capture is not transparent.** Ktor's `HttpClient` only sees plugins that you explicitly install. Each `HttpClient` instance you create must install `BugseeKtor2Plugin`. Ktor is a Kotlin-only client, so no Java variant is shown.
+
+```kotlin
+val client = HttpClient {
+    install(BugseeKtor2Plugin)
+    // ... your other plugins
+}
+```
+
+`BugseeKtor2Plugin` takes no configuration. It reads its settings from a process-wide static populated by the SDK, so you pass nothing when installing it. When the SDK is not active, the installed plugin instance no-ops.
+
+## Ktor 3
+
+Add the extension (or let the Gradle plugin auto-add it when it detects `io.ktor` 3.x in your build):
+
+```kotlin
+implementation("com.bugsee:bugsee-android-ktor-3:7.x.x")
+```
+
+Same model as Ktor 2, but targeting Ktor 3.x's `createClientPlugin` API. The install target is `BugseeKtor3Plugin.Plugin` — a property exposed on the companion — rather than the class itself. Ktor 3 is Kotlin-only.
+
+```kotlin
+val client = HttpClient {
+    install(BugseeKtor3Plugin.Plugin)
+    // ... your other plugins
+}
+```
+
+## Cronet
+
+Add the extension (or let the Gradle plugin auto-add it when it detects Cronet in your build):
+
+```kotlin
+implementation("com.bugsee:bugsee-android-cronet:7.x.x")
+```
+
+**Cronet capture is not transparent.** Cronet has no interceptor pipeline, and its `Builder.build()` call site lives inside the Cronet artifact where bytecode instrumentation cannot reach it. You must wrap every `CronetEngine` you create with `BugseeCronet.instrument(engine)`:
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
-Picasso picasso = new Picasso.Builder(context) //context - activity or application instance.
-	.loader(new UrlConnectionLoader(context))
-	.build();
+CronetEngine engine = BugseeCronet.instrument(
+    new CronetEngine.Builder(context).build()
+);
 ```
 
   </TabItem>
   <TabItem value="kotlin" label="Kotlin">
 
 ```kotlin
-val picasso: Picasso = Picasso.Builder(context) //context - activity or application instance.
-	.loader(UrlConnectionLoader(context))
-	.build()
+val engine = BugseeCronet.instrument(
+    CronetEngine.Builder(context).build()
+)
 ```
 
   </TabItem>
 </Tabs>
 
-For Picasso 2.0-2.5.2 it is necessary to call downloader() method with an instance of UrlConnectionDownloader as a parameter: 
+`instrument(engine)` returns a `CronetEngineWrapper` that delegates every call to the original engine and reports request / redirect / complete / error lifecycle events to the Bugsee network capture pipeline. Wrapping is idempotent — calling `instrument(...)` on an already-wrapped engine returns the same instance — and the wrapper passes calls through unchanged when the SDK is inactive.
 
+## Filtering and redacting network events
 
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-Picasso picasso = new Picasso.Builder(context) //context - activity or application instance.
-	.downloader(new UrlConnectionDownloader(context))
-	.build();
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-val picasso = Picasso.Builder(context) //context - activity or application instance.
-	.downloader(UrlConnectionDownloader(context))
-	.build()
-```
-
-  </TabItem>
-</Tabs>
-
-For Picasso 2.7+ some additional actions are required comparing with the previous case:
-
+Install a filter to inspect, mutate, or drop network events before they are attached to a report. Network filters use the generic `EventFilter<NetworkEvent>` interface, whose single `filter(event, callback)` method hands you the event and a `Callback1` to invoke with the result. Call `callback.run(event)` to keep the (possibly mutated) event, or `callback.run(null)` to drop it entirely.
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
-OkHttp3Downloader okHttp3Downloader = new OkHttp3Downloader(context); //context - activity or application instance.
-Bugsee.addNetworkLoggingToPicassoDownloader(okHttp3Downloader);
-Picasso picasso = new Picasso.Builder(context)
-	.downloader(okHttp3Downloader)
-	.build();
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-val okHttp3Downloader = OkHttp3Downloader(context) //context - activity or application instance.
-
-Bugsee.addNetworkLoggingToPicassoDownloader(okHttp3Downloader)
-val picasso = Picasso.Builder(context)
-	.downloader(okHttp3Downloader)
-	.build()
-```
-
-  </TabItem>
-</Tabs>
-
-## Glide
-Glide uses HttpUrlConnection by default, so its network events are intercepted automatically. 
-
-But if you use OkHttpClient as underlying HTTP stack for Glide, additional actions are required.
-First, add class, which extends OkHttpGlideModule class, with overridden registerComponents() method.
-
-
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-class CustomGlideModule extends OkHttpGlideModule {
-    @Override
-    public void registerComponents(Context context, Glide glide, Registry registry) {
-        OkHttpClient client = new OkHttpClient();
-        Bugsee.addNetworkLoggingToOkHttpClient(client);
-        OkHttpUrlLoader.Factory factory = new OkHttpUrlLoader.Factory(client);
-        registry.replace(GlideUrl.class, InputStream.class, factory);
+Bugsee.setNetworkEventFilter((event, callback) -> {
+    if (event.getUrl().contains("token")) {
+        event.setUrl(redact(event.getUrl()));
     }
+    callback.run(event); // callback.run(null) to drop the event
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.setNetworkEventFilter { event, callback ->
+    if (event.url.contains("token")) {
+        event.url = redact(event.url)
+    }
+    callback.run(event) // callback.run(null) to drop the event
+}
+```
+
+  </TabItem>
+</Tabs>
+
+Notes on the filter shape:
+
+- The filter is a two-argument, **void** function: `filter(event, callback)`. You must invoke the supplied `Callback1` to produce a result — `callback.run(event)` keeps the (possibly mutated) event, `callback.run(null)` drops it.
+- Event types are `NetworkEvent` / `LogEvent` in `com.bugsee.library.contracts`.
+- Mutators (`setUrl`, `setMethod`, `setBody`, headers, etc.) and `getNoBodyReason()` are available.
+- The filter applies uniformly to events coming from every network extension — OkHttp, Ktor 2, Ktor 3, and Cronet all feed the same pipeline.
+
+See also the [Logs page](/sdk/android/logs) for the matching `setLogEventFilter(...)` API.
+
+## Recording custom network events
+
+:::note
+`Bugsee.addNetworkEvent(...)` is **new in 7.0.0**.
+:::
+
+The OkHttp / Ktor / Cronet extension modules cover the common HTTP stacks transparently, but apps occasionally produce network exchanges through paths the SDK cannot see — a custom HTTP client, a native bridge, hand-built request/response pairs from a desktop SDK port, or a wrapper SDK forwarding events. `Bugsee.addNetworkEvent(NetworkEvent, boolean)` injects those events into the same capture pipeline that the auto-instrumented clients feed, so they appear in reports and session recordings alongside automatically captured traffic.
+
+Build the `NetworkEvent` with `Bugsee.getExchangeFactory()` rather than implementing the interface — the factory returns a pooled SDK container. Each request typically produces two events sharing the same `id`: a `RequestStarted` event when the request goes out and a `RequestCompleted` event when the response arrives. The factory's `create*` methods can return `null` before the SDK is launched, so null-check.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+import com.bugsee.library.Bugsee;
+import com.bugsee.library.contracts.exchange.BugseeExchangeFactory;
+import com.bugsee.library.contracts.exchange.NetworkEvent;
+import com.bugsee.library.contracts.exchange.NetworkEvent.NetworkEventStage;
+
+BugseeExchangeFactory factory = Bugsee.getExchangeFactory();
+String requestId = UUID.randomUUID().toString();
+
+// Request side
+NetworkEvent started = factory.createNetworkEvent(
+    System.currentTimeMillis(),
+    NetworkEventStage.RequestStarted,
+    requestId,
+    "custom-client",   // mechanism
+    "GET");            // HTTP method
+if (started != null) {
+    started.setUrl("https://api.example.com/orders");
+    Bugsee.addNetworkEvent(started, /* requiresFiltering */ true);
+}
+
+// Response side (same id)
+NetworkEvent completed = factory.createNetworkEvent(
+    System.currentTimeMillis(),
+    NetworkEventStage.RequestCompleted,
+    requestId,
+    "custom-client",
+    "GET");
+if (completed != null) {
+    completed.setUrl("https://api.example.com/orders");
+    completed.setResponseCode(200);
+    Bugsee.addNetworkEvent(completed, /* requiresFiltering */ true);
 }
 ```
 
@@ -248,31 +215,42 @@ class CustomGlideModule extends OkHttpGlideModule {
   <TabItem value="kotlin" label="Kotlin">
 
 ```kotlin
-class CustomGlideModule : OkHttpGlideModule() {
-    override fun registerComponents(context: Context, glide: Glide, registry: Registry) {
-        val client = OkHttpClient()
-        Bugsee.addNetworkLoggingToOkHttpClient(client)
-        val factory = OkHttpUrlLoader.Factory(client)
-        registry.replace(
-            GlideUrl::class.java,
-            InputStream::class.java,
-            factory
-        )
+import com.bugsee.library.Bugsee
+import com.bugsee.library.contracts.exchange.NetworkEvent.NetworkEventStage
+
+val factory = Bugsee.getExchangeFactory()
+val requestId = UUID.randomUUID().toString()
+
+factory.createNetworkEvent(
+    System.currentTimeMillis(),
+    NetworkEventStage.RequestStarted,
+    requestId,
+    "custom-client",   // mechanism
+    "GET")?.let { started ->
+        started.setUrl("https://api.example.com/orders")
+        Bugsee.addNetworkEvent(started, /* requiresFiltering */ true)
     }
-}
+
+factory.createNetworkEvent(
+    System.currentTimeMillis(),
+    NetworkEventStage.RequestCompleted,
+    requestId,
+    "custom-client",
+    "GET")?.let { completed ->
+        completed.setUrl("https://api.example.com/orders")
+        completed.setResponseCode(200)
+        Bugsee.addNetworkEvent(completed, /* requiresFiltering */ true)
+    }
 ```
 
   </TabItem>
 </Tabs>
 
-Then register this class in &lt;application&gt; node in application manifest.
+A `createNetworkEvent(...)` overload that takes every field (URL, headers, body, response code, timings, …) as parameters is also available when you prefer to populate the event in one call instead of using setters. `NetworkEventStage` values are `RequestStarted`, `RequestCompleted`, `Redirect`, `RequestErrored`, `RequestAborted`, `RequestTimingsReceived`, and `WebSocket`.
 
-```xml
-<application>
-<meta-data
-	android:name="com.example.CustomGlideModule"
-	android:value="GlideModule"/>
-</application>
-```
+The second argument to `addNetworkEvent` controls whether the event runs through the registered `setNetworkEventFilter`:
 
-Replace "com.example" by package of your class, which extends OkHttpGlideModule.
+- **`requiresFiltering = true`** — appropriate for raw payloads that may carry sensitive data the producer hasn't redacted. The event is run through the user filter (if any) before being recorded.
+- **`requiresFiltering = false`** — appropriate when the producer has already sanitized the event (for example, a wrapper SDK that ran its own redaction). The user filter is bypassed and the event is recorded verbatim.
+
+The call no-ops silently when the SDK has not been launched, when `CaptureNetwork` is disabled, or when `event` is `null`.

@@ -475,7 +475,7 @@ It is controlled by sanitizeNetworkData/BugseeSanitizeNetworkDataKey option (def
 - Other stability improvements
 
 ## 1.20.0 (Jan 22 2019)
-- Bug fix: Fix dSYM uploading issue that is caused by race when new Apple's build system is used. Two separate scripts are now should be used. Take a look [here](/sdk/ios/installation/#publishing-to-app-store) and [here](/sdk/ios/symbolication/) for more information and detailed instructions.
+- Bug fix: Fix dSYM uploading issue that is caused by race when new Apple's build system is used. Two separate scripts are now should be used. Take a look [here](/sdk/ios/installation/) and [here](/sdk/ios/symbolication/) for more information and detailed instructions.
 - Bug fix: Fix potential problem in WebKit events swizzling mechanism
 
 ## 1.19.4 (Jan 10 2019)
@@ -690,7 +690,7 @@ It is controlled by sanitizeNetworkData/BugseeSanitizeNetworkDataKey option (def
 ## 1.8.0 (Aug 25 2016)
 
 - Feature: Remove bundle from the package, one less thing to copy during manual install
-- Feature: Allow users to add attachments to the report through delegate [read more](/sdk/ios/custom/#file-attachments/)
+- Feature: Allow users to add attachments to the report through delegate [read more](/sdk/ios/custom/#file-attachments)
 - Optimizations: Optimize start up time
 - Bug fix: Make symbol collection agent truly run in the background
 - Big fix: Various bug fixes for Cordova applications

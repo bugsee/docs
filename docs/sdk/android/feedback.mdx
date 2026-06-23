@@ -1,6 +1,6 @@
 ---
 title: "Feedback"
-description: "How to enable and customize the in-app feedback messenger in the Bugsee Android SDK for user-to-support communication."
+description: "Installing and using the bugsee-android-feedback extension module for in-app feedback UI in Bugsee Android SDK 7.0.0."
 sidebar_position: 8
 slug: "/sdk/android/feedback"
 ---
@@ -8,79 +8,215 @@ slug: "/sdk/android/feedback"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Bugsee implements built in single threaded messenger to allow your users to communicate with your support and developers. 
+:::info
+The in-app feedback messenger ships as its own extension module, `bugsee-android-feedback`. Add it (via the Gradle plugin or an explicit dependency) when you want the feedback UI.
+:::
 
-## Feedback activity
+Bugsee provides a built-in, in-app messenger that lets your users talk to your support and developers. In 7.x this feature is packaged as an extension, so apps that don't need it don't pay for it.
 
-To start feedback activity from within your application:
+## Installation
 
+Feedback ships as the `bugsee-android-feedback` extension module. Once it is on the classpath it activates automatically with the SDK — there is no manual wiring or `registerExtension(...)` call to make from your code.
 
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
+### With the Gradle plugin (recommended)
 
-```java
-// context parameter should be either Application or Activity
-Bugsee.showFeedbackActivity(context);
-```
+If you use the [Bugsee Gradle plugin](/sdk/android/gradle-plugin), opt the module in from the `bugsee { }` block and the plugin pulls in the matching version for you. It is **off by default**, so add this line to enable it:
 
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-// context parameter should be either Application or Activity
-Bugsee.showFeedbackActivity(context)
-```
-
-  </TabItem>
-</Tabs>
-
-## Notifications
-
-To receive notifications about new messages arriving from the server, set OnNewFeedbackListener instance to Bugsee:
-
-
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-Bugsee.setOnNewFeedbackListener(new OnNewFeedbackListener() {
-	@Override
-	public void onNewFeedback(List<String> newMessages) {
-		// Handle received messages.
-	}
-});
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
+<Tabs groupId="gradle-dsl">
+  <TabItem value="kts" label="Kotlin DSL (build.gradle.kts)">
 
 ```kotlin
-Bugsee.setOnNewFeedbackListener { newMessages ->
-	// Handle received messages.
+bugsee {
+    feedback.set(true)
+}
+```
+
+  </TabItem>
+  <TabItem value="groovy" label="Groovy (build.gradle)">
+
+```groovy
+bugsee {
+    feedback.set true
 }
 ```
 
   </TabItem>
 </Tabs>
 
-## Default greeting
+### Manual dependency
 
-Default greeting can be set on the server in your application settings. However, for the cases when network is not available, you can set default greeting on the client as well:
+Without the plugin (for example a Maven-only setup), declare the extension alongside the core SDK yourself, matching its version:
 
+<Tabs groupId="gradle-dsl">
+  <TabItem value="kts" label="Kotlin DSL (build.gradle.kts)">
+
+```kotlin
+dependencies {
+    implementation("com.bugsee:bugsee-android:7.0.0")
+    implementation("com.bugsee:bugsee-android-feedback:7.0.0")
+}
+```
+
+  </TabItem>
+  <TabItem value="groovy" label="Groovy (build.gradle)">
+
+```groovy
+dependencies {
+    implementation 'com.bugsee:bugsee-android:7.0.0'
+    implementation 'com.bugsee:bugsee-android-feedback:7.0.0'
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Retrieving the extension
+
+All feedback APIs live on the `Feedback` contract interface, which you retrieve from the SDK through `Bugsee.ext(...)`. The call returns **`null` when the `bugsee-android-feedback` module is not on the classpath**, so always null-check the result — your code keeps compiling even if a downstream consumer drops the extension.
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
-Bugsee.setDefaultFeedbackGreeting("Hi! How can we help?");
+import com.bugsee.library.Bugsee;
+import com.bugsee.library.contracts.extensions.Feedback;
+
+Feedback feedback = Bugsee.ext(Feedback.class);
+if (feedback != null) {
+    feedback.showFeedbackActivity();
+}
 ```
 
   </TabItem>
   <TabItem value="kotlin" label="Kotlin">
 
 ```kotlin
-Bugsee.setDefaultFeedbackGreeting("Hi! How can we help?")
+import com.bugsee.library.Bugsee
+import com.bugsee.library.contracts.extensions.Feedback
+
+val feedback = Bugsee.ext(Feedback::class.java)
+feedback?.showFeedbackActivity()
 ```
 
   </TabItem>
 </Tabs>
+
+For an overview of how the extension framework works in 7.x (registration, lifecycle, `Bugsee.ext(...)` lookup), see the [Bugsee extensions](/sdk/android/extensibility/bugsee-extensions) page.
+
+## API
+
+The `Feedback` contract exposes the following methods:
+
+```kotlin
+fun showFeedbackActivity()
+fun setDefaultFeedbackGreeting(greeting: String?)
+fun setOnNewFeedbackListener(listener: FeedbackListener?)
+```
+
+### Showing the feedback activity
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Feedback feedback = Bugsee.ext(Feedback.class);
+if (feedback != null) {
+    feedback.showFeedbackActivity();
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.ext(Feedback::class.java)?.showFeedbackActivity()
+```
+
+  </TabItem>
+</Tabs>
+
+### New message notifications
+
+Register a `FeedbackListener` to be notified about feedback activity. It has two callbacks: `onNewMessagesReceived(List<String>)` fires when new messages arrive from your support team, and `onNewMessageSent(String)` fires when the user sends one. Pass `null` to clear a previously set listener.
+
+:::note
+`onNewMessagesReceived` may be invoked on a background thread. Marshal to the main thread before touching UI.
+:::
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+import com.bugsee.library.contracts.feedback.FeedbackListener;
+import java.util.List;
+
+Feedback feedback = Bugsee.ext(Feedback.class);
+if (feedback != null) {
+    feedback.setOnNewFeedbackListener(new FeedbackListener() {
+        @Override
+        public void onNewMessagesReceived(List<String> newMessages) {
+            // New messages received from your support team.
+        }
+
+        @Override
+        public void onNewMessageSent(String message) {
+            // A message the user just sent.
+        }
+    });
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+import com.bugsee.library.contracts.feedback.FeedbackListener
+
+Bugsee.ext(Feedback::class.java)?.setOnNewFeedbackListener(object : FeedbackListener {
+    override fun onNewMessagesReceived(newMessages: List<String>) {
+        // New messages received from your support team.
+    }
+
+    override fun onNewMessageSent(message: String) {
+        // A message the user just sent.
+    }
+})
+```
+
+  </TabItem>
+</Tabs>
+
+### Default greeting
+
+A default greeting can be set on the server in your application settings. For cases when the network is not available, you can also set a client-side fallback:
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Feedback feedback = Bugsee.ext(Feedback.class);
+if (feedback != null) {
+    feedback.setDefaultFeedbackGreeting("Hi! How can we help?");
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.ext(Feedback::class.java)?.setDefaultFeedbackGreeting("Hi! How can we help?")
+```
+
+  </TabItem>
+</Tabs>
+
+## Appearance
+
+The feedback chat UI is themed through the `FeedbackAppearance` contract interface, which ships inside `bugsee-android-feedback` and is only on the classpath when the extension is installed. It exposes constants such as `FeedbackAppearance.ActionBarColor`, `FeedbackAppearance.IncomingBubbleColor`, `FeedbackAppearance.OutgoingBubbleColor`, `FeedbackAppearance.InputTextColor` and friends, which you pass to the unified appearance API:
+
+```java
+Appearance appearance = Bugsee.getAppearance();
+appearance.setColor(FeedbackAppearance.OutgoingBubbleColor, Color.BLUE);
+```
+
+See the [Appearance](/sdk/android/appearance) page for the full list of `FeedbackAppearance` keys and the rest of the appearance API.

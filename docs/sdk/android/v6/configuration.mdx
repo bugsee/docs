@@ -1,0 +1,217 @@
+---
+title: "Configuration"
+description: "Reference for all Bugsee Android SDK launch options, covering video, network, logging, and behavior customization."
+sidebar_position: 2
+slug: "/sdk/android/v6/configuration"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Launching with options
+
+Bugsee behavior is very customizable. If the default configuration does not satisfy your needs, you can launch the SDK with additional parameters passed as a dictionary.
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+public class MyApplication extends Application {
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        HashMap<String, Object> options = new HashMap<>();
+        options.put(Bugsee.Option.MaxRecordingTime, 60);
+        options.put(Bugsee.Option.ShakeToTrigger, false);
+        Bugsee.launch(this, "<your_app_token>", options);
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+class MyApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        val options : HashMap<String, Any> = hashMapOf(
+                Bugsee.Option.MaxRecordingTime to 60,
+                Bugsee.Option.ShakeToTrigger to false
+        )
+        Bugsee.launch(this, "<your_app_token>", options)
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+Alternatively, parameters can be passed as LaunchOptions class instance.
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+public class MyApplication extends Application {
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        LaunchOptions options = new LaunchOptions();
+        options.Video.setMaxRecordingTime(60);
+        options.General.setShakeToTrigger(false);
+        Bugsee.launch(this, "<your_app_token>", options);
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+class MyApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        val options = LaunchOptions()
+        options.Video.maxRecordingTime = 60
+        options.General.isShakeToTrigger = false
+        Bugsee.launch(this, "<your_app_token>", options)
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+Note that not all of the following options will work in an Instant App. Specifically, the **NotificationBarTrigger**, **VideoEnabled**, and **CaptureLogs** options are always set to *false* for an Instant App.
+
+## Stop, Relaunch 
+
+It is also possible to relaunch Bugsee with other options later.
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+// Relaunch with other options.
+HashMap<String, Object> options = new HashMap<>();
+// Set other launch options.
+//...
+Bugsee.relaunch(options);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+// Relaunch with other options.
+val options : HashMap<String, Any> = hashMapOf()
+// Set other launch options.
+//...
+Bugsee.relaunch(options)
+```
+
+  </TabItem>
+</Tabs>
+
+Alternatively, you can stop the events and video recording.
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+// Stop recording completely.
+Bugsee.stop();
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+// Stop recording completely.
+Bugsee.stop()
+```
+
+  </TabItem>
+</Tabs>
+
+### Available Options
+|Key|Default value|Notes
+|---|---|---|
+|MaxRecordingTime|60|Maximum recording duration (in seconds)|
+|ShakeToTrigger|true|Shake gesture to trigger report|
+|NotificationBarTrigger|true|When enabled, a sticky system notification will be shown once Bugsee is launched. When tapped, this notification will bring up the built-in Bugsee bug reporting UI.<br /><br />It gets hidden when Bugsee is stopped, application is minimized, or built-in Bugsee bug reporting UI is being displayed.<br /><br />Starting with API 33 \(TIRAMISU\) the `POST_NOTIFICATIONS` permission is required for this feature to work.|
+|ScreenshotToTrigger|false|Trigger bug report by taking screenshot on device.<br /><br />Bugsee Android SDK 5.0.0 and up.<br /><br />This feature requires additional permissions:<br />**Android 14+**: DETECT_SCREEN_CAPTURE permission is required. More details about the permission and the native API involved in [Android development documentation](https://developer.android.com/about/versions/14/features/screenshot-detection).<br /><br />**Android 13**: READ_MEDIA_IMAGES permission is required.<br /><br />**Android 12** and below: READ_EXTERNAL_STORAGE permission is required.<br /><br />On Android 13 and below, Bugsee SDK monitors the gallery to detect screenshot creation and that's why the permissions mentioned above are required.|
+|CrashReport|true|Catch and report application crashes|
+|NdkCrashReport|false|Catch and report application crashes in native code. This is an experimental feature. Care should be taken when using it in production builds. [Learn more](/sdk/android/v6/crashes/) about NDK crashes symbolication and its requirements.|
+|HandleAnr|false|Detect ANR (Application Not Responding) and transform it to a meaningful exception. Note: option is experimental and it is not recommended to use it in production builds.|
+|DetectAppExit|false|Detect any kind of process termination \(e.g. when user swipes off the application from multitasking UI, or when system unloads the app due memory pressure\). Special error report is generated for this scenario with "BugseeAppExit" domain|
+|VideoEnabled|true|Record video. If *false*, created issues will contain console logs, events and traces, but will not contain video.|
+|ScreenshotEnabled|true|Attach screenshot to a report. Note that if the **VideoEnabled** option is *false*, the default value of this option is *false* as well.|
+|ViewHierarchyEnabled|true|Flag that controls view hierarchy capturing for Bug reports|
+|VideoMode|V3| Screen capture mechanism. Video modes comparison is presented below in [**Video modes comparison**](#video-modes-comparison) section.
+|VideoScale|1.0|Additional down scaling applied to recorded video, (e.g., 0.5 would reduce both width and height by half).|
+|MonitorNetwork|true| Monitor network events|
+|RecordHttpBodyWithoutType|false|Attach http request / response body, which has no declared content type, to a report. If *false*, only textual body is attached to a report. Option has no effect if  **MonitorNetwork** option value is *false*.|
+|MaxNetworkBodySize|20480| The maximal size of network request/response body (in bytes).|
+|ServiceMode|false|Should be used, when Bugsee is launched from service. If *true*, video is not recorded and recording is not stopped, when app goes to background; **ShakeToTrigger** and **NotificationBarTrigger** options are set to *false* automatically.|
+|CaptureLogs|true|Automatically capture Logcat logs.|
+|LogLevel|BugseeLogLevel.Verbose|Minimal log level of Logcat messages, which will be attached to reports. Option has no effect if **CaptureLogs** option is *false*. Option has value of com.bugsee.library.events.BugseeLogLevel type.|
+|MaxDataSize|50|Bugsee will avoid using more disk space than specified (in MB). If total Bugsee data size exceeds specified value, oldest recordings (even not sent) will be removed. Value should not be smaller than 10.|
+|FrameRate|FrameRate.High|Specifies how often frames are captured. Option has value of com.bugsee.library.data.FrameRate type.|
+|WifiOnlyUpload|false|Upload reports only when a device is connected to a wifi network.|
+|ReportPrioritySelector|false|Allow user to modify priority manually when reporting - *true* to allow, *false* to disallow.|
+|DefaultCrashPriority|IssueSeverity.Blocker|Default priority for crashes. Option has value of com.bugsee.library.data.IssueSeverity type.|
+|DefaultBugPriority|IssueSeverity.High|Default priority for bugs. Option has value of com.bugsee.library.data.IssueSeverity type.|
+|CaptureDeviceAndNetworkNames|true|Capture device name, wifi SSID and mobile carrier name.|
+|RememberUserDecisionForScreenCapture|false|Instructs Bugsee SDK to remember the choice user has made when permission dialog was shown for VideoMode.V2. To reset the remembered choice, use ```Bugsee.resetVideoCapturePermissionDecision()``` method.|
+|ReportSummaryRequired|false|Controls whether  _"Summary"_ field in bug reporting UI is mandatory or not.|
+|ReportDescriptionRequired|false|Controls whether  _"Description"_ field in bug reporting UI is mandatory or not.|
+|ReportEmailRequired|false|Controls whether  _"Email"_ field in bug reporting UI is mandatory or not.|
+|ReportLabelsEnabled|false|Display labels field in the built-in bug reporting UI|
+|ReportLabelsRequired|false|Controls whether  _"Labels"_ field in bug reporting UI is mandatory or not.|
+
+### Built-in reporting UI adjustments
+
+Alongside stylistic changes, you can also change the placeholders' texts shown in input controls within the built-in bug reporting UI
+
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.getAppearance().ReportSummaryPlaceholder = "What's happened? Only shortly";
+Bugsee.getAppearance().ReportDescriptionPlaceholder = "Here, describe all the pains and frustrations you had. In details";
+Bugsee.getAppearance().ReportEmailPlaceholder = "Identify yourself here";
+Bugsee.getAppearance().ReportLabelsPlaceholder = "Labels.For.Developers. [Comma separated]";
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.appearance.ReportSummaryPlaceholder = "What's happened? Only shortly"
+Bugsee.appearance.ReportDescriptionPlaceholder = "Here, describe all the pains and frustrations you had. In details"
+Bugsee.appearance.ReportEmailPlaceholder = "Identify yourself here"
+Bugsee.appearance.ReportLabelsPlaceholder = "Labels.For.Developers. [Comma separated]"
+```
+
+  </TabItem>
+</Tabs>
+
+### Video modes comparison
+|Mode name|Surfaces (GlSurfaceView, VideoView, MapView, etc.)|System views (keyboard, status bar, etc.)|User consent|Required Android API|
+|---|---|---|---|---|
+|VideoMode.V1|-|-|-|21|
+|VideoMode.V2\*\*|+|+|+|21|
+|VideoMode.V3\*\*\*|+|-|-|24|
+
+**\*\*VideoMode.V2**: Starting Android 9 it requires [FOREGROUND_SERVICE](https://developer.android.com/reference/android/Manifest.permission#FOREGROUND_SERVICE) permission.
+Starting Android 14 it requires additional [FOREGROUND_SERVICE_MEDIA_PROJECTION](https://developer.android.com/reference/android/Manifest.permission#FOREGROUND_SERVICE_MEDIA_PROJECTION) permission.
+If you want to use V2 mode, your application will have to declare these permissions in manifest.
+
+**\*\*\*VideoMode.V3**: On Samsung devices, VideoMode.V3 will work only on Android 8 and up. Earlier versions of Android on Samsung devices are known to have issues when VideoMode.V3 is being used and hence it preemptively disabled there.
