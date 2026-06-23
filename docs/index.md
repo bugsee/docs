@@ -1,6 +1,6 @@
 ---
 title: "Overview"
-description: "Overview of Bugsee SDK installation links and a feature comparison table across iOS, Android, React Native, Flutter, Unity, .NET, Cordova, and Xamarin."
+description: "Overview of Bugsee SDK installation links and a feature comparison table across iOS, Android, React Native, Flutter, Unity, .NET, and Cordova."
 sidebar_position: 0
 slug: "/"
 ---
@@ -55,10 +55,6 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<img src="/img/icons/apps/dotnet.svg" alt=".NET/MAUI" />
 		<span>.NET</span>
 	</th>
-    <th>
-		<img src="/img/icons/apps/xamarin.svg" alt="Xamarin" />
-		<span>Xamarin <em>(deprecated)</em></span>
-	</th>
 	<th>
 		<img src="/img/icons/apps/kotlin.svg" alt="KMP" />
 		<span>KMP</span>
@@ -76,7 +72,6 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
   		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
 		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
-		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   	</tr>
   	<tr>
   		<th>Capture Touches</th>
@@ -87,7 +82,6 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		  <td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
-		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
 		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   	</tr>
   	<tr>
@@ -100,7 +94,6 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
 		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
-		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   	</tr>
    	<tr>
   		<th>Screenshot & Annotations</th>
@@ -112,7 +105,6 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
       <td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
       <td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
 	  <td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
-	  <td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   	</tr>
    	<tr>
   		<th>Capture Network</th>
@@ -123,7 +115,6 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   		<td><a href="/sdk/dotnet/network/">View</a></td>
-		<td><a href="/sdk/xamarin/network/">View</a></td>
 		<td><a href="/sdk/kmp/network/">View</a></td>
   	</tr>
   	<tr>
@@ -136,7 +127,6 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
   		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
 		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
-		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   	</tr>
   	<tr>
   		<th>Obscure data from video</th>
@@ -147,7 +137,6 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<td><a href="/sdk/flutter/privacy/video/">View</a></td>
   		<td><a href="/sdk/unity/privacy/video/">View</a></td>
 		<td><a href="/sdk/dotnet/privacy/video/">View</a></td>
-  		<td><a href="/sdk/xamarin/privacy/video/">View</a></td>
 		<td><a href="/sdk/kmp/privacy/video/">View</a></td>
   	</tr>
   	<tr>
@@ -159,7 +148,6 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<td><a href="/sdk/flutter/symbolication/">View</a></td>
 		<td><a href="/sdk/unity/crashes/">View</a></td>
 		<td><a href="/sdk/dotnet/symbolication/">View</a></td>
-  		<td><a href="/sdk/xamarin/symbolication/">View</a></td>
 		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   	</tr>
    	<tr>
@@ -171,7 +159,6 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<td><a href="/sdk/flutter/logs/">View</a></td>
 		<td><a href="/sdk/unity/logs/">View</a></td>
 		<td><a href="/sdk/dotnet/logs/">View</a></td>
-		<td><a href="/sdk/xamarin/logs/">View</a></td>
 		<td><a href="/sdk/kmp/logs/">View</a></td>
   	</tr>
   	<tr>
@@ -183,7 +170,6 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<td><a href="/sdk/flutter/custom/#custom-events">View</a></td>
 		<td><a href="/sdk/unity/custom/#custom-events">View</a></td>
 		<td><a href="/sdk/dotnet/custom/#custom-events">View</a></td>
-		<td><a href="/sdk/xamarin/custom/#custom-events">View</a></td>
 		<td><a href="/sdk/kmp/custom/#custom-events">View</a></td>
   	</tr>
    	<tr>
@@ -195,7 +181,6 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<td><a href="/sdk/flutter/custom/#custom-traces">View</a></td>
 		<td><a href="/sdk/unity/custom/#custom-traces">View</a></td>
 		<td><a href="/sdk/dotnet/custom/#custom-traces">View</a></td>
-		<td><a href="/sdk/xamarin/custom/#custom-traces">View</a></td>
 		<td><a href="/sdk/kmp/custom/#custom-traces">View</a></td>
   	</tr>
     <tr>
@@ -207,7 +192,6 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<td><a href="/sdk/flutter/custom/#usersession-attributes">View</a></td>
 		<td><a href="/sdk/unity/custom/#usersession-attributes">View</a></td>
 		<td><a href="/sdk/dotnet/custom/#usersession-attributes">View</a></td>
-		<td><a href="/sdk/xamarin/custom/#usersession-attributes">View</a></td>
 		<td><a href="/sdk/kmp/custom/#usersession-attributes">View</a></td>
     </tr>
    	<tr>
@@ -219,7 +203,6 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<td><a href="/sdk/flutter/custom/#file-attachments">View</a></td>
 		<td><a href="/sdk/unity/custom/#file-attachments">View</a></td>
 		<td><a href="/sdk/dotnet/custom/">View</a></td>
-		<td><a href="/sdk/xamarin/custom/">View</a></td>
 		<td><a href="/sdk/kmp/custom/#file-attachments">View</a></td>
   	</tr>
   </tbody>
