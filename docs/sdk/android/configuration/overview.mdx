@@ -28,12 +28,12 @@ Every Bugsee SDK option can be set in two equivalent ways. The literal string ke
 
 ## General
 
-| `Options` constant | Manifest key | Type | Default |
-| --- | --- | --- | --- |
-| `Duration` | `com.bugsee.option.config.duration` | int (seconds) | `60` |
-| `WifiOnlyUpload` | `com.bugsee.option.config.wifi-only-upload` | boolean | `false` |
-| `ReportProcessingInProcess` | `com.bugsee.option.config.report-processing-in-process` | boolean | `true` |
-| `ReportHandlerCallbackTimeout` | `com.bugsee.option.config.report-handler-callback-timeout` | int (seconds) | `30` |
+| `Options` constant | Manifest key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `Duration` | `com.bugsee.option.config.duration` | int (seconds) | `60` | Maximum length of the cyclical capture buffer (video, logs, breadcrumbs); older data rolls off once the window is full. |
+| `WifiOnlyUpload` | `com.bugsee.option.config.wifi-only-upload` | boolean | `false` | Defer report uploads until the device is on Wi-Fi. |
+| `ReportProcessingInProcess` | `com.bugsee.option.config.report-processing-in-process` | boolean | `true` | When `true`, report export and upload run in-process on background threads; when `false` they go through Android's `JobScheduler` so they survive process death, at the cost of upload latency. |
+| `ReportHandlerCallbackTimeout` | `com.bugsee.option.config.report-handler-callback-timeout` | int (seconds) | `30` | How long to wait for a `ReportHandler` completion callback before auto-firing it so the report isn't lost. `0` disables the timeout. Not applied to terminating (crash) sequences. |
 
 `Duration` caps the cyclical capture buffer (video, logs, breadcrumbs) at the given number of seconds. `WifiOnlyUpload` defers report uploads until Wi-Fi. `ReportProcessingInProcess = false` routes report processing through `JobScheduler` so it survives process death (at the cost of upload latency). `ReportHandlerCallbackTimeout = 0` disables the timeout — but it doesn't apply to crash sequences.
 
@@ -64,30 +64,30 @@ Bugsee.launch(this, "<APP_TOKEN>", options);
 
 The full set of detection options is documented on each detector's own page in [Issue detection](/sdk/android/issue-detection). The table below is the option reference.
 
-| `Options` constant | Manifest key | Type | Default |
-| --- | --- | --- | --- |
-| `DetectAndReportCrash` | `com.bugsee.option.detect.crash` | boolean | `true` |
-| `DetectAndReportEarlyCrash` | `com.bugsee.option.detect.early-crash` | boolean | `false` |
-| `DetectAndReportHang` | `com.bugsee.option.detect.hang` | boolean | `false` |
-| `DetectAndReportHangFairLevel` | `com.bugsee.option.detect.hang.level.fair` | int (ms) | `3000` |
-| `DetectAndReportHangMediumLevel` | `com.bugsee.option.detect.hang.level.medium` | int (ms) | `5000` |
-| `DetectAndReportHangSevereLevel` | `com.bugsee.option.detect.hang.level.severe` | int (ms) | `10000` |
-| `DetectAndReportMainThreadMisuse` | `com.bugsee.option.detect.main_thread_misuse` | boolean | `false` |
-| `DetectAndReportAnomaly` | `com.bugsee.option.detect.anomaly` | boolean | `false` |
-| `DetectAndReportHttpErrors` | `com.bugsee.option.detect.http-errors` | boolean | `false` |
-| `DetectFrustration` | `com.bugsee.option.detect.frustration` | boolean | `false` |
-| `DetectAndReportExit` | `com.bugsee.option.detect.exit` | boolean | `true` |
-| `DetectAndReportExitLowMemory` | `com.bugsee.option.detect.exit.low_memory` | boolean | `true` |
-| `DetectAndReportExitNotResponding` | `com.bugsee.option.detect.exit.not_responding` | boolean | `true` |
-| `DetectAndReportExitExcessiveResourceUsage` | `com.bugsee.option.detect.exit.excessive_resource_usage` | boolean | `false` |
-| `DetectAndReportExitDependencyDied` | `com.bugsee.option.detect.exit.dependency_died` | boolean | `false` |
-| `DetectAndReportExitUserRequested` | `com.bugsee.option.detect.exit.user_requested` | boolean | `false` |
-| `DetectAndReportExitUserWasStopped` | `com.bugsee.option.detect.exit.user_was_stopped` | boolean | `false` |
-| `DetectAndReportExitPermissionChanged` | `com.bugsee.option.detect.exit.permission_changed` | boolean | `false` |
-| `DetectAndReportExitPackageUpdated` | `com.bugsee.option.detect.exit.package_updated` | boolean | `false` |
-| `DetectAndReportExitPackageStateChanged` | `com.bugsee.option.detect.exit.package_state_changed` | boolean | `false` |
-| `DetectAndReportExitOther` | `com.bugsee.option.detect.exit.other` | boolean | `false` |
-| `DetectAndReportExitUnknown` | `com.bugsee.option.detect.exit.unknown` | boolean | `false` |
+| `Options` constant | Manifest key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `DetectAndReportCrash` | `com.bugsee.option.detect.crash` | boolean | `true` | Catch unhandled Java/Kotlin exceptions and report them as crashes. |
+| `DetectAndReportEarlyCrash` | `com.bugsee.option.detect.early-crash` | boolean | `false` | Also catch crashes that happen very early in startup, before the SDK is fully attached. |
+| `DetectAndReportHang` | `com.bugsee.option.detect.hang` | boolean | `false` | Detect and report when the main (UI) thread is blocked long enough to count as a hang. |
+| `DetectAndReportHangFairLevel` | `com.bugsee.option.detect.hang.level.fair` | int (ms) | `3000` | Main-thread block duration that triggers a "Fair"-severity hang report. Must be smaller than the Medium level; detection resolution is roughly 1 s. |
+| `DetectAndReportHangMediumLevel` | `com.bugsee.option.detect.hang.level.medium` | int (ms) | `5000` | Main-thread block duration that triggers a "Medium"-severity hang report. Must sit between the Fair and Severe levels. |
+| `DetectAndReportHangSevereLevel` | `com.bugsee.option.detect.hang.level.severe` | int (ms) | `10000` | Main-thread block duration that triggers a "Severe"-severity hang report. Must be greater than the Medium level. |
+| `DetectAndReportMainThreadMisuse` | `com.bugsee.option.detect.main_thread_misuse` | boolean | `false` | Report file I/O, network, database, or SharedPreferences operations performed on the main thread. |
+| `DetectAndReportAnomaly` | `com.bugsee.option.detect.anomaly` | boolean | `false` | Enable the built-in statistical performance-anomaly detector (per-bucket EWMA baselines persisted across sessions). |
+| `DetectAndReportHttpErrors` | `com.bugsee.option.detect.http-errors` | boolean | `false` | Convert HTTP 5xx (500–599) responses into error reports sent to Bugsee. |
+| `DetectFrustration` | `com.bugsee.option.detect.frustration` | boolean | `false` | Detect user-frustration patterns (rage taps, dead taps, stuck loading, frozen UI) and report them as simulated errors grouped by screen and element. |
+| `DetectAndReportExit` | `com.bugsee.option.detect.exit` | boolean | `true` | Detect and report application exits. The per-reason flags below select which exit reasons are reported. |
+| `DetectAndReportExitLowMemory` | `com.bugsee.option.detect.exit.low_memory` | boolean | `true` | Report exits where the OS killed the app to reclaim memory. |
+| `DetectAndReportExitNotResponding` | `com.bugsee.option.detect.exit.not_responding` | boolean | `true` | Report exits caused by the app not responding (ANR). |
+| `DetectAndReportExitExcessiveResourceUsage` | `com.bugsee.option.detect.exit.excessive_resource_usage` | boolean | `false` | Report exits caused by excessive resource usage. |
+| `DetectAndReportExitDependencyDied` | `com.bugsee.option.detect.exit.dependency_died` | boolean | `false` | Report exits caused by a dependency process dying. |
+| `DetectAndReportExitUserRequested` | `com.bugsee.option.detect.exit.user_requested` | boolean | `false` | Report exits triggered by the user (e.g. force-stop). |
+| `DetectAndReportExitUserWasStopped` | `com.bugsee.option.detect.exit.user_was_stopped` | boolean | `false` | Report exits caused by the system stopping the app. |
+| `DetectAndReportExitPermissionChanged` | `com.bugsee.option.detect.exit.permission_changed` | boolean | `false` | Report exits caused by a runtime-permission change. |
+| `DetectAndReportExitPackageUpdated` | `com.bugsee.option.detect.exit.package_updated` | boolean | `false` | Report exits caused by the app package being updated. |
+| `DetectAndReportExitPackageStateChanged` | `com.bugsee.option.detect.exit.package_state_changed` | boolean | `false` | Report exits caused by a package state change. |
+| `DetectAndReportExitOther` | `com.bugsee.option.detect.exit.other` | boolean | `false` | Report exits the OS classifies with an "other" reason. |
+| `DetectAndReportExitUnknown` | `com.bugsee.option.detect.exit.unknown` | boolean | `false` | Report exits with an unknown reason. |
 
 <Tabs groupId="config">
   <TabItem value="manifest" label="AndroidManifest.xml">
@@ -114,29 +114,29 @@ Bugsee.launch(this, "<APP_TOKEN>", options);
 
 ## Capture
 
-| `Options` constant | Manifest key | Type | Default |
-| --- | --- | --- | --- |
-| `CaptureLogs` | `com.bugsee.option.capture.logs` | boolean | `true` |
-| `CaptureLogsLevel` | `com.bugsee.option.capture.logs.level` | `LogLevel` | `Verbose` |
-| `CaptureLogsUseAllSources` | `com.bugsee.option.capture.logs.allsources` | boolean | `false` |
-| `CaptureScreenshot` | `com.bugsee.option.capture.screenshot` | boolean | `true` |
-| `CaptureScreenshotScale` | `com.bugsee.option.capture.screenshot.scale` | float `[0.05, 1.0]` | `1.0` |
-| `CaptureNetwork` | `com.bugsee.option.capture.network` | boolean | `true` |
-| `CaptureNetworkBodySizeLimit` | `com.bugsee.option.capture.network.body-size-limit` | int (bytes) | `20480` |
-| `CaptureNetworkBodyWithoutType` | `com.bugsee.option.capture.network.body-without-type` | boolean | `false` |
-| `CaptureNetworkUseDefaultSanitizer` | `com.bugsee.option.capture.network.default-sanitizer` | boolean | `true` |
-| `CaptureViewHierarchy` | `com.bugsee.option.capture.view-hierarchy` | boolean | `true` |
-| `CaptureBreadcrumbs` | `com.bugsee.option.capture.breadcrumbs` | boolean | `false` |
-| `CaptureBreadcrumbsExtras` | `com.bugsee.option.capture.breadcrumbs.extras` | boolean | `false` |
-| `CaptureVideo` | `com.bugsee.option.capture.video` | boolean | `true` |
-| `CaptureVideoMode` | `com.bugsee.option.capture.video.mode` | `VideoMode` | `V2` |
-| `CaptureVideoQuality` | `com.bugsee.option.capture.video.quality` | `VideoQuality` | `Default` |
-| `CaptureVideoFrameRate` | `com.bugsee.option.capture.video.frame-rate` | `FrameRate` | `High` |
-| `CaptureVideoScale` | `com.bugsee.option.capture.video.scale` | float `[0.1, 1.0]` | `1.0` |
-| `CaptureVideoSecureScrolling` | `com.bugsee.option.capture.video.secure-scrolling` | boolean | `false` |
-| `CaptureVideoUsingCustomMuxer` | `com.bugsee.option.capture.video.custom-muxer` | boolean | `false` |
-| `CaptureVideoFullscreenRememberUserDecision` | `com.bugsee.option.capture.video.fullscreen-remember-decision` | boolean | `true` |
-| `CaptureVideoFullscreenKeepRunning` | `com.bugsee.option.capture.video.fullscreen-keep-running` | boolean | `true` |
+| `Options` constant | Manifest key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `CaptureLogs` | `com.bugsee.option.capture.logs` | boolean | `true` | Automatically capture Logcat output. |
+| `CaptureLogsLevel` | `com.bugsee.option.capture.logs.level` | `LogLevel` | `Verbose` | Minimum log level to capture; lower-priority entries are dropped. |
+| `CaptureLogsUseAllSources` | `com.bugsee.option.capture.logs.allsources` | boolean | `false` | Query all logcat buffers (system, radio, etc.) instead of just the default sources, which suffice in most cases. |
+| `CaptureScreenshot` | `com.bugsee.option.capture.screenshot` | boolean | `true` | Capture a screenshot when a report is created. |
+| `CaptureScreenshotScale` | `com.bugsee.option.capture.screenshot.scale` | float `[0.05, 1.0]` | `1.0` | Privacy down-then-up scaling applied to screenshots: destroys fine detail (text, icons) while preserving layout. `1.0` disables the transform. Mirrors `CaptureVideoScale`. |
+| `CaptureNetwork` | `com.bugsee.option.capture.network` | boolean | `true` | Monitor and capture network requests and responses. |
+| `CaptureNetworkBodySizeLimit` | `com.bugsee.option.capture.network.body-size-limit` | int (bytes) | `20480` | Maximum captured request/response body size, in bytes. |
+| `CaptureNetworkBodyWithoutType` | `com.bugsee.option.capture.network.body-without-type` | boolean | `false` | Also attach request/response bodies that have no declared content type; otherwise only textual bodies are kept. |
+| `CaptureNetworkUseDefaultSanitizer` | `com.bugsee.option.capture.network.default-sanitizer` | boolean | `true` | Auto-redact known sensitive keys (PII) in URL query parameters, HTTP headers, and JSON bodies. Applies only when no custom network event filter is set. |
+| `CaptureViewHierarchy` | `com.bugsee.option.capture.view-hierarchy` | boolean | `true` | Capture the view-hierarchy snapshot for reports. |
+| `CaptureBreadcrumbs` | `com.bugsee.option.capture.breadcrumbs` | boolean | `false` | Capture the breadcrumb trail of user and system events. |
+| `CaptureBreadcrumbsExtras` | `com.bugsee.option.capture.breadcrumbs.extras` | boolean | `false` | Also attach the raw `Intent` extras of captured system-event broadcasts to each breadcrumb. |
+| `CaptureVideo` | `com.bugsee.option.capture.video` | boolean | `true` | Record screen video for reports. |
+| `CaptureVideoMode` | `com.bugsee.option.capture.video.mode` | `VideoMode` | `V2` | Screen-capture mode/strategy to use (see [enum reference](#enum-reference)). |
+| `CaptureVideoQuality` | `com.bugsee.option.capture.video.quality` | `VideoQuality` | `Default` | Quality of the final encoded video. |
+| `CaptureVideoFrameRate` | `com.bugsee.option.capture.video.frame-rate` | `FrameRate` | `High` | How often frames are captured (see [enum reference](#enum-reference)). |
+| `CaptureVideoScale` | `com.bugsee.option.capture.video.scale` | float `[0.1, 1.0]` | `1.0` | Additional down-scaling applied to recorded video (e.g. `0.5` halves both width and height). |
+| `CaptureVideoSecureScrolling` | `com.bugsee.option.capture.video.secure-scrolling` | boolean | `false` | In `VideoMode.V1`, skip more frames while secure views are present on screen. |
+| `CaptureVideoUsingCustomMuxer` | `com.bugsee.option.capture.video.custom-muxer` | boolean | `false` | Use Bugsee's lightweight MP4 muxer instead of Android's `MediaMuxer` for video encoding; produces less verbose log output. |
+| `CaptureVideoFullscreenRememberUserDecision` | `com.bugsee.option.capture.video.fullscreen-remember-decision` | boolean | `true` | Persist the user's MediaProjection (screen-capture) consent decision across launches so they aren't re-prompted. Clear it at runtime with `Bugsee.resetVideoCapturePermission()`. |
+| `CaptureVideoFullscreenKeepRunning` | `com.bugsee.option.capture.video.fullscreen-keep-running` | boolean | `true` | Keep the MediaProjection session running in background (`true`: small ongoing CPU/battery cost plus a persistent foreground-service notification, but no re-prompt) versus tearing it down and re-acquiring on return to foreground (`false`: no background cost, but re-prompts on Android 14+). |
 
 For video modes and redaction details see [Privacy → Video](/sdk/android/privacy/video).
 
@@ -165,12 +165,12 @@ Bugsee.launch(this, "<APP_TOKEN>", options);
 
 ## Reporting triggers
 
-| `Options` constant | Manifest key | Type | Default |
-| --- | --- | --- | --- |
-| `ReportingTriggerByShake` | `com.bugsee.option.reporting.triggers.shake` | boolean | `true` |
-| `ReportingTriggerByScreenshot` | `com.bugsee.option.reporting.triggers.screenshot` | boolean | `false` |
-| `ReportingTriggerByNotification` | `com.bugsee.option.reporting.triggers.notification-bar` | boolean | `true` |
-| `ReportingTriggerByBroadcast` | `com.bugsee.option.reporting.triggers.broadcast` | boolean | `false` |
+| `Options` constant | Manifest key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `ReportingTriggerByShake` | `com.bugsee.option.reporting.triggers.shake` | boolean | `true` | Open the bug-reporting UI when the device is shaken. |
+| `ReportingTriggerByScreenshot` | `com.bugsee.option.reporting.triggers.screenshot` | boolean | `false` | Open the bug-reporting UI when the user takes a screenshot. |
+| `ReportingTriggerByNotification` | `com.bugsee.option.reporting.triggers.notification-bar` | boolean | `true` | Show a notification-bar entry that opens the bug-reporting UI when tapped. |
+| `ReportingTriggerByBroadcast` | `com.bugsee.option.reporting.triggers.broadcast` | boolean | `false` | Allow a report to be triggered by an Android broadcast intent. |
 
 <Tabs groupId="config">
   <TabItem value="manifest" label="AndroidManifest.xml">
@@ -194,22 +194,22 @@ Bugsee.launch(this, "<APP_TOKEN>", options);
 
 ## Reporting defaults
 
-| `Options` constant | Manifest key | Type | Default |
-| --- | --- | --- | --- |
-| `ReportingDefaultCrashPriority` | `com.bugsee.option.reporting.defaults.crash-priority` | `IssueSeverity` | `Blocker` |
-| `ReportingDefaultErrorPriority` | `com.bugsee.option.reporting.defaults.error-priority` | `IssueSeverity` | `High` |
-| `ReportingDefaultBugPriority` | `com.bugsee.option.reporting.defaults.bug-priority` | `IssueSeverity` | `High` |
+| `Options` constant | Manifest key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `ReportingDefaultCrashPriority` | `com.bugsee.option.reporting.defaults.crash-priority` | `IssueSeverity` | `Blocker` | Default severity assigned to crash reports. |
+| `ReportingDefaultErrorPriority` | `com.bugsee.option.reporting.defaults.error-priority` | `IssueSeverity` | `High` | Default severity assigned to error reports. |
+| `ReportingDefaultBugPriority` | `com.bugsee.option.reporting.defaults.bug-priority` | `IssueSeverity` | `High` | Default severity assigned to manually filed bug reports. |
 
 ## Reporting UI
 
-| `Options` constant | Manifest key | Type | Default |
-| --- | --- | --- | --- |
-| `ReportingUISummaryRequired` | `com.bugsee.option.reporting.ui.summary-required` | boolean | `false` |
-| `ReportingUIDescriptionRequired` | `com.bugsee.option.reporting.ui.description-required` | boolean | `false` |
-| `ReportingUIEmailRequired` | `com.bugsee.option.reporting.ui.email-required` | boolean | `false` |
-| `ReportingUILabelsEnabled` | `com.bugsee.option.reporting.ui.labels-enabled` | boolean | `false` |
-| `ReportingUILabelsRequired` | `com.bugsee.option.reporting.ui.labels-required` | boolean | `false` |
-| `ReportingUIPrioritySelectorEnabled` | `com.bugsee.option.reporting.ui.priority-selector-enabled` | boolean | `false` |
+| `Options` constant | Manifest key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `ReportingUISummaryRequired` | `com.bugsee.option.reporting.ui.summary-required` | boolean | `false` | Make the Summary field mandatory in the bug-reporting UI. |
+| `ReportingUIDescriptionRequired` | `com.bugsee.option.reporting.ui.description-required` | boolean | `false` | Make the Description field mandatory in the bug-reporting UI. |
+| `ReportingUIEmailRequired` | `com.bugsee.option.reporting.ui.email-required` | boolean | `false` | Make the Email field mandatory in the bug-reporting UI. |
+| `ReportingUILabelsEnabled` | `com.bugsee.option.reporting.ui.labels-enabled` | boolean | `false` | Show the Labels input field in the bug-reporting UI. |
+| `ReportingUILabelsRequired` | `com.bugsee.option.reporting.ui.labels-required` | boolean | `false` | Make the Labels field mandatory in the bug-reporting UI (implies it is shown). |
+| `ReportingUIPrioritySelectorEnabled` | `com.bugsee.option.reporting.ui.priority-selector-enabled` | boolean | `false` | Let the user set the report priority manually in the bug-reporting UI. |
 
 `ReportingUILabelsRequired = true` implies `ReportingUILabelsEnabled = true`.
 
@@ -217,12 +217,12 @@ Bugsee.launch(this, "<APP_TOKEN>", options);
 
 See [Performance monitoring](/sdk/android/performance) for the APM overview.
 
-| `Options` constant | Manifest key | Type | Default |
-| --- | --- | --- | --- |
-| `PerformanceMonitoring` | `com.bugsee.option.performance.enabled` | boolean | `true` |
-| `PerformanceSampleRate` | `com.bugsee.option.performance.sample-rate` | float `[0, 1]` | `0.01` |
-| `PerformanceUploadMode` | `com.bugsee.option.performance.upload-mode` | String | `"batched"` |
-| `PerformanceAdaptiveSampling` | `com.bugsee.option.performance.adaptive-sampling` | boolean | `true` |
+| `Options` constant | Manifest key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `PerformanceMonitoring` | `com.bugsee.option.performance.enabled` | boolean | `true` | Master switch for performance monitoring (APM). |
+| `PerformanceSampleRate` | `com.bugsee.option.performance.sample-rate` | float `[0, 1]` | `0.01` | Probability that a transaction is sampled for standalone APM upload. Does not affect capture — every transaction still flows into the report pipeline. |
+| `PerformanceUploadMode` | `com.bugsee.option.performance.upload-mode` | String | `"batched"` | How standalone APM data is uploaded: `"batched"` (30 s flush) or `"realtime"`. |
+| `PerformanceAdaptiveSampling` | `com.bugsee.option.performance.adaptive-sampling` | boolean | `true` | On top of the static sample rate, promote "interesting" unsampled transactions — scored at finish by status, duration outlier-ness, and span-tree complexity — into the upload pipeline. |
 
 `PerformanceUploadMode` accepts `"batched"` (30 s flush) or `"realtime"`. `PerformanceSampleRate` gates **standalone APM uploads only** — every transaction still flows into the capture pipeline for reports regardless of sampling. `PerformanceAdaptiveSampling = true` turns the sample rate into a ceiling rather than a fixed probability.
 
