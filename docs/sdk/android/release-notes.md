@@ -5,7 +5,12 @@ sidebar_position: 17
 slug: "/sdk/android/release-notes"
 ---
 
-Release history for Bugsee Android SDK 7.0.0. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
+Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
+
+## 7.0.1
+
+- **SurfaceView composition.** Captured SurfaceView may be incorrectly composited (in captured video) outside the app window after scrolling when activity is shown in a bubble (Android 17).
+
 
 ## 7.0.0
 
