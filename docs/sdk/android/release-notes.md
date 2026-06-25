@@ -7,6 +7,14 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.0.2
+
+**Fixes**
+
+- **Screen-capture crash.** Fixed a rare `NullPointerException` during video capture caused by a thread-safety issue in the internal video frame pipeline — the frame buffer could be recycled on another thread between being written and read. The capture pipeline now reads it through a single safe snapshot and skips the affected frame instead of crashing.
+- **More resilient SurfaceView capture.** The `SurfaceView` / `PixelCopy` capture path now recovers if a copy-result callback is never delivered — a watchdog reschedules capture instead of stalling the recording — and additional capture callbacks and bitmap handling are guarded against null and concurrent recycling.
+
+
 ## 7.0.1
 
 - **SurfaceView composition.** Captured SurfaceView may be incorrectly composited (in captured video) outside the app window after scrolling when activity is shown in a bubble (Android 17).
