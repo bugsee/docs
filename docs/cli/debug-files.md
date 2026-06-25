@@ -84,7 +84,12 @@ bugsee-cli debug-files upload ./app/build/intermediates/merged_native_libs \
 ```
 
 ELF symbols are uploaded with a Breakpad transform so native crashes from the
-Android NDK (or Linux) symbolicate.
+Android NDK (or Linux) symbolicate. Each `.so` is uploaded as its own symbol,
+keyed by its **GNU build-id** (`.note.gnu.build-id`) — so an unchanged library
+is skipped before its bytes transfer. A library built **without** a build-id
+can't be matched at crash time and is skipped with a warning; build native
+libraries with `-Wl,--build-id=sha1` to ensure they're symbolicated (see
+[Native crashes → Symbolication](/sdk/android/issue-detection/native-crashes#symbolication-and-native-debug-symbol-upload)).
 
 ## Apple (dSYM)
 

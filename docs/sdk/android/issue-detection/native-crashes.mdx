@@ -110,6 +110,31 @@ bugsee {
 }
 ```
 
+:::tip Build your native libraries with a GNU build-id
+Bugsee matches each native library to its uploaded symbols by the library's **GNU build-id** — the `.note.gnu.build-id` ELF note that Crashpad also records for every loaded module in the minidump. A `.so` built **without** a build-id can't be matched to a crash, so the upload skips it (it is never keyed by the build UUID, which belongs to the R8/ProGuard mapping).
+
+The Android NDK normally emits a build-id, but custom linker setups can drop it. Pass `-Wl,--build-id=sha1` to the linker to guarantee every `.so` carries a stable one:
+
+<Tabs groupId="native-build">
+  <TabItem value="cmake" label="CMake">
+
+```cmake title="CMakeLists.txt"
+target_link_options(your_native_lib PRIVATE "-Wl,--build-id=sha1")
+```
+
+  </TabItem>
+  <TabItem value="ndk-build" label="ndk-build">
+
+```makefile title="Android.mk"
+LOCAL_LDFLAGS += -Wl,--build-id=sha1
+```
+
+  </TabItem>
+</Tabs>
+
+Any build-id style works as long as one is present — the same id is recorded on both the crash and symbol sides — but `=sha1` pins a deterministic 160-bit id.
+:::
+
 Maven-based builds can't register the task; upload native symbols manually through the Bugsee dashboard or REST API.
 
 ## ProGuard / R8 interaction
