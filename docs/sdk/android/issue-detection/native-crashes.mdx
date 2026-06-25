@@ -110,7 +110,7 @@ bugsee {
 }
 ```
 
-:::tip Build your native libraries with a GNU build-id
+:::tip[Build your native libraries with a GNU build-id]
 Bugsee matches each native library to its uploaded symbols by the library's **GNU build-id** — the `.note.gnu.build-id` ELF note that Crashpad also records for every loaded module in the minidump. A `.so` built **without** a build-id can't be matched to a crash, so the upload skips it (it is never keyed by the build UUID, which belongs to the R8/ProGuard mapping).
 
 The Android NDK normally emits a build-id, but custom linker setups can drop it. Pass `-Wl,--build-id=sha1` to the linker to guarantee every `.so` carries a stable one:
