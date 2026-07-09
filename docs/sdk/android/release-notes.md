@@ -1,11 +1,35 @@
 ---
 title: "Release notes"
-description: "Release history for Bugsee Android SDK 7.0.0."
+description: "Release history for Bugsee Android SDK 7.x."
 sidebar_position: 17
 slug: "/sdk/android/release-notes"
 ---
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
+
+## 7.0.3
+
+A broad privacy, reliability, and compatibility release.
+
+**New features**
+
+- **More context in every report.** Reports now capture additional device and app signals — a per-app language override, floating-window ("bubble") state, Game Mode, thermal headroom, key accessibility settings, and Doze / app-standby power status — giving you more to correlate against when reproducing an issue.
+
+**Fixes**
+
+- **Interaction on secure fields is no longer recorded.** Taps, gestures, and focus on password fields and other views you mark as secure are now excluded from capture. Previously the on-screen pixels were masked but the surrounding interaction data could still be collected. (Typed text was already protected.)
+- **Stronger WebView redaction.** Password and hidden fields inside WebViews are now reliably blacked out across every frame and domain, including cross-origin iframes, and stay correctly positioned after the page is scrolled. If the first redaction attempt on a device doesn't take, the SDK now retries automatically instead of leaving those fields exposed.
+- **Consistent network scrubbing.** Closed a path where some captured network events could bypass your data-scrubbing filters.
+- **The SDK is guarded against crashing your app at startup.** Automatic initialization is now fully wrapped, so an unexpected failure on an unusual device or OS build makes Bugsee quietly disable itself rather than affecting your app.
+- **Compatibility with older Android versions.** Fixed crashes that could occur on Android 5.0–6.0 (API 21–23) when newer platform APIs were used without a fallback.
+- **More resilient handling of unexpected data.** Malformed, truncated, or unusually large inputs — crash markers, saved options, encrypted payloads, and server or WebView responses — are now handled gracefully instead of risking a crash or excessive memory use.
+- **Thread-safety and resource-leak fixes.** Resolved several rare race conditions and small leaks across the capture, performance-monitoring, and reporting paths for steadier long-running sessions.
+- **Cleaner video capture.** Empty or unreadable recordings are now detected and handled gracefully instead of producing a broken video.
+
+**Compatibility**
+
+- Now built against the stable **Bugsee Android Gradle plugin 4.0.0** (previously a 4.0.0 beta). Works with **4.0.0** or newer.
+
 
 ## 7.0.2
 
