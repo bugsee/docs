@@ -7,6 +7,16 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.0.4
+
+A follow-up privacy release that keeps WebView redaction reliable on the latest devices and extends it to more kinds of web content.
+
+**Fixes**
+
+- **WebView redaction restored on newer devices.** On devices whose system WebView had updated to a more recent build, redaction could stop reaching content inside iframes and certain embedded components — leaving password and hidden fields visible in the recording. The SDK now applies its protection to every frame in a more resilient way, so those fields stay blacked out regardless of the installed WebView version. No app changes required.
+- **Secure fields inside web components are now redacted.** Password and hidden fields rendered inside Shadow DOM — used by many modern web components, in both open and closed modes — are now detected and blacked out like any other secure field.
+- **Redaction keeps up as the page changes.** Masks now track more kinds of page updates — layout reflow, images and fonts finishing loading, scrolling inside a nested scroll area, and fields that appear or disappear dynamically — so secure content stays covered instead of briefly drifting out of place.
+
 ## 7.0.3
 
 A broad privacy, reliability, and compatibility release.
