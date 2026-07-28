@@ -9,6 +9,13 @@ slug: "/sdk/android/gradle-plugin/releases"
 
 ## 4.x (SDK 7.x)
 
+### 4.0.2 (July 28 2026)
+
+Bug-fix release. Extends the `ClassContext.loadClassData` probe removal from 4.0.0-beta10 (which only covered app-startup tracing) to the remaining instrumentation lanes — restoring Jetpack Compose touch capture and enabling third-party-JAR call-site instrumentation. No DSL changes; drop-in upgrade from 4.0.x.
+
+- **Jetpack Compose touch capture now works.** The Compose input lane gated instrumentation on a per-class `ClassContext.loadClassData` probe that is unreliable across AGP's artifact-transform isolation boundaries. Because `androidx.compose.ui.platform.AndroidComposeView` lives only in the `androidx.compose.ui:ui` JAR — whose transform context cannot see the consumer's core SDK dependency — the probe always returned null and the class was silently skipped, so `BugseeComposeInputAdapter.onComposeTouch` was never injected into `AndroidComposeView.dispatchTouchEvent`. Under 4.0.0 / 4.0.1, touch events inside Compose UI were not captured at all. 4.0.2 removes the probe (SDK presence is verified once at configuration time in `shouldApply`, matching the app-startup lane), so Compose taps are now recorded. Requires no SDK change — `BugseeComposeInputAdapter` already ships in Bugsee Android SDK 7.x.
+- **Call sites inside third-party JARs are now instrumented.** The same probe gated the OkHttp, Cronet, log, main-thread-misuse, operation-dispatch, and thread lanes. It happened to work for call sites in the app module (which can see the core SDK on their transform boundary) but silently skipped equivalent call sites inside dependency JARs. With the probe removed, network / log / I/O / thread call sites in third-party libraries are captured too.
+
 ### 4.0.1 (July 9 2026)
 
 - **Core SDK auto-load now tracks the latest release within SDK 7.x.** When the plugin auto-adds `com.bugsee:bugsee-android` for an app that has not declared the core SDK explicitly, it now uses a major-bounded dynamic range such as `[7.0.0,8.0.0)`. This lets apps pick up newer compatible 7.x minor and patch SDK releases automatically, while still avoiding an automatic jump to SDK 8.x.
