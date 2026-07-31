@@ -5,6 +5,11 @@ sidebar_position: 12
 slug: "/sdk/ios/release-notes"
 ---
 
+## 6.3.0 (July 31 2026)
+- Feat: Opt-in adaptive screen capture — lowers the video frame rate when the UI is idle (`BugseeCaptureVideoAdaptiveKey` / `CaptureVideoAdaptive`, default: NO).
+- Fix: iOS 27 compatibility improvements.
+- Fix: Rare screen-capture issues with zero-size layers.
+
 ## 6.2.0 (June 19 2026)
 - Feat: Application Performance Monitoring (APM) — first iteration. A new in-process span/trace pipeline that auto-instruments NSURLSession HTTP requests, NSData file reads/writes, NSFileManager file operations, UIViewController lifecycle, and app startup. Adds a public `Bugsee.startTransaction(...)` / `Bugsee.startSpan(...)` API for manual instrumentation. Captured transactions are attached to every report. Controlled by the `performanceMonitoring` option (`BugseePerformanceMonitoringKey`, default: YES). APM auto-instrumentation for SwiftUI is coming in an upcoming release.
 - Feat: WYSIWYG markdown formatting in the feedback chat.
