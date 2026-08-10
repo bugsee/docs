@@ -47,8 +47,12 @@ val secure = Bugsee.isSecureActivity(MySecretActivity::class.java.name)
   </TabItem>
 </Tabs>
 
-Activities carrying the system `FLAG_SECURE` flag are protected without any
-Bugsee call.
+Windows carrying the system `FLAG_SECURE` flag are protected without any Bugsee
+call: they are blanked in video and screenshots, excluded from the view hierarchy,
+and their input is not recorded. Since 7.1.0 this is controlled by the
+[`CaptureRespectFlagSecure`](/sdk/android/configuration#capture) option,
+which is enabled by default. Set it to `false` if your app marks windows
+`FLAG_SECURE` broadly and you would rather keep recording them.
 
 ## Protecting views
 
