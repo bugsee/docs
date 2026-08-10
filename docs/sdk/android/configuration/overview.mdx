@@ -1,6 +1,6 @@
 ---
 title: "Configuration — Overview"
-description: "Every core SDK option in Bugsee Android 7.0, with both AndroidManifest.xml meta-data and Bugsee.launch() map forms."
+description: "Every core SDK option in Bugsee Android 7.1, with both AndroidManifest.xml meta-data and Bugsee.launch() map forms."
 sidebar_position: 1
 slug: "/sdk/android/configuration"
 ---
@@ -8,7 +8,7 @@ slug: "/sdk/android/configuration"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-This page is the canonical reference for every **core SDK** option recognised by the 7.0 Android SDK. Options from extension modules live on their own pages — see [NDK options](/sdk/android/configuration/ndk) and [Leak options](/sdk/android/configuration/leak).
+This page is the canonical reference for every **core SDK** option recognised by the 7.1 Android SDK. Options from extension modules live on their own pages — see [NDK options](/sdk/android/configuration/ndk) and [Leak options](/sdk/android/configuration/leak).
 
 ## Two configuration channels
 
@@ -79,6 +79,7 @@ The full set of detection options is documented on each detector's own page in [
 | `DetectAndReportExit` | `com.bugsee.option.detect.exit` | boolean | `true` | Detect and report application exits. The per-reason flags below select which exit reasons are reported. |
 | `DetectAndReportExitLowMemory` | `com.bugsee.option.detect.exit.low_memory` | boolean | `true` | Report exits where the OS killed the app to reclaim memory. |
 | `DetectAndReportExitNotResponding` | `com.bugsee.option.detect.exit.not_responding` | boolean | `true` | Report exits caused by the app not responding (ANR). |
+| `DetectAndReportExitNotRespondingAsCrash` | `com.bugsee.option.detect.exit.not_responding.as_crash` | boolean | `false` | Report ANR exits as crashes rather than as exits, so they group with crashes in the dashboard. Requires `DetectAndReportExitNotResponding`. *(7.1.0)* |
 | `DetectAndReportExitExcessiveResourceUsage` | `com.bugsee.option.detect.exit.excessive_resource_usage` | boolean | `false` | Report exits caused by excessive resource usage. |
 | `DetectAndReportExitDependencyDied` | `com.bugsee.option.detect.exit.dependency_died` | boolean | `false` | Report exits caused by a dependency process dying. |
 | `DetectAndReportExitUserRequested` | `com.bugsee.option.detect.exit.user_requested` | boolean | `false` | Report exits triggered by the user (e.g. force-stop). |
@@ -122,6 +123,7 @@ Bugsee.launch(this, "<APP_TOKEN>", options);
 | `CaptureScreenshot` | `com.bugsee.option.capture.screenshot` | boolean | `true` | Capture a screenshot when a report is created. |
 | `CaptureScreenshotScale` | `com.bugsee.option.capture.screenshot.scale` | float `[0.05, 1.0]` | `1.0` | Privacy down-then-up scaling applied to screenshots: destroys fine detail (text, icons) while preserving layout. `1.0` disables the transform. Mirrors `CaptureVideoScale`. |
 | `CaptureNetwork` | `com.bugsee.option.capture.network` | boolean | `true` | Monitor and capture network requests and responses. |
+| `CaptureNetworkOnLaunch` | `com.bugsee.option.capture.network.on-launch` | boolean | `false` | Subscribe the network provider during `launch()` instead of when capture starts, so requests issued during app startup are not missed. Costs a few extra milliseconds on the launching thread. *(7.1.0)* |
 | `CaptureNetworkBodySizeLimit` | `com.bugsee.option.capture.network.body-size-limit` | int (bytes) | `20480` | Maximum captured request/response body size, in bytes. |
 | `CaptureNetworkBodyWithoutType` | `com.bugsee.option.capture.network.body-without-type` | boolean | `false` | Also attach request/response bodies that have no declared content type; otherwise only textual bodies are kept. |
 | `CaptureNetworkUseDefaultSanitizer` | `com.bugsee.option.capture.network.default-sanitizer` | boolean | `true` | Auto-redact known sensitive keys (PII) in URL query parameters, HTTP headers, and JSON bodies. Applies only when no custom network event filter is set. |
@@ -130,6 +132,7 @@ Bugsee.launch(this, "<APP_TOKEN>", options);
 | `CaptureBreadcrumbsExtras` | `com.bugsee.option.capture.breadcrumbs.extras` | boolean | `false` | Also attach the raw `Intent` extras of captured system-event broadcasts to each breadcrumb. |
 | `CaptureVideo` | `com.bugsee.option.capture.video` | boolean | `true` | Record screen video for reports. |
 | `CaptureVideoMode` | `com.bugsee.option.capture.video.mode` | `VideoMode` | `V2` | Screen-capture mode/strategy to use (see [enum reference](#enum-reference)). |
+| `CaptureVideoAdaptive` | `com.bugsee.option.capture.video.adaptive` | boolean | `false` | Skip capturing new frames while nothing on screen has been redrawn, lowering CPU and battery cost on idle screens. A frame is still taken at least once per second. *(7.1.0)* |
 | `CaptureVideoQuality` | `com.bugsee.option.capture.video.quality` | `VideoQuality` | `Default` | Quality of the final encoded video. |
 | `CaptureVideoFrameRate` | `com.bugsee.option.capture.video.frame-rate` | `FrameRate` | `High` | How often frames are captured (see [enum reference](#enum-reference)). |
 | `CaptureVideoScale` | `com.bugsee.option.capture.video.scale` | float `[0.1, 1.0]` | `1.0` | Additional down-scaling applied to recorded video (e.g. `0.5` halves both width and height). |
@@ -137,6 +140,7 @@ Bugsee.launch(this, "<APP_TOKEN>", options);
 | `CaptureVideoUsingCustomMuxer` | `com.bugsee.option.capture.video.custom-muxer` | boolean | `false` | Use Bugsee's lightweight MP4 muxer instead of Android's `MediaMuxer` for video encoding; produces less verbose log output. |
 | `CaptureVideoFullscreenRememberUserDecision` | `com.bugsee.option.capture.video.fullscreen-remember-decision` | boolean | `true` | Persist the user's MediaProjection (screen-capture) consent decision across launches so they aren't re-prompted. Clear it at runtime with `Bugsee.resetVideoCapturePermission()`. |
 | `CaptureVideoFullscreenKeepRunning` | `com.bugsee.option.capture.video.fullscreen-keep-running` | boolean | `true` | Keep the MediaProjection session running in background (`true`: small ongoing CPU/battery cost plus a persistent foreground-service notification, but no re-prompt) versus tearing it down and re-acquiring on return to foreground (`false`: no background cost, but re-prompts on Android 14+). |
+| `CaptureRespectFlagSecure` | `com.bugsee.option.capture.respect-flag-secure` | boolean | `true` | Honor the platform's `FLAG_SECURE`: windows that set it are blanked in video and screenshots, excluded from the view hierarchy, and their input is dropped. An app that sets `FLAG_SECURE` broadly will see empty recordings after upgrading — set to `false` to restore pre-7.1.0 behavior. *(7.1.0)* |
 
 For video modes and redaction details see [Privacy → Video](/sdk/android/privacy/video).
 
