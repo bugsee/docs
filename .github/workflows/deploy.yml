@@ -1,6 +1,13 @@
 name: Build and Deploy
 
 on:
+  # Pull requests run the SAME checkout / install / spell-check / build steps as a
+  # deploy, but stop before touching AWS. Without this the workflow only ran on
+  # pushes to main, so a content PR could not be validated until AFTER it merged —
+  # which is exactly how a spelling error reached main and broke the deploy.
+  # Deliberately no paths-ignore here: validating a workflow or config change on the
+  # PR is cheap and catches breakage before it can affect a deploy.
+  pull_request:
   push:
     branches: [main]
     # Skip deploys for changes that can't affect the built site.
@@ -15,11 +22,14 @@ on:
   workflow_dispatch:
 
 # Required for GitHub OIDC -> AWS IAM role assumption (no stored AWS keys).
+# Unused on pull_request runs, where every AWS step is skipped.
 permissions:
   id-token: write
   contents: read
 
 concurrency:
+  # github.ref is refs/pull/<n>/merge on a PR, so PR validation runs get their own
+  # group and never cancel an in-flight deploy of main.
   group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
@@ -49,12 +59,14 @@ jobs:
           node scripts/copy-raw-markdown.mjs
 
       - name: Configure AWS credentials (OIDC)
+        if: github.event_name != 'pull_request'
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Sync to S3
+        if: github.event_name != 'pull_request'
         # --acl public-read mirrors the existing s3cmd `-P` behavior. Remove it if the
         # bucket uses a bucket policy with ACLs disabled (Object Ownership = enforced).
         run: |
@@ -63,6 +75,7 @@ jobs:
             --acl public-read
 
       - name: Invalidate CloudFront
+        if: github.event_name != 'pull_request'
         run: |
           aws cloudfront create-invalidation \
             --distribution-id "${{ vars.CLOUDFRONT_ID }}" \
