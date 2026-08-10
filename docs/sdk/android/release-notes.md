@@ -45,21 +45,21 @@ capture, and restores native crash reporting on older Android versions.
 - **Screens the platform marks as secure are excluded by default.** Windows with `FLAG_SECURE` — the
   flag apps set on sensitive screens, and the one payment and DRM surfaces set for you — are now
   blanked in video and screenshots, and taps and typed keys on them are not recorded. This is on by
-  default; set `CaptureRespectFlagSecure` to `false` to restore the previous behaviour.
+  default; set `CaptureRespectFlagSecure` to `false` to restore the previous behavior.
 - **Secure `SurfaceView` content is blanked.** A `SurfaceView` with `setSecure(true)` is now treated
   the same way, so protected media and camera surfaces do not appear in recordings.
 - **Secure views are masked where they actually appear.** Views that are scaled, translated, or
   animated are now masked against their on-screen position rather than their layout position, so the
   mask no longer drifts away from the content it is protecting during transitions or while the
   keyboard pans the window.
-- **Secure regions registered before the first screen are honoured.** Marking views, fragments, or
+- **Secure regions registered before the first screen are honored.** Marking views, fragments, or
   rectangles as secure during application startup now takes effect immediately, instead of being
   ignored until the first Activity appeared.
 - **Secure content is kept out of the view hierarchy.** Labels and text of secure views are no longer
   included in the captured hierarchy, and everything inside a secure window is treated as secure.
 - **Secure regions declared from cross-platform wrappers now filter interaction** as well as pixels.
-- **Stronger network scrubbing.** Form-encoded request bodies are now scrubbed, and the sensitive-key
-  blocklist matches keys that merely contain a sensitive term rather than only exact matches.
+- **Stronger network scrubbing.** Form-encoded request bodies are now scrubbed, and the list of sensitive
+  field names now matches any key containing a sensitive term, not only exact matches.
 - **Blackout mode applies everywhere,** including the screenshot attached to a report.
 
 **Fixes**
@@ -85,13 +85,13 @@ capture, and restores native crash reporting on older Android versions.
 **Performance**
 
 - **Screen capture costs substantially less CPU.** Unchanged frames are detected and skipped before
-  any expensive work, colour conversion is fused into a single pass, and redundant per-frame
+  any expensive work, color conversion is fused into a single pass, and redundant per-frame
   clearing and compositing was removed.
 - **Secure-view tracking is roughly twice as cheap per frame,** and interaction hit-testing against
   secure regions is now allocation-free.
 - **Compose screens no longer stall capture.** Scanning a Compose hierarchy for secure areas runs off
   the capture thread, removing a pause that was visible on busy screens.
-- **Faster startup.** Reduced the SDK's cold-start cost through lazier initialisation and a bundled
+- **Faster startup.** Reduced the SDK's cold-start cost through lazier initialization and a bundled
   baseline profile.
 
 **Compatibility**
