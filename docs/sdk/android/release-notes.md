@@ -7,6 +7,100 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.1.0
+
+A feature and hardening release. WebSocket traffic is now captured, crash / ANR / exit reports carry
+substantially more diagnostic detail, and screens marked as secure by the Android platform are
+excluded from capture by default. It also lands a large privacy and performance pass across screen
+capture, and restores native crash reporting on older Android versions.
+
+**New features**
+
+- **WebSocket traffic is captured.** WebSocket connections opened through OkHttp are recorded
+  alongside your other network activity — connection lifecycle, sent and received frames, close and
+  error events — so a realtime feature is no longer a blank space in the timeline. Ktor is covered
+  too: on the OkHttp engine it works automatically, and on the CIO engine you can route calls
+  through the `bugseeWebSocket` helper to capture them. Automatic instrumentation requires Gradle
+  plugin **4.0.3** or newer.
+- **Richer ANR and app-exit reports.** ANR reports now understand the native-format traces Android
+  produces on some devices, instead of degrading to a single synthetic frame — so you get the real
+  stack. App-exit reports carry the full `ApplicationExitInfo` detail, including the sub-reason the
+  system recorded. You can optionally have "application not responding" exits reported as crashes
+  with the new `DetectAndReportExitNotRespondingAsCrash` option (off by default).
+- **Adaptive video capture.** With the new `CaptureVideoAdaptive` option (off by default), the SDK
+  skips redundant capture work while the screen is not changing, lowering CPU and battery cost
+  during idle periods without losing meaningful frames.
+- **Network capture from launch.** The new `CaptureNetworkOnLaunch` option (off by default) starts
+  network capture as early as possible, so requests issued during startup are not missed.
+- **Nothing is lost between `launch()` and capture starting.** Logs, events, traces, and breadcrumbs
+  produced in the short window before capture is fully running are now buffered and folded into the
+  session instead of being dropped.
+- **Query the SDK state.** `Bugsee.getStatus()` reports whether the SDK is launched, running, or
+  stopped, which makes conditional logic in host apps straightforward.
+- **More device context.** Reports now include satellite-services state, and window tracking follows
+  activity on secondary displays and while the app is in the background.
+
+**Privacy**
+
+- **Screens the platform marks as secure are excluded by default.** Windows with `FLAG_SECURE` — the
+  flag apps set on sensitive screens, and the one payment and DRM surfaces set for you — are now
+  blanked in video and screenshots, and taps and typed keys on them are not recorded. This is on by
+  default; set `CaptureRespectFlagSecure` to `false` to restore the previous behaviour.
+- **Secure `SurfaceView` content is blanked.** A `SurfaceView` with `setSecure(true)` is now treated
+  the same way, so protected media and camera surfaces do not appear in recordings.
+- **Secure views are masked where they actually appear.** Views that are scaled, translated, or
+  animated are now masked against their on-screen position rather than their layout position, so the
+  mask no longer drifts away from the content it is protecting during transitions or while the
+  keyboard pans the window.
+- **Secure regions registered before the first screen are honoured.** Marking views, fragments, or
+  rectangles as secure during application startup now takes effect immediately, instead of being
+  ignored until the first Activity appeared.
+- **Secure content is kept out of the view hierarchy.** Labels and text of secure views are no longer
+  included in the captured hierarchy, and everything inside a secure window is treated as secure.
+- **Secure regions declared from cross-platform wrappers now filter interaction** as well as pixels.
+- **Stronger network scrubbing.** Form-encoded request bodies are now scrubbed, and the sensitive-key
+  blocklist matches keys that merely contain a sensitive term rather than only exact matches.
+- **Blackout mode applies everywhere,** including the screenshot attached to a report.
+
+**Fixes**
+
+- **Native crash reporting restored on Android 5.0–9 (API 21–28).** Native (NDK) crashes were not
+  being reported on these versions; they are captured again, and the native handler has been
+  hardened for signal-safety and multi-process apps.
+- **No more duplicate or missing issues.** Report bundles are now named deterministically and
+  published atomically, closing a window where a single incident could surface as two issues or be
+  lost entirely. Report lifecycle callbacks now fire consistently for crashes and silent uploads.
+- **More accurate problem detection.** Hang and ANR watchdogs are immune to device sleep and clock
+  jumps, so a phone waking from a long sleep no longer produces a false report. App-exit
+  classification now matches what Play Console shows, and long-lived streaming requests are no longer
+  flagged as stuck.
+- **Reports are no longer dropped on a slow network.** Request timeouts are treated as temporary and
+  retried, expired sessions are refreshed automatically, and several upload paths were hardened.
+- **Steadier screen and input capture.** Fixed leaks, stalls, and rare crashes in the capture
+  pipeline; touch capture now recovers if the SDK is stopped and started again, and gesture tracking
+  survives dialogs being dismissed and reopened.
+- **Correct network event data.** Removed duplicate request events and fixed cases where a request
+  could be recorded without its completion.
+
+**Performance**
+
+- **Screen capture costs substantially less CPU.** Unchanged frames are detected and skipped before
+  any expensive work, colour conversion is fused into a single pass, and redundant per-frame
+  clearing and compositing was removed.
+- **Secure-view tracking is roughly twice as cheap per frame,** and interaction hit-testing against
+  secure regions is now allocation-free.
+- **Compose screens no longer stall capture.** Scanning a Compose hierarchy for secure areas runs off
+  the capture thread, removing a pause that was visible on busy screens.
+- **Faster startup.** Reduced the SDK's cold-start cost through lazier initialisation and a bundled
+  baseline profile.
+
+**Compatibility**
+
+- Pairs with **Bugsee Android Gradle plugin 4.0.3**. WebSocket capture requires it; everything else
+  works with 4.0.0 or newer.
+- **Leaner dependencies.** The OkHttp and Cronet extensions no longer pull the Kotlin standard
+  library or `androidx.annotation` into your dependency graph.
+
 ## 7.0.4
 
 A follow-up privacy release that keeps WebView redaction reliable on the latest devices and extends it to more kinds of web content.
