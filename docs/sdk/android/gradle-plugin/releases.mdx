@@ -40,6 +40,16 @@ bound introduced in 4.0.3. Upgrade if your project uses Kotlin 2.2 or newer with
   normally. Every supported combination is now verified by running each Kotlin line's real compiler
   and checking the injected call reaches the compiled output.
 
+### 4.0.4 (August 2026)
+
+Superseded by 4.0.5 — upgrade past it.
+
+- **Stops loading the Compose compiler plugin into Kotlin 2.2 and 2.3.** A correction to the bound
+  shipped in 4.0.3, which admitted two Kotlin lines that abort the build (see 4.0.5 for the
+  underlying cause). On Kotlin 2.2+ this release disables Compose tag and secure-modifier injection
+  with a warning rather than failing. 4.0.5 restores the injection on those lines, so there is no
+  reason to stay on 4.0.4.
+
 ### 4.0.3 (August 2026)
 
 Adds WebSocket capture, makes every bytecode injection verify that the SDK on the classpath can
