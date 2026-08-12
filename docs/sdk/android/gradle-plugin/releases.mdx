@@ -11,44 +11,26 @@ slug: "/sdk/android/gradle-plugin/releases"
 
 ### 4.0.5 (August 2026)
 
-Restores Jetpack Compose instrumentation on Kotlin 2.2, 2.3 and 2.4, and corrects the Kotlin version
-bound introduced in 4.0.3. Upgrade if your project uses Kotlin 2.2 or newer with Compose.
+Restores Jetpack Compose instrumentation on Kotlin 2.2, 2.3 and 2.4. Upgrade if your project uses
+Kotlin 2.2 or newer together with Compose.
 
-- **Compose instrumentation now supports Kotlin 2.2, 2.3 and 2.4.** The bundled Compose compiler
-  plugin binds the exact API of the Kotlin compiler it was built against, so a single artifact
-  cannot serve every Kotlin release. It is now published once per Kotlin line, and the Gradle plugin
-  selects the matching one from your project's Kotlin version:
+- **Compose instrumentation works on current Kotlin versions again.** Compose tag and secure-field
+  injection previously only worked on Kotlin 2.1 and older. It now covers Kotlin 2.2, 2.3 and 2.4,
+  with the plugin selecting the right build for your Kotlin version automatically — no configuration
+  needed. On a Kotlin release that has not been verified yet, Compose instrumentation is skipped
+  with a warning and your build still succeeds, as before.
 
-  | Your Kotlin | Artifact resolved |
-  | --- | --- |
-  | 1.9 – 2.1 | `com.bugsee:bugsee-compose-compiler-plugin` |
-  | 2.2 – 2.3 | `com.bugsee:bugsee-compose-compiler-plugin-k22` |
-  | 2.4 | `com.bugsee:bugsee-compose-compiler-plugin-k24` |
-
-  No configuration is required — the selection is automatic. On a Kotlin release no variant has been
-  verified against yet, Compose tag and secure-modifier injection stands down with a warning and the
-  build succeeds, as before.
-
-- **Corrects the Kotlin bound shipped in 4.0.3.** That release added a gate meant to skip the Compose
-  compiler plugin on unverified Kotlin versions, but set the bound at 2.3 — which does not hold.
-  Kotlin 2.2 widened the receiver type of an IR builder function, and a compiled call site binds the
-  exact signature, so 2.2 and 2.3 aborted the build with
-  `NoSuchMethodError: irCall(IrBuilderWithScope, IrSimpleFunctionSymbol)` rather than standing down.
-
-  This only affected projects that pair Compose with Bugsee's Compose integration — the injection
-  pass exits early when the Bugsee Compose runtime is absent, so a Compose app without it built
-  normally. Every supported combination is now verified by running each Kotlin line's real compiler
-  and checking the injected call reaches the compiled output.
+- **Fixes a build failure on Kotlin 2.2 and 2.3.** In 4.0.3, projects combining Compose with
+  Bugsee's Compose integration could fail to build on those Kotlin versions. Projects using Compose
+  without Bugsee's Compose integration were unaffected.
 
 ### 4.0.4 (August 2026)
 
 Superseded by 4.0.5 — upgrade past it.
 
-- **Stops loading the Compose compiler plugin into Kotlin 2.2 and 2.3.** A correction to the bound
-  shipped in 4.0.3, which admitted two Kotlin lines that abort the build (see 4.0.5 for the
-  underlying cause). On Kotlin 2.2+ this release disables Compose tag and secure-modifier injection
-  with a warning rather than failing. 4.0.5 restores the injection on those lines, so there is no
-  reason to stay on 4.0.4.
+- **Disables Compose instrumentation on Kotlin 2.2 and newer** rather than failing the build, after
+  the version limit shipped in 4.0.3 turned out to be too permissive. 4.0.5 restores the
+  instrumentation on those versions, so there is no reason to stay on 4.0.4.
 
 ### 4.0.3 (August 2026)
 
@@ -83,8 +65,8 @@ actually support it, and adds Gradle 9 compatibility. Drop-in upgrade from 4.0.x
   succeeds.
 
   :::caution
-  The bound shipped in 4.0.3 was set at Kotlin 2.3, which is incorrect — 2.2 and 2.3 also abort the
-  build. Use 4.0.5 or newer, which supports 2.2-2.4 properly.
+  The Kotlin version limit shipped in 4.0.3 was set one release too high — Compose instrumentation
+  still fails the build on Kotlin 2.2 and 2.3. Use 4.0.5 or newer, which supports them properly.
   :::
 - **Auto-added SDK floor raised to 7.1.0.** When the plugin adds `com.bugsee:bugsee-android` for an
   app that has not declared it, the version range is now `[7.1.0,8.0.0)`. Apps that declare the SDK
@@ -196,8 +178,8 @@ App-startup bytecode tracing tiers (MINIMAL through FULL) plus the typed `Startu
 - VCS information (branch, commit, dirty flag) is now sent as a nested object in the upload payload rather than flat fields.
 - Bundle upload tasks are now compatible with Gradle's configuration cache, and the app token is masked in log output.
 - Maven publishing signing tasks are now disabled cleanly when GPG credentials aren't present, replacing a workaround that broke configuration cache.
-- Adds Kotlin 2.3 compatibility. *(Correction: this covered the plugin's own build only. The
-  bundled Compose compiler plugin gained Kotlin 2.2+ support only in 4.0.5.)*
+- Adds Kotlin 2.3 compatibility. *(Correction: this covered the plugin's own build. Compose
+  instrumentation gained Kotlin 2.2+ support only in 4.0.5.)*
 
 ### 4.0.0-beta3 (April 23 2026)
 
