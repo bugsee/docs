@@ -7,6 +7,36 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.1.1
+
+A patch release. Bugsee no longer pulls the Kotlin standard library into your dependency graph, and
+the WebView bridge's control channel is now authenticated.
+
+- **The Kotlin standard library no longer reaches your dependency graph.** 7.1.0 removed it from the
+  OkHttp and Cronet extensions, but that change only edited the published POM — and Gradle reads
+  Gradle Module Metadata in preference to the POM, so in practice every consumer of
+  `bugsee-android` still resolved the Kotlin standard library, including pure-Java apps. It is now removed from
+  both metadata formats, across the core SDK and every extension that does not genuinely need it.
+
+  If your app builds with an older Kotlin version, this also stops Gradle resolving your standard
+  library *up* to the version Bugsee declared.
+
+  The memory-leak extension is the one module written in Kotlin that still publishes no Kotlin
+  dependency: it carries the small part of the runtime it uses inside its own artifact, relocated so
+  it cannot collide with your copy.
+
+  :::note
+  If your build was relying on Bugsee to supply the Kotlin standard library or
+  `org.jetbrains:annotations` transitively, declare them directly. Projects that already use Kotlin are unaffected — the Kotlin
+  Gradle plugin adds the standard library for you.
+  :::
+
+- **The WebView bridge control channel is authenticated.** `window.__bugsee_bridge.control(...)` is a
+  page global, so any script running in an instrumented WebView could previously pause capture or
+  stop the SDK. The bridge now mints a per-session token and rejects control messages that do not
+  carry it. Requires the matching Bugsee JavaScript SDK; older combinations continue to work
+  unchanged.
+
 ## 7.1.0
 
 A feature and hardening release. WebSocket traffic is now captured, crash / ANR / exit reports carry
