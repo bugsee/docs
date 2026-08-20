@@ -55,7 +55,7 @@ delivered on the next start.
 
 ## 7.1.1
 
-A patch release covering dependencies and WebView privacy.
+A patch release covering dependencies.
 
 - **Bugsee no longer adds the Kotlin standard library to your app.** Previously every project that
   included Bugsee picked it up, even apps written entirely in Java. It is now gone from the core SDK
@@ -66,11 +66,6 @@ A patch release covering dependencies and WebView privacy.
   If your build was relying on Bugsee to supply the Kotlin standard library or
   `org.jetbrains:annotations` indirectly, declare them yourself. Projects that already use Kotlin are unaffected.
   :::
-
-- **The WebView bridge is protected from page scripts.** Scripts running inside an instrumented
-  WebView could previously pause capture or stop the SDK. Bugsee now verifies that control messages
-  come from its own JavaScript SDK and ignores the rest. Requires the matching Bugsee JavaScript
-  SDK; older combinations continue to work unchanged.
 
 ## 7.1.0
 
