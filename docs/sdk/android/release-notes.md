@@ -7,6 +7,52 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.1.2
+
+A patch release for native crash reporting. Crashes in the first moments of a launch — a window that
+was previously uncovered — are now captured, and crashes that kill the app before it can report are
+delivered on the next start.
+
+- **Native crashes are captured from the very start of the first launch.** After an install or an
+  update, the SDK needs a moment to prepare its out-of-process native crash handler, and a crash
+  during that window went unreported. Bugsee now arms an in-process handler immediately at startup,
+  so those crashes arrive with the faulting library, its build ID and a stack, and upgrades to the
+  full handler as soon as it is ready. This is the window that used to hide crashes in native
+  libraries an app loads early.
+
+- **Crashes during startup, and crash loops, are now reported.** If your app crashes before capture
+  is fully running — including a loop where it never stays alive long enough to send anything — the
+  report is exported and uploaded during the next launch, instead of being handed to background work
+  the app never survives to run. If the device is offline the report is kept and retried.
+
+- **Reports created before capture starts are no longer discarded.** A report produced in that early
+  window was assembled without the list of capture providers and then dropped as unprocessable, so
+  the crash never arrived at all.
+
+- **A damaged crash handler no longer disables native reporting.** If the helper Bugsee extracts is
+  incomplete, or cannot be executed on a particular device, that is now detected during startup and
+  the in-process handler is kept instead of arming one that cannot run. Previously the combination
+  looked healthy and produced an empty report.
+
+- **Steadier crash handling.** The code that runs inside a crash no longer depends on library
+  functions that carry no guarantee of being safe there, and a race between arming the handler and a
+  crash arriving on another thread has been closed. Either could previously cost you the report.
+
+- **Optional libraries are no longer loaded merely to detect them.** Bugsee now checks whether
+  Material Components, AndroidX or `androidx.fragment` are present without initializing their
+  classes, so an app that never uses fragments never loads one on Bugsee's behalf.
+
+- **`addSecureView()` and `removeSecureView()` now take `Object`.** One overload previously took
+  `androidx.fragment.app.Fragment`. Passing a fragment still works exactly as before, and behavior is
+  unchanged when `androidx.fragment` is on the classpath. This removes the last non-platform type
+  from Bugsee's public API, which matters for hosts that inspect its methods reflectively — Unity
+  bindings in particular.
+
+  :::note
+  Because the method signature changed, rebuild your app against 7.1.2 rather than dropping the new
+  AAR onto an existing build. No source changes are required.
+  :::
+
 ## 7.1.1
 
 A patch release covering dependencies and WebView privacy.
