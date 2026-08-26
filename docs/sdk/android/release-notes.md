@@ -9,41 +9,37 @@ Release history for Bugsee Android SDK 7.x. Looking for the previous major versi
 
 ## 7.1.4
 
-A patch release focused on staying out of your way: instrumented calls no longer break local unit
-test runs, and three crashes that could surface inside your own app are fixed.
+A patch release that keeps Bugsee out of your test runs and fixes three crashes that could reach
+your users.
 
-- **Injected Bugsee calls no longer fail local unit tests.** The Gradle plugin rewrites call sites in
-  your code, and AGP feeds that rewritten bytecode to `testDebugUnitTest` as well as to the device.
-  On the JVM the Android framework is stubbed, so calls the injected code relies on — such as
-  `Looper.getMainLooper()` — either return `null` or throw, and that surfaced as a failure inside an
-  ordinary method of yours, from a line that only read `PreferenceManager.getDefaultSharedPreferences(…)`.
-  Every injected entry point now degrades to a no-op off-device. If you disabled
-  `mainThreadMisuse`, `log`, `thread` or `operationDispatch` instrumentation to get a green test
-  run, you can turn them back on.
+- **Your local unit tests pass again.** Bugsee could cause failures in ordinary JVM unit tests — in
+  your own code, on lines that had nothing to do with Bugsee. Tests now run unaffected. If you
+  turned off `mainThreadMisuse`, `log`, `thread` or `operationDispatch` instrumentation to get a
+  green test run, you can turn them back on.
 
-- **Capture failures can no longer escape into your own logging call.** Work performed on Bugsee's
-  behalf inside a rewritten `Log.x()` is now fully contained, so a failure in the capture pipeline
-  cannot propagate out of a logging statement in your code.
+- **Trouble inside Bugsee can no longer surface from your logging calls.** Logging statements in
+  your app are now unaffected by anything that happens while Bugsee is capturing.
 
-- **Fixes a crash when the report screen is reopened.** Reporting an issue could crash with a
-  `NullPointerException` if the screen ran before its fields were ready — for example when Android
-  restored it after the process had been killed in the background.
+- **Fixes a crash when the report screen is reopened.** Reporting an issue could crash if Android
+  restored the screen after your app had been dropped from memory in the background.
 
-- **Fixes a crash when the theme changes while a notification-triggered report is open.** Switching
-  the device between light and dark mode with that screen in the foreground crashed the host app.
+- **Fixes a crash when the theme changes while a report is open.** Switching the device between
+  light and dark mode with a notification-opened report on screen crashed the app.
 
-- **The notification's small icon renders again on devices that need the fallback.** On Huawei
-  devices running Android 6.0 and older, Bugsee draws its icon into a bitmap; that bitmap was blank,
-  so the workaround did nothing on exactly the devices it was written for.
+- **The notification icon appears again on devices that need the fallback.** On Huawei devices
+  running Android 6.0 and older, Bugsee's notification showed no small icon.
 
-- **Screenshots are no longer lost when de-duplication cannot link a file.** On storage that refuses
-  symbolic links, a failed link aborted the whole snapshot instead of falling back to a copy.
+- **Screenshots are no longer lost on some storage configurations.** Where the device restricted how
+  Bugsee stores identical screenshots, the screenshot was dropped from the report instead of being
+  saved another way.
 
 ## 7.1.3
 
-- **Reports opened from the Bugsee notification are attributed correctly.** A report started by
-  tapping the notification was recorded as if it had been triggered from code, which made
-  notification-initiated reports indistinguishable from `Bugsee.showReportDialog()` ones.
+A single fix for how notification-initiated reports are labelled.
+
+- **Reports opened from the Bugsee notification are attributed correctly.** They were recorded as if
+  they had been started from code, so they could not be told apart from reports opened with
+  `Bugsee.showReportDialog()`.
 
 ## 7.1.2
 

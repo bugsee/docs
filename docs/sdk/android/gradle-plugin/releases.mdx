@@ -11,36 +11,28 @@ slug: "/sdk/android/gradle-plugin/releases"
 
 ### 4.0.6 (August 2026)
 
-Stops instrumentation leaking into build variants that do not carry the SDK, and fixes three
-injection bugs that could break a build or crash an app at launch. Recommended for everyone;
-essential if you declare Bugsee for some variants only.
+Stops Bugsee being added to build variants that do not include the SDK, and fixes two crashes and a
+build failure. Recommended for everyone; essential if you include Bugsee in some build variants
+only.
 
-- **Variants that do not include the SDK are no longer instrumented.** Detection previously looked
-  at the whole project rather than the variant being built, so declaring the SDK with
-  `debugImplementation` — Bugsee in debug builds, absent from release — still injected Bugsee calls
-  into release bytecode. The result was either an R8 `Missing class` build failure, or, if you
-  applied the `-dontwarn` rule R8's own `missing_rules.txt` suggests, an app that compiled and then
-  died at launch with `NoClassDefFoundError` before any of your code ran. Detection is now scoped to
-  the configurations that feed the variant, and covers build-type, flavor and full-variant
-  declarations. Projects that declare Bugsee with plain `implementation` are unaffected.
+- **Build variants without Bugsee are left alone.** If you add Bugsee for some variants only — for
+  example with `debugImplementation`, so it is in your debug builds but not in release — your
+  release builds were still being wired up to call an SDK that was not there. Depending on your
+  setup that either failed the release build, or produced an app that crashed the moment it was
+  opened. Release builds are now left untouched unless Bugsee is genuinely part of them. Flavors are
+  handled the same way. If you declare Bugsee with plain `implementation`, nothing changes for you.
 
-- **Fixes a launch crash from Compose instrumentation.** A `Modifier` receiver arriving as `null` at
-  an injected `bugseeTag` call site crashed the app on startup with "Parameter specified as non-null
-  is null". Requires **Bugsee Android SDK 7.1.4** or newer, which ships the matching runtime change.
+- **Fixes a crash on launch in apps using Compose.** Requires **Bugsee Android SDK 7.1.4** or newer,
+  which ships the matching runtime change.
 
-- **Fixes a `VerifyError` from thread instrumentation.** Certain method shapes produced bytecode the
-  verifier rejected, failing the app at runtime.
+- **Fixes a crash in apps using thread instrumentation.**
 
-- **Operation timing is now reported when a guarded call throws.** An instrumented I/O or database
-  call that raised an exception reported its start but never its end, leaving an operation that
-  never appeared to finish. Exception handling in your own code is unchanged.
+- **Failed operations are now timed.** A database or file operation that ended in an exception was
+  left looking as though it had never finished. Exception handling in your own code is unchanged.
 
-- **Extension-provider stripping is gated on the SDK version.** The optimization that removes
-  extension init providers from the merged manifest is applied only when the SDK on the classpath
-  supports it, instead of being applied unconditionally.
+- **Manifest optimization is applied only when your SDK version supports it.**
 
-- **Already-minified classes are skipped.** Third-party code that arrives R8-minified is no longer
-  rewritten.
+- **Third-party libraries that arrive already minified are left as they are.**
 
 ### 4.0.5 (August 2026)
 
