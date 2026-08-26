@@ -9,6 +9,31 @@ slug: "/sdk/android/gradle-plugin/releases"
 
 ## 4.x (SDK 7.x)
 
+### 4.0.6 (August 2026)
+
+Stops Bugsee being added to build variants that do not include the SDK, and fixes two crashes and a
+build failure. Recommended for everyone; essential if you include Bugsee in some build variants
+only.
+
+- **Build variants without Bugsee are left alone.** If you add Bugsee for some variants only — for
+  example with `debugImplementation`, so it is in your debug builds but not in release — your
+  release builds were still being wired up to call an SDK that was not there. Depending on your
+  setup that either failed the release build, or produced an app that crashed the moment it was
+  opened. Release builds are now left untouched unless Bugsee is genuinely part of them. Flavors are
+  handled the same way. If you declare Bugsee with plain `implementation`, nothing changes for you.
+
+- **Fixes a crash on launch in apps using Compose.** Requires **Bugsee Android SDK 7.1.4** or newer,
+  which ships the matching runtime change.
+
+- **Fixes a crash in apps using thread instrumentation.**
+
+- **Failed operations are now timed.** A database or file operation that ended in an exception was
+  left looking as though it had never finished. Exception handling in your own code is unchanged.
+
+- **Manifest optimization is applied only when your SDK version supports it.**
+
+- **Third-party libraries that arrive already minified are left as they are.**
+
 ### 4.0.5 (August 2026)
 
 Restores Jetpack Compose instrumentation on Kotlin 2.2, 2.3 and 2.4. Upgrade if your project uses

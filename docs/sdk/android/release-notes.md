@@ -7,6 +7,40 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.1.4
+
+A patch release that keeps Bugsee out of your test runs and fixes three crashes that could reach
+your users.
+
+- **Your local unit tests pass again.** Bugsee could cause failures in ordinary JVM unit tests — in
+  your own code, on lines that had nothing to do with Bugsee. Tests now run unaffected. If you
+  turned off `mainThreadMisuse`, `log`, `thread` or `operationDispatch` instrumentation to get a
+  green test run, you can turn them back on.
+
+- **Trouble inside Bugsee can no longer surface from your logging calls.** Logging statements in
+  your app are now unaffected by anything that happens while Bugsee is capturing.
+
+- **Fixes a crash when the report screen is reopened.** Reporting an issue could crash if Android
+  restored the screen after your app had been dropped from memory in the background.
+
+- **Fixes a crash when the theme changes while a report is open.** Switching the device between
+  light and dark mode with a notification-opened report on screen crashed the app.
+
+- **The notification icon appears again on devices that need the fallback.** On Huawei devices
+  running Android 6.0 and older, Bugsee's notification showed no small icon.
+
+- **Screenshots are no longer lost on some storage configurations.** Where the device restricted how
+  Bugsee stores identical screenshots, the screenshot was dropped from the report instead of being
+  saved another way.
+
+## 7.1.3
+
+A single fix for how notification-initiated reports are labelled.
+
+- **Reports opened from the Bugsee notification are attributed correctly.** They were recorded as if
+  they had been started from code, so they could not be told apart from reports opened with
+  `Bugsee.showReportDialog()`.
+
 ## 7.1.2
 
 A patch release for native crash reporting. Crashes in the first moments of a launch — a window that
