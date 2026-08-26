@@ -7,6 +7,44 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.1.4
+
+A patch release focused on staying out of your way: instrumented calls no longer break local unit
+test runs, and three crashes that could surface inside your own app are fixed.
+
+- **Injected Bugsee calls no longer fail local unit tests.** The Gradle plugin rewrites call sites in
+  your code, and AGP feeds that rewritten bytecode to `testDebugUnitTest` as well as to the device.
+  On the JVM the Android framework is stubbed, so calls the injected code relies on — such as
+  `Looper.getMainLooper()` — either return `null` or throw, and that surfaced as a failure inside an
+  ordinary method of yours, from a line that only read `PreferenceManager.getDefaultSharedPreferences(…)`.
+  Every injected entry point now degrades to a no-op off-device. If you disabled
+  `mainThreadMisuse`, `log`, `thread` or `operationDispatch` instrumentation to get a green test
+  run, you can turn them back on.
+
+- **Capture failures can no longer escape into your own logging call.** Work performed on Bugsee's
+  behalf inside a rewritten `Log.x()` is now fully contained, so a failure in the capture pipeline
+  cannot propagate out of a logging statement in your code.
+
+- **Fixes a crash when the report screen is reopened.** Reporting an issue could crash with a
+  `NullPointerException` if the screen ran before its fields were ready — for example when Android
+  restored it after the process had been killed in the background.
+
+- **Fixes a crash when the theme changes while a notification-triggered report is open.** Switching
+  the device between light and dark mode with that screen in the foreground crashed the host app.
+
+- **The notification's small icon renders again on devices that need the fallback.** On Huawei
+  devices running Android 6.0 and older, Bugsee draws its icon into a bitmap; that bitmap was blank,
+  so the workaround did nothing on exactly the devices it was written for.
+
+- **Screenshots are no longer lost when de-duplication cannot link a file.** On storage that refuses
+  symbolic links, a failed link aborted the whole snapshot instead of falling back to a copy.
+
+## 7.1.3
+
+- **Reports opened from the Bugsee notification are attributed correctly.** A report started by
+  tapping the notification was recorded as if it had been triggered from code, which made
+  notification-initiated reports indistinguishable from `Bugsee.showReportDialog()` ones.
+
 ## 7.1.2
 
 A patch release for native crash reporting. Crashes in the first moments of a launch — a window that
