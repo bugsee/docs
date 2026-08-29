@@ -14,11 +14,22 @@ To start receiving notifications via Webhooks you only need to set it up once vi
 
 ## Responding
 
-Your server must respond with HTTP 200 to inform Bugsee that you accepted and handled request. Any other response may be treated as failure.
+Your server must respond with **HTTP 200** to inform Bugsee that you accepted and handled the request. Any other status (including 201 and 204) is treated as a failure.
+
+## Delivery and retries
+
+Delivery is **at-least-once**. A transient failure (timeout, 408, 429, 5xx, network error) is retried; your handler may see the same event more than once.
+
+Each request carries a stable delivery id in both places — use either to dedupe:
+
+- JSON envelope field `id`
+- request header `X-Bugsee-Delivery`
+
+Both values are the same string and stay the same across retries of that delivery.
 
 ## Rate limits
 
-For now, we do not set any limits on requests being made to your servers. However, if there will be 5 or more consecutive failures, webhook will be marked as disabled and any further activity notifications will not be passed through it. To reset disabled state, make sure you've provided valid URL and enable webhook in web dashboard.
+There is no rate limit on requests to your server. Five or more **consecutive terminal** failures disable the webhook; further events are not sent until you re-enable it in the dashboard. Transient failures that later succeed do not count.
 
 
 
