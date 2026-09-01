@@ -5,6 +5,10 @@ sidebar_position: 1
 slug: "/sdk/android/v6/maven-installation"
 ---
 
+:::caution[Previous version]
+This page documents Bugsee Android SDK **6.x**, the previous major version. The current line is **7.x** — see [Migrating from 6.x to 7.x](/sdk/android/migration) to upgrade, or [Installation](/sdk/android/installation) to start a new integration.
+:::
+
 > **Note:** this information is only for those, who use Maven to build their Android projects.
 
 Add Bugsee dependency to your pom.xml

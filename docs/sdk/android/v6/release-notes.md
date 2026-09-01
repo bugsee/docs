@@ -5,6 +5,10 @@ sidebar_position: 13
 slug: "/sdk/android/v6/release-notes"
 ---
 
+:::caution[Previous version]
+This page documents Bugsee Android SDK **6.x**, the previous major version. The current line is **7.x** — see [Migrating from 6.x to 7.x](/sdk/android/migration) to upgrade, or [Installation](/sdk/android/installation) to start a new integration.
+:::
+
 ## 6.0.4 (June 22 2026)
 - Fix: Screenshot-to-report was not triggered on some devices (specifically on Samsung, and possibly certain other manufacturers) running Android 14 and newer
 
