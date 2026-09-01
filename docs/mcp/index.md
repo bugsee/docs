@@ -43,7 +43,7 @@ Bugsee supports two ways for an MCP client to authenticate:
 - **OAuth 2.1 with PKCE** (recommended). Most modern MCP clients support this — they prompt the user to sign in to Bugsee in the browser, the user approves access, and the client receives a scoped, rotated access token. No long-lived secret lives on the user's machine. See [Security](/mcp/security) for details.
 - **Personal access token**. For clients that don't yet support OAuth, you can generate a long-lived personal token from the Bugsee dashboard and paste it into the client config. Treat it as a password.
 
-Both modes resolve to the same set of tools and the same data your account already has access to. Most tools are read-only; the only mutating tool today (`trigger_build_vuln_scan`) requires `modify` permission on the target application.
+Both modes resolve to the same set of tools and the same data your account already has access to. Most tools are read-only. The two mutating tools are `trigger_build_vuln_scan`, which requires `modify` permission on the target application, and `create_application`, which requires the `mcp:write` scope plus organization admin or `app_create` permission. See [Security](/mcp/security#read-only-by-default).
 
 ## Availability
 

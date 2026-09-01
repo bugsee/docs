@@ -7,11 +7,12 @@ slug: "/mcp/usage"
 
 ## Tools
 
-The Bugsee MCP server exports eleven tools across three resource families. All are read-only except `trigger_build_vuln_scan`, which queues a vulnerability scan against an existing build.
+The Bugsee MCP server exports thirteen tools across four resource families. All are read-only except `create_application`, which creates a new application, and `trigger_build_vuln_scan`, which queues a vulnerability scan against an existing build.
 
 | Family | Tool | Purpose |
 |---|---|---|
 | Applications | [`list_applications`](#list_applications) | Discover application keys |
+| Applications | [`create_application`](#create_application) | Create a new application and return its `app_token` (mutating) |
 | Issues | [`list_issues`](#list_issues) | Paginated issue listing with filters |
 | Issues | [`get_issue`](#get_issue) | Full issue report with optional logs and per-thread stacks |
 | Issues | [`get_issue_resource`](#get_issue_resource) | Presigned URL for an issue resource (video, screenshot, network log, attachment, native crash artifact, …) |
@@ -22,6 +23,7 @@ The Bugsee MCP server exports eleven tools across three resource families. All a
 | Builds | [`get_build_regressions`](#get_build_regressions) | Flat regression view: size / deps / timings vs baseline |
 | Builds | [`list_build_vulnerabilities`](#list_build_vulnerabilities) | Vulnerability-scan summary + diff for a build |
 | Builds | [`trigger_build_vuln_scan`](#trigger_build_vuln_scan) | Queue a vulnerability scan against a build (mutating) |
+| Symbols | [`get_symbol_by_uuid`](#get_symbol_by_uuid) | Diagnose missing symbols by module / debug UUID |
 
 ### list_applications
 
@@ -39,6 +41,26 @@ List all applications accessible to the current user. Takes no parameters.
 | `subtype` | Wrapper / framework if any (e.g., `react_native`, `flutter`, `unity`, `dotnet`, `xamarin`, `cordova`, `kmp`) |
 
 Use this tool first when the agent doesn't yet know which application key to query.
+
+### create_application
+
+Create a new application in the current organization and return it, including the `app_token` you need to initialize an SDK. Useful when the agent is onboarding a project end to end — scaffold the app, then wire the token straight into the SDK `launch()` call.
+
+:::caution[Mutating tool]
+This tool writes. It requires the `mcp:write` OAuth scope **and** either organization admin or an explicit `app_create` permission — the scope alone is not sufficient. A client holding only `mcp:read` cannot call it. See [Security](/mcp/security#scopes).
+:::
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | Display name of the application. |
+| `key` | string | Yes | Application key, used as the issue-key prefix (e.g. `"MYAPP"` produces issues `MYAPP-123`). |
+| `type` | string | Yes | Platform: `ios`, `android`, `javascript`, or `rust`. |
+| `subtype` | string | No | Wrapper / framework, when the platform is a host for one — e.g. `react_native`, `flutter`, `unity`, `react`, `nextjs`, `node`. |
+| `description` | string | No | Free-form description. |
+
+The returned `app_token` is a credential: it authorizes SDK builds to report into this application. Treat agent transcripts that contain it accordingly.
 
 ### list_issues
 
@@ -259,7 +281,7 @@ Prefer this over `get_build` + `include: ["vuln_scan_summary"]` when the questio
 Queue a vulnerability scan against a specific build's resolved dependency graph (OSV + GitHub Advisory). The scan runs asynchronously in the worker; this tool returns as soon as the build is admitted to the queue.
 
 :::caution[Mutating tool]
-This is the only mutating tool the MCP server exports today. It writes the build doc and enqueues a worker message. It is **not** idempotent — repeated calls within the cooldown window are rejected, not no-op. Trigger only when the agent (or the user) has a concrete reason: the user explicitly asks for a re-scan, the advisory databases were just refreshed, or the build has never been scanned and the user wants vulnerability data.
+This is one of two mutating tools the MCP server exports (the other is [`create_application`](#create_application)). It writes the build doc and enqueues a worker message. It is **not** idempotent — repeated calls within the cooldown window are rejected, not no-op. Trigger only when the agent (or the user) has a concrete reason: the user explicitly asks for a re-scan, the advisory databases were just refreshed, or the build has never been scanned and the user wants vulnerability data.
 :::
 
 **Parameters:**
@@ -282,6 +304,25 @@ This is the only mutating tool the MCP server exports today. It writes the build
 | `"access_denied"` | User lacks `modify` permission on the application. | — |
 
 After a `"queued"` response, poll `list_build_vulnerabilities` (or `get_build` with `include: ["vuln_scan_summary"]`) to read the result — the scan typically completes within a few minutes.
+
+### get_symbol_by_uuid
+
+Look up debugging symbols by module UUID — a dSYM, ELF, PDB, R8/ProGuard mapping, source map, or il2cpp line-map debug id. This is a **diagnostic** tool: it returns every matching symbol file in *any* status (`uploading`, `processing`, `ready`, `broken`, `deleted`), not just the ready ones, which is what makes it useful for investigating `missing_sym` markers and unsymbolicated frames.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `uuid` | string | Yes | Module / debug UUID taken from a crash frame or a symbol upload. Any spelling is accepted: with or without dashes, upper or lower case. |
+| `application_id_or_key` | string | No | Narrows org-owned matches to one application. When set, read access to that application is asserted before the lookup. System symbols are still included. |
+
+**Interpreting the result:**
+
+- An **empty** `symbols` array means either nothing is uploaded for that UUID in the organization, **or** matches exist only on applications the caller cannot read. It is *not* proof that an upload is missing — do not report it as one.
+- **Multiple** entries mean co-resident formats sharing a single module UUID (for example `elf` plus `il2cpp-linemap`), which is expected rather than a duplicate-upload bug.
+- System symbols are always included when present.
+
+Without `application_id_or_key`, org-owned hits are still limited to applications the caller can read.
 
 ## Prompts
 
