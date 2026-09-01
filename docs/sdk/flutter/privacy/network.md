@@ -7,7 +7,7 @@ slug: "/sdk/flutter/privacy/network"
 
 ## Disabling network traffic collection
 
-Network traffic collection can be disabled completely using **monitorNetwork** launch option. See [configuration](/sdk/flutter/configuration/) for more info. 
+Network traffic collection can be disabled completely using the **monitorNetwork** launch option. This covers both Dart and native platform traffic — with `monitorNetwork` set to `false`, nothing is captured even if the HTTP overrides handler below is installed. See [configuration](/sdk/flutter/configuration/) for more info.
 
 ## Initializing
 In order to let Bugsee intercept network traffic, the following needs to be added to the launch code of your app.

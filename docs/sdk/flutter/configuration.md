@@ -73,7 +73,7 @@ Future<void> main() async {
 |defaultCrashPriority|BugseeSeverityLevel.blocker|Default priority for crashes|
 |killDetection|false|Detect abnormal termination (experimental, [read more](/sdk/ios/app-kills/))|
 |maxRecordingTime|60|Maximum recording duration|
-|monitorNetwork|true|Capture network traffic|
+|monitorNetwork|true|Capture network traffic. Dart traffic additionally requires installing the HTTP overrides handler — see [Network capture](/sdk/flutter/network/)|
 |reportPrioritySelector|false|Allow user to modify priority when reporting manual|
 |screenshotToReport|true|Screenshot key to trigger report|
 |shakeToReport|false|Shake gesture to trigger report|
@@ -99,7 +99,7 @@ Future<void> main() async {
 |frameRate|BugseeFrameRate.high|Specifies how often frames are captured|
 |maxDataSize|50|Maximum disk space consumed by Bugsee|
 |maxRecordingTime|60|Maximum recording duration|
-|monitorNetwork|true|Capture network traffic|
+|monitorNetwork|true|Capture network traffic. Dart traffic additionally requires installing the HTTP overrides handler — see [Network capture](/sdk/flutter/network/)|
 |reportPrioritySelector|false|Allow user to modify priority when reporting manual|
 |screenshotEnabled|true|Attach screenshot to a report|
 |serviceMode|false|Used, when Bugsee is launched from service. No video and no visual controls available. Recording continues even in background.|
