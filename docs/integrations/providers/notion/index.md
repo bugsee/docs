@@ -47,7 +47,7 @@ Then you will need to choose the Tasks database.
 
 ## Configuration
 
-There are no any specific configuration steps for Microsoft Teams. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
+There are no any specific configuration steps for Notion. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
 
 
 ## Custom recipes

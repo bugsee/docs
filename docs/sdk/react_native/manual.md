@@ -8,7 +8,7 @@ slug: "/sdk/react_native/manual"
 ## Trigger Report view
 
 In addition to detection of shake gesture or screenshot issue report view can be triggered programmatically from within
-your Cordova application:
+your React Native application:
 
 ```javascript
 Bugsee.showReportDialog();
