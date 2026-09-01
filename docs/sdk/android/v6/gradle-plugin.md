@@ -5,6 +5,10 @@ sidebar_position: 12
 slug: "/sdk/android/v6/gradle-plugin"
 ---
 
+:::caution[Previous version]
+This page documents Bugsee Android SDK **6.x**, the previous major version. The current line is **7.x** — see [Migrating from 6.x to 7.x](/sdk/android/migration) to upgrade, or [Installation](/sdk/android/installation) to start a new integration.
+:::
+
 The Bugsee Gradle Plugin integrates into your Android build to provide:
 
 - **Bytecode instrumentation** — automatic capture of Logcat calls, OkHttp traffic, HttpEngine traffic, Compose touch events, thread registration, operation dispatch for APM, and main-thread misuse detection.

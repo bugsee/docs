@@ -8,6 +8,10 @@ slug: "/sdk/android/v6/privacy/report"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
+:::caution[Previous version]
+This page documents Bugsee Android SDK **6.x**, the previous major version. The current line is **7.x** — see [Migrating from 6.x to 7.x](/sdk/android/migration) to upgrade, or [Installation](/sdk/android/installation) to start a new integration.
+:::
+
 You can use both pre and postprocessing for report fields. This is useful when you want to strip any sensitive data user may enter into it or when you want to apply some specific formatting.
 
 The principle is simple, for every generated report, Bugsee will call the corresponding method from provided ```ReportFieldsFilter``` object.
