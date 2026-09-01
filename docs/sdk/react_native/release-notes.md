@@ -32,7 +32,7 @@ slug: "/sdk/react_native/release-notes"
 ## 5.5.6 (August 8 2025)
 - Feat: Updated native SDKs to their latest versions (Android: [5.8.3](/sdk/android/v6/release-notes/#583-august-8-2025), iOS: [5.5.7](/sdk/ios/release-notes/#557-august-1-2025))
 
-## 5.5.5 (June 7 2025)
+## 5.5.5 (August 7 2025)
 - Feat: Updated native SDKs to their latest versions (Android: [5.8.2](/sdk/android/v6/release-notes/#582-august-7-2025), iOS: [5.5.7](/sdk/ios/release-notes/#557-august-1-2025))
 
 ## 5.5.4 (June 12 2025)
