@@ -36,7 +36,7 @@ Ask Claude Code in natural language:
 ## What's included
 
 - **SDK setup skills** for every supported platform.
-- **Workflow skills**: `bugsee-fix-issues` (uses the MCP server) and `bugsee-upload-symbols`.
+- **Workflow skills**: `bugsee-fix-issues` (triage and root-cause crashes, errors, and bug reports through the MCP server), `bugsee-build-insights` (build size, regressions, and dependency vulnerabilities through the MCP server), and `bugsee-upload-symbols` (dSYMs, JavaScript source maps, Android mapping files).
 - **MCP server** access to your Bugsee applications and issues (read-only).
 
 See [Plugins](/ai/plugins) for the full list, or browse the source at [github.com/bugsee/bugsee-for-ai](https://github.com/bugsee/bugsee-for-ai).

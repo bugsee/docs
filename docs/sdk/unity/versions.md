@@ -63,7 +63,7 @@ slug: "/sdk/unity/versions"
 - [1.2.6](https://download.bugsee.com/sdk/unity/BugseeUnity-1.2.6.unitypackage)
 - [1.2.5](https://download.bugsee.com/sdk/unity/BugseeUnity-1.2.5.unitypackage)
 - [1.2.3](https://download.bugsee.com/sdk/unity/BugseeUnity-1.2.3.unitypackage)
-- [1.2.1](https://download.bugsee.com/sdk/unity/BugseeUnity-1.2.2.unitypackage)
+- [1.2.2](https://download.bugsee.com/sdk/unity/BugseeUnity-1.2.2.unitypackage)
 - [1.2.1](https://download.bugsee.com/sdk/unity/BugseeUnity-1.2.1.unitypackage)
 - [1.0.1](https://download.bugsee.com/sdk/unity/BugseeUnity-1.0.1.unitypackage)
 - [1.0.0](https://download.bugsee.com/sdk/unity/BugseeUnity-1.0.0.unitypackage)

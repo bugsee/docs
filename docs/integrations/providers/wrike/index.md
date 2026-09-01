@@ -17,7 +17,7 @@ Start Bugsee integration wizard and select  "OAuth" at the first step. Click _"N
 
 ![Select OAuth](wz_step1_oauth.png)
 
-You will be presented with dialog asking you to authorize Bugsee. Click _Authorize_ to allow Bugsee access your GitLab.
+You will be presented with dialog asking you to authorize Bugsee. Click _Authorize_ to allow Bugsee access your Wrike.
 
 ![OAuth Grant](oauth_grant.png)
 
