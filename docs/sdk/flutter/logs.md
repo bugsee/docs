@@ -5,7 +5,7 @@ sidebar_position: 4
 slug: "/sdk/flutter/logs"
 ---
 
-Out of the box Bugsee automatically captures all standard applications console logs both on Android and iOS.
+Out of the box Bugsee automatically captures all standard application console logs both on Android and iOS.
 
 Alternatively, we provide other methods to log messages directly into Bugsee reports. These methods maintain log levels for each message and later allow filtering
 in Bugsee report viewer.

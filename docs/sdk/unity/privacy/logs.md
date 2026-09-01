@@ -5,7 +5,7 @@ sidebar_position: 2
 slug: "/sdk/unity/privacy/logs"
 ---
 
-Bugsee automatically captures all standard applications console logs. The feature can be either completely disabled or
+Bugsee automatically captures all standard application console logs. The feature can be either completely disabled or
 logs can be sanitized during recording to strip any PII data.
 
 ## Disabling log collection

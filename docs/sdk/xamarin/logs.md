@@ -9,7 +9,7 @@ slug: "/sdk/xamarin/logs"
 Microsoft ended support for Xamarin on May 1, 2024. The Bugsee Xamarin SDK is no longer actively maintained. For new projects, use the [Bugsee .NET SDK](/sdk/dotnet/installation/), which supports .NET MAUI and modern .NET workloads.
 :::
 
-Out of the box Bugsee automatically captures all standard applications console logs both on Android and iOS.
+Out of the box Bugsee automatically captures all standard application console logs both on Android and iOS.
 If that behavior is not desired, it can be disabled through Bugsee launch options, see CaptureLogs option in [configuration](/sdk/xamarin/configuration/).
 
 Alternatively, we provide other methods to log messages directly into Bugsee reports. These methods maintain log levels for each message and later allow filtering

@@ -11,7 +11,7 @@ Console log collection can be disabled completely using **captureLogs** launch o
 
 ## Sanitizing console logs
 
-Bugsee automatically captures all standard applications console logs, but they can be protected as well.
+Bugsee automatically captures all standard application console logs, but they can be protected as well.
 
 For every event to be recorded, Bugsee will call your method and provide you with a **BugseeLogEvent** object. It is your
 method's responsibility to clean up all user identifiable data from that structure and return a sanitized event back
