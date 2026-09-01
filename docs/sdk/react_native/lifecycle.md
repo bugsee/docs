@@ -9,7 +9,7 @@ Bugsee SDK silently works within your app and recording everything to assist you
 
 ## Implementing callback
 
-Your should call **Bugsee.setLifecycleEventHandler** and provide the callback that will be executed when new lifecycle event is being dispatched:
+You should call **Bugsee.setLifecycleEventHandler** and provide the callback that will be executed when new lifecycle event is being dispatched:
 
 ```javascript
 /**
