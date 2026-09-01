@@ -48,14 +48,14 @@ You should then perform all the required fields manipulations and pass your chan
 ```swift
 // sample code blocks are provided for async versions
 func bugseeAddFieldsBeforeReportCreated(_ completion: @escaping (BugseeReportFields) -> Void) {
-    var reportFields = BugseeReportFields("Begin;", description: "Begin;", severity: BugseeSeverityBlocker, labels: ["qa"])
+    let reportFields = BugseeReportFields("Begin;", description: "Begin;", severity: BugseeSeverityBlocker, labels: ["qa"])
 
     completion(reportFields)
 }
 
 func bugseeCheckFields(afterReportCreated report: BugseeReportFields, completionHandler completion: @escaping (BugseeReportFields) -> Void) {
-    _ = report.summary?.appending(";End")
-    _ = report.reportDescription?.appending(";End")
+    report.summary = report.summary?.appending(";End")
+    report.reportDescription = report.reportDescription?.appending(";End")
     report.severity = BugseeSeverityHigh
     report.labels?.append("dev")
     
@@ -63,7 +63,7 @@ func bugseeCheckFields(afterReportCreated report: BugseeReportFields, completion
 }
 
 // somewhere within the class
-Bugsee.sharedInstance()?.delegate = self;
+Bugsee.sharedInstance()?.delegate = self
 ```
 
   </TabItem>

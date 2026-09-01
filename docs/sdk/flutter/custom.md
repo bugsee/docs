@@ -73,7 +73,7 @@ dynamic params = <String, dynamic>{};
 params['amount'] = 125;
 params['currency'] = 'USD';
 
-Bugsee.event("event with params", parameters);
+Bugsee.event("event with params", params);
 ```
 
 ## File Attachments
