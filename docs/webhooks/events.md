@@ -45,7 +45,7 @@ All webhook payloads has common structure, like the one below:
 
 |Field|Type|Description|
 |---|---|---|
-|id|String|Unique request ID|
+|id|String|Stable delivery id. Also sent as the `X-Bugsee-Delivery` request header. Same value on every retry of this delivery — use it to dedupe.|
 |type|String|Event type. One of the listed above|
 |created_on|String|Date and time of event generation (ISO date format)|
 |payload|Object|Event data|
