@@ -7,9 +7,18 @@ slug: "/mcp/security"
 
 The Bugsee MCP server is designed to be safe to expose to remote AI clients you don't fully control. This page summarizes how authentication and authorization work, what each token grants, and how to revoke access.
 
-## Read-only by design
+## Read-only by default
 
-All three exported tools (`list_applications`, `list_issues`, `get_issue`) are declared as `readOnlyHint: true` and `destructiveHint: false`. The server has **no** mutating tool surface — there is no way for an MCP client to modify Bugsee data, regardless of which auth flow it used. The value of the connector is entirely in delivering crash and bug context into the agent's conversation.
+The server exports thirteen tools. Eleven of them are declared `readOnlyHint: true` and `destructiveHint: false` and cannot alter Bugsee data — the bulk of the connector's value is in delivering crash, bug, and build context into the agent's conversation.
+
+Two tools mutate, and each is gated behind a permission the read-only tools do not require:
+
+| Tool | What it changes | Gate |
+|---|---|---|
+| [`trigger_build_vuln_scan`](/mcp/usage#trigger_build_vuln_scan) | Writes the build document and enqueues a vulnerability-scan worker message. Not idempotent. | `modify` permission on the target application |
+| [`create_application`](/mcp/usage#create_application) | Creates a new application in the organization and returns its `app_token`. | `mcp:write` scope **and** organization admin or explicit `app_create` permission |
+
+Neither can delete or overwrite existing issue, build, or session data. If you want a strictly read-only connection, issue a token limited to `mcp:read` (see [Scopes](#scopes)) and ensure the account lacks `modify` and `app_create` permissions.
 
 ## Authentication options
 
@@ -57,13 +66,16 @@ Personal tokens do not refresh, do not rotate, and have no audience binding. We 
 
 ## Scopes
 
-The Bugsee MCP server currently exposes one scope:
+The Bugsee MCP server exposes two scopes:
 
 | Scope | Grants |
 |---|---|
-| `mcp:read` | Read access to the three MCP tools, scoped to the user's accessible applications. Equivalent to what the user sees in the Bugsee dashboard. |
+| `mcp:read` | Read access to the eleven read-only tools, scoped to the user's accessible applications. Equivalent to what the user sees in the Bugsee dashboard. |
+| `mcp:write` | Additionally permits [`create_application`](/mcp/usage#create_application). Still subject to organization admin or explicit `app_create` permission — the scope alone does not grant it. |
 
-`mcp:read` is the default and only scope. Future scopes will be additive and explicitly requested by clients.
+`mcp:read` is the default scope. Future scopes will be additive and explicitly requested by clients.
+
+[`trigger_build_vuln_scan`](/mcp/usage#trigger_build_vuln_scan) is authorized by the `modify` permission on the target application rather than by a distinct scope; a client holding only `mcp:read` on an account without `modify` cannot queue a scan.
 
 ## Where granted access is visible and revocable
 
@@ -79,7 +91,7 @@ Revocation is immediate. There is no grace period.
 - **Stolen access token** → bounded by its short TTL (~1h) and audience binding; only usable against the Bugsee MCP resource.
 - **Stolen refresh token** → the next legitimate refresh will detect rotation reuse and revoke the entire chain.
 - **Stolen authorization code** → protected by PKCE (single-use, requires the verifier); replay revokes the resulting chain.
-- **Stolen personal token** → grants full read access until revoked; the user must rotate manually. Prefer OAuth.
+- **Stolen personal token** → grants everything the account itself can do until revoked — full read access, and the two mutating tools if the account holds `modify` / `app_create`. The user must rotate manually. Prefer OAuth.
 - **Compromised registered client** → revoke from the dashboard; the client will need to re-register and re-authorize.
 
 If you suspect a compromise, revoke the affected session or token from **My Integrations**, then rotate any other credentials that may have been exposed in the same incident.

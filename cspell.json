@@ -104,6 +104,7 @@
         "fullpath",
         "pubspec",
         "ARGB",
+        "linemap",
         "Proguard",
         "jailbroken",
         "interoperation",
