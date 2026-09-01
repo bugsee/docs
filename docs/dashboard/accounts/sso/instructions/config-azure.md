@@ -7,7 +7,7 @@ slug: "/dashboard/accounts/sso/instructions/config-azure"
 
 ## Configuration
 
-Navigate to your Azure. In the search bar at the top, type "Enterprise applications" and select the corresponding item.
+Navigate to your Azure portal. In the search bar at the top, type "Enterprise applications" and select the corresponding item.
 
 ![](azure-step-0.png?v=2)
 

@@ -20,11 +20,11 @@ On the first step, we offer a list of popular authentication apps Bugsee can wor
 
 ![](2fa-step-2.png)
 
-On the next step, Bugsee provides the information to configure your authentication application to work with Bugsee. Open you app and scan the shown QR code or manually specify the key if your app does not support QR codes.
+On the next step, Bugsee provides the information to configure your authentication application to work with Bugsee. Open your app and scan the shown QR code or manually specify the key if your app does not support QR codes.
 
 ![](2fa-step-3.png)
 
-Now, when you have configured your authentication application, it's time to check whether it was configured properly. Provide the verification token you authentication application is displaying for Bugsee on the next step.
+Now, when you have configured your authentication application, it's time to check whether it was configured properly. Provide the verification token your authentication application is displaying for Bugsee on the next step.
 
 ![](2fa-step-4.png)
 

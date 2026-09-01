@@ -163,7 +163,7 @@ Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: 
 
 If we pass that string to a service that pre-formats text using Markdown, then we potentially will lose some of the characters from that line (e.g. asterisks will be treated as bold triggers and will not be displayed).
 
-To mitigate this, we let you set the _description\_format_ field. By default, its value is set to ```raw``` which means that target field is not formatted with any of the markup languages and contains a plain string. You can set it to either ```html``` or ```markdown``` depending on the target service formatting support. In our example above, if we set _description\_format_ to ```markdown``` and pass the result of the recipe to JIRA, _description_ field will be kept intact. Setting the "_format" field instructs our algorithm to omit escaping the data if it matches the supported markup in remote service. Below is a table with all the services and what format they expect when is set in recipe result.
+To mitigate this, we let you set the _description\_format_ field. By default, its value is set to ```raw``` which means that target field is not formatted with any of the markup languages and contains a plain string. You can set it to either ```html``` or ```markdown``` depending on the target service formatting support. In our example above, if we set _description\_format_ to ```markdown``` and pass the result of the recipe to JIRA, _description_ field will be kept intact. Setting the "_format" field instructs our algorithm to omit escaping the data if it matches the supported markup in remote service. Below is a table with all the services and what format they expect when it is set in the recipe result.
 
 |Service|Supported markup|
 |---|---|
