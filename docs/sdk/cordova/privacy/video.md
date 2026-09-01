@@ -36,7 +36,7 @@ Bugsee allows hiding screen area by absolute coordinates as well. Notice that iO
 
 ```javascript
 // Values are: X, Y, Width, Height
-Bugsee.addSecureRect:(10, 10, 400, 600);
+Bugsee.addSecureRect(10, 10, 400, 600);
 ```
 
 You also need to be aware of the orientation that can be changed during application work. Recreate rectangle after orientation change, if 'black box' on video does not cover all secure fields and elements.

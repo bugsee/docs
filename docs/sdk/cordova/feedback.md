@@ -19,6 +19,6 @@ Bugsee.showFeedbackUI();
 
 Default greeting can be set on the server in your application settings. However, for the cases when network is not available, you can set default greeting on the client as well:
 
-```java
+```javascript
 Bugsee.setDefaultFeedbackGreeting("Hi! How can we help?");
 ```
