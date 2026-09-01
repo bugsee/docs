@@ -1,7 +1,7 @@
 ---
 title: "Bugsee Xamarin SDK"
 name: bugsee-xamarin-sdk
-description: Full Bugsee SDK setup for Xamarin. Use when asked to add Bugsee to Xamarin, install Bugsee NuGet for Xamarin, or set up bug reporting, crash reporting, and video recording for Xamarin applications.
+description: Full Bugsee SDK setup for Xamarin. DEPRECATED — Microsoft ended Xamarin support on May 1, 2024 and this SDK is no longer actively maintained; prefer the Bugsee .NET SDK for new projects. Use when asked to add Bugsee to Xamarin, install Bugsee NuGet for Xamarin, or set up bug reporting, crash reporting, and video recording for existing Xamarin applications.
 sidebar_label: "Xamarin"
 sidebar_position: 7
 slug: "/ai/agent-skills/sdk/xamarin/SKILL"
@@ -10,6 +10,12 @@ category: sdk-setup
 ---
 
 # Bugsee Xamarin SDK
+
+> **Deprecated — tell the user before proceeding.**
+> Microsoft ended support for Xamarin on May 1, 2024, and the Bugsee Xamarin SDK is no longer
+> actively maintained. For a **new** project, use the [Bugsee .NET SDK](/ai/agent-skills/sdk/dotnet/SKILL)
+> instead, which supports .NET MAUI and modern .NET workloads. Only continue with this skill when
+> the user is working in an existing Xamarin codebase and has confirmed they want to stay on it.
 
 Opinionated wizard that guides you through complete Bugsee setup in Xamarin — bug reporting with video, crash reporting, network monitoring, and console logs for iOS, Android, and Xamarin.Forms.
 

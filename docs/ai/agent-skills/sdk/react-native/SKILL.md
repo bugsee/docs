@@ -109,7 +109,8 @@ For functional components:
 
 ```javascript
 import Bugsee from 'react-native-bugsee';
-import { Platform, useEffect } from 'react-native';
+import { useEffect } from 'react';
+import { Platform } from 'react-native';
 
 function App() {
   useEffect(() => {
