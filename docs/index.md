@@ -12,7 +12,7 @@ Using Bugsee on mobile devices requires installation of Bugsee lightweight SDK:
 * [Installing iOS SDK](/sdk/ios/installation/)
 * [Installing Android SDK](/sdk/android/installation/)
 * [Installing Cordova SDK](/sdk/cordova/installation/)
-* [Installing React Native Module](/sdk/react_native/installation/)
+* [Installing React Native SDK](/sdk/react_native/installation/)
 * [Installing Flutter SDK](/sdk/flutter/installation/)
 * [Installing Unity SDK](/sdk/unity/installation/)
 * [Installing KMP SDK (Beta)](/sdk/kmp/installation/)

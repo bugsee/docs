@@ -19,11 +19,11 @@ Set **Bugsee** as the _"Display label"_ field value and optionally pick the colo
 
 ![](jumpcloud-step-3.png)
 
-Once upload completes, some of the fields will be populated automatically as shown. Notice, that _"IDP Entity ID_" is not filled. Just copy and paste the value from _"SP Entity ID"_ to _"IDP Entity ID_".
+Once upload completes, some of the fields will be populated automatically as shown. Notice that _"IDP Entity ID"_ is not filled. Just copy and paste the value from _"SP Entity ID"_ to _"IDP Entity ID"_.
 
 ![](jumpcloud-step-4.png)
 
-Next, we need to configure **user** attributes. They will contain information about the user being authenticated and must match to the values specified in the _"Fields Map_" step in Bugsee SSO setup wizard. Follow the visual instructions below.
+Next, we need to configure **user** attributes. They will contain information about the user being authenticated and must match the values specified in the _"Fields Map"_ step in Bugsee SSO setup wizard. Follow the visual instructions below.
 
 ![](jumpcloud-step-5.png)
 
@@ -33,7 +33,7 @@ Remember and/or make note of the attributes' names you've used. We will need the
 You can read more about user attributes available in JumpCloud in their [Knowledge base article](https://support.jumpcloud.com/s/article/configuring-user-attributes-for-saml-connectors-2019-08-21-10-36-47)
 :::
 
-Now, make sure _"Sign assertion_" is not checked and _"Declare redirect endpoint"_ is, on the contrary, is checked. Fill in _"IdP-initiated URL"_ **only** if you want to force the _"SP-initiated authentication SSO"_ (Bugsee supports both SP- and IdP-initiated authentication SSO). As the last segment in _"IdP URL"_ put "bugsee".
+Now, make sure _"Sign assertion"_ is not checked and _"Declare redirect endpoint"_ is, on the contrary, checked. Fill in _"IdP-initiated URL"_ **only** if you want to force the _"SP-initiated authentication SSO"_ (Bugsee supports both SP- and IdP-initiated authentication SSO). As the last segment in _"IdP URL"_ put "bugsee".
 
 ![](jumpcloud-step-6.png)
 
