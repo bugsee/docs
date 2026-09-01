@@ -24,4 +24,4 @@ You will be presented with dialog asking you to authorize Bugsee. Click _Authori
 
 ## Configuration
 
-There are no any specific configuration steps for Wrike. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
+There are no specific configuration steps for Wrike. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.

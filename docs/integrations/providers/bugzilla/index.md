@@ -26,7 +26,7 @@ Provide valid host (URL to your Bugzilla), username and password.
 
 ## Configuration
 
-There are no any specific configuration steps for Bugzilla. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
+There are no specific configuration steps for Bugzilla. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
 
 
 ## Custom recipes

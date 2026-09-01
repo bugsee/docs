@@ -34,7 +34,7 @@ Start Bugsee integration wizard and paste token copied in previous step. Click _
 
 ## Configuration
 
-There are no any specific configuration steps for Pivotal Tracker. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
+There are no specific configuration steps for Pivotal Tracker. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
 
 
 ## Custom recipes
