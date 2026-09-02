@@ -17,7 +17,7 @@ slug: "/integrations/providers/clickup"
 
 To proceed with this authentication type you need to obtain API token from ClickUp. Steps below will instruct you how to do that.
 
-Open ClickUp. Reveal user menu by clicking on your avatar icon in at the left bottom and then click _"Apps"_ there.
+Open ClickUp. Reveal user menu by clicking on your avatar icon at the bottom left and then click _"Apps"_ there.
 
 ![Navigate to apps](open_apps.png)
 
@@ -61,7 +61,7 @@ Bugsee can accommodate all these customizations with the help of [custom recipes
 
 ### Setting proper status for tasks
 
-Bugsee can't set proper status (open or closed) for all the types of tasks ClickUp posses. As it differs from one type of the space/list to another and there is no API endpoint to inquire that. So, you can define that using custom recipe as follows:
+Bugsee can't set proper status (open or closed) for all the types of tasks ClickUp possesses. As it differs from one type of the space/list to another and there is no API endpoint to inquire that. So, you can define that using custom recipe as follows:
 
 ```javascript
 function create(context) {

@@ -12,7 +12,7 @@ Bugsee is using OTP protocol to request additional authentication information up
 
 ## Configuration
 
-Any user can enable two-factor authentication (2FA) to strengthen their account security. Navigate to your Bugsee [profile](https://app.bugsee.com/#/settings/user/profile) and in _"Authentication_" block click _"Enable_" next to the _"Two-Factor authentication"_.
+Any user can enable two-factor authentication (2FA) to strengthen their account security. Navigate to your Bugsee [profile](https://app.bugsee.com/#/settings/user/profile) and in _"Authentication"_ block click _"Enable"_ next to the _"Two-Factor authentication"_.
 
 ![](2fa-step-1.png)
 

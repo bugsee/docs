@@ -373,7 +373,7 @@ This page documents Bugsee Android SDK **6.x**, the previous major version. The 
 - Fix: Rare launch failure in some wrappers introduced by the bug in 1.19.9
 
 ## 1.19.9 (January 28 2021)
-- Fix: More cases when SDK were initially launched without video and then relaunched with video, touches may not be captured properly
+- Fix: More cases when SDK was initially launched without video and then relaunched with video, touches may not be captured properly
 
 ## 1.19.8 (January 20 2021)
 - Fix: In some cases when SDK was initially launched without video and then relaunched with video, touches may not be captured properly

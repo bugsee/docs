@@ -15,7 +15,7 @@ This page documents Bugsee Android SDK **6.x**, the previous major version. The 
 You can use both pre and postprocessing for report fields. This is useful when you want to strip any sensitive data user may enter into it or when you want to apply some specific formatting.
 
 The principle is simple, for every generated report, Bugsee will call the corresponding method from provided ```ReportFieldsFilter``` object.
-You should then perform all the required fields manipulations and call ```listener.onChanged(reportFields)``` to pass it back to Bugsee. ```listener.onChanged(reportFields)``` can be called in other thread than calling thread.
+You should then perform all the required fields manipulations and call ```listener.onChanged(reportFields)``` to pass it back to Bugsee. ```listener.onChanged(reportFields)``` can be called on a thread other than the calling thread.
 
 
 <Tabs groupId="lang-android">

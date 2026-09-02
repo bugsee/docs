@@ -52,7 +52,7 @@ Please check the following:
 
 - Make sure Internet is available on the device (e.g. try to open a web page in the browser)
 - Make sure you don't have WifiOnlyUpload enabled via launch options. If it's enabled, you need to be connected to WiFi for the report to be uploaded.
-- If you're trying to upload crash report, you need to relaunch the application to trigger the upload. Crash report is uploaded on the next application launch.
+- If you're trying to upload a crash report, you need to relaunch the application to trigger the upload. Crash report is uploaded on the next application launch.
 
 
 <br />

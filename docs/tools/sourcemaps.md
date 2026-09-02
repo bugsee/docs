@@ -60,4 +60,4 @@ Usage
 
 - **make**: This command is a union of generate and upload. It automatically generates source maps and uploads them to Bugsee servers.
 - **generate**: This command instructs the tool to trigger source maps generation for the specified project.
-- **upload**: This command instructs the tool to upload the specified   to the Bugsee servers.
+- **upload**: This command instructs the tool to upload the specified source maps to the Bugsee servers.

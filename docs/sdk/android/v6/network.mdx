@@ -14,7 +14,7 @@ This page documents Bugsee Android SDK **6.x**, the previous major version. The 
 
 ## HttpURLConnection, HttpsURLConnection
 
-Bugsee automatically intercepts network requests made with the following clients and libraries, which use these clients as underlying HTTP stack. For other HTTP clients additional actions are required.
+Bugsee automatically intercepts network requests made with the following clients and libraries, which use these clients as the underlying HTTP stack. For other HTTP clients additional actions are required.
 
 ## OkHttpClient
 
@@ -229,7 +229,7 @@ val picasso = Picasso.Builder(context)
 ## Glide
 Glide uses HttpUrlConnection by default, so its network events are intercepted automatically. 
 
-But if you use OkHttpClient as underlying HTTP stack for Glide, additional actions are required.
+But if you use OkHttpClient as the underlying HTTP stack for Glide, additional actions are required.
 First, add class, which extends OkHttpGlideModule class, with overridden registerComponents() method.
 
 

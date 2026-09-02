@@ -5,7 +5,7 @@ sidebar_position: 4
 slug: "/sdk/unity/logs"
 ---
 
-Nothing needs to be done on your part if all you need is retrieve standard logs, Bugsee will extract the logs for the relevant period of time and upload it as part of the report. We provide an additional API to push logs directly into Bugsee without printing them to console.
+Nothing needs to be done on your part if all you need is to retrieve standard logs, Bugsee will extract the logs for the relevant period of time and upload it as part of the report. We provide an additional API to push logs directly into Bugsee without printing them to console.
 
 
 ```csharp
