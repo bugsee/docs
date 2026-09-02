@@ -57,7 +57,7 @@ A token value will be presented in the next step. This will be needed to configu
 
 Now, when you've obtained a token, let's configure integration in Bugsee.
 
-Start Bugsee integration wizard paste the token into. Click _"Next"_.
+Start the Bugsee integration wizard and paste the token into it. Click _"Next"_.
 
 ![Paste token](wz_step1_token.png)
 

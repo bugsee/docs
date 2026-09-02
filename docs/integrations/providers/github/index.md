@@ -15,7 +15,7 @@ slug: "/integrations/providers/github"
 
 ### Personal token
 
-Before using this method, please ensure you have the proper personal token. To generate it, navigate to [GitHub personal access tokens](https://github.com/settings/tokens/new). he following scopes must be selected for the `token:repo`, `repo:status`, `public_repo`, `read:org`, `project`.
+Before using this method, please ensure you have the proper personal token. To generate it, navigate to [GitHub personal access tokens](https://github.com/settings/tokens/new). The following scopes must be selected for the token: `repo`, `repo:status`, `public_repo`, `read:org`, `project`.
 
 Select "Personal token" in the first step of integration wizard. Click "Next".
 

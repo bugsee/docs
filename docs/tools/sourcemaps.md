@@ -52,7 +52,7 @@ Usage
 |-b, --bundle|Yes|upload|Path to the generated bundle (file)|
 |-e, --endpoint|No|upload, make|Defines the upload endpoint|
 |-p, --platform|Yes|make, generate, upload|Identifies the platform source maps are generated for. Available values are: 'ios' and 'android'|
-|-c|No\*|make, generate, upload|Defines the configuration to use when handling the source maps. Available values: 'debug' and 'release'. <br />\*_Note that this option is required for `upload` command as there is no way to easily found out for which configuration sourcemap was generated.For other commands, if omitted, source maps will be generated for both debug and release configurations_.|
+|-c|No\*|make, generate, upload|Defines the configuration to use when handling the source maps. Available values: 'debug' and 'release'. <br />\*_Note that this option is required for `upload` command as there is no way to easily find out for which configuration the sourcemap was generated. For other commands, if omitted, source maps will be generated for both debug and release configurations_.|
 |-o, --overwrite|No|make, upload|Instructs the tool to overwrite any existing source maps of the same version, build configuration and platform|
 
 

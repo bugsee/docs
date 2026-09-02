@@ -111,7 +111,7 @@ Alternatively you can set up a filter by registering a block to be executed for 
 
     // Send the event further, call with nil if you want to omit this event altogether.
     decisionBlock(event);
-}
+}];
 
 // Unregister a block before de-allocating a class in which it was registered
 [Bugsee removeNetworkEventFilter];

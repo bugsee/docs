@@ -8,7 +8,7 @@ slug: "/sdk/android/issue-detection/main-thread-misuse"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-The **main-thread misuse detector** flags I/O, network, database, or `SharedPreferences` operations executed on the UI thread — the kind of work that directly causes jank, hangs, and ANRs. When a violation is observed, Bugsee reports an issue with the offending stack trace categorised under one of six domains: `DiskRead`, `DiskWrite`, `Network`, `Database`, `SharedPrefs`, or generic `Blocking`.
+The **main-thread misuse detector** flags I/O, network, database, or `SharedPreferences` operations executed on the UI thread — the kind of work that directly causes jank, hangs, and ANRs. When a violation is observed, Bugsee reports an issue with the offending stack trace categorized under one of six domains: `DiskRead`, `DiskWrite`, `Network`, `Database`, `SharedPrefs`, or generic `Blocking`.
 
 Each unique call-site is reported once per session — repeated calls don't flood Bugsee with duplicates.
 
