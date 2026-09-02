@@ -113,7 +113,7 @@ slug: "/sdk/react_native/release-notes"
 - Feat: Add new API to manually trigger view hierarchy capturing. Multiple view hierarchies support.
 
 ## 3.1.3 (August 4 2023)
-- Feat: Updated underlying Android SDKs to its latest version (3.8.3)
+- Feat: Updated underlying Android SDKs to their latest version (3.8.3)
 - Fix: \[Android\] Deadlock in some specific scenario when application comes to foreground
 
 ## 3.1.2 (July 12 2023)
@@ -164,7 +164,7 @@ slug: "/sdk/react_native/release-notes"
 - Note: Please refer to the underlying SDKs release notes to get the detailed list of changes: [Android](/sdk/android/v6/release-notes/#300-august-19-2022) / [iOS](/sdk/ios/release-notes/#300-september-1-2022)
 
 ## 2.10.3 (June 1 2022)
-- Feature: Updated native Android SDKs to its latest versions. Several race conditions are fixed
+- Feature: Updated native Android SDKs to their latest versions. Several race conditions are fixed
 
 ## 2.10.2 (May 11 2022)
 - Feature: Updated native Android/iOS SDKs to their latest versions
@@ -179,11 +179,11 @@ slug: "/sdk/react_native/release-notes"
 - Fix: Some network events were not captured properly when network filter was set (on Android)
 
 ## 2.9.0 (March 16 2022)
-- Feature: Updated native iOS SDKs to its latest version
+- Feature: Updated native iOS SDKs to their latest version
 - Feature: Clean script is not required any more for iOS project
 
 ## 2.8.0 (February 04 2022)
-- Feature: Updated native iOS SDKs to its latest version
+- Feature: Updated native iOS SDKs to their latest version
 - Feature: iOS SDK is not bundled within the NPM package any more, but rather is fetched via CocoaPods
 
 ## 2.7.0 (January 26 2022)
@@ -194,13 +194,13 @@ slug: "/sdk/react_native/release-notes"
 - Feature: Improve exception information handling for better symbolication of JS call stacks
 
 ## 2.6.0 (October 4 2021)
-- Feature: Updated native Android SDKs to its latest versions. They include full support for iOS 15 and Android 12
+- Feature: Updated native Android SDKs to their latest versions. They include full support for iOS 15 and Android 12
 
 ## 2.5.1 (August 12 2021)
 - Feature: Automatically generate stack trace when non-Error instance is supplied to logException
 
 ## 2.5.0 (August 3 2021)
-- Feature: Updated native Android SDKs to its latest versions. It includes many updates to embedded dependencies to mitigate the NonSdkApi warnings and errors.
+- Feature: Updated native Android SDKs to their latest versions. It includes many updates to embedded dependencies to mitigate the NonSdkApi warnings and errors.
 
 ## 2.4.6 (June 18 2021)
 - Fix: Add missing reporting UI controlling flags to launch options

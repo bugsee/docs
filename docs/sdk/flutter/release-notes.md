@@ -131,10 +131,10 @@ slug: "/sdk/flutter/release-notes"
 - Fix: Incorrect underlying Bugsee Android SDK was used. Now using (Android: 3.4.0, iOS: 3.3.3)
 
 ## 5.0.4 (February 26 2023)
-- Feature: Updated native SDKs to its latest versions
+- Feature: Updated native SDKs to their latest versions
 
 ## 5.0.3 (January 26 2023)
-- Feature: Updated native SDKs to its latest versions
+- Feature: Updated native SDKs to their latest versions
 
 ## 5.0.2 (November 24 2022)
 - Feature: Update native SDKs to the latest versions (Android: 3.0.2, iOS: 3.2.1)

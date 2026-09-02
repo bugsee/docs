@@ -153,7 +153,7 @@ Bugsee.stop()
 |CrashReport|true|Catch and report application crashes|
 |NdkCrashReport|false|Catch and report application crashes in native code. This is an experimental feature. Care should be taken when using it in production builds. [Learn more](/sdk/android/v6/crashes/) about NDK crashes symbolication and its requirements.|
 |HandleAnr|false|Detect ANR (Application Not Responding) and transform it to a meaningful exception. Note: option is experimental and it is not recommended to use it in production builds.|
-|DetectAppExit|false|Detect any kind of process termination \(e.g. when user swipes off the application from multitasking UI, or when system unloads the app due memory pressure\). Special error report is generated for this scenario with "BugseeAppExit" domain|
+|DetectAppExit|false|Detect any kind of process termination \(e.g. when user swipes off the application from multitasking UI, or when system unloads the app due to memory pressure\). Special error report is generated for this scenario with "BugseeAppExit" domain|
 |VideoEnabled|true|Record video. If *false*, created issues will contain console logs, events and traces, but will not contain video.|
 |ScreenshotEnabled|true|Attach screenshot to a report. Note that if the **VideoEnabled** option is *false*, the default value of this option is *false* as well.|
 |ViewHierarchyEnabled|true|Flag that controls view hierarchy capturing for Bug reports|

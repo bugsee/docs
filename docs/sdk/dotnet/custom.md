@@ -85,7 +85,7 @@ BugseePlugin.Bugsee.Event("event with params", parameters);
 ## File Attachments
 
 Binary files (attachments) can also be added to the report right before it is sent. The attachment will be available for download directly from the issue viewer.
-Currently both the amount of attachments and their size is limited. Max of 3 attachments, 1M each.
+Currently both the amount of attachments and their size are limited. Max of 3 attachments, 1M each.
 
 You should provide an implementation for the **BugseeAttachmentsHandler** delegate and set it via the SetAttachmentsHandler() method.
 

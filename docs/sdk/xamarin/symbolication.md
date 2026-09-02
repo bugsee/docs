@@ -21,7 +21,7 @@ Before adding changes to trigger symbols collection and uploading, make sure you
 
 Symbols are collected and uploaded during build. We install several hooks into target projects build flow which are triggered automatically.
 
-The only thing you need to do is specify your Bugsee application token for your Project to let us properly link debug symbols. Add special assembly attribute ```BugseeAppToken``` to ${Project-Root}/Properties/AssemblyInfo.cs file (If it does not exists, create one). 
+The only thing you need to do is specify your Bugsee application token for your Project to let us properly link debug symbols. Add special assembly attribute ```BugseeAppToken``` to ${Project-Root}/Properties/AssemblyInfo.cs file (If it does not exist, create one). 
 
 ```csharp
 using System.Reflection;

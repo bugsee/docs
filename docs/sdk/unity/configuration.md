@@ -72,7 +72,7 @@ Bugsee.Relaunch(options);
 |KillDetection|false|Detect abnormal termination (experimental, [read more](/sdk/ios/app-kills/))|
 |MaxRecordingTime|60|Maximum recording duration|
 |MonitorNetwork|true|Capture network traffic|
-|ReportPrioritySelector|false|Allow user to modify priority when reporting manual|
+|ReportPrioritySelector|false|Allow user to modify priority when reporting manually|
 |ScreenshotToReport|true|Screenshot key to trigger report|
 |ShakeToReport|false|Shake gesture to trigger report|
 |Style|Default|Enumeration of Default, Dark and BasedOnStatusBar
@@ -83,7 +83,7 @@ Bugsee.Relaunch(options);
 |MaxDataSize|50|Bugsee will avoid using more disk space than specified (in MB). If total Bugsee data size exceeds specified value, oldest recordings (even not sent) will be removed. Value should not be smaller than 10|
 |VideoScale|1.0|Additional down scaling applied to recorded video, (e.g., 0.5 would reduce both width and height by half).|
 |CaptureDeviceAndNetworkNames|true|Capture device name, wifi SSID and mobile carrier name.|
-|DetectAppExit|false|Detect any kind of process termination (e.g. when user swipes off the application from multitasking UI, or when system unloads the app due memory pressure). Special error report is generated for this scenario with "BugseeAppExit" domain|
+|DetectAppExit|false|Detect any kind of process termination (e.g. when user swipes off the application from multitasking UI, or when system unloads the app due to memory pressure). Special error report is generated for this scenario with "BugseeAppExit" domain|
 |ViewHierarchyEnabled|false|Capture view hierarchy for Bug and Error reports|
 |CaptureOSLogs|false|Automatically capture OSLog and Logger print statements|
 |MonitorBluetoothStatus|false|Monitor bluetooth state.<br />IMPORTANT: You must add "Privacy - Bluetooth Always Usage Description" key into your Info.plist with a string value explaining to the user why you need bluetooth permission|
@@ -110,7 +110,7 @@ Bugsee.Relaunch(options);
 |MaxDataSize|50|Maximum disk space consumed by Bugsee|
 |MaxRecordingTime|60|Maximum recording duration|
 |MonitorNetwork|true|Capture network traffic|
-|ReportPrioritySelector|false|Allow user to modify priority when reporting manual|
+|ReportPrioritySelector|false|Allow user to modify priority when reporting manually|
 |NotificationBarTrigger|true|Trigger report from notification bar|
 |ScreenshotEnabled|true|Attach screenshot to a report. Note, that if VideoEnabled option is false, default value of this option is false too.|
 |ServiceMode|false|Used, when Bugsee is launched from service. No video and no visual controls available. Recording continues even in background.|
@@ -120,7 +120,7 @@ Bugsee.Relaunch(options);
 |VideoScale|1.0|Additional down scaling applied to recorded video, (e.g., 0.5 would reduce both width and height by half).|
 |CaptureDeviceAndNetworkNames|true|Capture device name, wifi SSID and mobile carrier name.|
 |ScreenshotToReport|false|Trigger bug report by taking screenshot on device.<br /><br />Bugsee Android SDK 5.0.0 and up.<br /><br />This feature requires additional permissions:<br />**Android 14+**: DETECT_SCREEN_CAPTURE permission is required. More details about the permission and the native API involved in [Android development documentation](https://developer.android.com/about/versions/14/features/screenshot-detection).<br /><br />**Android 13**: READ_MEDIA_IMAGES permission is required.<br /><br />**Android 12** and below: READ_EXTERNAL_STORAGE permission is required.<br /><br />On Android 13 and below, Bugsee SDK monitors the gallery to detect screenshot creation and that's why the permissions mentioned above are required.|
-|DetectAppExit|false|Detect any kind of process termination (e.g. when user swipes off the application from multitasking UI, or when system unloads the app due memory pressure). Special error report is generated for this scenario with "BugseeAppExit" domain|
+|DetectAppExit|false|Detect any kind of process termination (e.g. when user swipes off the application from multitasking UI, or when system unloads the app due to memory pressure). Special error report is generated for this scenario with "BugseeAppExit" domain|
 |ViewHierarchyEnabled|false|Capture view hierarchy for Bug and Error reports|
 
 ##### Android video modes comparison

@@ -11,7 +11,7 @@ Microsoft ended support for Xamarin on May 1, 2024. The Bugsee Xamarin SDK is no
 
 ## Report view
 
-In addition to detection of shake gesture or screenshot issue report view can be triggered programmatically:
+In addition to detection of a shake gesture or screenshot issue report view can be triggered programmatically:
 
 ```csharp
 Bugsee.ShowReport();
@@ -34,7 +34,7 @@ Bugsee.Upload("Upload from code", "Some description", BugseeSeverityLevel.Medium
 
 ## Handled exceptions
 
-It is possible to report handled exceptions from code. These reports will get combined similar to crashes, and you will be provided with statistics and a break down by unique devices, OS versions, etc.
+It is possible to report handled exceptions from code. These reports will get combined similar to crashes, and you will be provided with statistics and a breakdown by unique devices, OS versions, etc.
 
 ```csharp
 try {

@@ -19,7 +19,7 @@ Bugsee.resume();
 
 ### Marking view as protected in code
 
-You can mark any view as protected and in this case it will be covered with black box automatically. Use `Bugsee.toggleProtected()` method to achieve this. It accepts two parameters: `component` and `state`. First should be a reference to the component you want to hide/show and second is a boolean value of `protected` flag (either `true` or `false`).
+You can mark any view as protected and in this case it will be covered with a black box automatically. Use `Bugsee.toggleProtected()` method to achieve this. It accepts two parameters: `component` and `state`. First should be a reference to the component you want to hide/show and second is a boolean value of `protected` flag (either `true` or `false`).
 
 ```jsx
 <TextInput
@@ -39,7 +39,7 @@ Bugsee allows hiding screen area by absolute coordinates as well. Notice that iO
 Bugsee.addSecureRect(10, 10, 400, 600);
 ```
 
-You also need to be aware of the orientation that can be changed during application work. Recreate rectangle after orientation change, if 'black box' on video does not cover all secure fields and elements.
+You also need to be aware of the orientation that can be changed while the app is running. Recreate rectangle after orientation change, if 'black box' on video does not cover all secure fields and elements.
 
 Other methods of secure rectangles:
 
@@ -57,7 +57,7 @@ Bugsee.removeAllSecureRects();
 
 ## Hiding keyboard (iOS only)
 
-In some cases you might want to prevent keyboard to be captured on video (as well as touches). You can use the following method to achieve the desired effect.
+In some cases you might want to prevent the keyboard from being captured on video (as well as touches). You can use the following method to achieve the desired effect.
 
 ```javascript
 // To let us capture keyboard

@@ -7,14 +7,14 @@ slug: "/sdk/react_native/manual"
 
 ## Trigger Report view
 
-In addition to detection of shake gesture or screenshot issue report view can be triggered programmatically from within
+In addition to detection of a shake gesture or screenshot issue report view can be triggered programmatically from within
 your React Native application:
 
 ```javascript
 Bugsee.showReportDialog();
 ```
 
-Optionally you can pre-fill some fields (summary, description, severity, user will be able to modify them later.
+Optionally you can pre-fill some fields (summary, description, severity); the user will be able to modify them later.
 ```javascript
 // Bugsee.showReportDialog(summary, description, severity)
 Bugsee.showReportDialog("Problem summary", "Further description", Bugsee.Severity.Medium);
@@ -30,7 +30,7 @@ Bugsee.upload("Problem summary", "Further description", Bugsee.Severity.Blocker)
 ```
 ## Non-fatal exceptions
 
-It is possible to report non-fatal exceptions from code. These reports will get combined similar to crashes, and you will be provided with statistics and a break down by unique devices, versions, etc.
+It is possible to report non-fatal exceptions from code. These reports will get combined similar to crashes, and you will be provided with statistics and a breakdown by unique devices, versions, etc.
 
 ```javascript
 try {

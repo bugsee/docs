@@ -98,10 +98,10 @@ slug: "/sdk/unity/release-notes"
 
 
 ## 2.0.3 (August 16 2022)
-- Feature: Updated native Android SDKs to its latest version. Improvements for Unity as a Library scenario
+- Feature: Updated native Android SDKs to their latest version. Improvements for Unity as a Library scenario
 
 ## 2.0.2 (June 1 2022)
-- Feature: Updated native Android SDKs to its latest version. Several race conditions are fixed
+- Feature: Updated native Android SDKs to their latest version. Several race conditions are fixed
 
 ## 2.0.1 (May 11 2022)
 - Feature: Update native SDKs to the latest versions (Android: 2.1.2, iOS: 2.1.7)
@@ -174,7 +174,7 @@ slug: "/sdk/unity/release-notes"
 - Maintenance update
 
 ## 1.3.0 (Dec 11 2018)
-- Update: Native SDKs are updated to its latest versions (contains fixes for known issues)
+- Update: Native SDKs are updated to their latest versions (contains fixes for known issues)
 
 ## 1.2.10 (Oct 26 2018)
 - Feature: attachments are supported now both on iOS and Android platforms [read more](/sdk/unity/custom/)

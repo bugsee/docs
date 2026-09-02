@@ -5,7 +5,7 @@ sidebar_position: 4
 slug: "/sdk/cordova/logs"
 ---
 
-You can use Bugsee logging interface directly, we provide two API functions to send a message to a log:
+You can use the Bugsee logging interface directly, we provide two API functions to send a message to a log:
 
 ```javascript
 // With default log level (normal)
