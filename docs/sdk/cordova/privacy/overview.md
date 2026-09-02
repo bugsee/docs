@@ -10,7 +10,7 @@ Data sent along with the reports may include video recording of screen, network 
 
 It is the sole responsibility of the application developers to remove any such data from the reports before it leaves the users’ device.
 
-Bugsee provides the tools and means to either prevent some data of being collected or clean the data during the collection process:
+Bugsee provides the tools and means to either prevent some data from being collected or clean the data during the collection process:
 
 * [Video and Touch](/sdk/cordova/privacy/video/)
 * [Console logs](/sdk/cordova/privacy/logs/)

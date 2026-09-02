@@ -20,7 +20,7 @@ To proceed with this authentication type you need to obtain API token from Monda
 
 Now, when you've obtained a token, let's configure integration in Bugsee.
 
-Start Bugsee integration wizard paste the token into. Click _"Next"_.
+Start the Bugsee integration wizard and paste the token into it. Click _"Next"_.
 
 ![Token enter](wz_step1_token.png)
 
