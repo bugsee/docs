@@ -66,7 +66,7 @@ Bugsee.clearAllAttributes();
 ## File Attachments
 
 Binary files (attachments) can also be added to the report right before it is sent. The attachment will be available for download directly from the issue viewer.
-Currently both the amount of attachments and their size is limited. Max of 3 attachments, 3MB (size increased from 1MB starting from v3.0.11).
+Currently both the amount of attachments and their size are limited. Max of 3 attachments, 3MB (size increased from 1MB starting from v3.0.11).
 
 To specify attachments for the report, you should provide a corresponding handler by passing it into the ```setAttachmentsHandler()``` method. Your handler will be called each time a new report is being assembled, and it will be provided with the ```Report``` object that contains the following fields.
 

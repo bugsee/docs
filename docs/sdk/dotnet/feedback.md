@@ -9,7 +9,7 @@ Bugsee implements a built-in single-threaded messenger to allow your users to co
 
 ## Feedback controller
 
-To start feedback controller from within your application
+To start the feedback controller from within your application
 
 ```csharp
 BugseePlugin.Bugsee.ShowFeedbackUI();

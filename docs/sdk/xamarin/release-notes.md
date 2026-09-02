@@ -13,23 +13,23 @@ Microsoft ended support for Xamarin on May 1, 2024. The Bugsee Xamarin SDK is no
 - Fix: Deployment may fail due to mono-symbolicate not being found with .NET 6+
 
 ## 3.1.4 (March 14 2023)
-- Feature: Updated native SDKs to its latest versions \(Android: [3.4.0](/sdk/android/v6/release-notes/#340-january-24-2023), iOS: [3.4.0](/sdk/ios/release-notes/#340-march-14-2023)\)
+- Feature: Updated native SDKs to their latest versions \(Android: [3.4.0](/sdk/android/v6/release-notes/#340-january-24-2023), iOS: [3.4.0](/sdk/ios/release-notes/#340-march-14-2023)\)
 
 ## 3.1.3 (February 26 2023)
-- Feature: Updated native SDKs to its latest versions
+- Feature: Updated native SDKs to their latest versions
 
 ## 3.1.1 (November 28 2022)
-- Feature: Updated native Android SDKs to its latest versions
+- Feature: Updated native Android SDKs to their latest versions
 
 ## 3.1.0 (October 31 2022)
-- Feature: Updated native Android SDKs to its latest versions
+- Feature: Updated native Android SDKs to their latest versions
 
 ## 3.0.0 (September 4 2022)
 - Feature: Update native SDKs to the latest versions (Android: 3.0.0, iOS: 3.0.0)
 - Note: Please refer to the underlying SDKs release notes to get the detailed list of changes: [Android](/sdk/android/v6/release-notes/#300-august-19-2022) / [iOS](/sdk/ios/release-notes/#300-september-1-2022)
 
 ## 2.2.0 (June 1 2022)
-- Feature: Updated native Android SDKs to its latest versions. Several race conditions are fixed
+- Feature: Updated native Android SDKs to their latest versions. Several race conditions are fixed
 
 ## 2.1.0 (March 21 2022)
 - Feature: Switch to using underlying XCFramework for iOS. This fixes builds for simulators

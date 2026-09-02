@@ -55,30 +55,30 @@ slug: "/sdk/cordova/release-notes"
 - Breaking: Changes for the underlying SDKs: [Android](/sdk/android/v6/release-notes/#401-september-30-2023) and [iOS](/sdk/ios/release-notes/#401-september-30-2023).
 
 ## 4.1.0 (February 26 2023)
-- Feature: Updated native Android SDKs to its latest versions \[iOS: 3.3.3, Android: 3.4.0\]
+- Feature: Updated native Android SDKs to their latest versions \[iOS: 3.3.3, Android: 3.4.0\]
 
 ## 4.0.1 (November 28 2022)
-- Feature: Updated native Android SDKs to its latest versions
+- Feature: Updated native Android SDKs to their latest versions
 
 ## 4.0.0 (September 13 2022)
 - Feature: Update native SDKs to the latest versions (Android: 3.0.0, iOS: 3.0.0)
 - Note: Please refer to the underlying SDKs release notes to get the detailed list of changes: [Android](/sdk/android/v6/release-notes/#300-august-19-2022) / [iOS](/sdk/ios/release-notes/#300-september-1-2022)
 
 ## 3.1.0 (June 1 2022)
-- Feature: Updated native Android SDKs to its latest versions. Several race conditions are fixed
+- Feature: Updated native Android SDKs to their latest versions. Several race conditions are fixed
 
 ## 3.0.0 (March 21 2022)
-- Feature: Updated native Android and iOS SDKs to its latest versions \[iOS: [2.1.0](/sdk/ios/release-notes/#210-march-5-2022), Android: [2.0.7](/sdk/android/v6/release-notes/#207-march-11-2022)]
+- Feature: Updated native Android and iOS SDKs to their latest versions \[iOS: [2.1.0](/sdk/ios/release-notes/#210-march-5-2022), Android: [2.0.7](/sdk/android/v6/release-notes/#207-march-11-2022)]
 
 ## 2.7.0 (December 13 2021)
 - Feat: Update native iOS Bugsee SDK to 2.0.0 (dynamic XCFramework)
 - Feat: Update native Android Bugsee SDK to 1.21.4
 
 ## 2.6.0 (October 4 2021)
-- Feature: Updated native Android SDKs to its latest versions. They include full support for iOS 15 and Android 12
+- Feature: Updated native Android SDKs to their latest versions. They include full support for iOS 15 and Android 12
 
 ## 2.5.3 (March 4 2021)
-- Feat: Update native iOS Bugsee SDKs to its latest version
+- Feat: Update native iOS Bugsee SDKs to their latest version
 
 ## 2.5.2 (March 2 2021)
 - Fix: Error when handling some specific values passed into console

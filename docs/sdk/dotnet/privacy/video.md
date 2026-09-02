@@ -31,13 +31,13 @@ Bugsee.RemoveAllSecureRects();
 Bugsee.GetAllSecureRects();
 ```
 
-You need to be aware of the orientation that can be changed during application work.
+You need to be aware of the orientation that can be changed while the app is running.
 Recreate all rectangles after orientation change, if 'black box' on video does not cover all secure data that you need.
 
 
 ## Hiding keyboard (iOS only)
 
-In some cases you might want to prevent keyboard to be captured on video (as well as touches). You can use the following method to achieve the desired effect.
+In some cases you might want to prevent the keyboard from being captured on video (as well as touches). You can use the following method to achieve the desired effect.
 
 ```csharp
 // To let us capture keyboard

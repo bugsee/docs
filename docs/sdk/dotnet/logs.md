@@ -13,7 +13,7 @@ in Bugsee report viewer.
 
 ## Logging API
 
-You can use Bugsee logging interface directly, we provide two API functions for send a message to a log:
+You can use the Bugsee logging interface directly, we provide two API functions for sending a message to a log:
 
 ```csharp
 // With default log level (normal)

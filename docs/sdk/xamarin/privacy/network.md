@@ -45,7 +45,7 @@ Bugsee.SetNetworkEventFilter(null);
 ### Network Events
 
 The callback is going to be called several times for each network request, depending on its life cycle. Usually for
-successful requests its going to be called twice, once with the request event (request headers and body) and one more time after
+successful requests it's going to be called twice, once with the request event (request headers and body) and one more time after
 completion and will contain headers and body of the response. Note that callback can be called more times, initially without body and then with it for both request and response.
 
 

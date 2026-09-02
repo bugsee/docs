@@ -35,5 +35,5 @@ Bugsee.removeAllSecureRects();
 dynamic rectangles = await Bugsee.getAllSecureRects();
 ```
 
-You need to be aware of the orientation that can be changed during application work.
+You need to be aware of the orientation that can be changed while the app is running.
 Recreate all rectangles after orientation change, if 'black box' on video does not cover all secure data that you need.
