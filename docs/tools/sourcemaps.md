@@ -5,6 +5,10 @@ sidebar_position: 0
 slug: "/tools/sourcemaps"
 ---
 
+:::caution[Legacy tool]
+`bugsee-sourcemaps` is the older source-map upload mechanism, kept for SDK versions that still depend on it. New integrations should use the [Bugsee CLI](/cli/sourcemaps/), whose debug-ID-based flow is the mechanism wired into current SDK build integrations.
+:::
+
 `bugsee-sourcemaps` is a CLI tool that generates and uploads source maps to Bugsee servers from JavaScript-based projects.
 
 ## Installation
