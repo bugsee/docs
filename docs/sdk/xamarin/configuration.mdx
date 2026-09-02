@@ -176,10 +176,8 @@ Bugsee.Stop()
 
 ## Handling UnobservedTaskExceptions
 
-Starting with version 4.5 of .NET Framework, exceptions thrown within the Tasks are not causing app to crash any more. Instead, they are rerouted to UnobservedTaskExceptions event handlers. By default, we do not capture them to reduce noise. If, however, you need them to be captured, enable that feature by setting the following option (same for all the platforms):
+Starting with version 4.5 of .NET Framework, exceptions thrown within the Tasks are not causing app to crash any more. Instead, they are rerouted to UnobservedTaskExceptions event handlers. Bugsee captures them by default. You can change that by setting the following option (same for all the platforms):
 
 ```csharp
 BugseePlugin.Bugsee.HandleTaskExceptions = true;
 ```
-
-**NOTE**: Starting from Bugsee.Xamarin 1.4.6 this option is enabled by default.

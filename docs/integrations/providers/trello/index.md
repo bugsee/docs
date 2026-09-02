@@ -18,7 +18,7 @@ Select "OAuth" in the first step of integration wizard. Click _"Next"_.
 
 ![Select OAuth](wz_step1_oauth.png)
 
-You will be presented with dialog asking you to authorize Bugsee. You need to select default channel you want to post messages from Bugsee to. Note, that you can change that in the last wizard step on a per application basis. Click _Authorize_ to allow Bugsee access your Trello.
+You will be presented with dialog asking you to authorize Bugsee. Click _Authorize_ to allow Bugsee access your Trello.
 
 ![OAuth Grant](oauth_grant.png)
 

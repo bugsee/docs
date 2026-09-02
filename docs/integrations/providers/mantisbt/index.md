@@ -16,13 +16,11 @@ slug: "/integrations/providers/mantisbt"
 
 Log into your Mantis, click on your username in the top right hand corner and select _"My Account"_ from the drop down list. Then click on the "API Tokens" tab. Type in a descriptive name for the token and click _"Create API Token"_.
 
-![Reveal user menu](wz_step1_token.png)
+![Create API Token](wz_step1_token.png)
 
-In _"My Profile Settings"_ popup switch to _Apps_ tab. Click _"Manage Developer Apps"_ at its bottom.
+![Generated API token](wz_step2_token.png)
 
-![Profile settings](wz_step2_token.png)
-
-Copy and save the generated token. Be sure not to lose it as it will only displayed this one time. If you do mis-place it, you will need to revoke it and generate a new token.
+Copy and save the generated token. Be sure not to lose it as it will only be displayed this one time. If you do mis-place it, you will need to revoke it and generate a new token.
 
 Now, when you've obtained a token, let's configure integration in Bugsee. Select _"Personal token"_ authentication type and click _"Next"_.
 

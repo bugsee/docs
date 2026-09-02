@@ -1228,7 +1228,7 @@ The raw-bundle framing (full AAB delta regardless of splits) is preserved separa
 |key|String|Unique key for the recording|
 |url|String|Web URL for the recording|
 |environment|Object|Object that contains all the environment information. Refer to [environment](#environment) section for more details|
-created_on|String|Date and time when recording was created (ISO formatted string)|
+|created_on|String|Date and time when recording was created (ISO formatted string)|
 |updated_on|String|Date and time when recording was last updated (ISO formatted string)|
 
 ### Environment

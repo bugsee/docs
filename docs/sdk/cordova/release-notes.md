@@ -68,7 +68,7 @@ slug: "/sdk/cordova/release-notes"
 - Feature: Updated native Android SDKs to its latest versions. Several race conditions are fixed
 
 ## 3.0.0 (March 21 2022)
-- Feature: Updated native Android and iOS SDKs to its latest versions \[iOS: [2.1.0](/sdk/ios/release-notes/#210-march-5-2022), Android: [2.0.7](/sdk/android/v6/release-notes/#207-march-11-2022\]
+- Feature: Updated native Android and iOS SDKs to its latest versions \[iOS: [2.1.0](/sdk/ios/release-notes/#210-march-5-2022), Android: [2.0.7](/sdk/android/v6/release-notes/#207-march-11-2022)]
 
 ## 2.7.0 (December 13 2021)
 - Feat: Update native iOS Bugsee SDK to 2.0.0 (dynamic XCFramework)

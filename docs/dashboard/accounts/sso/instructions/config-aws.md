@@ -19,6 +19,7 @@ Now Click _"Add a new application"_ and then click _"Add a custom SAML 2.0 appli
 
 Fill _"Name"_ and _"Description"_ fields with the desired values
 
+![](aws-step-3.png)
 
 
 Next, you need to exchange metadata between Bugsee and AWS SSO. On the first step of Bugsee SSO setup wizard, click _"Download"_ for _"Service Provider metadata URL"_. Now use the downloaded file for _"Application SAML metadata file"_ in AWS SSO configuration page. Simultaneously, copy the url in _"AWS SSO SAML metadata file"_ field by clicking _"Copy URL"_ next to it. Paste that URL into _"Metadata URL"_ field in the second step of Bugsee's SSO setup wizard dialog.
