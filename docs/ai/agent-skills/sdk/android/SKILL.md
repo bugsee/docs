@@ -205,9 +205,9 @@ Check the Bugsee dashboard for the incoming report.
 
 - [Installation](https://docs.bugsee.com/sdk/android/installation/)
 - [Configuration](https://docs.bugsee.com/sdk/android/configuration/)
-- [Custom data](https://docs.bugsee.com/sdk/android/custom/)
+- [Custom data](https://docs.bugsee.com/sdk/android/v6/custom/)
 - [Network events](https://docs.bugsee.com/sdk/android/network/)
 - [Console logs](https://docs.bugsee.com/sdk/android/logs/)
 - [Privacy](https://docs.bugsee.com/sdk/android/privacy/overview/)
-- [Manual invocation](https://docs.bugsee.com/sdk/android/manual/)
+- [Manual invocation](https://docs.bugsee.com/sdk/android/v6/manual/)
 - [Release notes](https://docs.bugsee.com/sdk/android/release-notes/)

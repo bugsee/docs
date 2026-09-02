@@ -84,7 +84,7 @@ pod install
 
 Add the package in Xcode:
 1. File > Add Package Dependencies
-2. Enter URL: `https://github.com/nicklama/bugsee-ios-swift-package`
+2. Enter URL: `https://github.com/bugsee/spm`
 3. Select version rule and add to target
 
 ### Carthage

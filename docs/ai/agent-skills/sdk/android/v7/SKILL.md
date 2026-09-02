@@ -27,7 +27,7 @@ Opinionated wizard that scans the Android project and wires up Bugsee 7.x — co
 
 For generic "add Bugsee to Android" / "set up bug reporting" with no 7.x signal, switch to the 6.x skill.
 
-> **Always verify against** [docs.bugsee.com/sdk/android/v7/installation/](https://docs.bugsee.com/sdk/android/v7/installation/) before implementing. 7.x docs live under `/sdk/android/v7/`.
+> **Always verify against** [docs.bugsee.com/sdk/android/installation/](https://docs.bugsee.com/sdk/android/installation/) before implementing. 7.x docs live under `/sdk/android/`; `/sdk/android/v6/` is the legacy 6.x tree.
 
 ---
 
@@ -256,7 +256,7 @@ Network client wiring (required for non-OkHttp clients):
 
 Delete all 6.x manual wiring (`Bugsee.addNetworkLoggingToOkHttpBuilder(...)`, `addNetworkLoggingToKtorHttpClient(...)`, etc.) — those methods no longer exist and the code will not compile.
 
-Full reference: [configuration](https://docs.bugsee.com/sdk/android/v7/configuration/) · [network](https://docs.bugsee.com/sdk/android/v7/network/) · [gradle-plugin](https://docs.bugsee.com/sdk/android/v7/gradle-plugin/).
+Full reference: [configuration](https://docs.bugsee.com/sdk/android/configuration/) · [network](https://docs.bugsee.com/sdk/android/network/) · [gradle-plugin](https://docs.bugsee.com/sdk/android/gradle-plugin/).
 
 ---
 
@@ -281,10 +281,10 @@ Check the Bugsee dashboard for the incoming report. If APM is enabled, hit a few
 
 ## Documentation Links
 
-- [Installation (7.x)](https://docs.bugsee.com/sdk/android/v7/installation/)
-- [Configuration (7.x)](https://docs.bugsee.com/sdk/android/v7/configuration/)
-- [Gradle plugin (7.x)](https://docs.bugsee.com/sdk/android/v7/gradle-plugin/)
-- [Network events (7.x)](https://docs.bugsee.com/sdk/android/v7/network/)
-- [Issue detection (7.x)](https://docs.bugsee.com/sdk/android/v7/issue-detection)
-- [Performance / APM (7.x)](https://docs.bugsee.com/sdk/android/v7/performance/)
-- [Migration from 6.x](https://docs.bugsee.com/sdk/android/v7/migration/)
+- [Installation (7.x)](https://docs.bugsee.com/sdk/android/installation/)
+- [Configuration (7.x)](https://docs.bugsee.com/sdk/android/configuration/)
+- [Gradle plugin (7.x)](https://docs.bugsee.com/sdk/android/gradle-plugin/)
+- [Network events (7.x)](https://docs.bugsee.com/sdk/android/network/)
+- [Issue detection (7.x)](https://docs.bugsee.com/sdk/android/issue-detection)
+- [Performance / APM (7.x)](https://docs.bugsee.com/sdk/android/performance/)
+- [Migration from 6.x](https://docs.bugsee.com/sdk/android/migration/)
