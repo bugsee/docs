@@ -5,10 +5,6 @@ sidebar_position: 14
 slug: "/sdk/android/v6/faq"
 ---
 
-:::caution[Previous version]
-This page documents Bugsee Android SDK **6.x**, the previous major version. The current line is **7.x** — see [Migrating from 6.x to 7.x](/sdk/android/migration) to upgrade, or [Installation](/sdk/android/installation) to start a new integration.
-:::
-
 **1. What is the minimum Android version supported by Bugsee Android SDK?**
 
 Bugsee Android SDK supports Android 5.0 (API level 21) and up.

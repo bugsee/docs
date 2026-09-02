@@ -5,10 +5,6 @@ sidebar_position: 13
 slug: "/sdk/android/v6/gradle-plugin-releases"
 ---
 
-:::caution[Previous version]
-This page documents Bugsee Android SDK **6.x**, the previous major version. The current line is **7.x** — see [Migrating from 6.x to 7.x](/sdk/android/migration) to upgrade, or [Installation](/sdk/android/installation) to start a new integration.
-:::
-
 # Gradle Plugin Releases
 
 ## 4.x (SDK 7.x)

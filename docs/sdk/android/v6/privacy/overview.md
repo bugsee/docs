@@ -5,10 +5,6 @@ sidebar_position: 0
 slug: "/sdk/android/v6/privacy/overview"
 ---
 
-:::caution[Previous version]
-This page documents Bugsee Android SDK **6.x**, the previous major version. The current line is **7.x** — see [Migrating from 6.x to 7.x](/sdk/android/migration) to upgrade, or [Installation](/sdk/android/installation) to start a new integration.
-:::
-
 Bugsee SDK does not continuously stream any personal data. The reports are stored locally on the phone in cyclical buffer. Reports are being sent only when triggered by a crash, through a bug reporting UI or from an applications code.
 Data sent along with the reports may include video recording of screen, network and console logs. These may potentially contain personal data (usernames, passwords, emails, etc).
 

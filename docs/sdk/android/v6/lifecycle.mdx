@@ -8,10 +8,6 @@ slug: "/sdk/android/v6/lifecycle"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-:::caution[Previous version]
-This page documents Bugsee Android SDK **6.x**, the previous major version. The current line is **7.x** — see [Migrating from 6.x to 7.x](/sdk/android/migration) to upgrade, or [Installation](/sdk/android/installation) to start a new integration.
-:::
-
 Bugsee SDK silently works within your app and recording everything to assist you in debugging when something unexpected happens. Our SDK is designed as a black box, but there may be cases when you want to be notified about changes/events within Bugsee itself. Lifecycle events are designed exactly for that. Each time when internal state changes or some important event is raised, lifecycle event is dispatched to the user code.
 
 ## Implementing callback
