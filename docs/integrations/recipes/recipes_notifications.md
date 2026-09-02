@@ -15,7 +15,7 @@ These recipes handle data that is collected when some event is raised. For now, 
 - issue.deleted
 - issue.comment
 
-For simplicity, we unified the data structures passed to the ```handle()``` method to the ones being used in Webhooks. So, for details, on what data is available for each of the events listed above, refer to the [Webhook events](/webhooks/events/).
+For simplicity, we unified the data structures passed to the ```handle()``` method with the ones used in Webhooks. So, for details, on what data is available for each of the events listed above, refer to the [Webhook events](/webhooks/events/).
 
 ```javascript
 function handle(event) {
@@ -42,7 +42,7 @@ function handle(event) {
 }
 ```
 
-Note, that result is not used as is. Before executing the recipe, a default message object is constructed. Then, when recipe result is received, it extends that default object (replaces the default values on corresponding fields).
+Note that the result is not used as-is. Before executing the recipe, a default message object is constructed. Then, when recipe result is received, it extends that default object (replaces the default values on corresponding fields).
 
 ```result``` object is constructed from the following fields:
 

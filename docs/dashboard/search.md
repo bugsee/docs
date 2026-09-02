@@ -15,8 +15,8 @@ Filters area contains all the possible set of fields eligible to be used as sear
 
 ![Search text compare options](search_text_compare_options.png)
 
-Sometimes, you want to persist you search criteria to reuse at a later time. "Saved filters" were designed exactly for that. If you want to save you search criteria and reuse it later, just click "Save" in the right side of the search bar. Provide meaningful name for the search criteria you're about to save and click "Save" inside the popup. Now, you will see the saved search criteria in the "Saved filters" dropdown whenever you open it.
+Sometimes, you want to persist your search criteria to reuse at a later time. "Saved filters" were designed exactly for that. If you want to save your search criteria and reuse it later, just click "Save" on the right side of the search bar. Provide a meaningful name for the search criteria you're about to save and click "Save" inside the popup. Now, you will see the saved search criteria in the "Saved filters" dropdown whenever you open it.
 
 ![Saved filters](search_saved_filters.png)
 
-If you want some criteria to be applied by default, you can click at star icon in the corresponding row within the list of saved configurations. As you may guessed, clicking at the trash icon will let you delete the assigned configuration.
+If you want some criteria to be applied by default, you can click the star icon in the corresponding row within the list of saved configurations. As you may have guessed, clicking the trash icon will let you delete the assigned configuration.

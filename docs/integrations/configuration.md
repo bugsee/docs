@@ -7,7 +7,7 @@ slug: "/integrations/configuration"
 
 ## Overview
 
-We've designed the setup flow for integrations to be based upon wizards with sets of simple steps. Mostly integration flows have similar steps sequence, but there can be some discrepancies as requirements differ from one integration to another.
+We've designed the setup flow for integrations to be based upon wizards with sets of simple steps. Most integration flows have a similar sequence of steps, but there can be some discrepancies as requirements differ from one integration to another.
 
 The absolute minimal set of steps is (they do not correlate with wizard titles):
 
