@@ -17,19 +17,6 @@ Bugsee.pause();
 Bugsee.resume();
 ```
 
-### Marking view as protected in code
-
-You can mark any view as protected and in this case it will be covered with black box automatically. Use `Bugsee.toggleProtected()` method to achieve this. It accepts two parameters: `component` and `state`. First should be a reference to the component you want to hide/show and second is a boolean value of `protected` flag (either `true` or `false`).
-
-```jsx
-<TextInput
-    style={{height: 40, borderColor: 'gray', borderWidth: 1}}
-    onChangeText={(text) => this.setState({text})}
-    value={this.state.text} ref={comp => Bugsee.toggleProtected(comp, true)}
-/>
-```
-
-
 ### Protecting by coordinates
 
 Bugsee allows hiding screen area by absolute coordinates as well. Notice that iOS and Android approaches to hiding specific area differ a bit.

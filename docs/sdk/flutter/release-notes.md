@@ -133,7 +133,7 @@ slug: "/sdk/flutter/release-notes"
 ## 5.0.4 (February 26 2023)
 - Feature: Updated native SDKs to its latest versions
 
-## 5.0.3 (January 26 2022)
+## 5.0.3 (January 26 2023)
 - Feature: Updated native SDKs to its latest versions
 
 ## 5.0.2 (November 24 2022)

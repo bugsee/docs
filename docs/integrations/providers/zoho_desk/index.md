@@ -12,11 +12,7 @@ slug: "/integrations/providers/zoho_desk"
 - [OAuth](#oauth)
 
 
-### Personal tokens
-
-:::info
-No custom configuration required in Zoho Desk for this type of authentication.
-:::
+### OAuth
 
 Start Bugsee integration wizard and select "OAuth" in the first step of integration wizard. Click "Next".
 
