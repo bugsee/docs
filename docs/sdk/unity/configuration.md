@@ -88,7 +88,7 @@ Bugsee.Relaunch(options);
 |CaptureOSLogs|false|Automatically capture OSLog and Logger print statements|
 |MonitorBluetoothStatus|false|Monitor bluetooth state.<br />IMPORTANT: You must add "Privacy - Bluetooth Always Usage Description" key into your Info.plist with a string value explaining to the user why you need bluetooth permission|
 |MonitorDiskSpace|false||
-|AppLaunchCrashDetection|false|Controls whether early crashes are intercepted and uploaded. Early crashes are those happening within first 5 seconds after app launch. And they are uploaded synchronously (with blocking main thread) to guarantee upload|
+|AppLaunchCrashDetection|false|Controls whether early crashes are intercepted and uploaded. Early crashes are those happening within the first 5 seconds after app launch. And they are uploaded synchronously (with blocking main thread) to guarantee upload|
 |CaptureAVPlayer|false|When enabled, video playing via AVPlayerLayer and via AVPlayerViewController will be captured on video|
 
 :::warning

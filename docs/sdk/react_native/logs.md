@@ -5,7 +5,7 @@ sidebar_position: 4
 slug: "/sdk/react_native/logs"
 ---
 
-Bugsee provides a way to hook Bugsee as custom logger to React native logging system. With this, console.log(), console.warn(), console.error() as well
+Bugsee provides a way to hook Bugsee as custom logger to React Native logging system. With this, console.log(), console.warn(), console.error() as well
 as React Native internal logs will be properly handled by Bugsee.
 
 In your native code (AppDelegate) add the following:

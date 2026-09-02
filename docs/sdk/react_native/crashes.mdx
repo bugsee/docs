@@ -18,7 +18,7 @@ To symbolicate crashes captured in native code, you should configure underlying 
 
 ### JavaScript
 
-We rely on source maps to fill captured stack traces with proper methods, filenames and line numbers. To let this magic happen, Bugsee needs the related source maps which is uploaded automatically once you configure your projects following instructions below.
+We rely on source maps to fill captured stack traces with proper methods, filenames and line numbers. To let this magic happen, Bugsee needs the related source maps which are uploaded automatically once you configure your projects following instructions below.
 
 By default, during Bugsee initialization, we will try to get version automatically. Similarly, during build we will pick the application version from underlying native projects. If versions in Android/iOS projects and the one obtained during the initialization are in sync, then no extra actions are required. If not (e.g. when you set version explicitly following instructions below), then you should provide Bugsee with correct version using `Bugsee.setAppVersion('<your_app_version>')` method.
 
@@ -239,7 +239,7 @@ bugsee-sourcemaps make -t <YOUR-TOKEN> \
 
 #### Release builds
 
-> **IMPORTANT**: For release builds, we strongly recommend to upload source maps BEFORE deploying your app. That will guarantee your reports will not fail to symbolicate due to missing symbols.
+> **IMPORTANT**: For release builds, we strongly recommend uploading source maps BEFORE deploying your app. That will guarantee your reports will not fail to symbolicate due to missing symbols.
 
 - Open your React Native project
 - Make some changes
@@ -274,4 +274,4 @@ bugsee-sourcemaps make -t <YOUR-TOKEN> \
   </TabItem>
 </Tabs>
 
-- Deploy your build app to target Store
+- Deploy your app build to the target store

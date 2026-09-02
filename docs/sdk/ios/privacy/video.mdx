@@ -19,7 +19,7 @@ All system text boxes that are marked as secure are hidden from the recorded vid
 
 ### Marking view as protected in code
 
-You can protect any view that you want by importing ```Bugsee.h``` header and implement the following code:
+You can protect any view that you want by importing the ```Bugsee.h``` header and implementing the following code:
 
 
 <Tabs groupId="lang-ios">
@@ -129,7 +129,7 @@ Bugsee.removeAllSecureRects()
 
 ## Obscuring contents
 
-Sometimes application may contain too many elements with sensitive data. Marking all the views in such app as protected maybe quite overwhelming and time consuming. In these cases you can instruct Bugsee to obscure the whole screen by lowering resolution of the captured video. In this case, you won't be able to see the text on the screen, but you will be able to follow user navigation.
+Sometimes application may contain too many elements with sensitive data. Marking all the views in such app as protected may be quite overwhelming and time consuming. In these cases you can instruct Bugsee to obscure the whole screen by lowering resolution of the captured video. In this case, you won't be able to see the text on the screen, but you will be able to follow user navigation.
 
 To achieve this, try setting BugseeVideoScaleKey to a value between 0.1 and 1.0.
 

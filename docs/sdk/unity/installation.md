@@ -47,7 +47,7 @@ Bugsee can collect additional information, such as GPU model and supported GL ve
 
 In cases when you want to launch Bugsee from code (e.g. upon some event or user action), you need to perform one additional step in your initialization code to make Bugsee function as designed.
 
-Under the hood, Bugsee launcher adds an object to the scene named "bgs_gameObject". it is required to perform communication between managed code (.NET) and native backend (our platform SDK). When you call ```Bugsee.Launch()``` yourself, there will be no that special object added to the scene, hence you should do that yourself.
+Under the hood, Bugsee launcher adds an object to the scene named "bgs_gameObject". it is required to perform communication between managed code (.NET) and native backend (our platform SDK). When you call ```Bugsee.Launch()``` yourself, there will be no such special object added to the scene, hence you should do that yourself.
 
 :::warning
 "bgs_gameObject" GameObject is required to perform communication between managed code and our platform SDK. Please, do not remove or rename "bgs_gameObject".
@@ -59,7 +59,7 @@ Once you've done with the object, in your code, before calling ```Bugsee.Launch(
 
 ```csharp
 // gameObject below is the reference to the object in the scene
-// that will be used an by Bugsee for its internal communication
+// that will be used by Bugsee for its internal communication
 // procedures
 
 gameObject.AddComponent<Bugsee>();

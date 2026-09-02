@@ -103,7 +103,7 @@ It is controlled by sanitizeNetworkData/BugseeSanitizeNetworkDataKey option (def
 ## 5.3.2 (September 6 2024)
 - Fix: Ensure globally set attributes \(via \[Bugsee setAttribute\]\) are also attached to extended reports \(created via \[Bugsee createReport\]\)
 - Fix: Add missing attachments properties and methods to BugseeExtendedReport \(created via \[Bugsee createReport\]\)
-- Fix: In a very rare and outstanding scenarios, crashes may not be handled correctly.
+- Fix: In very rare and outstanding scenarios, crashes may not be handled correctly.
 
 ## 5.3.1 (August 28 2024)
 - Fix: Proper key name for "DetectAppExit" launch option \[[learn more](/sdk/ios/configuration/)\].

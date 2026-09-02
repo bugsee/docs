@@ -8,7 +8,7 @@ slug: "/sdk/ios/app-kills"
 In some rare cases, iOS may decide to terminate an application due to excessive memory or CPU usage, as well as when it detects the app is not responding. These cases are not
 registered as crashes. Bugsee may try to detect these and handle them as crashes, while collecting valuable statistics and analytics on devices and iOS versions it happens on.
 
-> **Note:** This feature is based on heuristics and may result in false positives in some scenarios. Thus disabled by default. Use at your own risk.
+> **Note:** This feature is based on heuristics and may result in false positives in some scenarios. Thus, it is disabled by default. Use at your own risk.
 
 In order to enable application kill detection, launch Bugsee with a `BugseeKillDetectionKey` option set to `YES`. Bugsee will try to automatically detect the following conditions:
 

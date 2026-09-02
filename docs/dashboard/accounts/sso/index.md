@@ -64,7 +64,7 @@ https://app.bugsee.com/#/signin?sso_target={organization_id}
 ```
 
 :::info
-**Single Sign On URL** is used to start Service Provider initiated authentication right away. It forcefully instruct Bugsee to authenticate user into the specified organization.
+**Single Sign On URL** is used to start Service Provider initiated authentication right away. It forcefully instructs Bugsee to authenticate user into the specified organization.
 :::
 
 <br />
