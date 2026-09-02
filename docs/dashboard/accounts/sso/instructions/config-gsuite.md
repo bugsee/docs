@@ -31,7 +31,7 @@ Now, on _"Service Provider Details"_ step, you need to fill information availabl
 
 ![](gsuite-step-6.png)
 
-Finally, on the _"Attribute Mapping"_ step, you need to list attributes that will be available to Bugsee (as Service Provider). Please, follow the instructions shown in the screenshot below. Copy the attributes names. You must provide the same names in the Bugsee's SSO setup wizard dialog when prompted.
+Finally, on the _"Attribute Mapping"_ step, you need to list attributes that will be available to Bugsee (as Service Provider). Please, follow the instructions shown in the screenshot below. Copy the attribute names. You must provide the same names in the Bugsee SSO setup wizard dialog when prompted.
 
 :::info
 Note that Bugsee is using single field to store user name, while Google Workspace does not provide similar one by default. In this tutorial, we use "Last name" as the target value for the "name" attribute.

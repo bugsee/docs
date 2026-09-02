@@ -9,7 +9,7 @@ Bugsee SDK silently works within your app and recording everything to assist you
 
 ## Implementing callback
 
-Your should call **Bugsee.setLifecycleCallback** and provide the callback:
+You should call **Bugsee.setLifecycleCallback** and provide the callback:
 
 ```dart
 void onBugseeLifecycleEvent(BugseeLifecycleEventType e) {

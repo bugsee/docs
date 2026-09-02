@@ -5,7 +5,7 @@ sidebar_position: 6
 slug: "/sdk/flutter/feedback"
 ---
 
-Bugsee implements built in single threaded messenger to allow your users to communicate with your support and developers. 
+Bugsee implements a built-in single-threaded messenger to allow your users to communicate with your support and developers.
 
 ## Feedback controller
 
@@ -17,7 +17,7 @@ Bugsee.showFeedbackUI();
 
 ## Notifications
 
-To receive notifications about new messages arriving from the server, your should provide ```BugseeNewFeedbackMessagesHandler``` delegate callback:
+To receive notifications about new messages arriving from the server, you should provide ```BugseeNewFeedbackMessagesHandler``` delegate callback:
 
 ```dart
 Bugsee.setNewFeedbackMessagesCallback((List<String> messages) {

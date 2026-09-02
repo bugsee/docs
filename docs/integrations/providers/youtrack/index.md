@@ -59,4 +59,4 @@ Pass through instructional steps in wizard and stop at authentication step. Prov
 
 ## Configuration
 
-There are no any specific configuration steps for YouTrack. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
+There are no specific configuration steps for YouTrack. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.

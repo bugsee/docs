@@ -34,7 +34,7 @@ Once you have the token, use it in Bugsee authentication wizard:
 
 ## Configuration
 
-There are no any specific configuration steps for Shortcut. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
+There are no specific configuration steps for Shortcut. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
 
 
 ## Custom recipes

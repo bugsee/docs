@@ -35,6 +35,6 @@ As the next step, you need to configure attributes mapping to let SSO work. Swit
 You can read more about possible attribute values [here](https://docs.aws.amazon.com/singlesignon/latest/userguide/attributemappingsconcept.html?icmpid=docs_sso_console).
 :::
 
-Copy the attributes names. You must provide the same names in the Bugsee's SSO setup wizard dialog when prompted. Also, as _"Format"_ for _"Subject"_ use _"emailAddress"_ and for the rest fields use _"uri"_.
+Copy the attribute names. You must provide the same names in the Bugsee SSO setup wizard dialog when prompted. Also, as _"Format"_ for _"Subject"_ use _"emailAddress"_ and for the rest fields use _"uri"_.
 
 That's all the steps required to configure SSO in AWS console. Complete the configuration of SSO in Bugsee and you're all set.

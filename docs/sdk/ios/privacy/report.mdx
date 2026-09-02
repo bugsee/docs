@@ -11,7 +11,7 @@ import TabItem from '@theme/TabItem';
 You can use both pre and postprocessing for report fields. This is useful when you want to strip any sensitive data user may enter into it or when you want to apply some specific formatting.
 
 The principle is simple, for every generated report, Bugsee will call the corresponding delegate method from provided ```BugseeDelegate``` protocol.
-Your class should implement **BugseeDelegate** protocol and it must set itself as the delegate for Bugsee (choose the sync or async delegate method that fits your needs).
+Your class should implement the **BugseeDelegate** protocol and it must set itself as the delegate for Bugsee (choose the sync or async delegate method that fits your needs).
 You should then perform all the required fields manipulations and pass your changes back to Bugsee.
 
 

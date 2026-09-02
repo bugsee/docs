@@ -59,4 +59,4 @@ Specify the URL of your iTop instance in the _"Host"_ field and paste the genera
 
 ## Configuration
 
-There are no any specific configuration steps for iTop. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
+There are no specific configuration steps for iTop. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.

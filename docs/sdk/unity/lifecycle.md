@@ -13,7 +13,7 @@ Bugsee SDK silently works within your app and recording everything to assist you
 "bgs_gameObject" GameObject is required to perform communication between managed code and our platform SDK. Please, do not remove or rename "bgs_gameObject".
 :::
 
-Your should subscribe to **Bugsee.OnLifecycleEvent** event and handle incoming lifecycle changes in the attached handler:
+You should subscribe to **Bugsee.OnLifecycleEvent** event and handle incoming lifecycle changes in the attached handler:
 
 ```csharp
 private void OnBugseeLifecycleEvent(BugseeLifecycleEventType eventType)

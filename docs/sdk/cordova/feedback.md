@@ -5,7 +5,7 @@ sidebar_position: 6
 slug: "/sdk/cordova/feedback"
 ---
 
-Bugsee implements built in single threaded messenger to allow your users to communicate with your support and developers. 
+Bugsee implements a built-in single-threaded messenger to allow your users to communicate with your support and developers.
 
 ## Feedback activity
 

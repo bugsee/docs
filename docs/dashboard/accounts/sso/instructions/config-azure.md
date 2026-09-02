@@ -39,15 +39,15 @@ Now, fill the fields as shown in the picture below and close the `Attributes & C
 
 ![](azure-step-6.png?v=2)
 
-Copy the attributes names. You must provide the same names in the Bugsee's SSO setup wizard dialog when prompted.
+Copy the attribute names. You must provide the same names in the Bugsee SSO setup wizard dialog when prompted.
 
 :::warning
-Notice the claims names. You must provide the same names in the Bugsee's SSO setup wizard dialog when prompted. See the screenshot below. The `Name` field is the name of the attribute that will be used in Bugsee.
+Notice the claim names. You must provide the same names in the Bugsee SSO setup wizard dialog when prompted. See the screenshot below. The `Name` field is the name of the attribute that will be used in Bugsee.
 :::
 
 ![](azure-step-6a.png?v=2)
 
-And the last step you need to take is to copy the `App Federation Metadata Url` and paste it into the `Metadata URL` in the Bugsee's SSO setup wizard.
+And the last step you need to take is to copy the `App Federation Metadata Url` and paste it into the `Metadata URL` in the Bugsee SSO setup wizard.
 
 ![](azure-step-7.png?v=2)
 

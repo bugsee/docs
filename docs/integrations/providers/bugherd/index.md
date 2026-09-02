@@ -41,4 +41,4 @@ Paste generated token into _"Personal token"_ field and click _"Next"_ to procee
 
 ## Configuration
 
-There are no any specific configuration steps for BugHerd. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
+There are no specific configuration steps for BugHerd. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.

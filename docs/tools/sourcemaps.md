@@ -43,7 +43,7 @@ Usage
 |Option|Required|Compatible commands|Description
 |---|---|---|---|
 |-t, --app-token|Yes|make, upload, generate|Application token that identifies the app in Bugsee you want to upload source maps for|
-|-v, --app-version|No|make, generate, upload|Lets Bugsee to associate source maps with the specified application version. We recommend to set this manually to make sure there will be no any differences in versions of source maps and crash reports|
+|-v, --app-version|No|make, generate, upload|Lets Bugsee to associate source maps with the specified application version. We recommend to set this manually to make sure there will be no differences in versions of source maps and crash reports|
 |-s, --source-map|Yes|upload|Path to the generated source maps (file)|
 |-b, --bundle|Yes|upload|Path to the generated bundle (file)|
 |-e, --endpoint|No|upload, make|Defines the upload endpoint|

@@ -46,4 +46,4 @@ You will be presented with the following window asking you to grant Bugsee acces
 
 ## Configuration
 
-There are no any specific configuration steps for Bitbucket. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
+There are no specific configuration steps for Bitbucket. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.

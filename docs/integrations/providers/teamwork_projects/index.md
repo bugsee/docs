@@ -37,7 +37,7 @@ Your API token can be found by logging into your Teamwork Projects account, clic
 
 ## Configuration
 
-There are no any specific configuration steps for Teamwork Projects. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
+There are no specific configuration steps for Teamwork Projects. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
 
 
 ## Custom recipes

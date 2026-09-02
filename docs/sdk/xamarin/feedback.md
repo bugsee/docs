@@ -9,7 +9,7 @@ slug: "/sdk/xamarin/feedback"
 Microsoft ended support for Xamarin on May 1, 2024. The Bugsee Xamarin SDK is no longer actively maintained. For new projects, use the [Bugsee .NET SDK](/sdk/dotnet/installation/), which supports .NET MAUI and modern .NET workloads.
 :::
 
-Bugsee implements built in single threaded messenger to allow your users to communicate with your support and developers. 
+Bugsee implements a built-in single-threaded messenger to allow your users to communicate with your support and developers.
 
 ## Feedback controller
 
@@ -21,7 +21,7 @@ Bugsee.ShowFeedbackUI();
 
 ## Notifications
 
-To receive notifications about new messages arriving from the server, your should provide ```BugseeNewFeedbackMessagesHandler``` delegate callback:
+To receive notifications about new messages arriving from the server, you should provide ```BugseeNewFeedbackMessagesHandler``` delegate callback:
 
 ```csharp
 Bugsee.SetNewFeedbackMessagesHandler(delegate (string[] messages)

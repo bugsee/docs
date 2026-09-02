@@ -13,7 +13,7 @@ Bugsee SDK silently works within your app and recording everything to assist you
 
 ## Implementing callback
 
-Your should call **Bugsee.SetLifecycleEventHandler** and provide the callback of **BugseeLifecycleEventHandler** as the only parameter to it:
+You should call **Bugsee.SetLifecycleEventHandler** and provide the callback of **BugseeLifecycleEventHandler** as the only parameter to it:
 
 ```csharp
 Bugsee.SetLifecycleEventHandler((BugseeLifecycleEventType eventType) =>

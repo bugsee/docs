@@ -61,7 +61,7 @@ Start Bugsee integration wizard paste the token into. Click _"Next"_.
 
 ![Paste token](wz_step1_token.png)
 
-There are no any entities to which you can map Bugsee applications in Splunk. Instead, you will be offered with single static option of _"Events stream"_. You should select it for all the Bugsee applications you want to receive events for.
+There are no entities to which you can map Bugsee applications in Splunk. Instead, you will be offered with single static option of _"Events stream"_. You should select it for all the Bugsee applications you want to receive events for.
 
 
 ## Configuration
