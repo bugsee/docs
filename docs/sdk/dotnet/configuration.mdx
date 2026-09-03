@@ -96,14 +96,14 @@ namespace YourNameSpace
 |DefaultBugPriority|High|Default priority for bugs|
 |DefaultCrashPriority|Blocker|Default priority for crashes|
 |DetectAppExit|false|Detect any kind of process termination \(e.g. when user swipes off the application from multitasking UI, or when system unloads the app due to memory pressure\). Special error report is generated for this scenario with "BugseeAppExit" domain|
-|FrameRate|High|Specifies how often frames are captured|
+|FrameRate|BugseeFrameRate.High|Specifies how often frames are captured|
 |KillDetection|false|Detect abnormal termination (experimental, [read more](/sdk/ios/app-kills/))|
 |MaxDataSize|50|Bugsee will avoid using more disk space than specified (in MB). If total Bugsee data size exceeds specified value, oldest recordings (even not sent) will be removed. Value should not be smaller than 10|
 |MaxNetworkBodySize|5120|The limit above which network requests bodies will not be captured. Specified in bytes.|
 |MaxRecordingTime|60|Maximum recording duration|
 |MonitorNetwork|true|Capture network traffic|
 |MonitorBluetoothStatus|false|Monitor bluetooth state.<br />_**IMPORTANT**: You must add "Privacy - Bluetooth Always Usage Description" key into your Info.plist with a string value explaining to the user why you need bluetooth permission_|
-|MonitorDiskSpace|false||
+|MonitorDiskSpace|false|Monitor available disk space and include it in reports as a system trace.|
 |ReportDescriptionRequired|false|Controls whether  _"Description"_ field in bug reporting UI is mandatory or not.|
 |ReportEmailRequired|false|Controls whether  _"Email"_ field in bug reporting UI is mandatory or not|
 |ReportPrioritySelector|false|Allow user to modify priority when reporting manually|
@@ -125,7 +125,7 @@ namespace YourNameSpace
 
 |Key|Default|Notes
 |---|---|---|
-|CaptureDeviceAndNetworkNames|false|Capture device name, wifi SSID and mobile carrier name.|
+|CaptureDeviceAndNetworkNames|true|Capture device name, wifi SSID and mobile carrier name.|
 |CaptureLogs|true|Automatically capture all console logs|
 |CrashReport|true|Catch and report application crashes|
 |DefaultBugPriority|High|Default priority for bugs|
@@ -133,7 +133,6 @@ namespace YourNameSpace
 |DetectAppExit|false|Detect any kind of process termination \(e.g. when user swipes off the application from multitasking UI, or when system unloads the app due to memory pressure\). Special error report is generated for this scenario with "BugseeAppExit" domain|
 |FrameRate|BugseeFrameRate.High|Specifies how often frames are captured|
 |ExtendedVideoMode|false|Enables or disables the use of MediaProjection API (\*\*)|
-|FrameRate|High|Specifies how often frames are captured|
 |LogLevel|Verbose|Minimal log level of Logcat messages, which will be attached to report|
 |MaxDataSize|50|Maximum disk space consumed by Bugsee|
 |MaxNetworkBodySize|5120|The limit above which network requests bodies will not be captured. Specified in bytes.|

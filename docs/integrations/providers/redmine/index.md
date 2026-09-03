@@ -15,7 +15,7 @@ To let Bugsee integrate with your Redmine, you should enable REST API access. En
 - [Personal token](#personal-token)
 
 
-## Basic authentication
+### Basic authentication
 
 :::info
 No custom configuration required in Redmine for this type of authentication.

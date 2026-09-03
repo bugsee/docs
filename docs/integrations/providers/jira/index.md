@@ -1,5 +1,5 @@
 ---
-title: "JIRA integration"
+title: "Jira integration"
 description: "Connect Bugsee to Jira using a personal token or OAuth, with extensive custom recipe examples for labels, components, priorities, and custom fields."
 sidebar_position: 14
 slug: "/integrations/providers/jira"
@@ -31,9 +31,9 @@ Your API token is now generated. Store it somewhere as it will not visible to yo
 
 ![Copy token](wz_step4_token.png)
 
-Now, as we have obtained the API token, it's time to setup JIRA integration in Bugsee.
+Now, as we have obtained the API token, it's time to setup Jira integration in Bugsee.
 
-Bring up the JIRA integration wizard. Select _"Personal token"_ in the first step of integration wizard. Click _"Next"_.
+Bring up the Jira integration wizard. Select _"Personal token"_ in the first step of integration wizard. Click _"Next"_.
 
 ![Select personal token authentication](wz_step5_token.png)
 
@@ -44,7 +44,7 @@ Provide username and personal token obtained in steps above.
 
 ### OAuth 
 
-Before we can start configuring integration in Bugsee, your JIRA instance need to be tuned a bit.
+Before we can start configuring integration in Bugsee, your Jira instance need to be tuned a bit.
 
 Click the _"Cog"_ icon to bring up the settings pane:
 
@@ -74,7 +74,7 @@ Click _"Continue"_:
 
 ![Configure application URL](app_link_url_2.png)
 
-Ignore the warning and click "Continue". JIRA will bring you next dialog:
+Ignore the warning and click "Continue". Jira will bring you next dialog:
 
 ![Link applications](app_link_name_2.png)
 
@@ -95,17 +95,17 @@ VLy6zImCFbJfPz1qbwIDAQAB
 -----END PUBLIC KEY-----
 ```
 
-Now, when you've prepared your JIRA instance, let's configure integration in Bugsee.
+Now, when you've prepared your Jira instance, let's configure integration in Bugsee.
 
 Start Bugsee integration wizard and select "OAuth" in the first step of integration wizard. Click _Next_.
 
 ![Select OAuth](wz_step1_oauth.png)
 
-Skip instructional steps. Provide valid URL to your JIRA (if you're using JIRA Cloud, then it will be ```https://<domain>.atlassian.net```) and click _"Next"_.
+Skip instructional steps. Provide valid URL to your Jira (if you're using Jira Cloud, then it will be ```https://<domain>.atlassian.net```) and click _"Next"_.
 
 ![Select OAuth](wz_step2_oauth.png)
 
-You will be presented with dialog asking you to grant Bugsee permissions. Click _Allow_ to allow Bugsee access your JIRA.
+You will be presented with dialog asking you to grant Bugsee permissions. Click _Allow_ to allow Bugsee access your Jira.
 
 ![OAuth Grant](oauth_grant.png)
 
@@ -120,12 +120,12 @@ Paste the code you copied in previous step. Click _"Next"_.
 
 ## Configuration
 
-There are no specific configuration steps for JIRA. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
+There are no specific configuration steps for Jira. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
 
 
 ## Custom recipes
 
-JIRA is very customizable, fields can be made mandatory, new fields can be added, issue types, priorities and other default types can be changed. Bugsee can accommodate all these customizations with the help of [custom recipes](/integrations/recipes/recipes/). This section provides a few examples of using custom recipes specifically with JIRA. For basic introduction, refer to custom recipe [documentation](/integrations/recipes/recipes/).
+Jira is very customizable, fields can be made mandatory, new fields can be added, issue types, priorities and other default types can be changed. Bugsee can accommodate all these customizations with the help of [custom recipes](/integrations/recipes/recipes/). This section provides a few examples of using custom recipes specifically with Jira. For basic introduction, refer to custom recipe [documentation](/integrations/recipes/recipes/).
 
 Some fields in sent to Jira, require specifying _accountId_ field. You can find it by navigating to your Jira's _People_ section: ```https://<your-sub-domain>.atlassian.net/people```. From there, select the user you want to get accountId for and URL in browser will change to something like: ```https://<your-sub-domain>.atlassian.net/people/123456:44448ae7-90ce-4e62-bfda-e88abcde5555```. The last segment of URL, after "people/" is accountId, which in this particular case is ```123456:44448ae7-90ce-4e62-bfda-e88abcde5555```.
 
@@ -278,15 +278,15 @@ function create(context) {
     return {
     	// ...
     	custom: {
-    		// We use default JIRA versions field, which is an array of available version in JIRA.
-    		// Important: This assumes the version with that name is already created in JIRA prior to first issue
+    		// We use default Jira versions field, which is an array of available version in Jira.
+    		// Important: This assumes the version with that name is already created in Jira prior to first issue
     		// being reported, otherwise integration will break.
             versions : [ 
                 {
                     name : app.version
                 }
             ],
-            // To store the build number, we have a custom field created in JIRA, so lets store it there
+            // To store the build number, we have a custom field created in Jira, so lets store it there
             customfield_10308 : app.build
     	}
     };

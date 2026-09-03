@@ -18,7 +18,7 @@ Add the Bugsee marketplace, then install the plugin:
 /plugin install bugsee@bugsee-plugin-marketplace
 ```
 
-That's it — Claude Code now has the Bugsee SDK-setup and workflow skills, and the read-only Bugsee MCP server (`https://api.bugsee.com/mcp`) is configured.
+That's it — Claude Code now has the Bugsee SDK-setup and workflow skills, and the Bugsee MCP server (`https://api.bugsee.com/mcp`) is configured with the read-only `mcp:read` scope.
 
 ## Connect the MCP server
 
@@ -37,6 +37,6 @@ Ask Claude Code in natural language:
 
 - **SDK setup skills** for every supported platform.
 - **Workflow skills**: `bugsee-fix-issues` (triage and root-cause crashes, errors, and bug reports through the MCP server), `bugsee-build-insights` (build size, regressions, and dependency vulnerabilities through the MCP server), and `bugsee-upload-symbols` (dSYMs, JavaScript source maps, Android mapping files).
-- **MCP server** access to your Bugsee applications and issues (read-only).
+- **MCP server** access to your Bugsee applications and issues (read-only by default — the `mcp:read` scope).
 
 See [Plugins](/ai/plugins) for the full list, or browse the source at [github.com/bugsee/bugsee-for-ai](https://github.com/bugsee/bugsee-for-ai).

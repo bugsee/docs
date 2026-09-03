@@ -36,7 +36,7 @@ These values were measured on Google Pixel 5 with Android 12 and can be influenc
 AAPT: error: attribute android:foregroundServiceType not found.
 ```
 
-Please, switch `compileSdk` in your build.gradle to the latest version (at least 35, as shown below).
+Please switch `compileSdk` in your build.gradle to the latest version (at least 35, as shown below).
 ```groovy
 android {
     compileSdk 35

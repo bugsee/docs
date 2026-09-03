@@ -5,6 +5,12 @@ sidebar_position: 21
 slug: "/integrations/providers/pivotal"
 ---
 
+:::warning[This integration is retired]
+Pivotal Tracker was discontinued on **30 April 2025**. Bugsee can no longer create or update stories, and attempting to push to an existing Pivotal Tracker integration returns an error.
+
+Existing configurations are left in place so historical links keep resolving, but no new stories will be delivered. Migrate to another supported provider from the [integrations list](/integrations/).
+:::
+
 ## Authentication
 
 ### Supported authentication methods

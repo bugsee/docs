@@ -26,14 +26,15 @@ Your class should implement the **BugseeDelegate** protocol and it must set itse
 ```objectivec
 -(void)bugseeFilterLog:(BugseeLogEvent *)log completionHandler:(BugseeLogFilterDecisionBlock)decisionBlock
 {
-    // Below is an example code that will remove access_token from all URLs going through the filter.
+    // Below is an example that replaces the access_token value in all URLs
+    // going through the filter with a fixed placeholder.
     NSError * error;
     NSRegularExpression * regex = [NSRegularExpression regularExpressionWithPattern:@"access_token=[0-9a-z\\-]*" 
                                                                             options:NSRegularExpressionCaseInsensitive error:&error];
     log.text = [regex stringByReplacingMatchesInString:log.text
                                                 options:0
                                                   range:NSMakeRange(0, log.text.length)
-                                           withTemplate:@"TokenWasFound here"];
+                                           withTemplate:@"access_token=<redacted>"];
     decisionBlock(log);
 }
 
@@ -48,10 +49,10 @@ Your class should implement the **BugseeDelegate** protocol and it must set itse
 private func bugseeFilterLog(log: BugseeLogEvent, completionHandler decisionBlock: @escaping BugseeLogFilterDecisionBlock) {
     let regex : NSRegularExpression
     do {
-        regex = try NSRegularExpression.init(pattern: "&access_token=[0-9a-z\\-]*",
+        regex = try NSRegularExpression.init(pattern: "access_token=[0-9a-z\\-]*",
                                                  options: NSRegularExpression.Options.caseInsensitive)
         let range = NSMakeRange(0 , log.text.count)
-        log.text = regex.stringByReplacingMatches(in: log.text, options: .reportProgress, range: range, withTemplate: "")
+        log.text = regex.stringByReplacingMatches(in: log.text, options: .reportProgress, range: range, withTemplate: "access_token=<redacted>")
     }catch { print("Somethings went wrong!") }
 
     decisionBlock(log);

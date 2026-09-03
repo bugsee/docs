@@ -124,8 +124,6 @@ In case, if you want to push data to some other _"index"_ and/or change the _"so
 ```
 
 
-## Custom recipes
-
 Bugsee can accommodate all these customizations with the help of [custom recipes](/integrations/recipes/recipes/). This section provides a few examples of using custom recipes specifically with Splunk. For basic introduction, refer to custom recipe [documentation](/integrations/recipes/recipes/).
 
 ### Setting labels field

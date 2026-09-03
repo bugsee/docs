@@ -24,7 +24,7 @@ slug: "/sdk/flutter/release-notes"
 - Feat: Updated native SDKs to their latest versions (Android: [5.9.1](/sdk/android/v6/release-notes/#591-september-29-2025), iOS: [5.5.8](/sdk/ios/release-notes/#558-august-21-2025))
 
 ## 8.6.7 (September 23 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.8.7](/sdk/android/v6/release-notes/#587-september-9-2025), iOS: [5.5.8](/sdk/ios/release-notes/#557-august-1-2025))
+- Feat: Updated native SDKs to their latest versions (Android: [5.8.7](/sdk/android/v6/release-notes/#587-september-9-2025), iOS: [5.5.8](/sdk/ios/release-notes/#558-august-21-2025))
 
 ## 8.6.6 (August 21 2025)
 - Feat: Updated native SDKs to their latest versions (Android: [5.8.4](/sdk/android/v6/release-notes/#584-august-21-2025), iOS: [5.5.8](/sdk/ios/release-notes/#558-august-21-2025))

@@ -11,7 +11,7 @@ Bugsee requires the "Projects and tasks" template to be present in the workspace
 
 During the authentication process you will be asked to grant Bugsee the access to your workspace in Notion. Make sure you select both "Projects" and "Tasks" databases.
 
-Once authenticated, you will need to add the "Description" field to the task template. You can do that by creating the dummy task, opening it and clicking on "Add a property" button below the task fields (not, that this button may be collapsed under the "# more property" toggle).
+Once authenticated, you will need to add the "Description" field to the task template. You can do that by creating the dummy task, opening it and clicking on "Add a property" button below the task fields (note that this button may be collapsed under the "# more property" toggle).
 
 ![Add description field](add_description_field.png)
 

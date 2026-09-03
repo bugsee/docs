@@ -170,12 +170,11 @@ To mitigate this, we let you set the _description\_format_ field. By default, it
 |Aha|html|
 |Asana|raw|
 |Basecamp|html|
-|BitBucket|markdown|
-|BugZilla|raw|
+|Bitbucket|markdown|
+|Bugzilla|raw|
 |Freshdesk|html|
 |GitHub|markdown|
 |GitLab|markdown|
-|Hipchat|html|
 |Jira|markdown|
 |Monday|html|
 |Nozbe|markdown|
@@ -184,8 +183,7 @@ To mitigate this, we let you set the _description\_format_ field. By default, it
 |Redmine|raw|
 |Shortcut|markdown|
 |Slack|raw|
-|Targetprocess|html|
-|Testlio|raw|
+|TargetProcess|html|
 |Trello|raw|
 |VSTS|html|
 |Wrike|raw|
@@ -235,7 +233,7 @@ The input to the _create()_ and _update()_ methods is a full context of the issu
             }
         ],
         last_recording_id: '5fe309e2b87c320a48000000', // ID of the recently added recording (optional)
-        recordings: 1 // Number of recordings within this issue. For bugs it's always equal 1.
+        recordings: 1, // Number of recordings within this issue. For bugs it's always equal 1.
         statistics: {
             total_count: 1, // Total number of occurrences 
             unique_devices: 1 // Total number of users (devices) affected by this issue

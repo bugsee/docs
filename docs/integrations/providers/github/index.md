@@ -68,11 +68,11 @@ For custom fields you can use in [custom recipes](/integrations/recipes/recipes/
 
 ## Custom recipes
 
-Bugsee can accommodate all these customizations with the help of [custom recipes](/integrations/recipes/recipes/). This section provides a few examples of using custom recipes specifically with Github. For basic introduction, refer to custom recipe [documentation](/integrations/recipes/recipes/).
+Bugsee can accommodate all these customizations with the help of [custom recipes](/integrations/recipes/recipes/). This section provides a few examples of using custom recipes specifically with GitHub. For basic introduction, refer to custom recipe [documentation](/integrations/recipes/recipes/).
 
 ### Setting labels field
 
-By default Bugsee creates and updates Github issues with Bugsee issue _labels_. But _labels_ list can be overridden inside your custom recipe. For example you can add some new _label_ to existing ones:
+By default Bugsee creates and updates GitHub issues with Bugsee issue _labels_. But _labels_ list can be overridden inside your custom recipe. For example you can add some new _label_ to existing ones:
 
 ```javascript
 function create(context) {

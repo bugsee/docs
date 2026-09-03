@@ -14,7 +14,7 @@ Bugsee can automatically upload managed (PDB/MDB) and platform native (like, dSY
 
 ## Configuring
 
-Before adding changes to trigger symbols collection and uploading, make sure your projects are configured to produce those symbols, as it's quite common practice to disable debug information completely for `Release` builds. Go to `Project options` -> `Compiler` and make sure `Debug information` option is set to either **Portable**, **Symbols only** or **Full**. As was noted above, we operate over managed and native symbols, which are generated alongside each other. The former contain debug information for managed code (which you write in one of IL-based languages, like C#) while the latter contain information that lets us symbolicate crashes in native code (like, Objective-C in case of iOS-targeted build).
+Before adding changes to trigger symbols collection and uploading, make sure your projects are configured to produce those symbols, as it's quite common practice to disable debug information completely for `Release` builds. Make sure the project's `DebugType` is set to either **portable**, **embedded** or **full** — in Visual Studio via project properties, or directly in the `.csproj` with `<DebugType>portable</DebugType>`. As was noted above, we operate over managed and native symbols, which are generated alongside each other. The former contain debug information for managed code (which you write in one of IL-based languages, like C#) while the latter contain information that lets us symbolicate crashes in native code (like, Objective-C in case of iOS-targeted build).
 
 ## Auto upload
 

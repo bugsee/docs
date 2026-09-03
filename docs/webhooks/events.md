@@ -32,7 +32,7 @@ Bugsee will send notifications for the following events:
   - [Environment](#environment)
 
 
-All webhook payloads has common structure, like the one below:
+All webhook payloads have a common structure, like the one below:
 
 ```json
 {
@@ -534,7 +534,7 @@ This event is triggered when new issue is deleted. It has the following payload 
 
 ### issue.comment
 
-This event is triggered when someone add comment to issue. It has the following payload data structure:
+This event is triggered when someone adds a comment to an issue. It has the following payload data structure:
 
 ```json
 {

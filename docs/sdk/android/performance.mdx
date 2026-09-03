@@ -1,6 +1,6 @@
 ---
 title: "Performance monitoring"
-description: "Application performance monitoring (APM) with transactions, spans, built-in providers, sampling, and upload modes in Bugsee Android SDK 7.0.0."
+description: "Application performance monitoring (APM) with transactions, spans, built-in providers, sampling, and upload modes in Bugsee Android SDK 7.x."
 sidebar_position: 13
 slug: "/sdk/android/performance"
 ---
@@ -181,8 +181,8 @@ APM emits two independent data streams — see [Two data paths](#two-data-paths)
 | Option | Default | Purpose |
 | --- | --- | --- |
 | `PerformanceMonitoring` | `true` | Master switch. When `false`, `startTransaction`/`startSpan` return no-op instances and no provider runs. |
-| `PerformanceSampleRate` | `0.01` | Probability (0.0–1.0) that a completed transaction is uploaded through the standalone APM pipeline. Does **not** affect whether transactions appear in issue reports. When `PerformanceAdaptiveSampling` is on, this acts as a ceiling rather than a fixed probability. |
-| `PerformanceAdaptiveSampling` | `true` | Adaptive sampling — the SDK adjusts the effective sample rate based on observed transaction volume so high-traffic operations don't dominate the upload budget. Set to `false` to keep `PerformanceSampleRate` as a fixed probability. _New in 7.0.0._ |
+| `PerformanceSampleRate` | `0.01` | Probability (0.0–1.0) that a completed transaction is uploaded through the standalone APM pipeline. Does **not** affect whether transactions appear in issue reports. When `PerformanceAdaptiveSampling` is on, this acts as a floor: transactions that lose the random draw can still be promoted on merit. |
+| `PerformanceAdaptiveSampling` | `true` | Adaptive sampling — transactions that lost the random draw are scored at finish time on status, duration outlier-ness, and span-tree complexity, and sufficiently "interesting" ones are promoted into the upload pipeline. Set to `false` to keep `PerformanceSampleRate` as a fixed probability. _New in 7.0.0._ |
 | `PerformanceUploadMode` | `"batched"` | How sampled transactions are uploaded. `"batched"` flushes on a 30-second interval; `"realtime"` uploads as soon as a transaction finishes. |
 
 All four options can be set programmatically via the `Bugsee.launch(...)` options map or via manifest metadata. See [Configuration](/sdk/android/configuration) for the mapping between `Options.*` constants and `com.bugsee.option.performance.*` manifest keys.

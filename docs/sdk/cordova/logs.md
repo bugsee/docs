@@ -8,7 +8,7 @@ slug: "/sdk/cordova/logs"
 You can use the Bugsee logging interface directly, we provide two API functions to send a message to a log:
 
 ```javascript
-// With default log level (normal)
+// With default log level (info)
 Bugsee.log("Some log message");
 
 // Set the log level explicitly

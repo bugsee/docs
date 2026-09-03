@@ -67,7 +67,7 @@ Bugsee.Relaunch(options);
 |---|---|---|
 |CaptureLogs|true|Automatically capture all console logs|
 |CrashReport|true|Catch and report application crashes (\*)|
-|DefaultBugPriority|Low|Default priority for bugs|
+|DefaultBugPriority|High|Default priority for bugs|
 |DefaultCrashPriority|Blocker|Default priority for crashes|
 |KillDetection|false|Detect abnormal termination (experimental, [read more](/sdk/ios/app-kills/))|
 |MaxRecordingTime|60|Maximum recording duration|
@@ -82,12 +82,12 @@ Bugsee.Relaunch(options);
 |WifiOnlyUpload|false|Upload reports only when a device is connected to a WiFi network|
 |MaxDataSize|50|Bugsee will avoid using more disk space than specified (in MB). If total Bugsee data size exceeds specified value, oldest recordings (even not sent) will be removed. Value should not be smaller than 10|
 |VideoScale|1.0|Additional down scaling applied to recorded video, (e.g., 0.5 would reduce both width and height by half).|
-|CaptureDeviceAndNetworkNames|true|Capture device name, wifi SSID and mobile carrier name.|
+|CaptureDeviceAndNetworkNames|false|Capture device name, wifi SSID and mobile carrier name.|
 |DetectAppExit|false|Detect any kind of process termination (e.g. when user swipes off the application from multitasking UI, or when system unloads the app due to memory pressure). Special error report is generated for this scenario with "BugseeAppExit" domain|
 |ViewHierarchyEnabled|false|Capture view hierarchy for Bug and Error reports|
 |CaptureOSLogs|false|Automatically capture OSLog and Logger print statements|
 |MonitorBluetoothStatus|false|Monitor bluetooth state.<br />IMPORTANT: You must add "Privacy - Bluetooth Always Usage Description" key into your Info.plist with a string value explaining to the user why you need bluetooth permission|
-|MonitorDiskSpace|false||
+|MonitorDiskSpace|false|Monitor available disk space and include it in reports as a system trace.|
 |AppLaunchCrashDetection|false|Controls whether early crashes are intercepted and uploaded. Early crashes are those happening within the first 5 seconds after app launch. And they are uploaded synchronously (with blocking main thread) to guarantee upload|
 |CaptureAVPlayer|false|When enabled, video playing via AVPlayerLayer and via AVPlayerViewController will be captured on video|
 

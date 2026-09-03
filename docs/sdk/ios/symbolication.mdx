@@ -142,6 +142,8 @@ All variables read by `BugseeAgent`'s build-publish flow. Empty-string values (e
 | --- | --- | --- | --- |
 | `BUGSEE_BUILD_INFO_ENABLED` | **ON** | bool | Master switch for the entire build-publish flow. Disable to opt out (firewalled CI, privacy-sensitive builds). |
 | `BUGSEE_BUILD_INFO_ALL_CONFIGURATIONS` | OFF | bool | Register every `$CONFIGURATION`, not just `release*`. |
+| `BUGSEE_BUILD_INFO_TIMINGS_ENABLED` | **ON** | bool | Per-section build timings read from the `.xcactivitylog`. Disable so no target or section names leave the machine. |
+| `BUGSEE_DEPENDENCIES_ENABLED` | **ON** | bool | Resolved CocoaPods / SPM / Carthage dependency graph. Also the gate for the OSV vulnerability scan. |
 | `BUGSEE_BUILD_INFO_ALL_ACTIONS` | OFF | bool | Register Build actions too, not just Archive. The agent then locates the `.app` at `$TARGET_BUILD_DIR/$WRAPPER_NAME`. If `$TARGET_BUILD_DIR` is also missing, the agent skips with a diagnostic line. |
 | `BUGSEE_SIZE_ANALYSIS_ENABLED` | OFF | bool | Also upload the IPA bytes for server-side tree analysis. Requires `BUGSEE_BUILD_INFO_ENABLED=1`. |
 | `BUGSEE_CHUNKED_UPLOAD` | OFF | bool | Use the deduplicated chunked-upload protocol for the IPA. The artefact is split into 8 MiB SHA-1 chunks and only the chunks that changed since the prior build are re-uploaded — typically cuts upload time by 70–90% on incremental CI. Only meaningful with `BUGSEE_SIZE_ANALYSIS_ENABLED=1` (build-info-only has nothing to chunk). Any failure falls back to the single-PUT path so flaky links can't break CI. |

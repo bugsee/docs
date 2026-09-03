@@ -5,12 +5,18 @@ sidebar_position: 3
 slug: "/integrations/providers/bitbucket"
 ---
 
+:::warning[This integration is retired]
+Bitbucket Cloud removed its native issue tracker and the Issues REST APIs on **20 August 2026**. Bugsee can no longer create or update Bitbucket issues, and attempting to push to an existing Bitbucket integration returns an error.
+
+Existing configurations are left in place so historical links keep resolving, but no new issues will be delivered. Migrate issue tracking to [Jira](/integrations/providers/jira/) or another supported provider.
+:::
+
 To push issues from Bugsee to Bitbucket you must have properly configured issue trackers in all target repositories. Follow the steps below to validate your configuration.
 
 
 ## Prepare
 
-Navigate to your [Bitbucket account](https://www.bitbucket.com) and open the repository you want to check.
+Navigate to your [Bitbucket account](https://bitbucket.org) and open the repository you want to check.
 
 ![Open repo](open_repo.png)
 

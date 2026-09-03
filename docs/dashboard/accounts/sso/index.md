@@ -11,8 +11,8 @@ Bugsee provides a generic auth provider for SAML2 based authentication, which al
 
 Bugsee supports the following SAML services:
 
-Identity and Service Provider initiated SSO
-Identity Provider initiated SLO (Single Logout)
+- Identity and Service Provider initiated SSO
+- Identity Provider initiated SLO (Single Logout)
 
 ### 1. Register Bugsee with IdP
 

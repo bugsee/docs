@@ -14,11 +14,15 @@ Native crash detection is shipped as the **`bugsee-android-ndk` extension module
 
 The NDK extension exposes two runtime options: the master switch for native crash detection, and a toggle for including the OS tombstone's raw log buffers in native crash reports.
 
-The programmatic constants live in the extension's own package:
+The programmatic constants live in the shared contracts package, alongside every other Bugsee contract type:
 
 ```java
-import com.bugsee.library.ndk.contracts.options.NdkOptions;
+import com.bugsee.library.contracts.options.NdkOptions;
 ```
+
+:::info
+Earlier builds exposed these keys from the module-nested `com.bugsee.library.ndk.contracts.options` package. That class still exists as a deprecated source-compatibility alias — the constants resolve to identical string values, so switching the import is a no-op at runtime — but it will be removed in a future major version.
+:::
 
 ## Detect and report native crashes
 

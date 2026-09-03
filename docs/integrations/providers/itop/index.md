@@ -13,7 +13,7 @@ slug: "/integrations/providers/itop"
 - [Personal token](#personal-token)
 
 
-## Basic authentication
+### Basic authentication
 
 :::info
 No custom configuration required in iTop for this type of authentication. The iTop user account you use must have sufficient permissions to create tickets via the REST API.

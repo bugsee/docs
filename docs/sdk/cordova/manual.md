@@ -25,7 +25,7 @@ Bugsee.showReportDialog("Problem summary", "Further description", Bugsee.Severit
 User doesn't have to be involved, you can also generate and upload a report automatically from your code.
 
 ```javascript
-// Bugsee.assert(summary, description, severity)
+// Bugsee.upload(summary, description, severity)
 Bugsee.upload("Problem summary", "Further description", Bugsee.Severity.Blocker);
 ```
 ## Non-fatal exceptions

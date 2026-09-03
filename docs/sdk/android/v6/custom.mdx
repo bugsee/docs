@@ -198,7 +198,7 @@ Bugsee.setReportAttachmentsProvider(new ReportAttachmentsProvider() {
 		ArrayList<CustomAttachment> resultList = new ArrayList<>();
 
 		// If it is a Blocker or crash.
-		if (report.getType() == Report.Type.Crash || report.getSeverity() == IssueSeverity.Blocker) {
+		if (report.getType() == IssueType.Crash || report.getSeverity() == IssueSeverity.Blocker) {
 			// myFilePath is a path to a file that should be attached to the report. 
 			CustomAttachment attachment = CustomAttachment.fromDataFilePath(myFilePath);
 			attachment.setFileName("detailed_info.txt");

@@ -13,7 +13,7 @@ slug: "/integrations/providers/wrike"
 
 ### OAuth
 
-Start Bugsee integration wizard and select  "OAuth" at the first step. Click _"Next"_.
+Start Bugsee integration wizard and select "OAuth" at the first step. Click _"Next"_.
 
 ![Select OAuth](wz_step1_oauth.png)
 
