@@ -32,7 +32,7 @@ cordova plugin add cordova-plugin-device --save
 ## Initialization
 
 :::warning
-iOS/iPadOS: Since v7.0.0 the underlying Bugsee iOS SDK supports the simulator; crash capture is excluded. For full functionality, launch your app with Bugsee on a real device.
+iOS/iPadOS: Since v6.0.0 the underlying Bugsee iOS SDK supports the simulator; crash capture is excluded. For full functionality, launch your app with Bugsee on a real device.
 :::
 
 Initialize the Bugsee plugin when your application starts, preferably when the *deviceready* event fires, e.g.:

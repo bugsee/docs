@@ -27,11 +27,11 @@ On the next step, fill the _"Application name"_, _"Description"_ and _"Logo"_.
 
 ![](gsuite-step-5.png)
 
-Now, on _"Service Provider Details"_ step, you need to fill information available in _"SSO setup"_ wizard in Bugsee. Please, follow the instructions shown in the screenshot below.
+Now, on _"Service Provider Details"_ step, you need to fill information available in _"SSO setup"_ wizard in Bugsee. Please follow the instructions shown in the screenshot below.
 
 ![](gsuite-step-6.png)
 
-Finally, on the _"Attribute Mapping"_ step, you need to list attributes that will be available to Bugsee (as Service Provider). Please, follow the instructions shown in the screenshot below. Copy the attribute names. You must provide the same names in the Bugsee SSO setup wizard dialog when prompted.
+Finally, on the _"Attribute Mapping"_ step, you need to list attributes that will be available to Bugsee (as Service Provider). Please follow the instructions shown in the screenshot below. Copy the attribute names. You must provide the same names in the Bugsee SSO setup wizard dialog when prompted.
 
 :::info
 Note that Bugsee is using single field to store user name, while Google Workspace does not provide similar one by default. In this tutorial, we use "Last name" as the target value for the "name" attribute.

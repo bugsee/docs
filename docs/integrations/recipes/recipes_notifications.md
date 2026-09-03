@@ -56,6 +56,6 @@ Note that the result is not used as-is. Before executing the recipe, a default m
 |title|String|Title of the message|
 |description|String|Description for the message|
 |severity|Number|Message severity. Value from 1 through 5 (from lower to higher). Pass 0 to ignore severity.|
-|fields|Array|Array of ```{ title: '', value: '' }``` objects, that denote the additional fields for the message.|
+|fields|Array|Array of `{ title: '', value: '' }` objects, that denote the additional fields for the message.|
 
 If you want to prevent pushing message to remote service, return ```null``` from the ```handle()```.

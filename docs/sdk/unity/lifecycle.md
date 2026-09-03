@@ -10,7 +10,7 @@ Bugsee SDK silently works within your app, recording everything to assist you in
 ## Implementing callback
 
 :::warning
-"bgs_gameObject" GameObject is required to perform communication between managed code and our platform SDK. Please, do not remove or rename "bgs_gameObject".
+"bgs_gameObject" GameObject is required to perform communication between managed code and our platform SDK. Please do not remove or rename "bgs_gameObject".
 :::
 
 You should subscribe to **Bugsee.OnLifecycleEvent** event and handle incoming lifecycle changes in the attached handler:

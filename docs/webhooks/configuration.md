@@ -11,7 +11,7 @@ Webhooks can be managed in special [Webhooks](https://app.bugsee.com/#/settings/
 
 ![Add webhook](add_webhook_button.png)
 
-That will bring up a new webhook wizard. One the first step fill in the remote URL to your server and optionally provide some description.
+That will bring up a new webhook wizard. On the first step, fill in the remote URL to your server and optionally provide some description.
 
 ![Fill URL](wizard_step1.png)
 
@@ -19,7 +19,7 @@ On the next step, check events you want to receive notifications about to the sp
 
 ![Select events](wizard_step2.png)
 
-If you have selected any of _issue.\*_ events on the second step, you will be presented with the third one, where you can select applications you want these events to be triggered for (all unchecked applications will not triggering events).
+If you have selected any of _issue.\*_ events on the second step, you will be presented with the third one, where you can select applications you want these events to be triggered for (all unchecked applications will not trigger events).
 
 ![Select applications](wizard_step3.png)
 

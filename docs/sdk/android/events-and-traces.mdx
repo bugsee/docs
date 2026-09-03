@@ -1,13 +1,14 @@
 ---
 title: "Custom events & traces"
 description: "Recording custom events and time-series traces into the Bugsee Android SDK report timeline."
+sidebar_position: 12
 slug: "/sdk/android/events-and-traces"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-This page documents the Bugsee Android SDK **7.0.0**. For the previous major version, see [Adding custom data](/sdk/android/v6/custom).
+This page documents the Bugsee Android SDK **7.x**. For the previous major version, see [Adding custom data](/sdk/android/v6/custom).
 
 In addition to the data Bugsee captures automatically, you can enrich reports with your own signals. Custom events and traces live on the `Bugsee` facade and are safe to call before or after `Bugsee.launch(...)` — calls made before launch are buffered.
 

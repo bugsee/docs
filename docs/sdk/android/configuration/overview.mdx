@@ -228,7 +228,7 @@ See [Performance monitoring](/sdk/android/performance) for the APM overview.
 | `PerformanceUploadMode` | `com.bugsee.option.performance.upload-mode` | String | `"batched"` | How standalone APM data is uploaded: `"batched"` (30 s flush) or `"realtime"`. |
 | `PerformanceAdaptiveSampling` | `com.bugsee.option.performance.adaptive-sampling` | boolean | `true` | On top of the static sample rate, promote "interesting" unsampled transactions — scored at finish by status, duration outlier-ness, and span-tree complexity — into the upload pipeline. |
 
-`PerformanceUploadMode` accepts `"batched"` (30 s flush) or `"realtime"`. `PerformanceSampleRate` gates **standalone APM uploads only** — every transaction still flows into the capture pipeline for reports regardless of sampling. `PerformanceAdaptiveSampling = true` turns the sample rate into a ceiling rather than a fixed probability.
+`PerformanceUploadMode` accepts `"batched"` (30 s flush) or `"realtime"`. `PerformanceSampleRate` gates **standalone APM uploads only** — every transaction still flows into the capture pipeline for reports regardless of sampling. `PerformanceAdaptiveSampling = true` turns the sample rate into a floor rather than a fixed probability — scored transactions are promoted on top of the random draw.
 
 ## Enum reference
 

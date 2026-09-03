@@ -77,7 +77,7 @@ BugseePlugin.Bugsee.Event("event with params", parameters);
 ## File Attachments
 
 :::warning
-"bgs_gameObject" GameObject is required to perform communication between managed code and our platform SDK. Please, do not remove or rename "bgs_gameObject".
+"bgs_gameObject" GameObject is required to perform communication between managed code and our platform SDK. Please do not remove or rename "bgs_gameObject".
 :::
 
 Binary files (attachments) can also be added to the report right before it is sent. The attachment will be available for download directly from the issue viewer.

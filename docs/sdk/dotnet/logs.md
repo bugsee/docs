@@ -16,7 +16,7 @@ in Bugsee report viewer.
 You can use the Bugsee logging interface directly, we provide two API functions for sending a message to a log:
 
 ```csharp
-// With default log level (normal)
+// With default log level (info)
 BugseePlugin.Bugsee.Log("Some log message");
 
 // Set the log level explicitly

@@ -22,8 +22,8 @@ In addition to detection of a shake gesture or screenshot issue report view can 
 // or pre-fill some fields, user will be able to modify them
 [Bugsee showReportControllerWithSummary:@"Some problem"
           description:@""
-          severity:BugseeSeverityMedium,
-          labels: @[@"some-label"]];
+          severity:BugseeSeverityMedium
+          labels:@[@"some-label"]];
 ```
 
   </TabItem>
@@ -115,7 +115,7 @@ You can also use the BugseeExtendedReport to fill it with information and upload
     // Note: Do not trigger upload while video export is being performed!
     // 
     // Available since Bugsee iOS SDK v5.4.0
-    [extendedReport exportVideoToPath:@"full/video/path.mov" withCompletion:^{
+    [report exportVideoToPath:@"full/video/path.mov" withCompletion:^{
         // Video export completed. Check the file presence. If
         // export failed, the file will not be created.
     }];
@@ -155,7 +155,7 @@ Bugsee.createReport { report in
     
     report.setSummary("UI is broken.")
     report.setDescription("It happened when I pressed the button")
-    report.labels = ["test"]
+    report.labels = ["test", "qa"]
     
     let image = report.screenshot
     
@@ -251,7 +251,9 @@ BUGSEE_ASSERT(balance > 0, @"Balance is wrong")
 
 ```swift
 // Unfortunately, there is no preprocessor in Swift, so you have to construct location string yourself
-if balance < 0 Bugsee.logAssert(description: "Balance is wrong", location:"\(#function) (\(#file):\(#line))")
+if balance < 0 {
+    Bugsee.logAssert(description: "Balance is wrong", location: "\(#function) (\(#file):\(#line))")
+}
 ```
 
   </TabItem>

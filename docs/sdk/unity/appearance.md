@@ -31,7 +31,6 @@ Bugsee.Appearance.Feedback.BackgroundColor = BugseeColor.Blue;
 | SendButtonColor | Send UIButton text color |
 | TextColor | UILabels text color |
 | VersionColor | UILabel with version number text color |
-| --- | --- |
 | SummaryPlaceholder | Placeholder which is displayed in Summary field in built-in bug reporting UI |
 | DescriptionPlaceholder | Placeholder which is displayed in Description field in built-in bug reporting UI |
 | EmailPlaceholder | Placeholder which is displayed in Email field in built-in bug reporting UI |
@@ -71,7 +70,6 @@ Bugsee.Appearance.Feedback.BackgroundColor = BugseeColor.Blue;
 | SeverityLabelActiveColor | Issue severity label text color in active state in Report UI |
 | TextColor | TextViews and EditTexts text color in Report UI |
 | VersionColor | Bugsee version number view text color in Report UI |
-| --- | --- |
 | SummaryPlaceholder | Placeholder which is displayed in Summary field in built-in bug reporting UI |
 | DescriptionPlaceholder | Placeholder which is displayed in Description field in built-in bug reporting UI |
 | EmailPlaceholder | Placeholder which is displayed in Email field in built-in bug reporting UI |

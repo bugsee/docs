@@ -50,7 +50,7 @@ In cases when you want to launch Bugsee from code (e.g. upon some event or user 
 Under the hood, Bugsee launcher adds an object to the scene named "bgs_gameObject". it is required to perform communication between managed code (.NET) and native backend (our platform SDK). When you call ```Bugsee.Launch()``` yourself, there will be no such special object added to the scene, hence you should do that yourself.
 
 :::warning
-"bgs_gameObject" GameObject is required to perform communication between managed code and our platform SDK. Please, do not remove or rename "bgs_gameObject".
+"bgs_gameObject" GameObject is required to perform communication between managed code and our platform SDK. Please do not remove or rename "bgs_gameObject".
 :::
 
 You can use an existing object for that, but we strongly encourage you to create a dedicated object to prevent any possible conflicts.

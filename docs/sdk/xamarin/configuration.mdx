@@ -99,7 +99,7 @@ namespace YourNameSpace
 |ScreenshotEnabled|true|Attach screenshot to a report|
 |WifiOnlyUpload|false|Upload reports only when a device is connected to a WiFi network|
 |MaxDataSize|50|Bugsee will avoid using more disk space than specified (in MB). If total Bugsee data size exceeds specified value, oldest recordings (even not sent) will be removed. Value should not be smaller than 10|
-|CaptureDeviceAndNetworkNames|true|Capture device name, wifi SSID and mobile carrier name.|
+|CaptureDeviceAndNetworkNames|false|Capture device name, wifi SSID and mobile carrier name.|
 
 :::warning
 * iOS allows only one crash detector to be active at a time, if you insist on using an alternative solution for handling crashes, you might want to use this option and disable Bugsee from taking over.

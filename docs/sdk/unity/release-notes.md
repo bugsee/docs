@@ -50,7 +50,7 @@ slug: "/sdk/unity/release-notes"
 - Feat: \[Android\] 16KB memory pages support
 
 ## 5.2.0 (April 23 2024)
-- Fix: \[Android\] In some cases, video before GF->BG->FG transitions may be absent
+- Fix: \[Android\] In some cases, video before FG->BG->FG transitions may be absent
 - Note: \[Android\] compileSdkVersion 34 and up is now required
 
 ## 5.1.0 (April 11 2024)

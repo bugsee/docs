@@ -219,7 +219,8 @@ public class BugseeCustomDelegate: NSObject, BugseeDelegate {
                 fileURL = URL(fileURLWithPath: pathToMyFile)
             }
             
-            if let att = BugseeAttachment(name:"internal app db", filename:"custom.db", data:Data(contentsOf: fileURL)) {
+            if let data = try? Data(contentsOf: fileURL),
+               let att = BugseeAttachment(name: "internal app db", filename: "custom.db", data: data) {
                 // Return array with one attachment
                 return [att]
             }

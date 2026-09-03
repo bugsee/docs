@@ -83,7 +83,7 @@ document.addEventListener('deviceready', function() {
 
 > Replace the tokens with values from your Bugsee dashboard.
 
-> iOS/iPadOS: Since v7.0.0 the Bugsee iOS SDK supports the simulator; crash capture is excluded. For full functionality, use a real device.
+> iOS/iPadOS: Since v6.0.0 the Bugsee iOS SDK supports the simulator; crash capture is excluded. For full functionality, use a real device.
 
 ---
 

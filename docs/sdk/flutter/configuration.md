@@ -8,7 +8,7 @@ slug: "/sdk/flutter/configuration"
 ## Launching with options
 
 :::warning
-iOS/iPadOS: Since v9.0.0 the underlying Bugsee iOS SDK supports the simulator; crash capture is excluded. For full functionality, launch your app with Bugsee on a real device.
+iOS/iPadOS: Since v6.0.0 the underlying Bugsee iOS SDK supports the simulator; crash capture is excluded. For full functionality, launch your app with Bugsee on a real device.
 :::
 
 Bugsee behavior is very customizable, if default configuration is not satisfying your needs you can launch the SDK with additional parameters. Use instance of ```IOSLaunchOptions``` or ```AndroidLaunchOptions``` for corresponding platform to change Bugsee behavior.
@@ -107,4 +107,4 @@ Future<void> main() async {
 |videoEnabled|true|Enable video recording|
 |videoScale|1.0|Custom video scale|
 |wifiOnlyUpload|false|Upload reports only when a device is connected to a WiFi network|
-|captureDeviceAndNetworkNames|false|Capture device name, wifi SSID and mobile carrier name.|
+|captureDeviceAndNetworkNames|true|Capture device name, wifi SSID and mobile carrier name.|

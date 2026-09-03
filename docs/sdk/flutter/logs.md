@@ -15,7 +15,7 @@ in Bugsee report viewer.
 You can use the Bugsee logging interface directly, we provide two API functions for sending a message to a log:
 
 ```dart
-// With default log level (normal)
+// With default log level (info)
 Bugsee.log("Some log message");
 
 // Set the log level explicitly

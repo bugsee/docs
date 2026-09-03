@@ -20,7 +20,7 @@ The precise amount of RAM used by Bugsee depends on the device specifications an
 |Without Bugsee|44|
 |With Bugsee enabled|60|
 
-These values were produced by testing Bugsee SDK in a sample application on iPhone Xs. The "Without Bugsee" row shows the baseline RAM usage of the app.
+These values were produced by testing Bugsee SDK in a sample application on iPhone XS. The "Without Bugsee" row shows the baseline RAM usage of the app.
 
 <br />
 

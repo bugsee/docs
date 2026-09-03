@@ -22,7 +22,7 @@ Add Bugsee dependency to your pom.xml
 		<dependency>
 			<groupId>com.bugsee</groupId>
 			<artifactId>bugsee-android</artifactId>
-			<version>1.11.7</version> <!-- The latest Bugsee version -->
+			<version>6.0.4</version> <!-- Check Maven Central for the latest 6.x release -->
 			<type>aar</type>
 		</dependency>
 	</dependencies>
@@ -58,5 +58,5 @@ Maven can't merge app's and library's manifests automatically. That's why it is 
             android:theme="@style/BugseeActivityStyle">
         </activity>
 	</application>
-</manifest
+</manifest>
 ```  

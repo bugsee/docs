@@ -14,7 +14,7 @@ slug: "/integrations/providers/youtrack"
 
 ### Basic authentication
 
-To create issues in YouTrack you need to ensure that YouTrack account you will be using to integrate Bugsee has _"Reporter"_ role assigned to it. Please, follow steps below to do that.
+To create issues in YouTrack you need to ensure that YouTrack account you will be using to integrate Bugsee has _"Reporter"_ role assigned to it. Please follow steps below to do that.
 
 Login to your YouTrack instance and go to user management page
 

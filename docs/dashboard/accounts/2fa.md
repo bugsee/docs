@@ -28,8 +28,8 @@ Now, when you have configured your authentication application, it's time to chec
 
 ![](2fa-step-4.png)
 
-If you have properly configured your authentication application and verification was passed successfully, 2FA will be enabled for your account and you will be provided with backup codes. Please, store them somewhere to later obtain access to your account if you will not be able to access your authentication application anymore.
+If you have properly configured your authentication application and verification was passed successfully, 2FA will be enabled for your account and you will be provided with backup codes. Please store them somewhere to later obtain access to your account if you will not be able to access your authentication application anymore.
 
 ![](2fa-step-5.png)
 
-Finally, click _"Complete"_ to close the wizard. Two-Factor authentication is now activated for your account.
+Finally, click _"Complete"_ to close the wizard. Two-factor authentication is now activated for your account.

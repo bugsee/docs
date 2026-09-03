@@ -25,7 +25,7 @@ curl -o .claude/skills/bugsee-android-sdk/SKILL.md \
 
 ## Any MCP-capable client
 
-Connect the read-only Bugsee MCP server (`https://api.bugsee.com/mcp`) to read your applications and issues. [MCP configuration](/mcp/configuration) has per-client setup for Claude Desktop, Cursor, Windsurf, VS Code, Cline, Zencoder, and Antigravity, plus the OAuth and personal-token flows for anything else.
+Connect the Bugsee MCP server (`https://api.bugsee.com/mcp`) to read your applications and issues; the default `mcp:read` scope is read-only. [MCP configuration](/mcp/configuration) has per-client setup for Claude Desktop, Cursor, Windsurf, VS Code, Cline, Zencoder, and Antigravity, plus the OAuth and personal-token flows for anything else.
 
 ## What you get
 

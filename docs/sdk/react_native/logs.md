@@ -26,7 +26,7 @@ RCTAddLogFunction((RCTLogFunction)BugseeReactNativeLogger);
 You can use the Bugsee logging interface directly from within Javascript bypassing the React logging system, we provide two API functions for sending a message to a log:
 
 ```javascript
-// With default log level (normal)
+// With default log level (info)
 Bugsee.log("Some log message");
 
 // Set the log level explicitly

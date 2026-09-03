@@ -118,7 +118,7 @@ Bugsee.relaunch(options: options)
 |BugseeKillDetectionKey|NO|Detect abnormal termination ([read more](/sdk/ios/app-kills/))|
 |BugseeDetectAppExitKey|NO|Detect any kind of process termination \(e.g. when user swipes off the application from multitasking UI, or when system unloads the app due to memory pressure\). Special error report is generated for this scenario with "BugseeAppExit" domain|
 |BugseeVideoEnabledKey|YES|Enable video recording|
-|BugseeScreenshotEnabledKey|YES|Attach screenshot to a report. Note, that if ```BugseeVideoEnabledKey``` option is *NO*, default value of this option is *NO* too.|
+|BugseeScreenshotEnabledKey|YES|Attach screenshot to a report. Note, that if `BugseeVideoEnabledKey` option is *NO*, default value of this option is *NO* too.|
 |BugseeViewHierarchyEnabledKey|YES|Capture view hierarchy for Bug and Error reports|
 |BugseeCaptureLogsKey|YES|Automatically capture all console logs|
 |BugseeCaptureOSLogsKey|NO|Automatically capture OSLog and Logger print statements.<br />_**IMPORTANT**: Experimental feature_|
@@ -137,7 +137,7 @@ Bugsee.relaunch(options: options)
 |BugseeStyleKey|Default|Enumeration of BugseeStyleSystemDefault, BugseeStyleDefault, BugseeStyleDark and BugseeStyleBasedOnStatusBarStyle|
 |BugseeFrameRateKey|BugseeFrameRateHigh|Specifies how often frames are attempted to be captured|
 |BugseeVideoScaleKey|@1|Additional down scaling applied to recorded video, (e.x @0.5 would reduce both width and height by half)|
-|BugseeCaptureDeviceAndNetworkNamesKey\*\*|NO|Capture device name, wifi SSID and mobile carrier name.|
+|BugseeCaptureDeviceAndNetworkNames\*\*|NO|Capture device name, wifi SSID and mobile carrier name.|
 |BugseeReportSummaryRequiredKey|NO|Controls whether  _"Summary"_ field in bug reporting UI is mandatory or not.|
 |BugseeReportDescriptionRequiredKey|NO|Controls whether  _"Description"_ field in bug reporting UI is mandatory or not.|
 |BugseeReportEmailRequiredKey|NO|Controls whether  _"Email"_ field in bug reporting UI is mandatory or not.|

@@ -23,7 +23,7 @@ Repeat for any platform you need, or point Codex at the [bugsee-for-ai](https://
 
 ## Connect the MCP server
 
-Add the read-only Bugsee MCP server to your Codex configuration (`~/.codex/config.toml`) so the assistant can read your issues. Use the OAuth URL `https://api.bugsee.com/mcp`, or the personal-token URL `https://api.bugsee.com/mcp/<token>` for unattended setups. See [MCP configuration](/mcp/configuration) for how to generate a token and the security model.
+Add the Bugsee MCP server to your Codex configuration (`~/.codex/config.toml`) so the assistant can read your issues. Use the OAuth URL `https://api.bugsee.com/mcp`, or the personal-token URL `https://api.bugsee.com/mcp/<token>` for unattended setups. See [MCP configuration](/mcp/configuration) for how to generate a token and the security model.
 
 ## Use it
 

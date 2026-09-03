@@ -13,12 +13,12 @@ Video recording can be disabled completely using the **videoEnabled** launch opt
 
 Bugsee automatically detects and hides secure input fields (e.g. password fields) from the recorded video. However, due to the declarative nature of Compose UI, automatic detection may not cover all cases. We recommend using the `BugseeProtect` composable to explicitly wrap any sensitive content. It places a secure overlay that hides the protected area from Bugsee video recordings and screenshots on both Android and iOS.
 
-Add the `library-protect` dependency to your shared module:
+Add the `bugsee-kotlin-multiplatform-protect` dependency to your shared module:
 
 ```kotlin
 commonMain.dependencies {
-    implementation("com.bugsee:bugsee-kotlin-multiplatform:+")
-    implementation("com.bugsee:bugsee-kotlin-multiplatform-protect:+")
+    implementation("com.bugsee:bugsee-kotlin-multiplatform:0.1.1")
+    implementation("com.bugsee:bugsee-kotlin-multiplatform-protect:0.1.1")
 }
 ```
 

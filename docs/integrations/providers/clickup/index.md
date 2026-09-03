@@ -50,7 +50,7 @@ You will be presented with the following window asking you to select workspaces 
 We describe here only specific configuration steps for ClickUp. Generic steps are described in [configuration](/integrations/configuration/) section. Refer to it for more details.
 :::
 
-ClickUp has the following structure: _"Team"_ -> _"Space"_ -> _"Folder"_ -> _"List"_ -> _"Task"_. So, we provide one more step in integration setup wizard that asks you to pick the _"Team"_ and _"Space"_ pair to fetch folders and lists from. Please, pick one and click _"Next"_ to proceed.
+ClickUp has the following structure: _"Team"_ -> _"Space"_ -> _"Folder"_ -> _"List"_ -> _"Task"_. So, we provide one more step in integration setup wizard that asks you to pick the _"Team"_ and _"Space"_ pair to fetch folders and lists from. Please pick one and click _"Next"_ to proceed.
 
 ![Choose workspace](workspace.png)
 
@@ -70,8 +70,9 @@ function create(context) {
     return {
     	// ...
     	custom: {
-    		// for some tasks this is 'open', for some others it's 'open'
-    		status: 'open'
+    		// Bugsee maps its own 'open' state to ClickUp's 'to do' by default;
+    		// your space or list may use 'open', 'backlog' or a custom name instead.
+    		status: 'to do'
     	}
     };
 }

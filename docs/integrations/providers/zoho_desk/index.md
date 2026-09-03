@@ -16,7 +16,7 @@ slug: "/integrations/providers/zoho_desk"
 
 Start Bugsee integration wizard and select "OAuth" in the first step of integration wizard. Click "Next".
 
-## OAuth
+### OAuth
 
 ![Select OAuth](wz_step1_oauth.png)
 
