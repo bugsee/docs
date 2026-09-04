@@ -1,6 +1,6 @@
 ---
 title: "Usage"
-description: "Reference for the Bugsee MCP tools — applications, issues, and builds — plus example prompts and common workflows for triage, root-cause analysis, regression hunting, vulnerability scanning, and bug-to-PR loops."
+description: "Reference for the Bugsee MCP tools — applications, issues, builds, and symbols — plus example prompts and common workflows for triage, root-cause analysis, regression hunting, vulnerability scanning, and bug-to-PR loops."
 sidebar_position: 2
 slug: "/mcp/usage"
 ---
@@ -14,7 +14,7 @@ The Bugsee MCP server exports thirteen tools across four resource families. All 
 | Applications | [`list_applications`](#list_applications) | Discover application keys |
 | Applications | [`create_application`](#create_application) | Create a new application and return its `app_token` (mutating) |
 | Issues | [`list_issues`](#list_issues) | Paginated issue listing with filters |
-| Issues | [`get_issue`](#get_issue) | Full issue report with optional logs and per-thread stacks |
+| Issues | [`get_issue`](#get_issue) | Full issue report with optional logs, attributes, and per-thread stacks |
 | Issues | [`get_issue_resource`](#get_issue_resource) | Presigned URL for an issue resource (video, screenshot, network log, attachment, native crash artifact, …) |
 | Builds | [`list_builds`](#list_builds) | Paginated build listing with filters |
 | Builds | [`list_latest_builds`](#list_latest_builds) | One build per `(package_id, format, build_configuration)` lineup |
@@ -37,8 +37,8 @@ List all applications accessible to the current user. Takes no parameters.
 | `key` | Application key used in issue keys (e.g., `MYAPP` in `MYAPP-123`) |
 | `name` | Display name |
 | `description` | Free-form description (may be empty) |
-| `type` | `ios`, `android`, or `web` |
-| `subtype` | Wrapper / framework if any (e.g., `react_native`, `flutter`, `unity`, `dotnet`, `xamarin`, `cordova`, `kmp`) |
+| `type` | Platform: `ios`, `android`, `javascript`, `rust`, or `web` (`web` is legacy — retained for existing applications, not creatable) |
+| `subtype` | Wrapper / framework if any (e.g., `react_native`, `flutter`, `unity`, `dotnet`, `xamarin`, `cordova`, `kmp`); empty for native apps |
 
 Use this tool first when the agent doesn't yet know which application key to query.
 
@@ -64,7 +64,7 @@ The returned `app_token` is a credential: it authorizes SDK builds to report int
 
 ### list_issues
 
-List issues for a given application. Returns a paginated response (50 issues per page).
+List issues for a given application, including unsymbolicated (missing-symbols) crashes and errors alongside ready ones. Returns a paginated response (50 issues per page).
 
 **Parameters:**
 
@@ -72,7 +72,7 @@ List issues for a given application. Returns a paginated response (50 issues per
 |---|---|---|---|
 | `application_id_or_key` | string | Yes | The application ID or key (e.g., `"MYAPP"`) |
 | `type` | string | No | Filter by issue type: `"bug"`, `"error"`, or `"crash"` |
-| `status` | string | No | Filter by issue status: `"open"` or `"closed"` |
+| `status` | string | No | Filter by issue open/closed state (not symbolication status): `"open"` or `"closed"` |
 | `version` | string | No | Filter by application version (e.g., `"1.2.3"`) |
 | `reporter_email` | string | No | Filter by reporter email address |
 | `sort` | string | No | Sort order. One of: `"date_desc"` (default), `"date_asc"`, `"events_desc"`, `"events_asc"`, `"users_desc"`, `"users_asc"` |
@@ -80,20 +80,26 @@ List issues for a given application. Returns a paginated response (50 issues per
 
 **Response fields:**
 
-- `issues` — array of issues, each containing `id`, `key`, `type`, `status`, `severity`, `summary`, `created_on`, `updated_on`; plus `events_count` and `users_count` for crashes/errors, or `description` for bugs
+- `issues` — array of issues, each containing `id`, `key`, `type`, `status`, `symbolication_status`, `severity`, `summary`, `created_on`, `updated_on`; plus `events_count` and `users_count` for crashes/errors, or `description` for bugs
 - `total` — total number of matching issues
 - `nextCursor` — present if more pages exist; pass it as `cursor` to fetch the next page
 
+`symbolication_status` is `"ready"` when the issue is symbolicated (or needs no symbols) and `"missing_sym"` when it is still waiting on debug symbols or source maps. Unsymbolicated issues often have an **empty `key`** until symbols are uploaded and processing completes — in that case pass the `id` field to `get_issue` / `get_issue_resource` as `issue_id` rather than `issue_key`, and use [`get_symbol_by_uuid`](#get_symbol_by_uuid) to find out what is missing.
+
+Log data is not available from this tool — use [`get_issue`](#get_issue) with `include_logs` for that.
+
 ### get_issue
 
-Get a single issue by its key (e.g., `"MYAPP-123"`). Returns a plain-text report with markdown sections covering timing, environment, summary, exception details, and optionally per-thread stacks and logs.
+Get a single issue by its key (e.g., `"MYAPP-123"`) or by its ID. Returns a plain-text report with markdown sections covering timing, environment, summary, exception details, and optionally per-thread stacks, app-defined attributes, and logs.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `issue_key` | string | Yes | The issue key in `"APPKEY-NUMBER"` format (e.g., `"MYAPP-123"`). Use `list_issues` first to discover available keys. |
+| `issue_key` | string | Conditional | The issue key in `"APPKEY-NUMBER"` format (e.g., `"MYAPP-123"`). Required unless `issue_id` is given. Use `list_issues` first to discover available keys. |
+| `issue_id` | string | Conditional | Mongo ObjectId hex of the issue — the `id` field from `list_issues`. Required unless `issue_key` is given. Prefer this for unsymbolicated (`missing_sym`) issues, which have an empty key. |
 | `include_all_threads` | boolean | No | When `true`, include stack traces for **all** threads in the crash dump, not just the crashed/target thread. Useful for diagnosing deadlocks, thread-related crashes, or cases where the crashed thread alone does not explain the failure. Native iOS/Android dumps may contain dozens of threads, so response size grows accordingly. No effect on bug-type issues. Default: `false`. |
+| `include_attributes` | boolean | No | When `true`, add an **Attributes** section with the app-defined key/value context the SDK attached to the session (set through `setAttribute` — user tier, feature flags, tenant, …). Useful when the failure looks configuration- or account-dependent. Attributes are unbounded and app-defined, so an app that attaches many of them grows the response accordingly. Default: `false`. |
 | `include_logs` | object | No | Log filter configuration. If omitted, logs are **not** included. See below. |
 
 **Log filter options** (`include_logs`):
@@ -119,6 +125,9 @@ Get a single issue by its key (e.g., `"MYAPP-123"`). Returns a plain-text report
 - **Runtime** — React Native, Flutter, Unity, etc. (if applicable)
 - **Summary** — issue title
 - **Description** — bug reports only
+- **Labels** — labels the SDK attached to the report, when there are any
+- **Attributes** — app-defined key/value context; only when `include_attributes=true`
+- **Report source** — how the report was triggered (screenshot, shake, crash, `code_upload`, …), plus the capture mechanism and the calling code's origin when the SDK reported them. Reads `not reported` for SDK builds that predate trigger reporting.
 - **Exception** — crash/error type, signal, reason, stack trace of the crashed/target thread
 - **All threads** — only when `include_all_threads=true`; one subsection per thread with the crashed thread marked
 - **Memory leak analysis** — only when the issue carries a memory/thread-leak bundle (leaks arrive as `error`-type issues); covers the leaking class, retained size, GC-root reference chain, and a memory snapshot
@@ -134,7 +143,8 @@ For `"attachment"` the response always contains a **list** (an issue may carry m
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `issue_key` | string | Yes | The issue key in `"APPKEY-NUMBER"` format. |
+| `issue_key` | string | Conditional | The issue key in `"APPKEY-NUMBER"` format. Required unless `issue_id` is given. |
+| `issue_id` | string | Conditional | Mongo ObjectId hex of the issue — the `id` field from `list_issues`. Required unless `issue_key` is given. Prefer this for unsymbolicated issues, which have an empty key. |
 | `resource_type` | string | Yes | One of: `"video"`, `"screenshot"`, `"log"`, `"network"`, `"breadcrumbs"`, `"viewtree"`, `"input"`, `"events.system"`, `"events.user"`, `"traces.system"`, `"traces.user"`, `"attachment"`, `"crash"`, `"minidump"`, `"crash.trace"`, `"crash.tombstone"`, `"performance"`, `"memory.leak"`. |
 
 For text-based log analysis prefer `get_issue` with `include_logs` — it returns filtered log entries inline without an HTTP fetch round trip. The `"memory.leak"` bundle is also rendered inline by `get_issue` (the **Memory leak analysis** section); fetch it via this tool only when you need the raw structured JSON.
@@ -324,12 +334,6 @@ Look up debugging symbols by module UUID — a dSYM, ELF, PDB, R8/ProGuard mappi
 
 Without `application_id_or_key`, org-owned hits are still limited to applications the caller can read.
 
-## Prompts
-
-> Note: While most AI agents that support the MCP Protocol also support tools, prompts are less widely adopted and may not be available in your AI agent of choice.
-
-* **/bugsee_fix** — when invoked from an agent that supports MCP prompts, pulls the supplied issue key and walks the agent through analyzing and proposing a fix.
-
 ## Example prompts by workflow
 
 The patterns below are what most users will write into their agent of choice. They map naturally onto the tools above, so an MCP-aware model can handle them without any custom wiring on your side.
@@ -415,6 +419,24 @@ If the user wants to re-check a build against the current advisory databases (e.
 > *"Trigger a fresh vulnerability scan on the latest release build of MyApp and let me know when it's done."*
 
 A `"queued"` outcome means the agent should poll `list_build_vulnerabilities` after a few minutes. `"cooldown"` means wait `retry_after_minutes`. `"already_in_progress"` means another scan is in flight — poll, don't re-trigger.
+
+### 10. Diagnose an unsymbolicated crash
+
+When `list_issues` returns an issue with `symbolication_status="missing_sym"` and an empty `key`, the agent fetches it by `issue_id` and checks which module is missing symbols.
+
+> *"MyApp has crashes that aren't symbolicated — pull one and tell me which symbol file we forgot to upload."*
+>
+> *"Is anything uploaded for debug UUID 8A3F1C2E-…? Show me its status."*
+
+`get_symbol_by_uuid` returns matches in **any** status, so it distinguishes "never uploaded" from "uploaded but still processing" or "broken" — the usual reason a crash sits in `missing_sym`.
+
+### 11. Onboard a new app
+
+With the `mcp:write` scope granted, the agent can create the application and wire the SDK in one pass.
+
+> *"Create a Bugsee app called Checkout Service for iOS with key CHECKOUT, then add the SDK launch call to my AppDelegate using the returned token."*
+
+`create_application` returns the `app_token`, which the agent drops straight into the SDK initialization in your working tree. This still requires organization-admin (or `app_create`) rights on your account.
 
 ## Worked example
 
