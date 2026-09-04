@@ -5,7 +5,7 @@ sidebar_position: 1
 slug: "/mcp/configuration"
 ---
 
-There are two ways to connect an MCP client to the Bugsee MCP server. Pick whichever your client supports — the resulting capabilities are identical.
+There are two ways to connect an MCP client to the Bugsee MCP server. Pick whichever your client supports — both reach the same tools and the same data your account can already see.
 
 - **OAuth 2.1** — paste a single URL (`https://api.bugsee.com/mcp`) into the client. The client opens a browser, you sign in to Bugsee, approve the connection once, and the client receives a scoped, rotating access token. No long-lived secret lives on the user's machine. Recommended for any client that supports it.
 - **Personal access token** — generate a token from the Bugsee dashboard and paste a URL that embeds it (`https://api.bugsee.com/mcp/<token>`) into the client config. Use this for clients that don't yet support OAuth, or for unattended setups (CI agents, scripts).
@@ -27,7 +27,7 @@ To connect:
 3. Bugsee asks you to confirm the connection and shows the application name supplied by the client.
 4. Approve. The client receives an access token (typically valid 1 hour, refreshed silently) and is now connected.
 
-The granted scope is **`mcp:read`** — read-only access to your Bugsee account. See [Security](/mcp/security) for details on the OAuth flow, scopes, and revocation.
+The default granted scope is **`mcp:read`** — read-only access to your Bugsee account. A client may additionally request **`mcp:write`**, which unlocks `create_application`; when it does, the consent screen shows the request and you can narrow the approval back to `mcp:read` before approving. See [Security](/mcp/security) for details on the OAuth flow, scopes, and revocation.
 
 ### Managing OAuth sessions
 

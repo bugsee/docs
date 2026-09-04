@@ -9,7 +9,7 @@ The [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol) is a
 
 ## Bugsee MCP server
 
-The Bugsee MCP server gives any MCP-aware AI agent secure, scoped access to your Bugsee data — issues (crashes, errors, and user-submitted bug reports) and builds (app/install size, dependency changes, build-timing regressions, and dependency vulnerabilities) — without the developer leaving the agent's chat or editor. Combined with a code assistant that has access to your local source tree, this enables an end-to-end workflow: the agent fetches the issue or build, reads the stack trace or regression, locates the relevant files, and proposes a fix in the same conversation.
+The Bugsee MCP server gives any MCP-aware AI agent secure, scoped access to your Bugsee data — issues (crashes, errors, and user-submitted bug reports), builds (app/install size, dependency changes, build-timing regressions, and dependency vulnerabilities), and debug symbols — without the developer leaving the agent's chat or editor. Combined with a code assistant that has access to your local source tree, this enables an end-to-end workflow: the agent fetches the issue or build, reads the stack trace or regression, locates the relevant files, and proposes a fix in the same conversation.
 
 ## What you can do with it
 
@@ -19,6 +19,8 @@ The Bugsee MCP server gives any MCP-aware AI agent secure, scoped access to your
 - **Bug-report to PR**: turn a user-submitted bug report into a proposed code change without leaving the IDE.
 - **Build health**: check a build's app/install size, see what a release added or removed, and catch size, dependency, or build-timing regressions against the baseline.
 - **Dependency vulnerabilities**: read a build's vulnerability-scan summary and the diff versus the previous scan, or queue a fresh scan.
+- **Symbolication diagnostics**: when a crash still shows raw addresses, look up the module UUID to see whether its debug symbols were never uploaded, are still processing, or came through broken.
+- **App onboarding**: create a new application and get its app token to drop straight into the SDK initialization — for clients granted the `mcp:write` scope.
 
 See [Usage](/mcp/usage) for concrete example prompts.
 
