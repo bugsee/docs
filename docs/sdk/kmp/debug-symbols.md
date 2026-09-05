@@ -19,7 +19,21 @@ In short:
 
 - Add the Bugsee Gradle plugin (`com.bugsee.android.gradle`) to your Android app module. When present, it uploads the ProGuard/R8 `mapping.txt` automatically at build time.
 - Configure the plugin with the same `appToken` you pass to `Bugsee.launch(...)` on Android.
-- If your app ships native `.so` libraries, enable NDK symbol collection (`ndk { enabled.set(true) }`) in the plugin configuration and set `debugSymbolLevel` to `SYMBOL_TABLE` or `FULL` for the relevant build types.
+- If your app ships native `.so` libraries, enable NDK symbol collection (`ndk(true)`) in the plugin configuration and set `debugSymbolLevel` to `SYMBOL_TABLE` or `FULL` for the relevant build types.
+
+:::note[Match the plugin line to the wrapped native Android SDK]
+The Bugsee KMP SDK wraps a specific native Android SDK release — see the [KMP release notes](/sdk/kmp/release-notes/) for which one, then pick the Gradle plugin line paired with it in [Gradle plugin — Requirements & compatibility](/sdk/android/gradle-plugin/requirements/).
+
+The NDK configuration syntax differs between plugin lines. Plugin **4.x** takes a nested block:
+
+```kotlin
+ndk {
+    enabled.set(true)
+}
+```
+
+Earlier plugin lines take the boolean form `ndk(true)` used in the example below. Using the nested block on a plugin line that expects the boolean fails to compile with `Type mismatch: inferred type is () -> Unit but Boolean was expected`.
+:::
 
 In a typical KMP/Compose Multiplatform project, the plugin is wired into `composeApp/build.gradle.kts` via the version catalog:
 
@@ -27,7 +41,7 @@ In a typical KMP/Compose Multiplatform project, the plugin is wired into `compos
 // gradle/libs.versions.toml
 //
 // [versions]
-// bugseeGradle = "x.y.z"
+// bugseeGradle = "x.y.z"   // plugin line paired with the native SDK this KMP release wraps
 //
 // [plugins]
 // bugsee-gradle-plugin = { id = "com.bugsee.android.gradle", version.ref = "bugseeGradle" }
@@ -48,9 +62,7 @@ android {
 
     bugsee {
         appToken("<your_app_token>")
-        ndk {
-            enabled.set(true)   // upload NDK debug symbols
-        }
+        ndk(true)   // upload NDK debug symbols
     }
 }
 ```

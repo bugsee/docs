@@ -204,7 +204,7 @@ In a typical KMP/Compose Multiplatform project, wire the Bugsee Gradle plugin in
 // gradle/libs.versions.toml
 //
 // [versions]
-// bugseeGradle = "4+"
+// bugseeGradle = "x.y.z"   // plugin line paired with the native SDK this KMP release wraps — see release notes
 //
 // [plugins]
 // bugsee-gradle-plugin = { id = "com.bugsee.android.gradle", version.ref = "bugseeGradle" }
@@ -224,12 +224,12 @@ android {
 
     bugsee {
         appToken("<your_app_token>")
-        ndk {
-            enabled.set(true)   // upload NDK debug symbols (only if your app ships native libraries)
-        }
+        ndk(true)   // upload NDK debug symbols (only if your app ships native libraries)
     }
 }
 ```
+
+> **Note:** The Gradle plugin line must match the native Android SDK this KMP release wraps. Check the [KMP release notes](https://docs.bugsee.com/sdk/kmp/release-notes/) for the wrapped SDK version, then pick the paired plugin line from [Gradle plugin — Requirements & compatibility](https://docs.bugsee.com/sdk/android/gradle-plugin/requirements/). The NDK syntax differs by line: plugin 4.x takes a nested block (`ndk { enabled.set(true) }`), earlier lines take the boolean `ndk(true)` shown above. Using the nested block on a line that expects the boolean fails to compile with `Type mismatch: inferred type is () -> Unit but Boolean was expected`.
 
 The plugin uploads the ProGuard/R8 `mapping.txt` automatically at build time.
 
