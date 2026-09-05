@@ -28,12 +28,12 @@ Add the following dependency to your app module's build.gradle file
 
 ```gradle
 dependencies {
-   implementation 'com.bugsee:bugsee-android:+'
+   implementation 'com.bugsee:bugsee-android:6.+'
 }
 ```
 
 :::info
-The statement above will fetch the latest available version. If instead you want to stick to some particular version, replace the plus symbol (+) with desired value. You can find all the released versions in our [release notes](/sdk/android/v6/release-notes/).
+The statement above fetches the latest available **6.x** release. The `6.` prefix matters: a bare `+` resolves to the newest version at this coordinate, which is now on the **7.x** line and is not source-compatible with 6.x. To pin an exact version instead, replace `6.+` with the version you want — you can find all released versions in our [release notes](/sdk/android/v6/release-notes/). To move to the current line, see [Migrating from 6.x to 7.x](/sdk/android/migration).
 :::
 
 This is the recommended way to install Bugsee. 
