@@ -19,7 +19,11 @@ In short:
 
 - Add the Bugsee Gradle plugin (`com.bugsee.android.gradle`) to your Android app module. When present, it uploads the ProGuard/R8 `mapping.txt` automatically at build time.
 - Configure the plugin with the same `appToken` you pass to `Bugsee.launch(...)` on Android.
-- If your app ships native `.so` libraries, enable NDK symbol collection (`ndk { enabled.set(true) }`) in the plugin configuration and set `debugSymbolLevel` to `SYMBOL_TABLE` or `FULL` for the relevant build types.
+- If your app ships native `.so` libraries, enable NDK symbol collection (`ndk(true)`) in the plugin configuration and set `debugSymbolLevel` to `SYMBOL_TABLE` or `FULL` for the relevant build types.
+
+:::note[Plugin version tracks the wrapped native Android SDK]
+The Bugsee KMP SDK wraps a specific native Android SDK release — see the [KMP release notes](/sdk/kmp/release-notes/) for which one. Use the Gradle plugin line that's paired with that native SDK's major version (3.x for SDK 6.x, 4.x for SDK 7.x); see [Gradle plugin — Requirements & compatibility](/sdk/android/gradle-plugin/requirements/) for the full compatibility table. Pairing the wrong plugin line with the wrapped SDK fails at build or runtime — for example, `4.x`'s nested `ndk { enabled.set(true) }` DSL only exists in the plugin line paired with SDK 7.x.
+:::
 
 In a typical KMP/Compose Multiplatform project, the plugin is wired into `composeApp/build.gradle.kts` via the version catalog:
 
@@ -27,7 +31,7 @@ In a typical KMP/Compose Multiplatform project, the plugin is wired into `compos
 // gradle/libs.versions.toml
 //
 // [versions]
-// bugseeGradle = "x.y.z"
+// bugseeGradle = "3.x.x"   // plugin line paired with the native SDK this KMP release wraps
 //
 // [plugins]
 // bugsee-gradle-plugin = { id = "com.bugsee.android.gradle", version.ref = "bugseeGradle" }
@@ -48,9 +52,7 @@ android {
 
     bugsee {
         appToken("<your_app_token>")
-        ndk {
-            enabled.set(true)   // upload NDK debug symbols
-        }
+        ndk(true)   // upload NDK debug symbols
     }
 }
 ```

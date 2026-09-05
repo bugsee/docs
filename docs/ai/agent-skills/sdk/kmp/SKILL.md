@@ -204,7 +204,7 @@ In a typical KMP/Compose Multiplatform project, wire the Bugsee Gradle plugin in
 // gradle/libs.versions.toml
 //
 // [versions]
-// bugseeGradle = "4+"
+// bugseeGradle = "3.x.x"   // plugin line paired with the native SDK this KMP release wraps — see release notes
 //
 // [plugins]
 // bugsee-gradle-plugin = { id = "com.bugsee.android.gradle", version.ref = "bugseeGradle" }
@@ -224,12 +224,12 @@ android {
 
     bugsee {
         appToken("<your_app_token>")
-        ndk {
-            enabled.set(true)   // upload NDK debug symbols (only if your app ships native libraries)
-        }
+        ndk(true)   // upload NDK debug symbols (only if your app ships native libraries)
     }
 }
 ```
+
+> **Note:** The Gradle plugin line must match the native Android SDK this KMP release wraps (3.x for SDK 6.x, 4.x for SDK 7.x — see [Gradle plugin — Requirements & compatibility](https://docs.bugsee.com/sdk/android/gradle-plugin/requirements/)). Check the [KMP release notes](https://docs.bugsee.com/sdk/kmp/release-notes/) for the wrapped SDK version before picking a plugin line — mixing lines fails at build or runtime.
 
 The plugin uploads the ProGuard/R8 `mapping.txt` automatically at build time.
 
