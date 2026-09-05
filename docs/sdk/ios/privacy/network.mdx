@@ -78,10 +78,10 @@ Your class should implement the **BugseeDelegate** protocol and it must set itse
 func bugseeFilterNetworkEvent(_ event: BugseeNetworkEvent, completionHandler decisionBlock: @escaping BugseeNetworkFilterDecisionBlock) {
     let regex : NSRegularExpression
     do {
-        regex = try NSRegularExpression.init(pattern: "&access_token=[0-9a-z\\-]*", options: NSRegularExpression.Options.caseInsensitive)
-        let range = NSMakeRange(0 , (event.url!.count))
-        if (event.url != nil) {
-            event.url = regex.stringByReplacingMatches(in: event.url!, options: .reportProgress, range: range, withTemplate: "")
+        regex = try NSRegularExpression.init(pattern: "access_token=[0-9a-z\\-]*", options: NSRegularExpression.Options.caseInsensitive)
+        if let url = event.url {
+            let range = NSMakeRange(0, url.utf16.count)
+            event.url = regex.stringByReplacingMatches(in: url, options: .reportProgress, range: range, withTemplate: "")
         }
     }catch { print("Somethings went wrong!") }
 
