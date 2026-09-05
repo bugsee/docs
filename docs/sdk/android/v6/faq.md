@@ -30,13 +30,13 @@ These values were measured on Google Pixel 5 with Android 12 and can be influenc
 
 <br />
 
-**3. After updating Bugsee Android SDK to version ```1.15.0``` I get the following error:**
+**3. I get the following error when building my app:**
 
 ```text
 AAPT: error: attribute android:foregroundServiceType not found.
 ```
 
-Please switch `compileSdk` in your build.gradle to the latest version (at least 35, as shown below).
+This means your `compileSdk` is too low for the Bugsee SDK version you're using — SDK 6.0.0 and newer require at least 35 (see the [release notes](/sdk/android/v6/release-notes/) for the exact version your build pulls in). Please switch `compileSdk` in your build.gradle to at least 35, as shown below.
 ```groovy
 android {
     compileSdk 35
