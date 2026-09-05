@@ -21,7 +21,7 @@ Select "Personal token" in the first step of integration wizard. Click "Next".
 
 ![Select personal token authentication](wz_step1_token.png)
 
-Provide username and password.
+Provide your GitHub username and the personal access token you just generated (as the password).
 
 ![Provide authentication info](wz_step2_token.png)
 
