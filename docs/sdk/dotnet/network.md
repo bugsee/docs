@@ -16,8 +16,7 @@ This section describes network APIs, whose network events can be captured the sa
 All requests made with  ```WebRequest.Create('https://domain.com')``` are captured automatically and do not require any changes in your code. Bugsee will capture all the data passed through the returned ```HttpWebRequest``` instance.
 
 :::warning
-While capturing network requests made using the instances obtained through WebRequest.Create() work out of the box, currently we are not able to capture requests made from direct instantiation of HttpWebRequest: <code class="csharp"><span class="hljs-keyword">new</span> HttpWebRequest(<span class="hljs-string">"https://domain.com"</span>)
-</code>
+While capturing network requests made using the instances obtained through WebRequest.Create() work out of the box, currently we are not able to capture requests made from direct instantiation of HttpWebRequest: `new HttpWebRequest("https://domain.com")`
 :::
 
 ## Capturing network in an iOS app
