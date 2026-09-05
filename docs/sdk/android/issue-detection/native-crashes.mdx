@@ -61,7 +61,7 @@ The extension auto-registers its detection provider at process start via its own
 | `Bugsee.launch()` map | `options.put(NdkOptions.DetectAndReport, false)` |
 | Default | `true` (when the `bugsee-android-ndk` module is on the classpath) |
 
-The default flips to `true` once you add the extension — there is no second knob to flip after the dependency. The example below shows the *opt-out* form. The programmatic constant lives in the extension's own package: `com.bugsee.library.ndk.contracts.options.NdkOptions`.
+The default flips to `true` once you add the extension — there is no second knob to flip after the dependency. The example below shows the *opt-out* form. The programmatic constant lives in the shared contracts package: `com.bugsee.library.contracts.options.NdkOptions`.
 
 <Tabs groupId="config">
   <TabItem value="manifest" label="AndroidManifest.xml">
@@ -75,7 +75,7 @@ The default flips to `true` once you add the extension — there is no second kn
   <TabItem value="programmatic" label="Programmatic">
 
 ```java
-import com.bugsee.library.ndk.contracts.options.NdkOptions;
+import com.bugsee.library.contracts.options.NdkOptions;
 
 HashMap<String, Object> options = new HashMap<>();
 options.put(NdkOptions.DetectAndReport, false);
