@@ -162,7 +162,7 @@ bugsee {
 }
 ```
 
-The dynamic-version range used for the auto-pulled core is bounded to the same `MAJOR.MINOR` series as the plugin's `sdk-min-version` (e.g. `[7.0.0, 7.1.0)`), so you pick up patches automatically without crossing a minor boundary.
+The dynamic-version range used for the auto-pulled core is bounded to the next major version above the plugin's `sdk-min-version` (currently `[7.1.0, 8.0.0)`), so you pick up any newer compatible `7.x` release automatically.
 
 The full list of dependency-driven auto-installs lives on the [Gradle plugin](/sdk/android/gradle-plugin/auto-load) page.
 

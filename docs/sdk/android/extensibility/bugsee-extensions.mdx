@@ -70,7 +70,7 @@ dependencies {
 }
 ```
 
-The auto-pulled version is the latest patch of the same `MAJOR.MINOR` series the plugin was released against (e.g. `[7.0.0, 7.1.0)`), so you pick up patch updates without bumping the plugin and never silently cross a minor boundary. Opt out via `bugsee { sdkAutoLoad.set(false) }` if you ship the core SDK from a manual classpath path or a locally-published artefact — see the [Gradle plugin reference](/sdk/android/gradle-plugin/auto-load).
+The auto-pulled version is bounded to the next major version above the plugin's minimum-compatible SDK version (currently `[7.1.0, 8.0.0)`), so you pick up any newer compatible `7.x` release without bumping the plugin — pin the core SDK explicitly if you need to hold a specific version. Opt out via `bugsee { sdkAutoLoad.set(false) }` if you ship the core SDK from a manual classpath path or a locally-published artefact — see the [Gradle plugin reference](/sdk/android/gradle-plugin/auto-load).
 
 For OkHttp, installation is fully transparent: the plugin's bytecode instrumentation injects the Bugsee interceptor at every `OkHttpClient.Builder.build()` call site. For **Ktor 2 / Ktor 3 / Cronet**, the plugin adds the artifact but your code still needs an explicit `install(BugseeKtorPlugin...)` / `BugseeCronet.instrument(engine)` call — these clients do not expose a transparent interception point.
 

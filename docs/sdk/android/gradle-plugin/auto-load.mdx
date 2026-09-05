@@ -18,7 +18,7 @@ During `withDependencies` evaluation of the `implementation` configuration, the 
 | `org.chromium.net:*` | `com.bugsee:bugsee-android-cronet` |
 
 :::caution[Auto-added extensions track the SDK version line, not the plugin version]
-Auto-added extension modules are pulled at the **Bugsee SDK version line** — the same min-compatible SDK range the plugin emits for the core `bugsee-android` artifact (e.g. `[7.0.0, 7.1.0)`), **not** the plugin's own 4.x version. The plugin and the SDK runtime are versioned independently, so the extension artifacts (which are SDK modules) always match the SDK line rather than the plugin line. This keeps the core SDK and every auto-added extension on the same coordinated version series.
+Auto-added extension modules are pulled at the **Bugsee SDK version line** — the same min-compatible SDK range the plugin emits for the core `bugsee-android` artifact (e.g. `[7.1.0, 8.0.0)`), **not** the plugin's own 4.x version. The plugin and the SDK runtime are versioned independently, so the extension artifacts (which are SDK modules) always match the SDK line rather than the plugin line. This keeps the core SDK and every auto-added extension on the same coordinated version series.
 :::
 
 If you already declared the matching Bugsee artifact yourself, the plugin leaves your declaration alone. Each auto-install rule can be disabled via the corresponding DSL property — for example `instrumentation.ktor.set(false)` suppresses Ktor auto-install, and `instrumentation.cronet.set(false)` suppresses Cronet auto-install. The same DSL toggles can also be set via Gradle properties (`-Pbugsee.instrumentation.ktor=false`) or `bugsee.properties` (`plugin.instrumentation.ktor=false`). See [Configuration](/sdk/android/gradle-plugin/configuration) for the full toggle list.
@@ -36,12 +36,11 @@ dependencies {
 }
 ```
 
-The plugin reads its bundled `sdk-min-version` (the lowest SDK release the plugin was tested against), parses it as SemVer, and emits a Gradle dynamic-version range bounded to the **same `MAJOR.MINOR` series** — so consumers automatically pick up the latest patch on that line but never cross a minor boundary that could carry breaking changes:
+The plugin reads its bundled `sdk-min-version` (the lowest SDK release the plugin was tested against), parses it as SemVer, and emits a Gradle dynamic-version range bounded to the **next major version** — so consumers automatically pick up any newer compatible SDK release on the same major line without an automatic jump to the next major. The current floor is `7.1.0`:
 
 | `sdk-min-version` | Emitted range | Pulls |
 | --- | --- | --- |
-| `7.0.0` | `[7.0.0, 7.1.0)` | latest `7.0.x` patch |
-| `7.2.5` | `[7.2.5, 7.3.0)` | latest `7.2.x` patch |
+| `7.1.0` | `[7.1.0, 8.0.0)` | latest compatible `7.x` release |
 
 The same range logic governs the auto-installed extension modules described above — they are pulled on the SDK version line, not the plugin line.
 
