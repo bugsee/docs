@@ -11,9 +11,8 @@ Release history for Bugsee Android SDK 7.x. Looking for the previous major versi
 
 A feature release. Your app can now send a message straight to your Slack or Teams integration
 without filing an issue, hang and ANR reports are attributed to the code that actually caused the
-freeze rather than wherever the main thread ended up, native crash reports carry the machine code
-around the crash, and the captured view hierarchy now describes the whole screen — every window on
-it, and the shape of the display underneath.
+freeze rather than wherever the main thread ended up, and the captured view hierarchy now describes
+the whole screen — every window on it, and the shape of the display underneath.
 
 **New features**
 
@@ -41,13 +40,6 @@ it, and the shape of the display underneath.
   Because the signature moves to the culprit stack, existing hang and ANR issues regroup once after
   you upgrade. Background ANRs on API 30+ keep the old single-snapshot stack for now.
   :::
-
-- **Native crash reports carry the instructions around the crash.** Symbolication tells you which
-  line crashed, but a line holding several pointer dereferences produces the same frame for all of
-  them. Native crash reports now include roughly 256 bytes of executable memory around the crashing
-  program counter, taken from the OS tombstone or captured in-process, along with the architecture
-  and — on 32-bit ARM, where it decides how the bytes are read — whether the code is ARM or Thumb.
-  A capture that cannot be made reports why instead of going missing.
 
 - **The view hierarchy covers every window on the screen.** The walk used to start and stop at the
   activity's own window, so dialogs, popups, spinner and autocomplete dropdowns, and toasts never
