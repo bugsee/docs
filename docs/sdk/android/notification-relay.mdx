@@ -180,16 +180,11 @@ Bugsee.launch(this, "<APP_TOKEN>", options);
 
 Notification relay has no separate enable/disable option — it's active whenever the SDK is launched, tuned only by `NotifyFlushDelay`.
 
-## Dashboard configuration
+## Delivery
 
-Calling `Bugsee.notify(...)` delivers nothing on its own — relay has to be configured for the app on the Bugsee dashboard first, in that app's **Notification Relay** section:
+Calling `Bugsee.notify(...)` delivers nothing on its own. Relay has to be turned on for the app, and its destinations chosen, before any notification is sent — until then `notify(...)` succeeds on the device and nothing arrives.
 
-- A master on/off switch for the app. Notifications aren't relayed anywhere while it's off.
-- A list of integrations to relay to, chosen from the integrations already mapped to the app. A notification reaches an integration only when the switch is on **and** that integration is selected here.
-- A list of webhooks to relay to. A notification reaches a webhook only when all three are true: the webhook is subscribed to the `notification.relayed` event, the webhook is mapped to the app in the webhook wizard, and the webhook is selected in this app's Notification Relay section.
-- Filters: rows of field, condition, and value, AND-ed together and matched case-insensitively. With no filters configured, every notification passes.
-
-Relay delivery is independent of an integration's Auto/Events toggles, and there is no longer a per-integration relay checkbox — selection happens in this one place. A subscribed webhook receives this as the `notification.relayed` event — see the [webhook events reference](/webhooks/events) for its payload.
+A subscribed webhook receives a relayed notification as the `notification.relayed` event — see the [webhook events reference](/webhooks/events) for its payload.
 
 ## Privacy
 
