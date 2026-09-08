@@ -130,6 +130,11 @@ const sidebars: SidebarsConfig = {
           ],
         },
         {
+          type: "doc",
+          id: "sdk/android/notification-relay",
+          label: "Notification relay",
+        },
+        {
           type: "category",
           label: "Data capture",
           collapsed: true,

@@ -27,6 +27,7 @@ Bugsee will send notifications for the following events:
   - [build.created](#buildcreated)
   - [build.deleted](#builddeleted)
   - [build.vulnerabilities\_detected](#buildvulnerabilities_detected)
+  - [notification.relayed](#notificationrelayed)
 - [Common data structures](#common-data-structures)
   - [Recording](#recording)
   - [Environment](#environment)
@@ -1166,6 +1167,59 @@ A 5-minute server-side deduplication window prevents back-to-back fanouts for th
 ||severity|String|One of `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`, or `UNKNOWN`|
 ||summary|String|One-line description of the vulnerability. May be truncated to ~4096 characters; consult `references[]` for the full advisory|
 ||references|Array&lt;String&gt;|URLs of advisory pages, CVE entries, and other authoritative sources. May be empty when no references are published|
+
+
+### notification.relayed
+
+This event fires when a mobile app calls `Bugsee.notify`. Delivery is independent of the integration's Auto/Events toggles, but a webhook only receives it when the webhook is subscribed to `notification.relayed`, mapped to the app, and selected in that app's **Notification Relay** section — see [Notification relay](/sdk/android/notification-relay) for the SDK-side API and the full delivery gating. There is no Bugsee issue for this event. SDK options, `app_token`, and device identifiers are omitted.
+
+```json
+{
+    "app": {
+        "key": "IOS",
+        "name": "iOS application",
+        "url": "https://app.bugsee.com/#/apps/IOS"
+    },
+    "notification": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "timestamp": "2026-08-30T12:00:00.000Z",
+        "title": "Payment failed",
+        "body": "Card declined",
+        "severity": 3,
+        "fields": { "order_id": "42" },
+        "user": {
+            "name": "John Smith",
+            "email": "john.smith@example.com"
+        },
+        "urgent": false,
+        "delivery": "deferred",
+        "environment": {
+            "app": { "version": "1.2.3", "build": "99" },
+            "platform": { "type": "ios", "version": "17.0" },
+            "hardware": { "name": "iPhone", "model": "iPhone15,2" }
+        }
+    }
+}
+```
+
+|Object|Field|Type|Description|
+|---|---|---|---|
+|**app**|||
+||key|String|Unique application key (within organization)|
+||name|String|Application name|
+||url|String|Web URL for the application|
+|**notification**|||
+||id|String|Client-generated notification id (UUID)|
+||timestamp|String|Client timestamp (ISO formatted string)|
+||title|String|Notification title|
+||body|String|Notification body|
+||severity|Number or String|Optional severity from the SDK|
+||fields|Object|Optional caller-supplied key/value fields|
+||user|Object|Optional current user (`name` / `email`)|
+||attributes|Object|Optional global `setAttribute` snapshot|
+||urgent|Boolean|Optional per-call urgent flag|
+||delivery|String|Optional `deferred` when the SDK flushed after a failed urgent attempt|
+||environment|Object|Trimmed environment snapshot (no `app_token`, Wi‑Fi, or device identifiers)|
 
 
 ## Common data structures
