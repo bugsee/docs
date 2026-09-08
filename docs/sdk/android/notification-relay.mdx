@@ -189,7 +189,7 @@ Calling `Bugsee.notify(...)` delivers nothing on its own — relay has to be con
 - A list of webhooks to relay to. A notification reaches a webhook only when all three are true: the webhook is subscribed to the `notification.relayed` event, the webhook is mapped to the app in the webhook wizard, and the webhook is selected in this app's Notification Relay section.
 - Filters: rows of field, condition, and value, AND-ed together and matched case-insensitively. With no filters configured, every notification passes.
 
-Relay delivery is independent of an integration's Auto/Events toggles, and there is no longer a per-integration relay checkbox — selection happens in this one place. See [Webhook events → `notification.relayed`](/webhooks/events#notificationrelayed) for the payload a subscribed webhook receives.
+Relay delivery is independent of an integration's Auto/Events toggles, and there is no longer a per-integration relay checkbox — selection happens in this one place. A subscribed webhook receives this as the `notification.relayed` event — see the [webhook events reference](/webhooks/events) for its payload.
 
 ## Privacy
 
