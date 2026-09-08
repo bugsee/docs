@@ -34,8 +34,9 @@ Every Bugsee SDK option can be set in two equivalent ways. The literal string ke
 | `WifiOnlyUpload` | `com.bugsee.option.config.wifi-only-upload` | boolean | `false` | Defer report uploads until the device is on Wi-Fi. |
 | `ReportProcessingInProcess` | `com.bugsee.option.config.report-processing-in-process` | boolean | `true` | When `true`, report export and upload run in-process on background threads; when `false` they go through Android's `JobScheduler` so they survive process death, at the cost of upload latency. |
 | `ReportHandlerCallbackTimeout` | `com.bugsee.option.config.report-handler-callback-timeout` | int (seconds) | `30` | How long to wait for a `ReportHandler` completion callback before auto-firing it so the report isn't lost. `0` disables the timeout. Not applied to terminating (crash) sequences. |
+| `NotifyFlushDelay` | `com.bugsee.option.config.notify-flush-delay` | int (ms) | `0` | Coalescing window before the [notification relay](/sdk/android/notification-relay) queue drains; `0` starts the drain as soon as a notification is persisted. Only affects the non-urgent, batched drain — not an urgent `notify()` skip-ahead POST. |
 
-`Duration` caps the cyclical capture buffer (video, logs, breadcrumbs) at the given number of seconds. `WifiOnlyUpload` defers report uploads until Wi-Fi. `ReportProcessingInProcess = false` routes report processing through `JobScheduler` so it survives process death (at the cost of upload latency). `ReportHandlerCallbackTimeout = 0` disables the timeout — but it doesn't apply to crash sequences.
+`Duration` caps the cyclical capture buffer (video, logs, breadcrumbs) at the given number of seconds. `WifiOnlyUpload` defers report uploads until Wi-Fi. `ReportProcessingInProcess = false` routes report processing through `JobScheduler` so it survives process death (at the cost of upload latency). `ReportHandlerCallbackTimeout = 0` disables the timeout — but it doesn't apply to crash sequences. `NotifyFlushDelay` delays the notification-relay drain so nearby `Bugsee.notify(...)` calls can batch together.
 
 <Tabs groupId="config">
   <TabItem value="manifest" label="AndroidManifest.xml">

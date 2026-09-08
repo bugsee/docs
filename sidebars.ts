@@ -181,6 +181,7 @@ const sidebars: SidebarsConfig = {
           ],
         },
         { type: "doc", id: "sdk/android/feedback", label: "Feedback" },
+        { type: "doc", id: "sdk/android/notification-relay", label: "Notification relay" },
         { type: "doc", id: "sdk/android/appearance", label: "Appearance" },
         {
           type: "doc",

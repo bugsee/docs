@@ -1,0 +1,193 @@
+---
+title: "Notification relay"
+description: "Bugsee.notify() — pushing a title, message, severity, and custom fields straight to the app's configured messaging integrations and webhooks, without creating a bug report."
+sidebar_position: 14
+slug: "/sdk/android/notification-relay"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+This page documents the Bugsee Android SDK **7.x**. Notification relay has no equivalent in the 6.x SDK.
+
+## What it is
+
+`Bugsee.notify(...)` sends a title, an optional message, an optional severity, and optional key/value fields to the app's configured messaging integrations and webhooks — **without** creating a bug report and without running the report pipeline. There is no recording, no issue, and nothing attached to it beyond what you pass in the call.
+
+## When to use it
+
+A full bug report — video, network capture, logs, view hierarchy, upload — is a lot of machinery to pay for when the only goal is getting a few strings into Slack or a ticket tracker. If your code already knows what happened and just needs to tell a human ("payment webhook returned 500 for order 42"), relay is a direct path to that: one call, a handful of strings, delivered to the destinations your team already has configured. No recording starts, nothing uploads except the notification payload itself.
+
+## When not to use it
+
+Notification relay is not a replacement for bug reports. It doesn't record video, capture logs or network traffic, or snapshot the view hierarchy, and it doesn't create a Bugsee issue — there is nothing to open in the dashboard and investigate afterward. If you need a session someone can replay, use [bug reporting](/sdk/android/manual/bug-reporting) or [crash & error reporting](/sdk/android/manual/crash-error-reporting) instead.
+
+## API
+
+```java
+static void notify(String title);
+static void notify(String title, String message);
+static void notify(String title, String message, IssueSeverity severity);
+static void notify(String title, String message, IssueSeverity severity, Map<String, String> fields);
+static void notify(String title, String message, IssueSeverity severity, Map<String, String> fields, boolean urgent);
+```
+
+`title` is required; the call is a no-op if it's empty. Every other parameter is optional. `notify(...)` is a no-op if the SDK has not been launched — unlike custom events and traces, calls made before `Bugsee.launch(...)` are **not** buffered and are simply dropped.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+// Title only
+Bugsee.notify("Payment webhook failed");
+
+// With a message
+Bugsee.notify("Payment webhook failed", "Stripe returned a 500 for order 42");
+
+// With a severity
+Bugsee.notify(
+    "Payment webhook failed",
+    "Stripe returned a 500 for order 42",
+    IssueSeverity.High);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+// Title only
+Bugsee.notify("Payment webhook failed")
+
+// With a message
+Bugsee.notify("Payment webhook failed", "Stripe returned a 500 for order 42")
+
+// With a severity
+Bugsee.notify(
+    "Payment webhook failed",
+    "Stripe returned a 500 for order 42",
+    IssueSeverity.High)
+```
+
+  </TabItem>
+</Tabs>
+
+### `IssueSeverity` values
+
+`notify(...)` takes the same `IssueSeverity` enum used elsewhere in the SDK: `VeryLow`, `Medium`, `High`, `Critical`, `Blocker`. See [Configuration — Enum reference](/sdk/android/configuration#enum-reference) for the full set.
+
+### Custom fields
+
+`fields` is a `Map<String, String>` — plain strings, not the `Object` values `Bugsee.event(...)` accepts. Each entry is rendered as an extra row alongside the notification. Pass an ordered map, such as `LinkedHashMap`, if the row order matters to you; an unordered `HashMap` doesn't preserve it.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Map<String, String> fields = new LinkedHashMap<>();
+fields.put("order_id", "42");
+fields.put("provider", "stripe");
+fields.put("status_code", "500");
+
+Bugsee.notify(
+    "Payment webhook failed",
+    "Stripe returned a 500 for order 42",
+    IssueSeverity.High,
+    fields);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+val fields: Map<String, String> = linkedMapOf(
+    "order_id" to "42",
+    "provider" to "stripe",
+    "status_code" to "500"
+)
+
+Bugsee.notify(
+    "Payment webhook failed",
+    "Stripe returned a 500 for order 42",
+    IssueSeverity.High,
+    fields
+)
+```
+
+  </TabItem>
+</Tabs>
+
+### Urgent notifications
+
+The five-argument overload adds `urgent`. When `urgent = true`, the SDK attempts to POST that one notification immediately, ahead of anything already queued — but only when the call happens in the app's main process, a session is active, and the network is currently reachable (honoring the `WifiOnlyUpload` option). If any of those conditions isn't met, the notification is queued exactly like a non-urgent one instead; it still gets delivered on the next drain, it just doesn't skip ahead. `urgent` never drains older queued notifications — it only decides whether *this* item tries to jump the line. The four shorter overloads are all non-urgent.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.notify(
+    "Payment webhook failed",
+    "Stripe returned a 500 for order 42",
+    IssueSeverity.Critical,
+    fields,
+    /* urgent = */ true);
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.notify(
+    "Payment webhook failed",
+    "Stripe returned a 500 for order 42",
+    IssueSeverity.Critical,
+    fields,
+    /* urgent = */ true
+)
+```
+
+  </TabItem>
+</Tabs>
+
+`notify(...)` is fire-and-forget: it returns `void` and none of the overloads take a completion callback, so there's no way to observe whether a given call — urgent or not — has actually reached the server from inside the app.
+
+## Offline behavior and batching
+
+Every `notify(...)` call is persisted to a bounded on-device queue before anything is sent, so it survives the app being killed. When the device is offline, notifications stay queued and are delivered once connectivity returns — you don't need to retry or buffer them yourself. Non-urgent notifications are drained from that queue and uploaded in batches rather than one request per call.
+
+The `NotifyFlushDelay` option (`com.bugsee.option.config.notify-flush-delay`, `Integer`, default `0`) sets the coalescing window, in milliseconds, before that drain runs. With the default of `0`, the SDK tries to start draining as soon as a notification has been persisted. A positive value delays the drain by that many milliseconds, so `notify(...)` calls made in quick succession have a chance to land in the same batch instead of triggering separate drains. `NotifyFlushDelay` only affects the non-urgent drain — it has no effect on an urgent skip-ahead POST.
+
+Set it like any other core option — see [Configuration](/sdk/android/configuration) for both the manifest and programmatic forms:
+
+<Tabs groupId="config">
+  <TabItem value="manifest" label="AndroidManifest.xml">
+
+```xml
+<meta-data android:name="com.bugsee.option.config.notify-flush-delay"
+           android:value="2000" />
+```
+
+  </TabItem>
+  <TabItem value="programmatic" label="Programmatic">
+
+```java
+HashMap<String, Object> options = new HashMap<>();
+options.put(Options.NotifyFlushDelay, 2000);
+Bugsee.launch(this, "<APP_TOKEN>", options);
+```
+
+  </TabItem>
+</Tabs>
+
+Notification relay has no separate enable/disable option — it's active whenever the SDK is launched, tuned only by `NotifyFlushDelay`.
+
+## Delivery
+
+Calling `Bugsee.notify(...)` delivers nothing on its own. Relay has to be turned on for the app, and its destinations chosen, before any notification is sent — until then `notify(...)` succeeds on the device and nothing arrives.
+
+A subscribed webhook receives a relayed notification as the `notification.relayed` event — see the [webhook events reference](/webhooks/events) for its payload.
+
+## Privacy
+
+A relayed notification carries the title, message, severity, and fields you pass to `notify(...)`, plus the current user identifier if one is set with [`Bugsee.setUserIdentifier(...)`](/sdk/android/user-session-data#user-identity), an environment snapshot (app, platform, and hardware info), and the global attributes set via [`Bugsee.setAttribute(...)`](/sdk/android/user-session-data#user-and-session-attributes). It does not include video, logs, network capture, or the view hierarchy — the relay pipeline never touches those subsystems.
+
+The payload only ever contains what you put into it and what the SDK already tracks for the session — there's no separate scrubbing pass over `title`, `message`, or `fields` before they're sent, so don't put anything in those parameters that shouldn't leave the device.
