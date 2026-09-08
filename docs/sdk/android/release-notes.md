@@ -7,6 +7,146 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.2.0
+
+A feature release. Your app can now send a message straight to your Slack or Teams integration
+without filing an issue, hang and ANR reports are attributed to the code that actually caused the
+freeze rather than wherever the main thread ended up, native crash reports carry the machine code
+around the crash, and the captured view hierarchy now describes the whole screen — every window on
+it, and the shape of the display underneath.
+
+**New features**
+
+- **`Bugsee.notify()` sends a message to your messaging integrations without creating an issue.**
+  Pass a title, and optionally a body, a severity and extra key/value rows that are rendered
+  alongside it. Nothing is uploaded through the report pipeline and no issue is created. The
+  notification is written to disk first and delivered in batches, so an offline device queues it and
+  sends it once connectivity returns rather than losing it. An urgent variant is posted immediately
+  without waiting for older queued items, and the new `NotifyFlushDelay` option (default `0`)
+  coalesces nearby calls into one batch. Payloads larger than 256 KiB are rejected rather than sent.
+
+- **Hangs and ANRs are attributed to the culprit code, not to where the main thread was parked.**
+  Previously every hang and ANR carried a single main-thread stack captured late — at the level
+  crossing, or after the system confirmed the ANR — which shows where the thread ended up rather
+  than what put it there, so unrelated root causes collapsed into one bucket. The SDK now samples
+  the main thread for the duration of the freeze and derives the culprit stack from that series,
+  which becomes the report's signature. The original stack still travels in the report's thread
+  list, so nothing is lost. This works on API 30+ as well, where the samples are kept on disk and
+  attached to the ANR on the next launch. Controlled by the new `DetectAndReportHangSampling` and
+  `DetectAndReportAnrSampling` options — both on by default, and each takes effect only when its
+  parent detection option (`DetectAndReportHang`, `DetectAndReportExitNotResponding`) is enabled.
+  The sampler exists only while a freeze is in progress, so there is no steady-state cost.
+
+  :::note
+  Because the signature moves to the culprit stack, existing hang and ANR issues regroup once after
+  you upgrade. Background ANRs on API 30+ keep the old single-snapshot stack for now.
+  :::
+
+- **Native crash reports carry the instructions around the crash.** Symbolication tells you which
+  line crashed, but a line holding several pointer dereferences produces the same frame for all of
+  them. Native crash reports now include roughly 256 bytes of executable memory around the crashing
+  program counter, taken from the OS tombstone or captured in-process, along with the architecture
+  and — on 32-bit ARM, where it decides how the bytes are read — whether the code is ARM or Thumb.
+  A capture that cannot be made reports why instead of going missing.
+
+- **The view hierarchy covers every window on the screen.** The walk used to start and stop at the
+  activity's own window, so dialogs, popups, spinner and autocomplete dropdowns, and toasts never
+  appeared in a report at all. Every window on the display is now captured, each as its own entry.
+
+- **The view hierarchy describes the display.** The document's root now carries a `display` object
+  with the display's size, rotation, absolute orientation, safe-area and waterfall insets, cutout
+  rectangles and rounded-corner radii — so a report can be drawn knowing that the top of the screen
+  is behind a notch and the corners are rounded. On API 31 and newer the cutout is additionally
+  described by its real outline (`display.cutout_outlines`), a closed polygon per contour, so a
+  round hole-punch camera is no longer drawn as the rectangle that bounds it.
+
+- **Windows are named and ordered.** Each window node carries a `window_kind` — one of
+  `application`, `dialog`, `popup`, `toast`, `input_method`, `system`, `overlay` — instead of
+  leaving consumers to recognize Android's internal window classes, and the vocabulary matches what
+  the iOS SDK emits. Each view also carries its `Z`, so overlapping siblings can be drawn in paint
+  order.
+
+- **More detail on every node.** Views now report the id you gave them in your layout rather than
+  the compiled integer, their own clipping behavior (`clip_children`), their resolved background
+  color, and whether their pixels come from content or from a background.
+
+- **The view-hierarchy document is now version 3.** Its root is a synthetic node whose children are
+  the windows of one capture pass, each with a dense window index. Other exported streams — logs,
+  traces, events, network, input — are unchanged and stay at version 2.
+
+**Fixes**
+
+- **Session video lines up with the rest of the timeline again.** The encoder takes its time origin
+  from the first frame it is given, and a capture that opened before the first activity had resumed
+  handed it a frame from part-way into the window. The video was then shorter than the report — the
+  viewer padding the tail with "Sorry, video is not available" — and, less visibly, every frame in
+  it was presented earlier than it happened, so the recording ran out of step with the log, network
+  and touch timelines. The exported video is now anchored on the start of the snapshot window.
+  Fixed alongside it: a tail that could be skipped entirely, leaving the video's length an artifact
+  of the capture cadence, and several cases where the timeline could jump backwards and cost you
+  the video altogether.
+
+- **Gesture breadcrumbs are stamped when the gesture started.** A gesture was recorded at the moment
+  it was recognized — finger-up — so anything with a duration was filed after the video frames that
+  show it happening; an 800 ms swipe landed in the timeline once the movement was already over.
+
+- **Compose nodes sit where they actually are.** Compose bounds were reported in window coordinates
+  inside a tree whose other coordinates are screen-relative, and the root's bounds hard-coded the
+  origin. Both are corrected.
+
+- **`hidden` and `secure` describe the view, not the walk.** Compose nodes no longer claim to be
+  visible when they are not, an accessibility flag no longer leaks into `hidden`, and a view's
+  background color is now read from the drawable it comes from instead of defaulting to white.
+  Where the hierarchy walk had to stop, the document now says so instead of looking complete.
+
+- **Low disk space is detected accurately.** The free-space reading could be up to ~100 seconds
+  stale, was taken against a directory the SDK does not necessarily write to, and flapped every poll
+  on a device sitting near a threshold — each downward edge marking the current capture part
+  truncated. It is now re-read on every poll against the real capture directory, with headroom
+  required before recovering, and a write that genuinely fails is treated as authoritative — which
+  is the only signal there is where a storage quota, rather than a full volume, rejected the write.
+
+- **Queued notifications drain reliably.** A server error on the oldest batch used to sit at the
+  head of the queue and block everything behind it; batches are now reordered so later items still
+  send, per-item results are honored so accepted items leave the queue while only failed ones stay,
+  and notifications are held in memory rather than dropped when the disk write fails.
+
+- **32-bit ARM native crashes no longer claim the wrong instruction set.** A tombstone does not
+  carry the register the ARM-versus-Thumb question is answered from, and the code was falling back
+  to "ARM" for every crash. It is now left unset unless it is actually known.
+
+**Privacy**
+
+- **Secure content in dialogs, popups and dropdowns stays out of the hierarchy.** Reaching windows
+  the walk never used to visit meant they had to be gated in their own right: a window whose
+  contents are covered by `addSecureView()` cannot be recognized by walking parents across a window
+  boundary — an autocomplete or spinner dropdown opens as a separate window, and its rows are
+  ordinary text views whose tags can carry the secured value — so such a window is excluded
+  outright, extra windows are walked for structure only, and app-authored window titles are
+  withheld. Compose labels in those windows are withheld too, without the node being marked as
+  though your app had declared it secure.
+
+- **A sensitive field is recognized as soon as it appears.** Whether a node's text may be included
+  was decided from a set the SDK refreshes on lifecycle and view-tree changes, so a field that
+  appeared between two refreshes was treated as ordinary — a recycled list row binding into a
+  password field being the common case. The check is now made per node, against the field itself.
+
+**Performance**
+
+- **The view-hierarchy pass and window tracking cost less.** Fetching the window list no longer
+  allocates on the two hottest paths, the background-color probe's budget is spent on the views it
+  exists to fix, and the theme is consulted only where it can change the answer.
+
+- **Storage polling stops when nothing needs it,** instead of running for the life of the process
+  after `Bugsee.stop()`.
+
+**Compatibility**
+
+- The public API is additive in this release — nothing was removed or changed. New surface: the
+  `Bugsee.notify()` overloads, the `NotifyFlushDelay`, `DetectAndReportHangSampling` and
+  `DetectAndReportAnrSampling` options, and `TimeUtils.uptimeToWallTimeMillis()`. No source changes
+  are required to upgrade.
+
 ## 7.1.4
 
 A patch release that keeps Bugsee out of your test runs and fixes three crashes that could reach
