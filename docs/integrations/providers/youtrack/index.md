@@ -9,10 +9,10 @@ slug: "/integrations/providers/youtrack"
 
 ### Supported authentication methods
 
-- [Basic (username and password)](#basic-authentication)
+- [Personal token](#personal-token)
 
 
-### Basic authentication
+### Personal token
 
 To create issues in YouTrack you need to ensure that YouTrack account you will be using to integrate Bugsee has _"Reporter"_ role assigned to it. Please follow steps below to do that.
 

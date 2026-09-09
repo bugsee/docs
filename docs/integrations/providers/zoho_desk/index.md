@@ -16,8 +16,6 @@ slug: "/integrations/providers/zoho_desk"
 
 Start Bugsee integration wizard and select "OAuth" in the first step of integration wizard. Click "Next".
 
-### OAuth
-
 ![Select OAuth](wz_step1_oauth.png)
 
 You will be presented with dialog asking you to authorize Bugsee. Click _"Allow"_ to allow Bugsee access your Zoho Desk.

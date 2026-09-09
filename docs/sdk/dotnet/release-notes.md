@@ -41,6 +41,7 @@ slug: "/sdk/dotnet/release-notes"
 
 ## 5.8.3 (May 5 2025)
 - Feat: Updated native SDKs to their latest versions (Android: [5.7.3](/sdk/android/v6/release-notes/#573-may-5-2025), iOS: [5.5.6](/sdk/ios/release-notes/#556-march-25-2025))
+- Note: The version jumps from 3.8.2 to 5.8.3 because the major version was realigned with the underlying native SDKs. There are no API changes, this release is not breaking
 
 ## 3.8.2 (April 21 2025)
 - Feat: Updated native SDKs to their latest versions (Android: [5.7.2](/sdk/android/v6/release-notes/#572-march-17-2025), iOS: [5.5.6](/sdk/ios/release-notes/#556-march-25-2025))

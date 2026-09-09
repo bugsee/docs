@@ -1,6 +1,6 @@
 ---
 title: "Bugsee Gradle Plugin"
-description: "Overview and configuration guide for the Bugsee Gradle plugin — bytecode instrumentation, mapping uploads, NDK symbols, and auto-install of SDK extension modules."
+description: "Overview and configuration guide for the 3.x Bugsee Gradle plugin — ProGuard/R8 mapping uploads, NDK symbol uploads, and BUILD_UUID manifest injection for SDK 6.x."
 sidebar_position: 12
 slug: "/sdk/android/v6/gradle-plugin"
 ---
@@ -9,14 +9,13 @@ slug: "/sdk/android/v6/gradle-plugin"
 This page documents Bugsee Android SDK **6.x**, the previous major version. The current line is **7.x** — see [Migrating from 6.x to 7.x](/sdk/android/migration) to upgrade, or [Installation](/sdk/android/installation) to start a new integration.
 :::
 
-The Bugsee Gradle Plugin integrates into your Android build to provide:
+This page documents the **3.x** Gradle plugin, the line that matches SDK 6.x. If you are on SDK 7.x, see the [current Gradle plugin reference](/sdk/android/gradle-plugin) instead.
 
-- **Bytecode instrumentation** — automatic capture of Logcat calls, OkHttp traffic, HttpEngine traffic, Compose touch events, thread registration, operation dispatch for APM, and main-thread misuse detection.
-- **Kotlin compiler plugin** — Compose tag injection and automatic `Modifier.bugseeSecure()` insertion for password `TextField` call sites.
+The 3.x Bugsee Gradle Plugin integrates into your Android build to provide:
+
 - **Mapping file upload** — uploads ProGuard/R8 mapping files to Bugsee for crash symbolication.
 - **NDK symbol upload** — uploads native debug symbols for native crash symbolication.
-- **Manifest injection** — injects a per-build `BUILD_UUID` into the merged manifest for build correlation.
-- **Extension auto-install** — detects third-party dependencies (OkHttp, Ktor, Cronet, Compose) and automatically adds the matching Bugsee SDK extension module.
+- **Manifest injection** — injects a per-build `BUILD_UUID` meta-data entry into the merged manifest for build correlation.
 
 You can find the plugin in the <a rel="noopener noreferrer" href="https://central.sonatype.com/artifact/com.bugsee/bugsee-android-gradle-plugin">Maven repository</a>.
 
@@ -59,85 +58,34 @@ bugsee {
 }
 ```
 
-## Bytecode instrumentation
-
-The plugin transforms your application's compiled classes at build time. Each instrumentation is gated on the presence of a specific dependency and can be toggled individually.
-
-| Instrumentation | What it does | Gating dependency |
-| --- | --- | --- |
-| `log` | Redirects `android.util.Log.*` calls through Bugsee's capture pipeline, then delegates to the original method. | `bugsee-android` |
-| `thread` | Injects `registerThread()` at the start of every `Runnable.run()` / `Thread.run()` to build the Java-to-native thread ID map for NDK crash reporting. | `bugsee-android` |
-| `operationDispatch` | Injects start/end hooks around I/O, network, DB, and SharedPreferences operations for APM span tracking. | `bugsee-android` |
-| `mainThreadMisuse` | Injects pre-call checks before guarded operations and reports violations when the calling thread is the main thread. | `bugsee-android` |
-| `http_engine` | Wraps every `HttpEngine.Builder.build()` call site (Android 14+ platform HTTP API) for network capture. | `bugsee-android` |
-| `okhttp` | Injects `BugseeOkHttpInterceptor` into every `OkHttpClient.Builder.build()` call site. | `bugsee-android-okhttp` |
-| `composeInput` | Instruments `AndroidComposeView.dispatchTouchEvent` to capture Compose touch events. | `bugsee-android` + `androidx.compose.ui:ui` |
-
-### Disabling specific instrumentations
-
-```kotlin title="app/build.gradle.kts"
-bugsee {
-    instrumentation {
-        log             = true  // default
-        thread          = true  // default
-        operationDispatch = true  // default
-        mainThreadMisuse = true  // default
-        http_engine     = true  // default
-        okhttp          = true  // default
-        composeInput    = true  // default
-        compose         = true  // Compose tag injection (compiler plugin)
-        composeSecure   = true  // password TextField auto-redaction (compiler plugin)
-    }
-}
-```
-
-Disabling an instrumentation key only skips the build-time transformation. The corresponding runtime feature still functions but loses what the bytecode hook provides (e.g. disabling `log` means `Bugsee.log(...)` still works, but `android.util.Log` calls from your app are no longer captured).
-
-## Kotlin compiler plugin
-
-When Compose dependencies are detected, the Gradle plugin automatically loads a Kotlin compiler plugin that provides two features:
-
-| Feature | Option | Description |
-| --- | --- | --- |
-| Compose tag injection | `instrumentation.compose` | Injects element tags into Compose IR so the SDK can correlate captured input/screenshots with composables. |
-| Secure modifier auto-injection | `instrumentation.composeSecure` | Walks the Compose IR for password `TextField` call sites and auto-inserts `Modifier.bugseeSecure()`. |
-
-Both are enabled by default.
-
-## Extension auto-install
-
-The plugin scans your declared dependencies and automatically adds the matching Bugsee extension module at the same version as the plugin:
-
-| Detected dependency | Auto-added module |
-| --- | --- |
-| `androidx.compose.*` | `com.bugsee:bugsee-android-compose` |
-| `com.squareup.okhttp3:*` | `com.bugsee:bugsee-android-okhttp` |
-| `io.ktor:* (2.x)` | `com.bugsee:bugsee-android-ktor-2` |
-| `io.ktor:* (3.x)` | `com.bugsee:bugsee-android-ktor-3` |
-| `org.chromium.net:*` | `com.bugsee:bugsee-android-cronet` |
-
-You can still add the extension modules manually if you prefer explicit control.
-
 :::note
-**Ktor and Cronet require manual wiring.** While the plugin auto-adds the dependency, you must still install the Bugsee plugin in each Ktor `HttpClient` and wrap your `CronetEngine` with `BugseeCronet.instrument(engine)`. See the [network events](/sdk/android/v6/network/) documentation for details.
+**No bytecode instrumentation in 3.x.** Build-time bytecode instrumentation (Logcat, OkHttp, HttpEngine, thread registration, operation dispatch, main-thread misuse, Compose touch input), the Bugsee Kotlin compiler plugin (Compose tag injection and `Modifier.bugseeSecure()` auto-insertion), and auto-install of the `bugsee-android-*` extension modules were all introduced in the **4.x** plugin, which requires SDK 7.x. The 3.x plugin does not transform your classes at all. See [Gradle plugin — Instrumentation](/sdk/android/gradle-plugin/instrumentation) and [Gradle plugin — Auto-load & extensions](/sdk/android/gradle-plugin/auto-load) for those features.
 :::
+
+On SDK 6.x, HTTP clients other than `HttpURLConnection`/`HttpsURLConnection` are wired up manually in your own code — see [network events](/sdk/android/v6/network/).
 
 ## Build tasks
 
-The plugin registers per-variant tasks:
+The plugin registers per-variant tasks on application variants. The manifest and mapping tasks are only created for variants that produce a mapping file; the native task is only created when `ndk(true)` is set:
 
 | Task | Description |
 | --- | --- |
-| `createBugsee<Variant>ManifestConfig` | Injects `BUILD_UUID` into the merged manifest. |
-| `uploadBugsee<Variant>Mapping` | Uploads the ProGuard/R8 mapping file after `assemble<Variant>` / `bundle<Variant>`. |
-| `uploadBugsee<Variant>Native` | Uploads NDK debug symbols (when `ndk(true)` is set). |
+| `createBugseeAppVar<Variant>ProguardConfig` | Injects the `BUILD_UUID` meta-data entry into the merged manifest. |
+| `uploadBugseeAppVar<Variant>Mapping` | Uploads the ProGuard/R8 mapping file. |
+| `uploadBugseeAppVar<Variant>Native` | Uploads NDK debug symbols (when `ndk(true)` is set). |
+
+For Android feature variants the same tasks are registered with a `FeatVar` infix instead of `AppVar` (for example `uploadBugseeFeatVar<Variant>Mapping`).
 
 ## Compatibility
 
 | Plugin version | SDK version | Min AGP | Min Gradle |
 | --- | --- | --- | --- |
 | 4.x | 7.x | 8.6.0 | 8.7+ |
-| 3.x | 6.x | 7.0.0 | 7.0+ |
+| 3.x | 6.x | 4.2.2 | 7.0+ |
+
+The `Min AGP` column is the *plugin's* own requirement. The 3.x plugin is built against the Android Gradle Plugin 4.2.2 API and uses only the older `applicationVariants` / `processManifestProvider` / `mappingFileProvider` APIs, so 4.2.2 is its floor — it also runs fine on AGP 8.x (SDK 6.0.0 is itself built with plugin 3.6 on AGP 8.6.0).
+
+The SDK has a separate, higher requirement: SDK 6.0.0 is built with `compileSdk 35` and needs **AGP 8.6.0 or newer**. Your project's effective minimum is therefore AGP 8.6.0 — see the [SDK 6.x release notes](/sdk/android/v6/release-notes/).
 
 :::caution
 Plugin 4.x is **not** backward-compatible with SDK 6.x. The auto-install and instrumentation gating use the new `bugsee-android-*` artifact names introduced in SDK 7.x.

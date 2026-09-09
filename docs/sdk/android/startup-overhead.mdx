@@ -40,7 +40,7 @@ The core SDK is what you get from the base dependency; extensions (NDK crash rep
 | Whole-app cold start (context) | ~1.5 s | ~0.3 s |
 | SDK share of cold start | ~10% | ~6% |
 
-So even with **every** extension enabled the SDK adds ~140 ms on a low-end device (≈ a tenth of that device's cold start), and the bulk of that is the core — the seven extensions together add only ~32 ms.
+So even with **every** extension enabled the SDK adds ~140 ms on a low-end device (≈ a tenth of that device's cold start), and the bulk of that is the core — the extensions together add only ~32 ms.
 
 :::note[Read low-end as a conservative bound]
 The low-end column is a deliberately conservative case (Cortex-A53 SoC). Mid-range and flagship devices land far below it — see the high-end column. Absolute timings vary with device, OS version, thermal state, and configuration; treat them as a ballpark and [measure your own app](#measuring-it-in-your-app).

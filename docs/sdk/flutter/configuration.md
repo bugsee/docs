@@ -73,6 +73,7 @@ Future<void> main() async {
 |defaultCrashPriority|BugseeSeverityLevel.blocker|Default priority for crashes|
 |killDetection|false|Detect abnormal termination (experimental, [read more](/sdk/ios/app-kills/))|
 |maxRecordingTime|60|Maximum recording duration|
+|monitorDiskSpace|false|Enable monitoring of disk space. Disabled by default due to privacy limitations|
 |monitorNetwork|true|Capture network traffic. Dart traffic additionally requires installing the HTTP overrides handler — see [Network capture](/sdk/flutter/network/)|
 |reportPrioritySelector|false|Allow user to modify priority when reporting manually|
 |screenshotToReport|true|Screenshot key to trigger report|
@@ -85,6 +86,7 @@ Future<void> main() async {
 |wifiOnlyUpload|false|Upload reports only when a device is connected to a WiFi network|
 |maxDataSize|50|Bugsee will avoid using more disk space than specified (in MB). If total Bugsee data size exceeds specified value, oldest recordings (even not sent) will be removed. Value should not be smaller than 10|
 |captureDeviceAndNetworkNames|false|Capture device name, wifi SSID and mobile carrier name.|
+|viewHierarchyEnabled|true|Enable View hierarchy capturing|
 
 
 #### For Android
@@ -108,3 +110,4 @@ Future<void> main() async {
 |videoScale|1.0|Custom video scale|
 |wifiOnlyUpload|false|Upload reports only when a device is connected to a WiFi network|
 |captureDeviceAndNetworkNames|true|Capture device name, wifi SSID and mobile carrier name.|
+|viewHierarchyEnabled|true|Enable View hierarchy capturing|

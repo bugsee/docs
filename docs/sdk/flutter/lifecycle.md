@@ -26,8 +26,8 @@ Bugsee.setLifecycleCallback(onBugseeLifecycleEvent);
 |launched|Event is dispatched when Bugsee was successfully launched|
 |started|Event is dispatched when Bugsee is started after being stopped|
 |stopped|Event is dispatched when Bugsee is stopped|
-|resumed|Event is dispatched when Bugsee recording is resumed after being paused|
-|paused|Event is dispatched when Bugsee recording is paused|
+|resumed|Event is dispatched when video recording is resumed, i.e. when a [blackout](/sdk/flutter/privacy/video/#blackout) is ended|
+|paused|Event is dispatched when video recording is paused, i.e. when a [blackout](/sdk/flutter/privacy/video/#blackout) is started|
 |relaunchedAfterCrash|Event is dispatched when Bugsee is launched and pending crash report is discovered. That usually means that app was relaunched after crash.|
 |beforeReportShown|Event is dispatched before the reporting UI is shown|
 |afterReportShown|Event is dispatched when reporting UI is shown|

@@ -9,6 +9,20 @@ slug: "/sdk/flutter/privacy/video"
 
 Video recording can be disabled completely using **videoEnabled** launch option. See [configuration](/sdk/flutter/configuration/) for more info.
 
+## Blackout
+
+You can temporarily black out the whole video and stop recording touch events, without stopping the rest of the data capture (logs, network, events):
+
+```dart
+// Black out the video
+Bugsee.startBlackout();
+
+// Resume normal video recording
+Bugsee.endBlackout();
+```
+
+> **Note:** ```Bugsee.pause()``` and ```Bugsee.resume()``` are deprecated aliases of ```Bugsee.startBlackout()``` and ```Bugsee.endBlackout()```.
+
 ## Protecting flutter views
 
 Bugsee automatically obscures ```TextField``` views with ```obscureText``` option set to true. Also, you can wrap any view sub-tree with ```BugseeSecureView``` to make it obscured on video. ```BugseeSecureView``` has ```enabled``` option for your convenience, thus you don't need to add/remove the element to toggle obscuring on/off.

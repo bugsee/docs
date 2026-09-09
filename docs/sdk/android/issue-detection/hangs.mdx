@@ -8,7 +8,7 @@ slug: "/sdk/android/issue-detection/hangs"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-The **hang detector** watches for situations where the main thread becomes unresponsive long enough to degrade the user experience, but the OS has not yet raised an ANR. When a hang is detected, Bugsee captures a stack trace of the main thread alongside the usual video / logs / network context and produces an issue report.
+The **hang detector** watches for situations where the main thread becomes unresponsive long enough to degrade the user experience, but the OS has not yet raised an ANR. When a hang is detected, Bugsee reports the main thread's stack alongside the usual video / logs / network context and produces an issue report.
 
 Internally, the detector schedules a 1 s tick on a background thread; each tick posts a ping to the main thread's `Looper`. If a ping isn't acknowledged within the configured threshold, a hang at the matching severity is reported.
 
@@ -57,6 +57,30 @@ Hangs are graded into three severity bands. Each band has its own configurable t
 The three thresholds must satisfy `Fair < Medium < Severe` and all three must be positive. An out-of-order trio reverts the entire set to defaults (the SDK doesn't try to repair partial overrides).
 
 Reports are deduplicated per call-site hash, so a single stuck call site doesn't flood Bugsee with reports during a long-running hang.
+
+## Culprit attribution
+
+Once the main thread has been unresponsive for 1 s — before the Fair threshold can be crossed — the SDK starts a short-lived sampler that walks the main thread's stack every 200 ms for the rest of the freeze. When the report is generated, those samples are folded into the deepest, most persistent sub-stack they share, biased toward your own frames over framework plumbing. That **culprit** stack is what the report carries and what its grouping signature is derived from.
+
+This replaces the single snapshot used before 7.2.0. A stack captured at the moment of reporting shows where the main thread ended up parked — routinely a framework frame — rather than the work that consumed the budget, which is why unrelated root causes used to collapse into one issue.
+
+Consecutive identical samples are collapsed into a repeat count, the series keeps at most 80 distinct entries, and sampling stops after at most 50 walks (10 s at the default cadence) or as soon as the main thread recovers. No sampler thread, timer or allocation exists outside a freeze.
+
+The report's thread list still carries the main thread's own stack, so nothing is lost. If sampling is disabled, arms too late, or produces nothing foldable, the report falls back to the single snapshot exactly as before.
+
+| Form | Setting |
+| --- | --- |
+| Manifest meta-data | `<meta-data android:name="com.bugsee.option.detect.hang.sampling" android:value="false" />` |
+| `Bugsee.launch()` map | `options.put(Options.DetectAndReportHangSampling, false)` |
+| Default | `true` |
+
+`DetectAndReportHangSampling` only has an effect when `DetectAndReportHang` is enabled; it is a kill switch for the sampler, not a second way to turn hang detection on.
+
+:::note
+Hang issues group by the culprit stack, so hangs reported before and after the upgrade to 7.2.0 do not merge into the same issue.
+:::
+
+ANRs are attributed the same way, under their own switch `DetectAndReportAnrSampling` (default `true`, effective only when `DetectAndReportExitNotResponding` is enabled). On API 30+ the samples are mirrored to disk while the freeze is in progress and folded into the ANR report on the next launch, and they are used only when they cover the ANR's timestamp. Sampling on that path arms only while the app is in the foreground, so a background ANR on API 30+ keeps the single main-thread stack parsed from the OS trace. See [Abnormal exits](/sdk/android/issue-detection/exits).
 
 ## See also
 

@@ -38,7 +38,7 @@ List all applications accessible to the current user. Takes no parameters.
 | `name` | Display name |
 | `description` | Free-form description (may be empty) |
 | `type` | Platform: `ios`, `android`, `javascript`, `rust`, or `web` (`web` is legacy — retained for existing applications, not creatable) |
-| `subtype` | Wrapper / framework if any (e.g., `react_native`, `flutter`, `unity`, `dotnet`, `xamarin`, `cordova`, `kmp`); empty for native apps |
+| `subtype` | Wrapper / framework if any. Mobile wrappers: `react_native`, `flutter`, `unity`, `dotnet`, `xamarin`, `cordova`, `kmp`. JavaScript targets: `react`, `vue`, `angular`, `nextjs`, `node`, `express`, `browser`, and other supported frameworks/runtimes. Empty for native apps |
 
 Use this tool first when the agent doesn't yet know which application key to query.
 
