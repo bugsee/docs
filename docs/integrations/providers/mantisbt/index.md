@@ -1,5 +1,5 @@
 ---
-title: "Mantis BT integration"
+title: "MantisBT integration"
 description: "How to authenticate and configure the Bugsee integration with MantisBT using a personal API token, including custom recipe examples for tags."
 sidebar_position: 16
 slug: "/integrations/providers/mantisbt"
@@ -14,7 +14,7 @@ slug: "/integrations/providers/mantisbt"
 
 ### Personal token
 
-Log into your Mantis, click on your username in the top right hand corner and select _"My Account"_ from the drop down list. Then click on the "API Tokens" tab. Type in a descriptive name for the token and click _"Create API Token"_.
+Log into your MantisBT, click on your username in the top right hand corner and select _"My Account"_ from the drop down list. Then click on the "API Tokens" tab. Type in a descriptive name for the token and click _"Create API Token"_.
 
 ![Create API Token](wz_step1_token.png)
 
@@ -26,23 +26,23 @@ Now, when you've obtained a token, let's configure integration in Bugsee. Select
 
 ![Select personal token](wz_step3_token.png)
 
-Specify the URL of your Mantis in _"Host"_ field and paste generated token into _"Personal token"_ field and finally click _"Next"_ to proceed.
+Specify the URL of your MantisBT in _"Host"_ field and paste generated token into _"Personal token"_ field and finally click _"Next"_ to proceed.
 
 ![Paste personal token](wz_step4_token.png)
 
 
 ## Configuration
 
-There are no specific configuration steps for Mantis. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
+There are no specific configuration steps for MantisBT. Refer to <a href="/integrations/configuration/">configuration</a> section for description about generic steps.
 
 
 ## Custom recipes
 
-Bugsee can accommodate all these customizations with the help of [custom recipes](/integrations/recipes/recipes/). This section provides a few examples of using custom recipes specifically with Mantis. For basic introduction, refer to custom recipe [documentation](/integrations/recipes/recipes/).
+Bugsee can accommodate all these customizations with the help of [custom recipes](/integrations/recipes/recipes/). This section provides a few examples of using custom recipes specifically with MantisBT. For basic introduction, refer to custom recipe [documentation](/integrations/recipes/recipes/).
 
 ### Setting tags field
 
-By default Bugsee creates Mantis issues with Bugsee issue _labels_ as Mantis _tags_. But _labels_ list can be overridden inside your custom recipe. For example you can add some new _label_ (Mantis _tag_) to existing ones:
+By default Bugsee creates MantisBT issues with Bugsee issue _labels_ as MantisBT _tags_. But _labels_ list can be overridden inside your custom recipe. For example you can add some new _label_ (MantisBT _tag_) to existing ones:
 
 ```javascript
 function create(context) {

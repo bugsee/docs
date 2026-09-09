@@ -150,6 +150,8 @@ Bugsee.notify(
 
 `notify(...)` is fire-and-forget: it returns `void` and none of the overloads take a completion callback, so there's no way to observe whether a given call — urgent or not — has actually reached the server from inside the app.
 
+A notification whose serialized form exceeds **256 KiB** is dropped instead of being queued. The limit applies to the whole serialized item — title, body, severity and custom fields together with the user, environment and attribute data the SDK attaches — not just the arguments you pass. Because `notify(...)` is fire-and-forget, an oversized call fails silently from the app's point of view: nothing is queued or uploaded, and the SDK writes a warning naming the limit and the actual size to logcat.
+
 ## Offline behavior and batching
 
 Every `notify(...)` call is persisted to a bounded on-device queue before anything is sent, so it survives the app being killed. When the device is offline, notifications stay queued and are delivered once connectivity returns — you don't need to retry or buffer them yourself. Non-urgent notifications are drained from that queue and uploaded in batches rather than one request per call.

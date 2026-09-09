@@ -1,5 +1,5 @@
 ---
-title: "Hubspot integration"
+title: "HubSpot integration"
 description: "Connect Bugsee to HubSpot via OAuth to create and manage CRM tickets from Bugsee issues using the HubSpot Tickets API."
 sidebar_position: 12
 slug: "/integrations/providers/hubspot"
@@ -22,7 +22,7 @@ If you have multiple accounts, you'll be presented with the following dialog let
 
 ![Select account](select_account.png)
 
-Next, you will be presented with the dialog asking you to authorize Bugsee. Click _Connect app_ to allow Bugsee access your Hubspot.
+Next, you will be presented with the dialog asking you to authorize Bugsee. Click _Connect app_ to allow Bugsee access your HubSpot.
 
 ![OAuth Grant](oauth_grant.png)
 
@@ -33,14 +33,14 @@ Note, that you may see a warning like shown in the picture below. You can safely
 
 ## Custom recipes
 
-Bugsee can accommodate all these customizations with the help of [custom recipes](/integrations/recipes/recipes/). This section provides a few examples of using custom recipes specifically with Hubspot. For basic introduction, refer to custom recipe [documentation](/integrations/recipes/recipes/).
+Bugsee can accommodate all these customizations with the help of [custom recipes](/integrations/recipes/recipes/). This section provides a few examples of using custom recipes specifically with HubSpot. For basic introduction, refer to custom recipe [documentation](/integrations/recipes/recipes/).
 
-When Bugsee pushes the issue data to Hubspot, it uses the [Tickets API](https://developers.hubspot.com/docs/api/crm/tickets). You can find all the details about on which fields you can set in their documentation.
+When Bugsee pushes the issue data to HubSpot, it uses the [Tickets API](https://developers.hubspot.com/docs/api/crm/tickets). You can find all the details about on which fields you can set in their documentation.
 
 
-### Recipe structure for Hubspot
+### Recipe structure for HubSpot
 
-According to the Hubspot [Tickets API](https://developers.hubspot.com/docs/api/crm/tickets) documentation, fields must be nested within the "properties" object in the data payload. This is to allow passing associations along with the ticket data.
+According to the HubSpot [Tickets API](https://developers.hubspot.com/docs/api/crm/tickets) documentation, fields must be nested within the "properties" object in the data payload. This is to allow passing associations along with the ticket data.
 
 ```javascript
 function create(context) {

@@ -127,6 +127,7 @@ Bugsee.relaunch(options: options)
 |BugseeSanitizeNetworkDataKey|YES|Automatically redact values of known sensitive keys (PII) from URL query parameters, HTTP headers, and JSON bodies of captured network events. Applies only when no custom network filter (delegate or block) is set. See [Privacy and Network traffic](/sdk/ios/privacy/network/).|
 |BugseeMonitorBluetoothStatusKey|NO|Monitor bluetooth state.<br />_**IMPORTANT**: You must add "Privacy - Bluetooth Always Usage Description" key into your Info.plist with a string value explaining to the user why you need bluetooth permission_|
 |BugseeMonitorDiskSpaceKey|NO|Monitor available disk space and include it in reports as a system trace.|
+|BugseePerformanceMonitoringKey|YES|Master switch for Application Performance Monitoring (APM). Controls auto-instrumentation of network requests, file operations, view controller lifecycle and app startup, as well as the manual ```Bugsee.startTransaction()``` / ```Bugsee.startSpan()``` API. Captured transactions are attached to every report.|
 |BugseeReportPrioritySelectorKey|NO|Allow user to modify priority when reporting manually|
 |BugseeReportLabelsEnabledKey|NO|Display labels field in the built-in bug reporting UI|
 |BugseeReportLabelsRequiredKey|NO|Controls whether  _"Labels"_ field in bug reporting UI is mandatory or not.|
@@ -136,6 +137,7 @@ Bugsee.relaunch(options: options)
 |BugseeMaxDataSizeKey|@50|Bugsee will avoid using more disk space than specified (in MB). If total Bugsee data size exceeds specified value, oldest recordings (even not sent) will be removed. Value should not be smaller than 10.|
 |BugseeStyleKey|Default|Enumeration of BugseeStyleSystemDefault, BugseeStyleDefault, BugseeStyleDark and BugseeStyleBasedOnStatusBarStyle|
 |BugseeFrameRateKey|BugseeFrameRateHigh|Specifies how often frames are attempted to be captured|
+|BugseeCaptureVideoAdaptiveKey|NO|Opt-in adaptive screen capture. When enabled, capture idles at about 1 frame per second on a static screen and ramps back up to the maximum frame rate on visual activity (scrolling, animation, layer updates).|
 |BugseeVideoScaleKey|@1|Additional down scaling applied to recorded video, (e.x @0.5 would reduce both width and height by half)|
 |BugseeCaptureDeviceAndNetworkNames\*\*|NO|Capture device name, wifi SSID and mobile carrier name.|
 |BugseeReportSummaryRequiredKey|NO|Controls whether  _"Summary"_ field in bug reporting UI is mandatory or not.|

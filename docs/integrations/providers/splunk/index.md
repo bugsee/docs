@@ -77,6 +77,8 @@ Splunk Enterprise instances do not require anything to be prepended to the hostn
 
 ## Custom recipes
 
+Bugsee can accommodate all these customizations with the help of [custom recipes](/integrations/recipes/recipes/). This section provides a few examples of using custom recipes specifically with Splunk. For basic introduction, refer to custom recipe [documentation](/integrations/recipes/recipes/).
+
 You can utilize custom recipes with Splunk integration to update/enhance the sent data to your Splunk instance.
 
 By default, we send the following object to the Splunk events collector endpoint
@@ -122,9 +124,6 @@ In case, if you want to push data to some other _"index"_ and/or change the _"so
     }
 }
 ```
-
-
-Bugsee can accommodate all these customizations with the help of [custom recipes](/integrations/recipes/recipes/). This section provides a few examples of using custom recipes specifically with Splunk. For basic introduction, refer to custom recipe [documentation](/integrations/recipes/recipes/).
 
 ### Setting labels field
 

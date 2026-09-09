@@ -158,7 +158,7 @@ Notes on the filter shape:
 
 - The filter is a two-argument, **void** function: `filter(event, callback)`. You must invoke the supplied `Callback1` to produce a result — `callback.run(event)` keeps the (possibly mutated) event, `callback.run(null)` drops it.
 - Event types are `NetworkEvent` / `LogEvent` in `com.bugsee.library.contracts`.
-- Mutators (`setUrl`, `setMethod`, `setBody`, headers, etc.) and `getNoBodyReason()` are available.
+- Mutators (`setUrl`, `setMethod`, `setBody`, headers, etc.) and `getBodyAbsenceReason()` are available.
 - The filter applies uniformly to events coming from every network extension — OkHttp, Ktor 2, Ktor 3, and Cronet all feed the same pipeline.
 
 See also the [Logs page](/sdk/android/logs) for the matching `setLogEventFilter(...)` API.

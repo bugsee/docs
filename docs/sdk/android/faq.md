@@ -47,7 +47,7 @@ Very little. Bugsee defers all heavy work (native library loading, capture-provi
 Measured as the median of force-stopped cold starts on release (R8) builds:
 
 - **Core SDK** (no extensions): ~107 ms on a low-end device / ~16 ms on a high-end device.
-- **Core SDK + all extensions**: ~139 ms / ~19 ms — the seven extensions together add only ~32 ms on the low-end device.
+- **Core SDK + all extensions**: ~139 ms / ~19 ms — the extensions together add only ~32 ms on the low-end device.
 
 The largest single extension is NDK native crash reporting (~24 ms on low-end), because it spawns an out-of-process Crashpad handler; leave it out if your app has no native code. See [App launch overhead](/sdk/android/startup-overhead) for the full breakdown and how to measure it in your own app.
 

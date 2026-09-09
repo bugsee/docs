@@ -53,7 +53,7 @@ There are no specific configuration steps for Visual Studio Team Services. Refer
 
 ## Custom recipes
 
-Bugsee can accommodate all the customizations required for your VSTS with the help of [custom recipes](/integrations/recipes/recipes/). This section provides a few examples of using custom recipes with Azure DevOps. For basic introduction, refer to custom recipe [documentation](/integrations/recipes/recipes/).
+Bugsee can accommodate all the customizations required for your VSTS with the help of [custom recipes](/integrations/recipes/recipes/). This section provides a few examples of using custom recipes with VSTS. For basic introduction, refer to custom recipe [documentation](/integrations/recipes/recipes/).
 
 ### Setting tags field
 

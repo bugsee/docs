@@ -654,7 +654,7 @@ Notable shape changes:
 
 - The separate 6.x filter interfaces are unified into the generic `EventFilter<T>`, whose single `filter(T, Callback1<T>)` method hands you the event and a `Callback1`. Both 6.x and 7.x are callback-based: invoke the supplied callback with the (mutated) event to keep it, or with `null` to drop it. The 6.x `listener.onEvent(...)` / `listener.onLog(...)` becomes `callback.run(...)`.
 - The event types are now `NetworkEvent` / `LogEvent` (in `com.bugsee.library.contracts`), not `BugseeNetworkEvent` / `BugseeLog`.
-- The helper getters/setters on `NetworkEvent` are largely the same as on `BugseeNetworkEvent`. `getNoBodyReason()` is preserved.
+- The helper getters/setters on `NetworkEvent` are largely the same as on `BugseeNetworkEvent`, but the no-body reason getter is renamed: 6.x `getNoBodyReason()` becomes `getBodyAbsenceReason()`, returning a `NetworkEvent.NetworkBodyAbsenceReason`.
 - `setLogFilter(...)` is kept as an alias for `setLogEventFilter(...)` to smooth call-site migration.
 
 ---
