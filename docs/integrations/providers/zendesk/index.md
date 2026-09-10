@@ -1,6 +1,6 @@
 ---
 title: "Zendesk integration"
-description: "How to connect Bugsee with Zendesk using basic auth, personal token, or OAuth, with custom recipe examples for tags and resource type overrides."
+description: "How to connect Bugsee with Zendesk using OAuth, with custom recipe examples for tags and resource type overrides."
 sidebar_position: 32
 slug: "/integrations/providers/zendesk"
 ---
@@ -9,63 +9,11 @@ slug: "/integrations/providers/zendesk"
 
 ### Supported authentication methods
 
-- [Basic (username and password)](#basic-authentication)
-- [Personal token](#personal-tokens)
 - [OAuth](#oauth)
 
-
-### Basic authentication
-
-In order to use Basic authentication, you need to enable _"Password access"_ in Zendesk. Follow steps below to do that.
-
-Navigate to your Zendesk and switch to **Admin** area.
-
-![Open settings](open_settings.png)
-
-Locate the *Channels* section and click on *API* item there
-
-![API settings](api_settings.png)
-
-Switch *Password Access* to **Enabled**.
-
-![Enable password access](enable_passw_access.png)
-
-Now, when you've enabled basic authentication in Zendesk, let's configure integration in Bugsee.
-
-Start Bugsee integration wizard and select "Basic authentication" in the first step of integration wizard. Click "Next".
-
-![Select basic authentication](wz_step1_basic.png)
-
-Provide valid host (URL to your Zendesk), username and password.
-
-![Provide authentication info](wz_step2_basic.png)
-
-
-### Personal tokens
-
-In order to use Personal tokens, you need to enable _"Token access"_ in Zendesk. Follow steps below to do that.
-
-Navigate to your Zendesk and switch to **Admin** area.
-
-![Open settings](open_settings.png)
-
-Locate the *Channels* section and click on *API* item there
-
-![API settings](api_settings.png)
-
-Switch *Token Access* to **Enabled**.
-
-![Enable password access](enable_token_access.png)
-
-Now, when you've enabled token access in Zendesk, let's configure integration in Bugsee.
-
-Start Bugsee integration wizard and select "Personal token" in the first step of integration wizard. Click "Next".
-
-![Select basic authentication](wz_step1_token.png)
-
-Provide valid host (URL to your Zendesk), and paste your token. Click _"Next"_.
-
-![Provide authentication info](wz_step2_token.png)
+:::info
+Zendesk removed email and password authentication on 12 January 2026, and new Bugsee integrations are connected with OAuth. An existing integration that authenticates with an API token keeps working; one that still uses a password must be reconnected.
+:::
 
 
 ### OAuth

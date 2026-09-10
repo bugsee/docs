@@ -5,6 +5,12 @@ sidebar_position: 23
 slug: "/integrations/providers/shortcut"
 ---
 
+Integration with Shortcut is based on stories. Each time a new issue is reported to Bugsee, we create a new story of type _bug_ in the Shortcut project you mapped the application to.
+
+:::info
+Bugsee maps applications to Shortcut **projects**, so your workspace needs at least one. Shortcut no longer creates a project in new workspaces by default — if the application mapping step comes back empty, create a project in Shortcut first and reopen the wizard.
+:::
+
 ## Authentication
 
 
