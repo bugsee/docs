@@ -121,7 +121,8 @@ function create(context) {
 
     return {
     	// return object with fields that need to be overridden
-    	// allowed properties: 'summary', 'description', 'reporter', 'priority', 'labels'
+    	// allowed properties: 'summary', 'summary_format', 'description', 'description_format',
+    	// 'labels', 'priority', 'severity', 'reporter', 'project'
     	custom: {
     		// custom, service specific fields, refer to the documentation of a particular service for custom fields
     		// for a specific service.
@@ -151,6 +152,26 @@ function update(context, changes) {
 }
 ```
 
+The properties a recipe may override are fixed. Anything else you return is ignored, and any property you leave alone keeps the value Bugsee computed for it.
+
+|Method|Overridable properties|
+|---|---|
+|`create()`|`summary`, `summary_format`, `description`, `description_format`, `labels`, `priority`, `severity`, `reporter`, `project`|
+|`update()`|`summary`, `summary_format`, `description`, `description_format`, `state`, `priority`, `severity`, `labels`|
+
+The `custom` object is merged one top-level key at a time rather than deeply: naming a key replaces whatever the mapping held for that key, and leaving a key out preserves it.
+
+To drop a field from the pushed item entirely, rather than sending it empty, assign the special value `=$unset`:
+
+```javascript
+function create(context) {
+    return {
+        // omit the reporter altogether instead of sending an empty one
+        reporter: '=$unset'
+    };
+}
+```
+
 ## Output customization
 
 Services we integrate with, allow you to format the summary/description using some popular markup language - mostly these are Markdown and HTML. We handle these fields accordingly by escaping all the controlling entities in passed strings. This is required to keep the original strings intact.
@@ -169,21 +190,31 @@ To mitigate this, we let you set the _description\_format_ field. By default, it
 |---|---|
 |Aha!|html|
 |Asana|raw|
+|Azure DevOps|html|
 |Basecamp|html|
-|Bitbucket|markdown|
+|BugHerd|html|
 |Bugzilla|raw|
+|ClickUp|markdown|
+|Datadog|markdown|
 |Freshdesk|html|
 |GitHub|markdown|
 |GitLab|markdown|
+|HubSpot|raw|
+|iTop|html|
 |Jira|markdown|
+|Linear|markdown|
+|MantisBT|markdown|
+|Microsoft Teams|html|
 |Monday|html|
+|Notion|raw|
 |Nozbe|markdown|
 |Odoo|html|
-|Pivotal|markdown|
 |Redmine|raw|
 |Shortcut|markdown|
 |Slack|raw|
+|Splunk|raw|
 |TargetProcess|html|
+|Teamwork Projects|raw|
 |Trello|raw|
 |VSTS|html|
 |Wrike|raw|

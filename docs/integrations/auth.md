@@ -1,6 +1,6 @@
 ---
 title: "Integration authentication types"
-description: "Explains the three authentication methods Bugsee supports for integrations: basic username/password, token-based, and OAuth."
+description: "Explains the three authentication methods Bugsee supports for integrations: basic username/password, personal token, and OAuth."
 sidebar_position: 1
 slug: "/integrations/auth"
 ---
@@ -8,7 +8,7 @@ slug: "/integrations/auth"
 We support three ways to authenticate Bugsee in remote service:
 
 - [Basic authentication](#basic-authentication)
-- [Token based authentication](#token-based-authentication)
+- [Personal token](#personal-token)
 - [OAuth](#oauth)
 
 :::info
@@ -27,7 +27,7 @@ We strongly recommend creating a dedicated user when basic authentication is use
 :::
 
 
-## Token based authentication
+## Personal token
 
 This approach requires you to provide a special unique sequence of characters (token) that will authenticate Bugsee to remote service. This lets you keep your authentication data private (username and password) and easily revoke access rights if that token becomes compromised.
 

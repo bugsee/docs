@@ -1,7 +1,7 @@
 ---
 title: "Odoo Integration"
 description: "How to integrate Bugsee with Odoo using basic username and password authentication, including steps to set a local password on Odoo Online accounts."
-sidebar_position: 20
+sidebar_position: 21
 slug: "/integrations/providers/odoo"
 ---
 
