@@ -87,8 +87,8 @@ This event is triggered when new application is created in organization. It has 
 ||name|String|Application name|
 ||url|String|Web URL for the application|
 ||description|String|Description for the application|
-||type|String|Type of the application. One of the following: 'ios', 'android', 'web'|
-||subtype|String|In case of type is 'android' or 'ios' this field contains the type of framework/platform used to create the actual app. One of 'xamarin', 'cordova', 'react_native', 'unity' or empty in case of native app|
+||type|String|Type of the application. One of the following: 'ios', 'android', 'javascript', 'rust', or the legacy 'web'|
+||subtype|String|Framework/platform the application was built with. In case of type is 'android' or 'ios': one of 'xamarin', 'cordova', 'react_native', 'unity', 'flutter', 'dotnet', 'kmp', or empty in case of native app. In case of type is 'javascript': the targeted framework/runtime, e.g. 'react', 'vue', 'angular', 'nextjs', 'node', 'express', 'browser'. Empty when not set|
 ||timezone|Number|Timezone offset from GMT [-11..11]|
 ||created_on|String|Date and time when application was created (ISO formatted string)|
 ||updated_on|String|Date and time when application was last updated (ISO formatted string)|
@@ -132,8 +132,8 @@ This event is triggered when one of the applications is updated in organization 
 ||name|String|Application name|
 ||url|String|Web URL for the application|
 ||description|String|Description for the application|
-||type|String|Type of the application. One of the following: 'ios', 'android', 'web'|
-||subtype|String|In case of type is 'android' or 'ios' this field contains the type of framework/platform used to create the actual app. One of 'xamarin', 'cordova', 'react_native', 'unity' or empty in case of native app|
+||type|String|Type of the application. One of the following: 'ios', 'android', 'javascript', 'rust', or the legacy 'web'|
+||subtype|String|Framework/platform the application was built with. In case of type is 'android' or 'ios': one of 'xamarin', 'cordova', 'react_native', 'unity', 'flutter', 'dotnet', 'kmp', or empty in case of native app. In case of type is 'javascript': the targeted framework/runtime, e.g. 'react', 'vue', 'angular', 'nextjs', 'node', 'express', 'browser'. Empty when not set|
 ||timezone|Number|Timezone offset from GMT [-11..11]|
 ||created_on|String|Date and time when application was created (ISO formatted string)|
 ||updated_on|String|Date and time when application was last updated (ISO formatted string)|
@@ -173,8 +173,8 @@ This event is triggered when some application is deleted from organization. It h
 ||name|String|Application name|
 ||url|String|Web URL for the application|
 ||description|String|Description for the application|
-||type|String|Type of the application. One of the following: 'ios', 'android', 'web'|
-||subtype|String|In case of type is 'android' or 'ios' this field contains the type of framework/platform used to create the actual app. One of 'xamarin', 'cordova', 'react_native', 'unity' or empty in case of native app|
+||type|String|Type of the application. One of the following: 'ios', 'android', 'javascript', 'rust', or the legacy 'web'|
+||subtype|String|Framework/platform the application was built with. In case of type is 'android' or 'ios': one of 'xamarin', 'cordova', 'react_native', 'unity', 'flutter', 'dotnet', 'kmp', or empty in case of native app. In case of type is 'javascript': the targeted framework/runtime, e.g. 'react', 'vue', 'angular', 'nextjs', 'node', 'express', 'browser'. Empty when not set|
 ||timezone|Number|Timezone offset from GMT [-11..11]|
 ||created_on|String|Date and time when application was created (ISO formatted string)|
 ||updated_on|String|Date and time when application was last updated (ISO formatted string)|
@@ -1013,7 +1013,7 @@ Consumers that only want post-analysis notifications can branch on `current.size
 ||vcs|Object|Commit context resolved at upload time (`commit_sha`, `branch`, `base_branch`, `pr_number`, `provider`, `repo`). May be absent when the build was produced from a host without a git context|
 ||created_on|String|Date and time the build record was created (ISO formatted string)|
 ||updated_on|String|Date and time the build record was last updated (ISO formatted string)|
-|**build.previous**|Object|Same shape as `build.current`. **Absent** on the first build for this `(package_id, build_configuration)` tuple and on the build-info-only trigger|
+|**build.previous**|Object|Same shape as `build.current`. **Absent** on the first build for this `(package_id, format, build_configuration)` tuple and on the build-info-only trigger|
 
 ### build.deleted
 
