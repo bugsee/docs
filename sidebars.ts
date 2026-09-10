@@ -942,11 +942,6 @@ const sidebars: SidebarsConfig = {
             },
             {
               type: "doc",
-              id: "integrations/providers/bitbucket/index",
-              label: "Bitbucket",
-            },
-            {
-              type: "doc",
               id: "integrations/providers/bugherd/index",
               label: "BugHerd",
             },
@@ -1023,13 +1018,13 @@ const sidebars: SidebarsConfig = {
             },
             {
               type: "doc",
-              id: "integrations/providers/odoo/index",
-              label: "Odoo",
+              id: "integrations/providers/nozbe/index",
+              label: "Nozbe",
             },
             {
               type: "doc",
-              id: "integrations/providers/pivotal/index",
-              label: "Pivotal Tracker",
+              id: "integrations/providers/odoo/index",
+              label: "Odoo",
             },
             {
               type: "doc",

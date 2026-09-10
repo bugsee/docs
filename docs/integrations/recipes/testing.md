@@ -1,46 +1,44 @@
 ---
 title: "Testing recipes"
-description: "How to test and debug Bugsee custom recipes using the built-in recipe playground, including how to interpret create and update test results."
+description: "How to test Bugsee custom recipes from the recipe editor, including test scenarios, dry run versus live mode, and how to read the results."
 sidebar_position: 3
 slug: "/integrations/recipes/testing"
 ---
 
-Recipes are just little pieces of code, and as any code they also may contain bugs or just unhandled corner cases. To assist you in debugging those Bugsee provides you with a playground where you can try and check various options and execute recipe in test environment.
+Recipes are just little pieces of code, and as any code they also may contain bugs or just unhandled corner cases. To help you find those, the recipe editor can run your recipe against a generated issue and show you exactly what would be pushed.
 
-To ease testing we've placed test controls right next to recipe editor itself. You can find them in "Test recipe" tab in "Recipe editor" dialog.
+The controls sit directly above the editor: pick a _Scenario_, pick a _Mode_, and click _"Run test"_. Results appear in the _Results_ pane below.
 
-![Test recipe tab](tab_test_recipe.png)
+## Scenario
 
-After clicking on "Test recipe" you will be presented with the following dialog
+A scenario decides which issue your recipe is handed. Rather than typing field values, you choose the shape you want to exercise — the awkward ones are the point, since a recipe that works on a typical issue may still break on one with no description or a summary in a right-to-left script.
 
-![Test recipe dialog](test_recipe_full.png)
+Scenarios come in two groups:
 
-In the left pane you can find all the recipe inputs you can change. Below is a table describing each field.
+- **Issue shapes** — a typical issue, one with no reporter, a minimal issue, issues missing the summary and/or description, a crash, an error, a user-reported bug, a very long summary, unicode text, and low- and high-severity issues.
+- **Transitions**, used to exercise `update()` — an issue being reopened, closed, raised in severity, retitled, or assigned.
 
-|Input|Recipe field|Description|
-|---|---|---|
-|Type|type|Issue type. Can be one of: 'bug', 'crash' or 'error'|
-|State|state|Issue state. Can be one of: 'open' or 'closed'|
-|Severity|severity|Issue severity. Ranges from 1 through 5.|
-|Summary|summary|Short line of text that briefly describes an issue|
-|Description|description|Detailed multi-line description for issue|
+The platform is **not** something you pick. The dialog is opened from a specific application's mapping, so the generated issue uses that application's platform — testing an iOS application's recipe against a generated Android issue would prove nothing about production.
 
-All the inputs are set to some dummy defaults, so you can click "Test" button at the bottom right away to check out how things work.
+## Mode
 
-After setting desired values to inputs and clicking "Test" button at the bottom of dialog, you will shortly receive result in the right pane. Unlike the normal integration flow that either creates or updates an item in remote system, test recipe flow does both simultaneously. Hence, the testing response will also contain results for both and you need to switch between the two. And that is what "Result type" drop down is designed for. It lets you display either of the results.
+|Mode|What it does|
+|---|---|
+|Dry run|Runs the recipe and shows you the result without contacting the remote service. This is the default.|
+|Live|Runs the recipe **and actually pushes the result**, creating a real item or message in the remote service.|
 
-### Test results: Create
+:::warning
+_Live_ mode creates a real ticket, card or message in the integrated service — remember to clean it up afterwards. _Dry run_ is the default precisely so that clicking _"Run test"_ without reading cannot post anything.
+:::
 
-Creation result is quite straightforward. You get the issue object that will be used to push data to remote service.
+Live mode also requires the integration to be saved: there is nothing to push through until it exists.
 
-![Test result: create](test_result_create.png)
+## Results
 
-### Test results: Update
+Both recipe entry points are exercised in a single run, so a result is reported for each.
 
-Update result is a bit more complicated. It is represented by array with three objects:
+For issue-based recipes the results are labelled **Create** and **Update**, showing the item that `create()` would produce and the fields `update()` would change. For event-based recipes they are labelled **Notification (issue created)** and **Notification (issue updated)** — the event family has a single `handle()` method, so it is run twice, once against an `issue.created`-shaped event and once against `issue.updated`, both derived from the same generated issue.
 
-- resulting issue
-- changes
-- final updates
+You can expand the generated issue that was used for the test alongside the results, which is usually the fastest way to understand why a recipe took the branch it did.
 
-<code>Resulting issue</code> is the same object to what you may discover for "Create" case. <code>Changes</code> contains the fields with values of <code>{ from: '', to: '' }</code> which denotes what value was before and what became after the update. And the last object contains the actually updated fields (it's just a subset of the first one which shows what was actually changed).
+In live mode each result also reports what happened at the remote end — a link to the created item where the service returns one, a note that the push was delivered where it does not, or the failure.

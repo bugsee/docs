@@ -1,6 +1,6 @@
 ---
 title: "Wrike integration"
-description: "How to connect Bugsee with Wrike using OAuth authentication to push issues into your Wrike workspace."
+description: "How to connect Bugsee with Wrike using a personal token or OAuth to push issues into your Wrike workspace."
 sidebar_position: 30
 slug: "/integrations/providers/wrike"
 ---
@@ -9,7 +9,12 @@ slug: "/integrations/providers/wrike"
 
 ### Supported authentication methods
 
+- [Personal token](#personal-token)
 - [OAuth](#oauth)
+
+### Personal token
+
+Generate a permanent access token in Wrike (**Apps & Integrations** → **API**), then start the Bugsee integration wizard, select _"Personal token"_ at the first step and paste the token when prompted.
 
 ### OAuth
 
