@@ -79,6 +79,11 @@ const sidebars: SidebarsConfig = {
               id: "sdk/ios/v7/installation",
               label: "Installation",
             },
+            {
+              type: "doc",
+              id: "sdk/ios/v7/release-notes",
+              label: "Release notes",
+            },
           ],
         },
       ],
