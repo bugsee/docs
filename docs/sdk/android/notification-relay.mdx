@@ -186,7 +186,7 @@ Notification relay has no separate enable/disable option — it's active wheneve
 
 Calling `Bugsee.notify(...)` delivers nothing on its own. Relay has to be turned on for the app, and its destinations chosen, before any notification is sent — until then `notify(...)` succeeds on the device and nothing arrives.
 
-A subscribed webhook receives a relayed notification as the `notification.relayed` event — see the [webhook events reference](/webhooks/events) for its payload.
+A subscribed webhook receives a relayed notification as the `notification.relayed` event — see [`notification.relayed`](/webhooks/events#notificationrelayed) for its payload.
 
 ## Privacy
 

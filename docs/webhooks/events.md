@@ -27,6 +27,7 @@ Bugsee will send notifications for the following events:
   - [build.created](#buildcreated)
   - [build.deleted](#builddeleted)
   - [build.vulnerabilities\_detected](#buildvulnerabilities_detected)
+  - [notification.relayed](#notificationrelayed)
 - [Common data structures](#common-data-structures)
   - [Recording](#recording)
   - [Environment](#environment)
@@ -1166,6 +1167,67 @@ A 5-minute server-side deduplication window prevents back-to-back fanouts for th
 ||severity|String|One of `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`, or `UNKNOWN`|
 ||summary|String|One-line description of the vulnerability. May be truncated to ~4096 characters; consult `references[]` for the full advisory|
 ||references|Array&lt;String&gt;|URLs of advisory pages, CVE entries, and other authoritative sources. May be empty when no references are published|
+
+
+### notification.relayed
+
+This event fires when an app calls `Bugsee.notify(...)` and the notification is relayed onward. There is no Bugsee issue behind it — nothing is uploaded through the report pipeline and no issue is created.
+
+A webhook receives it only when all of the following hold: the application has **Notification Relay** enabled, this webhook is selected as a relay destination for that application, the webhook is subscribed to the `notification.relayed` event, and the webhook is not disabled. It is independent of the per-application _Events_ toggles used by Slack and Microsoft Teams integrations — those never carry this event.
+
+The payload is deliberately trimmed. The application token is stripped from `environment.app`, and Wi‑Fi details and device identifiers (`device_id`, `device_id2`, `device_id3`, `android_id`) are stripped from `environment.hardware`.
+
+```json
+{
+    "app": {
+        "key": "IOS",
+        "name": "iOS application",
+        "url": "https://app.bugsee.com/#/apps/IOS"
+    },
+    "notification": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "timestamp": "2026-08-30T12:00:00.000Z",
+        "title": "Payment failed",
+        "body": "Card declined",
+        "severity": "high",
+        "fields": { "order_id": "42" },
+        "user": {
+            "name": "John Smith",
+            "email": "john.smith@example.com"
+        },
+        "attributes": { "plan": "pro" },
+        "urgent": false,
+        "delivery": "deferred",
+        "environment": {
+            "app": { "version": "1.2.3", "build": "99" },
+            "platform": { "type": "ios", "version": "17.0" },
+            "hardware": { "name": "iPhone", "model": "iPhone15,2" },
+            "browser": {}
+        }
+    }
+}
+```
+
+Every field below is always present. Values the SDK did not supply arrive as an empty string or an empty object rather than being omitted, so a consumer can read them without checking for their presence first.
+
+|Object|Field|Type|Description|
+|---|---|---|---|
+|**app**|||
+||key|String|Unique application key (within organization)|
+||name|String|Application name|
+||url|String|Web URL for the application|
+|**notification**|||
+||id|String|Client-generated notification id (UUID). Empty string when the SDK sent none|
+||timestamp|String|Client timestamp (ISO formatted string)|
+||title|String|Notification title|
+||body|String|Notification body. Empty string when the call passed only a title|
+||severity|String or Number|Severity as sent by the SDK. Empty string when the call did not set one|
+||fields|Object|Caller-supplied key/value fields. Empty object when the call passed none|
+||user|Object|Current user as `name` / `email`. Either is an empty string when not set|
+||attributes|Object|Snapshot of the global attributes set with `setAttribute`. Empty object when none are set|
+||urgent|Boolean|Whether the call requested immediate delivery. `false` unless the urgent variant was used|
+||delivery|String|`deferred` when the SDK flushed the notification after a failed urgent attempt, otherwise an empty string|
+||environment|Object|Trimmed environment snapshot carrying `app`, `platform`, `hardware` and `browser`. Always all four keys; each is an empty object when the SDK sent nothing for it|
 
 
 ## Common data structures
