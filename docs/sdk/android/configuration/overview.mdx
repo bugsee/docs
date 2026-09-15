@@ -246,6 +246,8 @@ Enum-typed options accept the enum constant programmatically, or the enum value 
 | `IssueSeverity` | `VeryLow`, `Medium`, `High`, `Critical`, `Blocker` |
 | `IssueType` | `Bug`, `Crash`, `Error` |
 
+`IssueSeverity` constants carry the numeric values 1 (`VeryLow`) through 5 (`Blocker`). The value-1 constant is named `VeryLow` here and `Low` in the other Bugsee SDKs (`BugseeSeverityLow` on iOS); both mean the same severity.
+
 ## Reading effective options at runtime
 
 `OptionsContainer` is the read-only view of effective launch options. It's returned by `Bugsee.getLaunchOptions()` and is what extensions receive in their `launch(OptionsContainer)` callback:

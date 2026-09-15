@@ -443,10 +443,6 @@ Every option key changed name. Use this table to do a mechanical search/replace 
 | `CaptureDeviceAndNetworkNames` | _removed_; device naming is captured automatically. |
 | `Bugsee.Override.AttachmentOverrideLabels` | _removed_; use `ReportHandler`. |
 
-### Removed enum value
-
-`IssueSeverity.Critical` is removed in 7.x. Map it to either `High` or `Blocker` depending on intent.
-
 ---
 
 ## 4. Feedback moved to its own module
@@ -1004,7 +1000,7 @@ Use the same target column to drive a global search/replace pass.
 | `Bugsee.newOkHttpWrappedWebSocket(...)` | _(removed; covered by `bugsee-android-okhttp`)_ |
 | `Bugsee.resetVideoCapturePermissionDecision()` | `Bugsee.resetVideoCapturePermission()` |
 | `BugseeAppearance` (data class with public fields) | `Appearance` (typed contract; use `setColor` / `setString`) |
-| `IssueSeverity.Critical` | `IssueSeverity.High` or `IssueSeverity.Blocker` |
+| `IssueSeverity` (`com.bugsee.library.data`) | `IssueSeverity` (`com.bugsee.library.contracts.options`) — same constants, same values |
 | `BugseeNetworkEvent` | `NetworkEvent` (`com.bugsee.library.contracts`) |
 | `BugseeLog` | `LogEvent` (`com.bugsee.library.contracts`) |
 | `BugseeLogLevel` (`com.bugsee.library.events`) | `LogLevel` (`com.bugsee.library.contracts.options`) |
