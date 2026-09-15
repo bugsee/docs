@@ -221,10 +221,6 @@ and traces keep being captured. If you relied on `pause` to stop *all* capture, 
 `+[Bugsee stop:]` and launch again afterwards.
 :::
 
-`BugseeLifecycleEventPaused` and `BugseeLifecycleEventResumed` remain in
-`BugseeLifecycleEventType` but are never dispatched in 7.x. A `bugseeLifecycleEvent:`
-handler that switches on them now has unreachable branches.
-
 ### 3.3 New: observing SDK status
 
 Bugsee finishes starting up in the background, so `launchWithToken:` returns a moment
@@ -315,8 +311,6 @@ covers the code changes; the dependency line is added to the
 | `+[Bugsee showFeedbackController]` | `[BugseeFeedback.shared showFeedbackUI]` |
 | `+[Bugsee setDefaultFeedbackGreeting:]` | `[BugseeFeedback.shared setGreeting:]` |
 | `-[BugseeDelegate bugsee:didReceiveNewFeedback:]` | `-[BugseeFeedbackListener onNewMessagesReceived:]` |
-| `BugseeLifecycleEventBeforeFeedbackShown` | _(no longer dispatched)_ |
-| `BugseeLifecycleEventAfterFeedbackShown` | _(no longer dispatched)_ |
 | _(not available)_ | `-[BugseeFeedbackListener onNewMessageSent:]` |
 | _(not available)_ | `[BugseeFeedback.shared setListener:]` |
 

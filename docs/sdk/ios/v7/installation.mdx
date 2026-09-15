@@ -41,22 +41,34 @@ https://github.com/bugsee/spm
 In Xcode choose **File → Add Package Dependencies…**, paste that URL, and set the
 dependency rule to **Exact Version**, entering the 7.x version.
 
-For a package manifest, add it to `dependencies` and to your target:
+For a package manifest:
 
 ```swift
-// Package.swift
-dependencies: [
-    .package(url: "https://github.com/bugsee/spm", exact: "7.x"),
-],
-targets: [
-    .target(
-        name: "YourApp",
-        dependencies: [
-            .product(name: "Bugsee", package: "spm"),
-        ]
-    ),
-]
+// swift-tools-version: 5.9
+import PackageDescription
+
+let package = Package(
+    name: "YourApp",
+    platforms: [
+        .iOS(.v13),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/bugsee/spm", exact: "7.x"),
+    ],
+    targets: [
+        .target(
+            name: "YourApp",
+            dependencies: [
+                // The package identity is "spm" — the last path component of the URL.
+                .product(name: "Bugsee", package: "spm"),
+            ]
+        ),
+    ]
+)
 ```
+
+`exact:` is required for a beta. Swift Package Manager keeps pre-release versions out of
+version ranges, so `from:` and "Up to Next Major Version" will not resolve a 7.x beta.
 
 ### Optional: in-app feedback
 
@@ -182,9 +194,43 @@ Bugsee.launch(token: "<your_app_token>", options: nil) { success in
 
 ## Debug builds
 
-To build and enable Bugsee only in debug builds, exclude the Bugsee dependency from release
-configurations in your Xcode build settings, then wrap every reference in your code with
-conditional compilation flags:
+To build and enable Bugsee only in debug builds, keep it out of the release configuration
+and wrap every reference in your code with conditional compilation flags.
+
+In a `Package.swift`, attach a condition to the product dependency so it is linked in debug
+builds only:
+
+```swift
+// swift-tools-version: 5.9
+import PackageDescription
+
+let package = Package(
+    name: "YourApp",
+    platforms: [
+        .iOS(.v13),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/bugsee/spm", exact: "7.x"),
+    ],
+    targets: [
+        .target(
+            name: "YourApp",
+            dependencies: [
+                .product(
+                    name: "Bugsee",
+                    package: "spm",
+                    condition: .when(configuration: .debug)
+                ),
+            ]
+        ),
+    ]
+)
+```
+
+In an Xcode project, exclude the Bugsee framework from the release configuration in your
+build settings instead.
+
+Either way, wrap the call sites:
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
