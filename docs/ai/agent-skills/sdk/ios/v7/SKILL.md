@@ -58,7 +58,8 @@ grep -r "@main" --include="*.swift" 2>/dev/null | head -3
 grep -rnE "showReportController|showFeedbackController|setDefaultFeedbackGreeting|didReceiveNewFeedback|setView:.*asHidden|setView\(.*asHidden|addSecureRect\b|removeSecureRect\b|removeAllSecureRects|getAllSecureRects|isViewHidden|registerEvent|traceKey|registerNetworkEvent|removeNetworkEventFilter|setEmail|getEmail|clearEmail|getDeviceId|logAssert|hideKeyboard|testExceptionCrash|testSignalCrash|setDefaultCrashPriority|setDefaultErrorPriority|setDefaultBugPriority|Bugsee\.pause|Bugsee\.resume|\[Bugsee pause\]|\[Bugsee resume\]" \
   --include="*.swift" --include="*.m" --include="*.mm" . 2>/dev/null | grep -v "/Pods/" | head -40
 
-# Raw option-key strings — the ONLY silent break in 7.x
+# 6.x option names written as plain strings. The SDK translates these, EXCEPT
+# "CaptureVideoAdaptive" — flag that one; renaming the rest is optional cleanup.
 grep -rnE '"(BugseeAppLaunchCrashDetectionKey|BugseeDefaultBugPriority|BugseeDefaultCrashPriority|BugseeDefaultErrorPriority|BugseeEnableMachExceptions|BugseeEnableOnDeviceSymbolication|BugseeKillDetectionKey|BugseeReportPrioritySelector|BugseeStyle|BuildTarget|BuildType|CaptureAVPlayer|CaptureLogs|CaptureOSLogs|CaptureVideoAdaptive|CrashReport|DataEncryption|DetectAppExit|FrameRate|MaxDataSize|MaxFrameRate|MaxRecordingTime|MinFrameRate|MonitorBluetoothStatus|MonitorDiskSpace|MonitorNetwork|MonitorWebSocket|PerformanceAdaptiveSampling|PerformanceMonitoring|PerformanceSampleRate|ReportDescriptionRequired|ReportEmailRequired|ReportLabelsEnabled|ReportLabelsRequired|ReportSummaryRequired|SanitizeNetworkData|ScreenshotEnabled|ScreenshotToReport|ShakeToReport|StatusBarInfo|VideoEnabled|VideoScale|ViewHierarchyEnabled|WifiOnlyUpload|bodySizeLimit)"' \
   --include="*.swift" --include="*.m" --include="*.mm" . 2>/dev/null | grep -v "/Pods/" | head -20
 ```
@@ -68,7 +69,7 @@ grep -rnE '"(BugseeAppLaunchCrashDetectionKey|BugseeDefaultBugPriority|BugseeDef
 | Deployment target below iOS 13? | Raise it — 7.x will not link otherwise |
 | `Podfile` / `Cartfile` only? | 7.x ships via SPM; the project needs an SPM dependency added |
 | Existing Bugsee 6.x found? | This is a migration, not a fresh install — go to Phase 2b after Phase 2 |
-| Raw option-key strings found? | **Fix these first** — they fail silently, with no compiler error |
+| Raw option-key strings found? | Still work — the SDK translates them. Only `"CaptureVideoAdaptive"` must change |
 | Feedback call sites found? | Feedback needs the separate `BugseeFeedback` package |
 | Swift files found? | Show Swift init code |
 | Objective-C files found? | Show Objective-C init code |
@@ -130,12 +131,17 @@ Skip this phase for a fresh install. Run it whenever Phase 1 found existing Bugs
 
 Work in this order — it is not arbitrary:
 
-1. **Replace hard-coded option strings first.** This is the only change that produces no
-   build error. `@"ShakeToReport"` and the rest still compile and still run in 7.x, and
-   Bugsee ignores them and uses its defaults. Swap each one for the constant in the
-   [option tables](https://docs.bugsee.com/sdk/ios/v7/migration/#2-option-keys) — grouped
-   by area as `BugseeOptionDetect*`, `BugseeOptionCapture*`, `BugseeOptionReporting*`,
-   `BugseeOptionConfig*` and `BugseeOptionPerformance*`.
+1. **Handle the two things that change behavior without any build error.**
+   - `@"CaptureVideoAdaptive"` is the one 6.x option name the SDK does not translate, so it
+     is dropped silently. Replace it with `BugseeOptionCaptureVideoAdaptive`.
+   - Five defaults moved between 6.x and 7.x — shake-to-report is now on, screenshot-to-report
+     is now off, exit and early-crash detection are now on, and adaptive capture is now on.
+     Ask the user whether the app relies on any of them and pin those explicitly. See
+     [Defaults that changed](https://docs.bugsee.com/sdk/ios/v7/migration/#3-defaults-that-changed).
+
+   Every other 6.x option name — constant or plain string — keeps working; renaming those to
+   the [new constants](https://docs.bugsee.com/sdk/ios/v7/migration/#2-option-keys) is
+   optional cleanup, and the only way to reach the settings 7.x adds.
 2. **Build.** Everything below surfaces as a compiler error, so let the build drive the
    rest.
 3. **Apply the renames** in the table below.
@@ -301,7 +307,7 @@ options.maxRecordingTime = 60;
 [Bugsee launchWithToken:@"<your_app_token>" options:options];
 ```
 
-> **Never pass raw option strings.** `@"ShakeToReport"` and friends resolved in 6.x and are ignored in 7.x, with no warning and no crash. Always use the constants.
+> **One option name is not translated.** 6.x names still work, as constants or plain strings — except `@"CaptureVideoAdaptive"`, which is dropped silently. Prefer the `BugseeOption*` constants in new code: the settings 7.x adds exist only under those names.
 
 Commonly used option keys:
 
@@ -312,8 +318,8 @@ Commonly used option keys:
 | `BugseeOptionCaptureNetwork` | `YES` | Network traffic capture. |
 | `BugseeOptionCaptureBreadcrumbs` | `NO` | Automatic breadcrumb collection (new in 7.x). |
 | `BugseeOptionDetectAndReportCrash` | `YES` | Crash capture. |
-| `BugseeOptionReportingTriggerByShake` | `NO` | Shake-to-report gesture. |
-| `BugseeOptionReportingTriggerByScreenshot` | `YES` | Screenshot-to-report trigger. |
+| `BugseeOptionReportingTriggerByShake` | `YES` | Shake-to-report gesture. Was `NO` in 6.x. |
+| `BugseeOptionReportingTriggerByScreenshot` | `NO` | Screenshot-to-report trigger. Was `YES` in 6.x. |
 | `BugseeOptionConfigDuration` | `60` | Max recording duration, seconds. |
 | `BugseeOptionConfigWifiOnlyUpload` | `NO` | Restrict uploads to Wi-Fi. |
 | `BugseeOptionPerformanceMonitoring` | `YES` | APM master switch. |

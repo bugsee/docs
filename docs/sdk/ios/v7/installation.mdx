@@ -74,7 +74,7 @@ version ranges, so `from:` and "Up to Next Major Version" will not resolve a 7.x
 
 In 7.x the feedback/chat feature is a separate package, `BugseeFeedback`, layered on top of
 the core SDK. It is published alongside the beta; see
-[Feedback moved to its own package](/sdk/ios/v7/migration#4-feedback-moved-to-its-own-package)
+[Feedback moved to its own package](/sdk/ios/v7/migration#5-feedback-moved-to-its-own-package)
 for the call sites.
 
 ## Initialization
@@ -159,8 +159,9 @@ Bugsee.launch(token: "<your_app_token>", options: options)
 </Tabs>
 
 :::note
-Passing raw strings such as `"ShakeToReport"` instead of the constants does not work in
-7.x — the option is ignored without any warning. Always use the constants. See
+6.x option names still work — written as constants or as plain strings, the SDK translates
+them. The one exception is `"CaptureVideoAdaptive"`, which is dropped; use
+`BugseeOptionCaptureVideoAdaptive`. See
 [Option keys](/sdk/ios/v7/migration#2-option-keys).
 :::
 

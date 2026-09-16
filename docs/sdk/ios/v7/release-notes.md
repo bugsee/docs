@@ -23,8 +23,10 @@ list of API changes and the order to apply them in.
 
 - Every option constant is renamed into the `BugseeOption*` family, grouped by area:
   `BugseeOptionDetect*`, `BugseeOptionCapture*`, `BugseeOptionReporting*`,
-  `BugseeOptionConfig*`, `BugseeOptionPerformance*`. Launch options passed as hard-coded
-  strings rather than constants are no longer recognized and fall back to the defaults.
+  `BugseeOptionConfig*`, `BugseeOptionPerformance*`. The 6.x names still work, as constants
+  or as plain strings, with one exception: `CaptureVideoAdaptive` is not translated and its
+  `BugseeCaptureVideoAdaptiveKey` constant is removed — use
+  `BugseeOptionCaptureVideoAdaptive`.
 - Feedback is no longer part of the core framework. It ships as a separate Swift package,
   `BugseeFeedback`, reached through `BugseeFeedback.shared`.
   `showFeedbackController`, `setDefaultFeedbackGreeting:` and the
