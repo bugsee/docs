@@ -1,0 +1,319 @@
+---
+title: "Installation"
+description: "Installing and initializing the Bugsee iOS SDK 7.x beta via Swift Package Manager, including debug-only and TestFlight-only setups."
+sidebar_position: 1
+slug: "/sdk/ios/v7/installation"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::note
+This page documents Bugsee iOS SDK 7.x, currently in beta. Upgrading from 6.x? See the
+[migration guide](/sdk/ios/v7/migration). For the previous release, see the
+[6.x installation guide](/sdk/ios/installation).
+:::
+
+## Requirements
+
+| | |
+| --- | --- |
+| iOS | 13.0 or later |
+| tvOS | 13.0 or later |
+| visionOS | 1.0 or later |
+
+6.x supported iOS 12; 7.x raises the minimum to iOS 13. tvOS and visionOS are new in 7.x.
+
+:::warning
+Simulator slices are built without the native crash reporter, so crash capture is
+unavailable there. Run on a real device to exercise crash reporting.
+:::
+
+## Add the package
+
+7.x is distributed through Swift Package Manager, from the same repository as the stable
+line:
+
+```
+https://github.com/bugsee/spm
+```
+
+In Xcode choose **File → Add Package Dependencies…**, paste that URL, and set the
+dependency rule to **Exact Version**, entering the 7.x version.
+
+For a package manifest:
+
+```swift
+// swift-tools-version: 5.9
+import PackageDescription
+
+let package = Package(
+    name: "YourApp",
+    platforms: [
+        .iOS(.v13),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/bugsee/spm", exact: "7.x"),
+    ],
+    targets: [
+        .target(
+            name: "YourApp",
+            dependencies: [
+                // The package identity is "spm" — the last path component of the URL.
+                .product(name: "Bugsee", package: "spm"),
+            ]
+        ),
+    ]
+)
+```
+
+`exact:` is required for a beta. Swift Package Manager keeps pre-release versions out of
+version ranges, so `from:` and "Up to Next Major Version" will not resolve a 7.x beta.
+
+### Optional: in-app feedback
+
+In 7.x the feedback/chat feature is a separate package, `BugseeFeedback`, layered on top of
+the core SDK. It is published alongside the beta; see
+[Feedback moved to its own package](/sdk/ios/v7/migration#4-feedback-moved-to-its-own-package)
+for the call sites.
+
+## Initialization
+
+Locate your app delegate and launch the SDK in
+`application:didFinishLaunchingWithOptions:`:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+@import Bugsee;
+
+//...
+
+- (BOOL)application:(UIApplication *)application
+    didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    // ...other initialization code
+
+    [Bugsee launchWithToken:@"<your_app_token>"];
+
+    return YES;
+}
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+import Bugsee
+
+//...
+
+func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    // ...other initialization code
+
+    Bugsee.launch(token: "<your_app_token>")
+
+    return true
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Launching with options
+
+Options are passed either as a `BugseeOptions` object or as a dictionary keyed by the
+`BugseeOption*` constants.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.shakeToReport = YES;
+
+// Options that have no BugseeOptions property are set by key:
+[options updateLaunchOptions:@{
+    BugseeOptionCaptureBreadcrumbs : @YES,
+}];
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.defaultOptions()
+options.shakeToReport = true
+
+// Options that have no BugseeOptions property are set by key:
+options.updateLaunchOptions([
+    BugseeOptionCaptureBreadcrumbs: true,
+])
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+:::note
+Passing raw strings such as `"ShakeToReport"` instead of the constants does not work in
+7.x — the option is ignored without any warning. Always use the constants. See
+[Option keys](/sdk/ios/v7/migration#2-option-keys).
+:::
+
+### Knowing when the SDK is running
+
+Capture is brought up off the main thread, so `launchWithToken:` returns before the SDK is
+fully running. Use the `started:` completion block, or observe `status`:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee launchWithToken:@"<your_app_token>"
+                options:nil
+                started:^(BOOL success) {
+    NSLog(@"Bugsee started: %d", success);
+}];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.launch(token: "<your_app_token>", options: nil) { success in
+    print("Bugsee started: \(success)")
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Debug builds
+
+To build and enable Bugsee only in debug builds, keep it out of the release configuration
+and wrap every reference in your code with conditional compilation flags.
+
+In a `Package.swift`, attach a condition to the product dependency so it is linked in debug
+builds only:
+
+```swift
+// swift-tools-version: 5.9
+import PackageDescription
+
+let package = Package(
+    name: "YourApp",
+    platforms: [
+        .iOS(.v13),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/bugsee/spm", exact: "7.x"),
+    ],
+    targets: [
+        .target(
+            name: "YourApp",
+            dependencies: [
+                .product(
+                    name: "Bugsee",
+                    package: "spm",
+                    condition: .when(configuration: .debug)
+                ),
+            ]
+        ),
+    ]
+)
+```
+
+In an Xcode project, exclude the Bugsee framework from the release configuration in your
+build settings instead.
+
+Either way, wrap the call sites:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+#ifdef DEBUG
+@import Bugsee;
+#endif
+
+// ...
+
+#ifdef DEBUG
+[Bugsee launchWithToken:@"<your_app_token>"];
+#endif
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+#if DEBUG
+import Bugsee
+#endif
+
+// ...
+
+#if DEBUG
+Bugsee.launch(token: "<your_app_token>")
+#endif
+```
+
+  </TabItem>
+</Tabs>
+
+## TestFlight builds
+
+It makes sense in some cases to enable Bugsee on builds distributed through TestFlight but
+keep it disabled on builds distributed through the App Store. There is an easy way to
+detect a TestFlight build at runtime.
+
+:::warning
+Application crashes can be intercepted by the system instead of Bugsee for builds installed
+via TestFlight. You can disable the "Share With App Developers" system option on test
+devices in *Settings > Privacy & Security > Analytics & Improvements*.
+:::
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+- (BOOL)application:(UIApplication *)application
+    didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    // ...other initialization code
+
+    if ([[[[NSBundle mainBundle] appStoreReceiptURL] lastPathComponent] isEqualToString:@"sandboxReceipt"]) {
+        // We are in TestFlight, enable Bugsee!
+        [Bugsee launchWithToken:@"<your_app_token>"];
+    }
+
+    return YES;
+}
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    // ...other initialization code
+
+    let isRunningTestFlightBeta = Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+    if isRunningTestFlightBeta {
+        Bugsee.launch(token: "<your_app_token>")
+    }
+
+    return true
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Crash symbolication
+
+Uploading dSYM files works exactly as in 6.x — follow the
+[crash symbolication guide](/sdk/ios/symbolication).

@@ -1,0 +1,889 @@
+---
+title: "Migrating from 6.x to 7.x"
+description: "Step-by-step guide for upgrading an iOS app from Bugsee SDK 6.x to 7.x, covering option keys, the Feedback package, renamed methods, and new capabilities."
+sidebar_position: 0
+slug: "/sdk/ios/v7/migration"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::note
+This guide targets the 7.x release line, currently in beta. If you are setting up a
+brand-new project, start from the [7.x installation guide](/sdk/ios/v7/installation)
+instead. For 6.x installs, see the [6.x installation guide](/sdk/ios/installation).
+:::
+
+This guide walks through every public-API change between Bugsee iOS SDK 6.x and 7.x.
+
+:::note[TL;DR]
+7.x keeps the shape of the 6.x API, but much of it moved. Many 6.x methods still exist
+under a new name, the option keys changed, feedback left the core framework for its own
+package, and the minimum deployment target is now iOS 13. You will need code changes; a
+drop-in version bump is not possible.
+:::
+
+---
+
+## 1. Requirements and dependency
+
+### 1.1 Deployment target
+
+The minimum deployment target moves from **iOS 12 to iOS 13**. Raise it in your target's
+build settings before upgrading.
+
+7.x also ships tvOS and visionOS slices:
+
+| Platform | 6.x | 7.x |
+| --- | --- | --- |
+| iOS | 12.0 | **13.0** |
+| tvOS | _(not shipped)_ | 13.0 |
+| visionOS | _(not shipped)_ | 1.0 |
+
+Simulator slices are built without the native crash reporter, exactly as in 6.x — run on a
+real device to exercise crash capture.
+
+### 1.2 Dependency
+
+7.x is distributed through Swift Package Manager. The repository is unchanged —
+`https://github.com/bugsee/spm` — so an existing integration only needs its dependency
+rule changed to **Exact Version** with the 7.x beta tag. See the
+[7.x installation guide](/sdk/ios/v7/installation) for details.
+
+---
+
+## 2. Option keys
+
+:::danger[Check this before anything else]
+Option names are no longer the same text behind the scenes. If you typed them out as plain
+strings — `@"VideoEnabled"`, `@"ShakeToReport"` — your app still builds and still runs, but
+Bugsee no longer recognizes them and uses its defaults instead.
+:::
+
+### 2.1 Detection
+
+| 6.x | 7.x |
+| --- | --- |
+| `BugseeCrashReportKey` | `BugseeOptionDetectAndReportCrash` |
+| `BugseeAppLaunchCrashDetectionKey` | `BugseeOptionDetectAndReportEarlyCrash` |
+| `BugseeDetectAppExitKey` | `BugseeOptionDetectAndReportExit` |
+| `BugseeKillDetectionKey` | `BugseeOptionDetectAndReportKill` |
+| _(not available)_ | `BugseeOptionDetectAndReportAnomaly` |
+| _(not available)_ | `BugseeOptionDetectAndReportHang` |
+| _(not available)_ | `BugseeOptionDetectAndReportHangFairLevel` |
+| _(not available)_ | `BugseeOptionDetectAndReportHangMediumLevel` |
+| _(not available)_ | `BugseeOptionDetectAndReportHangSevereLevel` |
+| _(not available)_ | `BugseeOptionDetectAndReportHttpErrors` |
+| _(not available)_ | `BugseeOptionDetectAndReportMainThreadMisuse` |
+| _(not available)_ | `BugseeOptionDetectCrashFillEmptyExceptionStacks` |
+| _(not available)_ | `BugseeOptionDetectCrashSwiftAsyncStackTraces` |
+| _(not available)_ | `BugseeOptionDetectFrustration` |
+
+### 2.2 Capture
+
+| 6.x | 7.x |
+| --- | --- |
+| `BugseeCaptureAVPlayerKey` | `BugseeOptionCaptureAVPlayer` |
+| `BugseeMonitorBluetoothStatusKey` | `BugseeOptionCaptureBluetoothStatus` |
+| `BugseeMonitorDiskSpaceKey` | `BugseeOptionCaptureDiskSpace` |
+| `BugseeCaptureLogsKey` | `BugseeOptionCaptureLogs` |
+| `BugseeEnableMachExceptionsKey` | `BugseeOptionCaptureMachExceptions` |
+| `BugseeMonitorNetworkKey` | `BugseeOptionCaptureNetwork` |
+| `BugseeMaxNetworkBodySizeKey` | `BugseeOptionCaptureNetworkBodySizeLimit` |
+| `BugseeSanitizeNetworkDataKey` | `BugseeOptionCaptureNetworkUseDefaultSanitizer` |
+| `BugseeCaptureOSLogsKey` | `BugseeOptionCaptureOSLogs` |
+| `BugseeEnableOnDeviceSymbolicationKey` | `BugseeOptionCaptureOnDeviceSymbolication` |
+| `BugseeScreenshotEnabledKey` | `BugseeOptionCaptureScreenshot` |
+| `BugseeStatusBarInfoKey` | `BugseeOptionCaptureStatusBarInfo` |
+| `BugseeVideoEnabledKey` | `BugseeOptionCaptureVideo` |
+| `BugseeCaptureVideoAdaptiveKey` | `BugseeOptionCaptureVideoAdaptive` |
+| `BugseeFrameRateKey` | `BugseeOptionCaptureVideoFrameRate` |
+| `BugseeMaxFrameRateKey` | `BugseeOptionCaptureVideoMaxFramerate` |
+| `BugseeMinFrameRateKey` | `BugseeOptionCaptureVideoMinFramerate` |
+| `BugseeVideoScaleKey` | `BugseeOptionCaptureVideoScale` |
+| `BugseeViewHierarchyEnabledKey` | `BugseeOptionCaptureViewHierarchy` |
+| `BugseeMonitorWebSocketKey` | `BugseeOptionCaptureWebSocket` |
+| _(not available)_ | `BugseeOptionCaptureBreadcrumbs` |
+| _(not available)_ | `BugseeOptionCaptureBreadcrumbsExtras` |
+| _(not available)_ | `BugseeOptionCaptureCameraPreview` |
+| _(not available)_ | `BugseeOptionCaptureDeviceAndNetworkNames` |
+| _(not available)_ | `BugseeOptionCaptureLogsLevel` |
+| _(not available)_ | `BugseeOptionCaptureNetworkBodyWithoutType` |
+| _(not available)_ | `BugseeOptionCaptureNetworkOnLaunch` |
+| _(not available)_ | `BugseeOptionCaptureSampleBufferDisplayLayer` |
+| _(not available)_ | `BugseeOptionCaptureScreenshotScale` |
+| _(not available)_ | `BugseeOptionCaptureVideoPrivacyBlur` |
+| _(not available)_ | `BugseeOptionCaptureVideoQuality` |
+| _(not available)_ | `BugseeOptionCaptureWebViewAdvanced` |
+| _(not available)_ | `BugseeOptionCaptureWebViewReportTrigger` |
+
+### 2.3 Reporting
+
+| 6.x | 7.x |
+| --- | --- |
+| `BugseeDefaultBugPriorityKey` | `BugseeOptionReportingDefaultBugPriority` |
+| `BugseeDefaultCrashPriorityKey` | `BugseeOptionReportingDefaultCrashPriority` |
+| `BugseeDefaultErrorPriorityKey` | `BugseeOptionReportingDefaultErrorPriority` |
+| `BugseeScreenshotToReportKey` | `BugseeOptionReportingTriggerByScreenshot` |
+| `BugseeShakeToReportKey` | `BugseeOptionReportingTriggerByShake` |
+| `BugseeReportDescriptionRequiredKey` | `BugseeOptionReportingUIDescriptionRequired` |
+| `BugseeReportEmailRequiredKey` | `BugseeOptionReportingUIEmailRequired` |
+| `BugseeReportLabelsEnabledKey` | `BugseeOptionReportingUILabelsEnabled` |
+| `BugseeReportLabelsRequiredKey` | `BugseeOptionReportingUILabelsRequired` |
+| `BugseeReportPrioritySelectorKey` | `BugseeOptionReportingUIPrioritySelectorEnabled` |
+| `BugseeStyleKey` | `BugseeOptionReportingUIStyle` |
+| `BugseeReportSummaryRequiredKey` | `BugseeOptionReportingUISummaryRequired` |
+
+### 2.4 Configuration
+
+| 6.x | 7.x |
+| --- | --- |
+| `BugseeBuildTargetKey` | `BugseeOptionConfigBuildTarget` |
+| `BugseeBuildTypeKey` | `BugseeOptionConfigBuildType` |
+| `BugseeMaxRecordingTimeKey` | `BugseeOptionConfigDuration` |
+| `BugseeMaxDataSizeKey` | `BugseeOptionConfigMaxDataSize` |
+| `BugseeWifiOnlyUploadKey` | `BugseeOptionConfigWifiOnlyUpload` |
+| _(not available)_ | `BugseeOptionConfigNotifyFlushDelay` |
+
+### 2.5 Performance
+
+| 6.x | 7.x |
+| --- | --- |
+| `BugseePerformanceAdaptiveSamplingKey` | `BugseeOptionPerformanceAdaptiveSampling` |
+| `BugseePerformanceMonitoringKey` | `BugseeOptionPerformanceMonitoring` |
+| `BugseePerformanceSampleRateKey` | `BugseeOptionPerformanceSampleRate` |
+
+### 2.6 Options that have no `BugseeOptions` property
+
+Most of the settings 7.x adds exist only as keys. Reach them through the dictionary launch
+overload, or fold them into a `BugseeOptions` object with `updateLaunchOptions:`:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.videoEnabled = YES;
+
+[options updateLaunchOptions:@{
+    BugseeOptionDetectAndReportHang : @YES,
+    BugseeOptionCaptureBreadcrumbs  : @YES,
+}];
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.defaultOptions()
+options.videoEnabled = true
+
+options.updateLaunchOptions([
+    BugseeOptionDetectAndReportHang: true,
+    BugseeOptionCaptureBreadcrumbs: true,
+])
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+---
+
+## 3. Launching and lifecycle
+
+### 3.1 Dictionary launch has a new Swift label
+
+In 6.x both launch overloads carried the Swift name `launch(token:options:)` and Swift
+picked one by argument type. In 7.x the dictionary overload is spelled out:
+
+| 6.x (Swift) | 7.x (Swift) |
+| --- | --- |
+| `Bugsee.launch(token:options:)` _(dictionary)_ | `Bugsee.launch(token:dictionaryOptions:)` |
+| `Bugsee.launch(token:options:)` _(`BugseeOptions`)_ | `Bugsee.launch(token:options:)` |
+| `Bugsee.relaunch(options:)` _(dictionary)_ | `Bugsee.relaunch(dictionaryOptions:)` |
+| `Bugsee.relaunch(options:)` _(`BugseeOptions`)_ | `Bugsee.relaunch(options:)` |
+
+Objective-C selectors are unchanged: `launchWithToken:andOptions:` and
+`launchWithToken:options:`.
+
+### 3.2 `pause` and `resume` are gone
+
+`+[Bugsee pause]` and `+[Bugsee resume]` are removed.
+
+:::caution[Blackout is not a drop-in replacement]
+6.x `pause` suspended video **and** the loggers. 7.x
+[blackout](#71-blackout) suppresses only what describes the screen — logs, network events
+and traces keep being captured. If you relied on `pause` to stop *all* capture, use
+`+[Bugsee stop:]` and launch again afterwards.
+:::
+
+### 3.3 New: observing SDK status
+
+Bugsee finishes starting up in the background, so `launchWithToken:` returns a moment
+before recording is actually live. 7.x lets you see when that moment passes.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// BugseeStatusStopped / Launching / Launched / Stopping
+if ([Bugsee sharedInstance].status == BugseeStatusLaunched) { /* ... */ }
+
+// Or observe every transition, on the main thread:
+- (void)bugseeDidChangeStatus:(BugseeStatus)status {
+    NSLog(@"Bugsee status: %ld", (long)status);
+}
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+if Bugsee.sharedInstance()?.status == BugseeStatusLaunched { /* ... */ }
+
+// Or observe every transition, on the main thread:
+func bugsee(didChangeStatus status: BugseeStatus) {
+    print("Bugsee status: \(status)")
+}
+```
+
+  </TabItem>
+</Tabs>
+
+The existing `launched` property still works, but it is `NO` during the short `Launching`
+window. Prefer `status`, or the `started:` completion block, for launch sequencing.
+
+### 3.4 New: `relaunch` with no arguments
+
+`+[Bugsee relaunch]` restarts with the current app token and default options.
+
+### 3.5 `deleteCollectedDataOnDevice:` gained a parameter
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// 6.x
+[Bugsee deleteCollectedDataOnDevice:^(BOOL success) { /* ... */ }];
+
+// 7.x — YES also deletes intermediate capture data
+[Bugsee deleteCollectedDataOnDevice:YES completion:^(BOOL success) { /* ... */ }];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// 6.x
+Bugsee.deleteCollectedData { success in /* ... */ }
+
+// 7.x
+Bugsee.deleteCollectedDataOnDevice(includingIntermediate: true) { success in /* ... */ }
+```
+
+  </TabItem>
+</Tabs>
+
+Recording must be stopped with `+[Bugsee stop:]` before calling it, as in 6.x.
+
+---
+
+## 4. Feedback moved to its own package
+
+Feedback is no longer part of the core framework. Every 6.x feedback symbol is removed, and
+the feature ships as a separate Swift package, `BugseeFeedback`, layered on top of the core
+SDK.
+
+:::info[Package coordinates]
+The `BugseeFeedback` package URL is published together with the 7.x beta. This section
+covers the code changes; the dependency line is added to the
+[installation guide](/sdk/ios/v7/installation) once the package is available.
+:::
+
+### 4.1 API mapping
+
+| 6.x | 7.x |
+| --- | --- |
+| `+[Bugsee showFeedbackController]` | `[BugseeFeedback.shared showFeedbackUI]` |
+| `+[Bugsee setDefaultFeedbackGreeting:]` | `[BugseeFeedback.shared setGreeting:]` |
+| `-[BugseeDelegate bugsee:didReceiveNewFeedback:]` | `-[BugseeFeedbackListener onNewMessagesReceived:]` |
+| _(not available)_ | `-[BugseeFeedbackListener onNewMessageSent:]` |
+| _(not available)_ | `[BugseeFeedback.shared setListener:]` |
+
+### 4.2 Register the extension
+
+The package registers itself with the SDK on load. You can also register it explicitly:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+@import BugseeFeedback;
+
+[BugseeFeedback register];
+[Bugsee launchWithToken:@"<your_app_token>"];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+import BugseeFeedback
+
+BugseeFeedback.register()
+Bugsee.launch(token: "<your_app_token>")
+```
+
+  </TabItem>
+</Tabs>
+
+### 4.3 Rewrite the call sites
+
+Call the feature through `BugseeFeedback.shared`.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// 6.x
+[Bugsee showFeedbackController];
+[Bugsee setDefaultFeedbackGreeting:@"How can we help?"];
+
+// 7.x
+[BugseeFeedback.shared showFeedbackUI];
+[BugseeFeedback.shared setGreeting:@"How can we help?"];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// 6.x
+Bugsee.showFeedbackController()
+Bugsee.setDefaultFeedbackGreeting("How can we help?")
+
+// 7.x
+BugseeFeedback.shared.showFeedbackUI()
+BugseeFeedback.shared.setGreeting("How can we help?")
+```
+
+  </TabItem>
+</Tabs>
+
+### 4.4 New-message callbacks
+
+The `bugsee:didReceiveNewFeedback:` delegate method is replaced by a dedicated listener on
+the extension.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// 7.x — your type conforms to BugseeFeedbackListener
+[BugseeFeedback.shared setListener:self];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// 7.x — your type conforms to BugseeFeedbackListener
+BugseeFeedback.shared.setListener(self)
+```
+
+  </TabItem>
+</Tabs>
+
+### 4.5 The extension registry is public
+
+`registerExt(_:)` and `ext(_:)` are the general mechanism for optional 7.x modules, not a
+feedback-specific hook. Feedback is the first module to use it.
+
+---
+
+## 5. Event filters
+
+### 5.1 `removeNetworkEventFilter` is gone
+
+All three filter setters now accept `nil` to remove the filter.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// 6.x
+[Bugsee removeNetworkEventFilter];
+
+// 7.x
+[Bugsee setNetworkEventFilter:nil];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// 6.x
+Bugsee.removeNetworkEventFilter()
+
+// 7.x
+Bugsee.setNetworkEventFilter(nil)
+```
+
+  </TabItem>
+</Tabs>
+
+### 5.2 New: a block-based log filter
+
+6.x could only filter console logs through the `bugseeFilterLog:completionHandler:`
+delegate method. 7.x adds `setLogEventFilter:`, which runs alongside it.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee setLogEventFilter:^(BugseeLogEvent *event, BugseeLogFilterDecisionBlock decision) {
+    if ([event.text containsString:@"password"]) {
+        decision(nil);   // drop it
+        return;
+    }
+    decision(event);
+}];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.setLogEventFilter { event, decision in
+    if event.text.contains("password") {
+        decision(nil)    // drop it
+        return
+    }
+    decision(event)
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### 5.3 New: a breadcrumb filter
+
+Breadcrumbs are new in 7.x, and `setBreadcrumbFilter:` is the only filter they pass
+through. See [§8.3](#83-breadcrumbs).
+
+---
+
+## 6. Manual reports
+
+### 6.1 `showReportController` is now `showReportDialog`
+
+| 6.x | 7.x |
+| --- | --- |
+| `showReportController` | `showReportDialog` |
+| `showReportControllerWithSummary:description:severity:` | `showReportDialogWithSummary:description:severity:` |
+| `showReportControllerWithSummary:description:severity:labels:` | `showReportDialogWithSummary:description:severity:labels:` |
+| _(not available)_ | `showReportDialogWithSummary:description:` |
+
+### 6.2 `includeVideo:` overloads are gone
+
+Both `uploadWithSummary:…:includeVideo:` and `logError:labels:includeVideo:` lose their
+last parameter. Drop the argument; the shorter overloads already exist in 6.x.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// 6.x
+[Bugsee uploadWithSummary:@"s" description:@"d" severity:BugseeSeverityHigh
+                   labels:nil includeVideo:YES];
+
+// 7.x
+[Bugsee uploadWithSummary:@"s" description:@"d" severity:BugseeSeverityHigh labels:nil];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// 6.x
+Bugsee.upload(summary: "s", description: "d", severity: BugseeSeverityHigh,
+              labels: nil, includeVideo: true)
+
+// 7.x
+Bugsee.upload(summary: "s", description: "d", severity: BugseeSeverityHigh, labels: nil)
+```
+
+  </TabItem>
+</Tabs>
+
+7.x also adds a two-argument `uploadWithSummary:description:`.
+
+### 6.3 `uploadReport:` is `upload(_:)` in Swift
+
+The Objective-C selector `uploadReport:` is unchanged; only its Swift name moves from
+`Bugsee.uploadReport(_:)` to `Bugsee.upload(_:)`. A `completion:` overload is new.
+
+---
+
+## 7. Privacy and secure areas
+
+### 7.1 Blackout
+
+New in 7.x. Blackout suppresses every capture that describes the screen — video (a black
+placeholder frame), the report screenshot, touch and gesture recording, and the view
+hierarchy. Logs, network events and traces keep flowing.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee startBlackout];
+// ... sensitive flow ...
+[Bugsee endBlackout];
+
+BOOL hidden = [Bugsee isBlackout];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.startBlackout()
+// ... sensitive flow ...
+Bugsee.endBlackout()
+
+let hidden = Bugsee.isBlackout()
+```
+
+  </TabItem>
+</Tabs>
+
+Two lifecycle events report the transitions: `BugseeLifecycleEventBlackoutStarted` and
+`BugseeLifecycleEventBlackoutEnded`.
+
+### 7.2 Secure views
+
+`setView:asHidden:` is split into two explicit methods.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// 6.x
+[Bugsee setView:myView asHidden:YES];
+[Bugsee setView:myView asHidden:NO];
+
+// 7.x
+[Bugsee addSecureView:myView];
+[Bugsee removeSecureView:myView];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// 6.x
+Bugsee.setView(myView, asHidden: true)
+Bugsee.setView(myView, asHidden: false)
+
+// 7.x
+Bugsee.addSecureView(myView)
+Bugsee.removeSecureView(myView)
+```
+
+  </TabItem>
+</Tabs>
+
+`isViewHidden:` is removed with no replacement. The `UIView.bugseeProtectedView` property
+and `addSecureWebView:` are unchanged.
+
+### 7.3 Secure rectangles renamed
+
+`Rect` becomes `Rectangle` throughout. Behaviour and the ten-rectangle limit are unchanged.
+
+| 6.x | 7.x |
+| --- | --- |
+| `addSecureRect:` | `addSecureRectangle:` |
+| `removeSecureRect:` | `removeSecureRectangle:` |
+| `removeAllSecureRects` | `removeAllSecureRectangles` |
+| `getAllSecureRects` | `getAllSecureRectangles` |
+| `setInternalSecureRectangles:` | _(removed)_ |
+
+---
+
+## 8. New capabilities
+
+### 8.1 User identity replaces email
+
+`setEmail:` recorded an email address. 7.x records an arbitrary user identifier instead —
+same storage, wider meaning.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// 6.x
+[Bugsee setEmail:@"user@example.com"];
+NSString *email = [Bugsee getEmail];
+[Bugsee clearEmail];
+
+// 7.x
+[Bugsee setUserIdentifier:@"user@example.com"];
+NSString *identifier = [Bugsee getUserIdentifier];
+[Bugsee clearUserIdentifier];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// 6.x
+Bugsee.setEmail("user@example.com")
+let email = Bugsee.getEmail()
+Bugsee.clearEmail()
+
+// 7.x
+Bugsee.setUserIdentifier("user@example.com")
+let identifier = Bugsee.getUserIdentifier()
+Bugsee.clearUserIdentifier()
+```
+
+  </TabItem>
+</Tabs>
+
+### 8.2 Reading all attributes
+
+7.x adds `getAllAttributes`, which returns every attribute currently set.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+NSDictionary<NSString *, id> *all = [Bugsee getAllAttributes];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let all = Bugsee.getAllAttributes()
+```
+
+  </TabItem>
+</Tabs>
+
+### 8.3 Breadcrumbs
+
+New in 7.x. The SDK collects breadcrumbs automatically once
+`BugseeOptionCaptureBreadcrumbs` is enabled, and you can add your own. Build the breadcrumb
+through the SDK's factory, then record it.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+id<BGSBreadcrumb> crumb = [[Bugsee getExchangeFactory] createBreadcrumb];
+crumb.category = @"checkout";
+crumb.message  = @"Coupon applied";
+crumb.type     = @"user";
+[crumb setDataValue:@"SUMMER25" forKey:@"code"];
+
+[Bugsee addBreadcrumb:crumb];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let crumb = Bugsee.getExchangeFactory().createBreadcrumb()
+crumb.category = "checkout"
+crumb.message  = "Coupon applied"
+crumb.type     = "user"
+crumb.setDataValue("SUMMER25", forKey: "code")
+
+Bugsee.addBreadcrumb(crumb)
+```
+
+  </TabItem>
+</Tabs>
+
+:::caution[Network filters do not reach breadcrumbs]
+`setBreadcrumbFilter:` is the only filter breadcrumbs pass through. A URL your
+`setNetworkEventFilter:` (or `bugseeFilterNetworkEvent:`) drops or rewrites still appears in
+the breadcrumb trail unless you repeat the rule in the breadcrumb filter. The built-in
+query-parameter sanitizer does apply to breadcrumb URLs; a custom filter does not.
+:::
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee setBreadcrumbFilter:^(id<BGSBreadcrumb> crumb,
+                              BugseeBreadcrumbFilterDecisionBlock decision) {
+    if ([crumb.category isEqualToString:@"internal"]) {
+        decision(nil);   // drop it
+        return;
+    }
+    decision(crumb);
+}];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.setBreadcrumbFilter { crumb, decision in
+    if crumb.category == "internal" {
+        decision(nil)    // drop it
+        return
+    }
+    decision(crumb)
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### 8.4 Notification relay
+
+New in 7.x. `notify` sends a lightweight notification straight to the app's configured
+messaging integrations, bypassing the bug-report pipeline — no video, logs or events are
+attached. Notifications are persisted offline and uploaded in batches.
+
+There is no option to enable or disable it; it is available once the SDK has launched, and
+calls made before launch are ignored. `title` must be non-empty.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee notifyWithTitle:@"Checkout failed"];
+
+[Bugsee notifyWithTitle:@"Checkout failed"
+                   body:@"Payment provider returned 502"
+               severity:BugseeSeverityHigh
+                 fields:@{@"orderId": @"A-1721"}
+                 urgent:YES];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.notify(title: "Checkout failed")
+
+Bugsee.notify(title: "Checkout failed",
+              body: "Payment provider returned 502",
+              severity: BugseeSeverityHigh,
+              fields: ["orderId": "A-1721"],
+              urgent: true)
+```
+
+  </TabItem>
+</Tabs>
+
+The shorter overloads are non-urgent. `BugseeOptionConfigNotifyFlushDelay` (also the
+`notifyFlushDelay` property) sets the upload coalescing delay in milliseconds; the default
+is 1000, and 0 flushes as soon as the item is persisted.
+
+---
+
+## 9. Appearance
+
+`+[Bugsee appearance]` is renamed to `+[Bugsee getAppearance]`. `BugseeTheme` itself is
+unchanged — every color and string property behaves exactly as in 6.x.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// 6.x
+[Bugsee appearance].reportBackgroundColor = UIColor.blackColor;
+
+// 7.x
+[Bugsee getAppearance].reportBackgroundColor = UIColor.blackColor;
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// 6.x
+Bugsee.appearance().reportBackgroundColor = .black
+
+// 7.x
+Bugsee.getAppearance().reportBackgroundColor = .black
+```
+
+  </TabItem>
+</Tabs>
+
+---
+
+## 10. Cheat sheet
+
+Renamed — a plain search and replace does most of these.
+
+| 6.x | 7.x |
+| --- | --- |
+| `Bugsee.appearance()` | `Bugsee.getAppearance()` |
+| `Bugsee.activeSpan()` | `Bugsee.getActiveSpan()` |
+| `registerEvent:` | `event:` |
+| `registerEvent:withParams:` | `event:params:` (params now optional) |
+| `traceKey:withValue:` | `trace:value:` |
+| `registerNetworkEvent:` | `addNetworkEvent:` |
+| `registerNetworkEvent:needsToBeFiltered:` | `addNetworkEvent:requiresFiltering:` |
+| `removeNetworkEventFilter` | `setNetworkEventFilter:nil` |
+| `showReportController*` | `showReportDialog*` |
+| `setView:asHidden:` | `addSecureView:` / `removeSecureView:` |
+| `addSecureRect:` | `addSecureRectangle:` |
+| `removeSecureRect:` | `removeSecureRectangle:` |
+| `removeAllSecureRects` | `removeAllSecureRectangles` |
+| `getAllSecureRects` | `getAllSecureRectangles` |
+| `setEmail:` / `getEmail` / `clearEmail` | `setUserIdentifier:` / `getUserIdentifier` / `clearUserIdentifier` |
+| `clearAllAttribute` | `clearAllAttributes` |
+| `testExceptionCrash` / `testSignalCrash` | `testCrash` |
+| `deleteCollectedDataOnDevice:` | `deleteCollectedDataOnDevice:completion:` |
+| `uploadWithSummary:…:includeVideo:` | `uploadWithSummary:description:severity:labels:` |
+| `logError:labels:includeVideo:` | `logError:labels:` |
+| Swift `Bugsee.launch(token:options:)` _(dictionary)_ | Swift `Bugsee.launch(token:dictionaryOptions:)` |
+| Swift `Bugsee.relaunch(options:)` _(dictionary)_ | Swift `Bugsee.relaunch(dictionaryOptions:)` |
+| Swift `Bugsee.uploadReport(_:)` | Swift `Bugsee.upload(_:)` |
+| `showFeedbackController` | `[BugseeFeedback.shared showFeedbackUI]` |
+| `setDefaultFeedbackGreeting:` | `[BugseeFeedback.shared setGreeting:]` |
+| `bugsee:didReceiveNewFeedback:` | `BugseeFeedbackListener` |
+
+Removed with no direct replacement.
+
+| 6.x | Notes |
+| --- | --- |
+| `pause` / `resume` | Closest is `startBlackout` / `endBlackout`, which is narrower — see [§3.2](#32-pause-and-resume-are-gone) |
+| `getDeviceId` | — |
+| `accessToken` | — |
+| `isViewHidden:` | — |
+| `hideKeyboard:` | — |
+| `setInternalSecureRectangles:` | — |
+| `logAssert:withLocation:` | Use `logException:reason:options:completion:` |
+| `log:level:timestamp:` | `log:level:enforceFiltering:` takes the slot but does something different — it opts the message into the log filter |
+| `setDefaultCrashPriority:` | `BugseeOptionReportingDefaultCrashPriority` at launch |
+| `setDefaultErrorPriority:` | `BugseeOptionReportingDefaultErrorPriority` at launch |
+| `setDefaultBugPriority:` | `BugseeOptionReportingDefaultBugPriority` at launch |
+| `BugseeAttachmentOverrideLabels` | — |
+| `BugseeOptions.captureVideoAdaptive` | `BugseeOptionCaptureVideoAdaptive` key |
+
+---
+
+## 11. Recommended migration order
+
+1. **Raise the deployment target to iOS 13** and switch the dependency to 7.x.
+2. **Fix the option names first,** using the tables in [§2](#2-option-keys). Do this before anything else — it is the one change Xcode cannot find for you.
+3. **Build, and work down the errors.** Everything in §3 to §9 shows up as a build error, and the [cheat sheet](#10-cheat-sheet) covers most of them.
+4. **Rewire feedback** through `BugseeFeedback` ([§4](#4-feedback-moved-to-its-own-package)) — the largest single change, and the only one that needs a new dependency.
+5. **Look at your `pause` calls by hand.** This is the one place where the obvious replacement is not quite right — blackout keeps recording logs and network traffic.
+6. **(Optional)** Adopt breadcrumbs, `notify`, and the new detection options.
+
+Build and run after each step — the 7.x APIs are designed to be adopted in this order.

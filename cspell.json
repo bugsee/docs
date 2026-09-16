@@ -215,6 +215,9 @@
         "normalising",
         "finalisation",
         "KAPT",
-        "dexing"
+        "dexing",
+        "IPHONEOS",
+        "pbxproj",
+        "comlletion"
     ]
 }

@@ -64,6 +64,28 @@ const sidebars: SidebarsConfig = {
         { type: "doc", id: "sdk/ios/app-kills", label: "Kill detection" },
         { type: "doc", id: "sdk/ios/release-notes", label: "Release notes" },
         { type: "doc", id: "sdk/ios/faq", label: "FAQ" },
+        {
+          type: "category",
+          label: "iOS v7.x (beta)",
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              id: "sdk/ios/v7/migration",
+              label: "Migrating from 6.x",
+            },
+            {
+              type: "doc",
+              id: "sdk/ios/v7/installation",
+              label: "Installation",
+            },
+            {
+              type: "doc",
+              id: "sdk/ios/v7/release-notes",
+              label: "Release notes",
+            },
+          ],
+        },
       ],
     },
     {
