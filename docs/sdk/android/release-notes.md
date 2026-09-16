@@ -660,7 +660,7 @@ First public beta of the 7.x line — a ground-up rewrite of every major subsyst
 - `LaunchOptions` is gone — configure via a `Map<String, Serializable>` keyed by `Options.*` constants, or via manifest `meta-data`.
 - Network-client helpers for OkHttp, Ktor, and Picasso have been replaced by extension modules. OkHttp 2 is no longer supported.
 - Feedback now lives in the `bugsee-android-feedback` extension; access it via `Bugsee.ext(Feedback.class)`.
-- Option keys have been renamed across detection, capture, reporting UI, and trigger groups. `IssueSeverity.Critical` has been removed.
+- Option keys have been renamed across detection, capture, reporting UI, and trigger groups.
 - `pause()`, `resume()`, and `isResumed()` have been replaced by the blackout APIs `startBlackout()` and `endBlackout()`.
 - `getDeviceId()`, `setEmail()`, and `getEmail()` have been removed. Use `setUserIdentifier()` / `getUserIdentifier()` / `clearUserIdentifier()`.
 - The `ExtendedReport` / `ExtendedReportCreatedListener` / `setReportFieldsFilter` / `setReportAttachmentsProvider` APIs are replaced by the new `Report` and `ReportHandler` contracts. `createReport(...)` is unchanged; a new `showReportDialog(...)` API has been added for opening the report UI directly.
