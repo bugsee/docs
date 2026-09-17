@@ -1175,6 +1175,7 @@ const sidebars: SidebarsConfig = {
         { type: "doc", id: "cli/update", label: "Updating the CLI" },
         { type: "doc", id: "cli/exit-codes", label: "Exit codes & telemetry" },
         { type: "doc", id: "cli/commands", label: "Command reference" },
+        { type: "doc", id: "cli/release-notes", label: "Release notes" },
       ],
     },
     { type: "doc", id: "tools/sourcemaps", label: "Source maps" },
