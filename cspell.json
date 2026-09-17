@@ -218,6 +218,10 @@
         "dexing",
         "IPHONEOS",
         "pbxproj",
-        "comlletion"
+        "comlletion",
+        "MSVC",
+        "rustls",
+        "RUSTSEC",
+        "libil"
     ]
 }
