@@ -312,8 +312,8 @@ Commonly used option keys:
 | `BugseeOptionCaptureNetwork` | `YES` | Network traffic capture. |
 | `BugseeOptionCaptureBreadcrumbs` | `NO` | Automatic breadcrumb collection (new in 7.x). |
 | `BugseeOptionDetectAndReportCrash` | `YES` | Crash capture. |
-| `BugseeOptionReportingTriggerByShake` | `NO` | Shake-to-report gesture. |
-| `BugseeOptionReportingTriggerByScreenshot` | `YES` | Screenshot-to-report trigger. |
+| `BugseeOptionReportingTriggerByShake` | `YES` | Shake-to-report gesture. Was `NO` in 6.x. |
+| `BugseeOptionReportingTriggerByScreenshot` | `NO` | Screenshot-to-report trigger. Was `YES` in 6.x. |
 | `BugseeOptionConfigDuration` | `60` | Max recording duration, seconds. |
 | `BugseeOptionConfigWifiOnlyUpload` | `NO` | Restrict uploads to Wi-Fi. |
 | `BugseeOptionPerformanceMonitoring` | `YES` | APM master switch. |
