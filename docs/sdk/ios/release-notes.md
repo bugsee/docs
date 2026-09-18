@@ -5,6 +5,16 @@ sidebar_position: 12
 slug: "/sdk/ios/release-notes"
 ---
 
+## 6.3.2 (August 20 2026)
+- Feat: Reports now record how they were triggered (crash, error, shake, screenshot, in-code call, and so on), so the dashboard can filter and route on it.
+- Change: Capture of `os_log` / `Logger` statements has been permanently disabled — it polled the log store for the whole session and cost battery with no upper bound. `BugseeCaptureOSLogsKey` / `captureOSLogs` are still accepted for source and binary compatibility, but now have no effect. Use `Bugsee.log(...)` or `NSLog` for logs you want captured.
+- Fix: Rare crash caused by network capture releasing an `NSURLSession` it did not own.
+- Fix: APM no longer instruments Bugsee's own network traffic, which could surface Bugsee endpoints in your performance data.
+- Fix: The app launch trace could be dropped when startup instrumentation bailed early on a condition that later recovered.
+
+## 6.3.1 (July 31 2026)
+- Fix: dSYM upload could fail on Python 3.14 when BugseeAgent fell back to its Python upload path.
+
 ## 6.3.0 (July 31 2026)
 - Feat: Opt-in adaptive screen capture — lowers the video frame rate when the UI is idle (`BugseeCaptureVideoAdaptiveKey` / `CaptureVideoAdaptive`, default: NO).
 - Fix: iOS 27 compatibility improvements.
