@@ -121,7 +121,7 @@ Bugsee.relaunch(options: options)
 |BugseeScreenshotEnabledKey|YES|Attach screenshot to a report. Note, that if `BugseeVideoEnabledKey` option is *NO*, default value of this option is *NO* too.|
 |BugseeViewHierarchyEnabledKey|YES|Capture view hierarchy for Bug and Error reports|
 |BugseeCaptureLogsKey|YES|Automatically capture all console logs|
-|BugseeCaptureOSLogsKey|NO|Automatically capture OSLog and Logger print statements.<br />_**IMPORTANT**: Experimental feature_|
+|BugseeCaptureOSLogsKey|NO|_**Deprecated**_. Capture of OSLog and Logger statements was permanently disabled in 6.3.2. The option is still accepted so existing code keeps building, but setting it has no effect|
 |BugseeMonitorNetworkKey|YES|Capture network traffic|
 |BugseeMaxNetworkBodySizeKey|@20480|The maximal size of network request/response body (in bytes).|
 |BugseeSanitizeNetworkDataKey|YES|Automatically redact values of known sensitive keys (PII) from URL query parameters, HTTP headers, and JSON bodies of captured network events. Applies only when no custom network filter (delegate or block) is set. See [Privacy and Network traffic](/sdk/ios/privacy/network/).|
