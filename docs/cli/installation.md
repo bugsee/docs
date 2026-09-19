@@ -28,8 +28,9 @@ a hint.
 powershell -ExecutionPolicy ByPass -c "irm https://download.bugsee.com/cli/install.ps1 | iex"
 ```
 
-This installs to `%LOCALAPPDATA%\Bugsee\bin`. Only 64-bit (x86_64/AMD64) Windows
-is published.
+This installs to `%LOCALAPPDATA%\Bugsee\bin`. Both 64-bit (x86_64/AMD64) and
+ARM64 Windows are published; the script detects the host architecture, including
+when a 32-bit PowerShell is running on 64-bit Windows.
 
 ## Installer environment overrides
 
@@ -57,8 +58,21 @@ work for direct installs too.
 | Channel | Package |
 |---|---|
 | npm | `@bugsee/cli` (per-OS `optionalDependencies` pull the right binary) |
+| npm | `@bugsee/bugsee-cli` (single package; downloads the binary on install) |
 | Homebrew | the Bugsee tap |
 | Maven Central | `com.bugsee:bugsee-cli` (consumed by the Android Gradle plugin) |
+
+:::tip
+Prefer `@bugsee/cli` in JavaScript projects. Its binary ships inside per-platform
+packages, so npm resolves exactly one and **nothing runs at install time** — it
+works under `--ignore-scripts`, under a lockfile-pinned CI install, and offline
+from a warm cache. `@bugsee/bugsee-cli` is the older single package whose
+`postinstall` downloads the binary on every fresh install; it is still published
+and supported, but it needs network access at install time.
+:::
+
+Published platforms: macOS arm64 and x86_64, Linux x86_64 and aarch64, Windows
+x86_64 and arm64.
 
 :::note
 You normally don't install the CLI yourself for an SDK integration — the Bugsee

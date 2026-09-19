@@ -38,6 +38,7 @@ See [Configuration](/cli/configuration/) for details.
 | `upload build-info` | Upload per-build metadata sidecars in one bundle. | [Builds](/cli/builds/#upload-build-info) |
 | `pack` | Build the normalized upload ZIP locally, without uploading. | [Builds](/cli/builds/#pack) |
 | `xcode post-action` | Run the whole iOS build-publish flow from an Xcode post-action. | [iOS build publishing](/cli/xcode/) |
+| `xcode upload-dsyms` | Upload dSYMs from an Xcode Run Script build phase, with no build registration. | [iOS build publishing](/cli/xcode/#xcode-upload-dsyms) |
 | `vcs-metadata` | Resolve VCS metadata (provider, commit, branch, PR, repo). | [Metadata resolvers](/cli/metadata/#vcs-metadata) |
 | `ios-deps collect` | Collect the iOS dependency graph from lockfiles + linked frameworks. | [Metadata resolvers](/cli/metadata/#ios-deps-collect) |
 | `build-env xcode-version` | Resolve the dotted Xcode version. | [Metadata resolvers](/cli/metadata/#build-env) |
