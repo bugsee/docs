@@ -14,6 +14,64 @@ date for you.
 
 ## 0.7.x
 
+### 0.7.10 (September 18 2026)
+
+Source maps upload several at a time, an empty build can be a no-op, and a path
+you named but the tool can't find now stops the run.
+
+- **Source-map uploads run concurrently.** `debug-files upload --type sourcemaps`
+  sent one map at a time, so a web build with one map per chunk spent most of its
+  upload time waiting on round-trips. Against a server with 50 ms of latency, 60
+  maps went from 7.1 s to 1.3 s and 200 maps from 23.6 s to 4.1 s.
+
+  `--concurrency <N>` (`1..=32`) sets a ceiling; left unset it scales with the
+  batch — one upload per 8 maps, at least 4, at most 8. `--concurrency 1`
+  restores the previous sequential behaviour. An explicit `--uuid` forces
+  sequential uploads whatever the ceiling, because it keys every map under one
+  ID and those registrations must not race. See
+  [Source maps](/cli/sourcemaps/#concurrency).
+
+- **`--allow-empty` makes "nothing to upload" a success.** A monorepo package
+  built without maps, or a framework whose server output has none, previously
+  failed the caller's build with exit `10`. The flag applies to
+  `--type sourcemaps`; `xcode upload-dsyms` already treated nothing-to-upload as
+  success.
+
+- **A path that does not exist is now an error.**
+  `debug-files upload --type sourcemaps dist/ missing/` used to warn about
+  `missing/`, upload what it found under `dist/`, and exit `0`. It now exits `10`
+  with `path does not exist: …` before uploading anything — a path you named and
+  the tool can't find is a typo or a build that didn't run, and half-uploading a
+  build's symbols hides that until a crash is unsymbolicated. Drop the missing
+  path from the invocation if you relied on the old leniency. The bundler plugins
+  pass a single output directory and are unaffected.
+
+- **A failed upload stops the batch.** Now that uploads are concurrent, the first
+  failure cancels the rest instead of letting every remaining map pack, register
+  and transfer into a server that has already refused one — a rejected token on a
+  200-chunk build was 400 doomed round-trips.
+
+- **`--concurrency` and `--allow-empty` are rejected for other `--type`s**
+  (exit `20`) rather than accepted and ignored, so a caller who passed
+  `--allow-empty` to keep a build green can't still get exit `10`.
+
+- **A throttled request is retried.** The symbol-metadata and build-registration
+  `POST`s are sent without status retries, because a 5xx may mean the server
+  processed the request and only the response was lost. A `429` carries no such
+  ambiguity — the request was rejected without being processed — so it is now
+  retried with the usual backoff. Those requests are also the first thing a
+  server throttles when several uploads run at once.
+
+### 0.7.9 (September 17 2026)
+
+- **`sourcemaps inject` registers a debug ID another tool already wrote.** A
+  bundle carrying its own `//# debugId=` — Rollup 4 writes one with
+  `output.sourcemapDebugIds` — counted as already injected, so it never got the
+  `globalThis._bugseeDebugIds` runtime registration and the SDK could not attach
+  its debug ID to a crash frame. Such a bundle now keeps its ID, since its map
+  already carries it, and gains only the registration, without a second comment.
+  It is still never re-keyed. See [Source maps](/cli/sourcemaps/).
+
 ### 0.7.8 (September 17 2026)
 
 Re-uploading a symbol the server already has no longer fails, including in an

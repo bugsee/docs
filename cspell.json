@@ -222,6 +222,9 @@
         "MSVC",
         "rustls",
         "RUSTSEC",
+        "jsbundle",
+        "rustflags",
+        "sandboxing",
         "libil"
     ]
 }
