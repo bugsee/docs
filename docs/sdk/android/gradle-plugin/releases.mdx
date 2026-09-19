@@ -9,6 +9,44 @@ slug: "/sdk/android/gradle-plugin/releases"
 
 ## 4.x (SDK 7.x)
 
+### 4.0.7 (September 2026)
+
+Fixes a serious regression in 4.0.6 that silently disabled every Bugsee extension. Everyone on
+4.0.6 should upgrade.
+
+- **Extensions work again.** In apps built against the published SDK, 4.0.6 removed the extension
+  providers from the manifest but never added the code that registers those extensions in their
+  place. NDK crash reporting, feedback, Compose, OkHttp, Ktor, Cronet and leak detection therefore
+  never ran, even though the build succeeded and the app worked normally. Because the
+  Compose extension was never installed, Compose content marked `bugseeSecure` was also **not
+  masked** in report screenshots. 4.0.7 registers every extension again.
+
+  :::caution
+  If you cannot upgrade yet, stay on 4.0.5 or set `optimizeExtensionsLoading` to `false` in the
+  `bugsee {}` block.
+  :::
+
+- **Your own providers are no longer removed.** From 4.0.0-beta10 through 4.0.6, the plugin
+  removed any `ContentProvider` named like `Bugsee<Something>InitProvider` from the APK, whatever
+  its package, with no warning. A provider of that name in your app or in a wrapper SDK was
+  therefore silently missing at runtime. Only Bugsee's own extension providers are consolidated
+  now; any other provider is left alone.
+
+- **The build fails instead of shipping extensions that never start.** If the plugin would remove
+  extension providers without being able to register them, for example with an SDK older than
+  7.0.0-beta11 declared with a non-literal version such as `7.+`, the build now fails with a
+  message naming the providers and telling you to turn off `optimizeExtensionsLoading`.
+  Previously such a build passed.
+
+- **Re-uploading a symbol file that the server already has is treated as success.** The server's
+  "already uploaded" reply was reported as a failed upload, so the same file was uploaded again on
+  every build. This affected the built-in fallback uploader only; `bugsee-cli` fixed the same
+  problem in 0.7.8.
+
+- **Auto-added SDK floor raised to 7.2.0.** When the plugin adds `com.bugsee:bugsee-android` for an
+  app that has not declared it, the version range now starts at 7.2.0. Apps that declare the SDK
+  version themselves are unaffected.
+
 ### 4.0.6 (August 2026)
 
 Prevents Bugsee from being added to build variants that do not include the SDK, and fixes two crashes and a
@@ -33,6 +71,8 @@ only.
 - **Manifest optimization is applied only when your SDK version supports it.**
 
 - **Third-party libraries that arrive already minified are left as they are.**
+
+Superseded by 4.0.7 — 4.0.6 silently disables every Bugsee extension, so upgrade past it.
 
 ### 4.0.5 (August 2026)
 
@@ -114,6 +154,88 @@ First stable release of the 4.x plugin line, paired with the stable [Bugsee Andr
 
 - **Minimum compatible SDK pinned to 7.0.0.** The plugin's core-SDK auto-load and version gating now target the stable `7.0.0` line. See [Requirements & compatibility](/sdk/android/gradle-plugin/requirements).
 - Plugin **4.x pairs with SDK 7.x**; plugin 3.x remains paired with SDK 6.x — the two lines are not interchangeable.
+
+### 4.0.0-beta15 (June 20 2026)
+
+Fixes two problems with automatically added dependencies. Upgrade if you rely on the plugin to add
+the SDK or its extensions for you.
+
+- **Auto-added extensions resolve again.** Extension modules added by the plugin (for example
+  `bugsee-android-ndk`) were requested at the plugin's version rather than the SDK's, so the
+  dependency could not be found and the build failed. They now use the same version as the core SDK.
+- **Apps that rely on the plugin to add the SDK are instrumented again.** When the core SDK was
+  added automatically rather than declared, logging, thread, network and app-startup
+  instrumentation of your own code was skipped. It now applies.
+- **Auto-added SDK floor raised to 7.0.0-beta13.**
+
+### 4.0.0-beta14 (June 18 2026)
+
+Build uploads move to `bugsee-cli`, and automatic SDK and leak-module additions become
+configurable.
+
+- **Uploads go through `bugsee-cli` by default.** Mapping, native symbol and build uploads now use
+  the `bugsee-cli` binary, which the plugin downloads, verifies and caches automatically and keeps
+  up to date. If the CLI cannot be obtained or run, the plugin falls back to its built-in uploader,
+  so a CLI problem does not fail the build. Settings: `uploader`, `cliPath`, `cliVersion` and
+  `cliAutoUpdate`.
+- **Automatic addition of the core SDK can be turned off.** When your app does not declare
+  `com.bugsee:bugsee-android`, the plugin adds it within a bounded version range instead of an
+  open-ended one. Turn this off with `sdkAutoLoad.set(false)`. See
+  [Auto-load](/sdk/android/gradle-plugin/auto-load).
+- **`leak { enabled }` adds the leak-detection module**, the same way `ndk { enabled }` adds the NDK
+  module.
+- **Writes a `build-actions.json` file** listing the uploads the plugin handled, so the Bugsee
+  fastlane plugin can skip repeating them.
+- **Fixes a crash at class load** (`VerifyError`) in code using `HttpEngine`, caused by incorrectly
+  sized injected bytecode.
+- **Build metadata with non-ASCII characters** (such as a branch name) is now sent as UTF-8 instead
+  of being garbled.
+- **An invalid app token now fails the build-info upload** instead of being reported as success.
+- **GitLab tag pipelines** no longer report the tag as the branch name.
+- **Auto-added SDK floor raised to 7.0.0-beta12.**
+
+### 4.0.0-beta13 (June 2 2026)
+
+- **The SDK is detected through intermediate modules.** If your app gets
+  `com.bugsee:bugsee-android` through another module of your project (for example a Kotlin
+  Multiplatform shared module) rather than declaring it directly, the plugin now recognizes it.
+  Previously its instrumentation and extension registration silently switched themselves off in
+  that setup.
+
+### 4.0.0-beta12 (May 29 2026)
+
+- **Exclude classes from instrumentation.** `bugsee { instrumentation { excludes.add("com.example.Foo") } }`
+  keeps the named classes out of all Bugsee bytecode instrumentation. It accepts exact class names,
+  package prefixes and `*` wildcards.
+- **Instrumentation failures name the class.** If instrumenting a class fails, the build error now
+  names the class and method instead of showing a bare ASM stack trace. You can then exclude that
+  class to unblock your build.
+- **Dependencies are now matched by the vulnerability scan.** The uploaded dependency list lacked
+  the field the scan uses to identify Maven packages, so no Android dependency was ever matched.
+- **Dependency collection works with the configuration cache.**
+
+### 4.0.0-beta11 (May 28 2026)
+
+Symbol-matching, build and runtime fixes. Recommended for everyone on the beta line.
+
+- **Build IDs match the code that shipped.** In minified builds the build ID is now derived from
+  the R8 mapping file, and mapping, bundle and native symbol uploads use that same ID. Otherwise it
+  is derived from the build's inputs rather than generated at random, so building the APK and the
+  AAB in separate Gradle runs gives both the same ID.
+- **Fixes an app crash in subclasses of `FileInputStream` or `FileOutputStream`.** Their `super(…)`
+  constructor calls were rewritten in a way Android's verifier rejects.
+- **OkHttp requests are no longer recorded more than once.** A client created from another with
+  `newBuilder()` received an extra Bugsee interceptor each time, so one request could appear several
+  times. This relies on a runtime helper that ships in Bugsee Android SDK 7.0.0-beta12.
+- **Library modules are left untouched.** Applying the plugin to a library module could remove
+  extension providers from the resulting AAR and stop those extensions from starting in apps that
+  use the library.
+- **Mapping and native symbol uploads work with the configuration cache.**
+- **Successful uploads are no longer reported as failures** when storage or a proxy answers with a
+  2xx code other than 200. Chunked uploads now also send the dependency and build-timing details.
+- **The `MINIMAL` startup tier now instruments only `Application` and `ContentProvider`
+  startup**, as documented.
+- Hardened manifest XML parsing and made the upload hash cache safe for parallel builds.
 
 ### 4.0.0-beta10 (May 26 2026)
 
