@@ -1,0 +1,226 @@
+---
+title: "Report handler"
+description: "Inspect, enrich, or scrub every Bugsee report before it is uploaded with the Android SDK's ReportHandler — callbacks, threading, timeouts, and attachments."
+sidebar_position: 5
+slug: "/sdk/android/report-handler"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+A **report handler** is the single place to inspect or rewrite a report before Bugsee uploads it. It runs for **every** outgoing report — crashes, handled errors, user-filed bug reports, and silent uploads alike — so it is the right hook for anything that must apply to all of them: tagging reports with your build variant, raising severity for a subset, attaching a config snapshot, or scrubbing text a user typed into the report form.
+
+Register one handler per process, as early as you can — typically right after `Bugsee.launch(...)`:
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.setReportHandler(new ReportHandler() {
+    @Override
+    public void onBeforeReportCreated(Report report, boolean isTerminating, Runnable completionCallback) {
+        report.setSummary("[" + BuildConfig.FLAVOR + "] " + report.getSummary());
+        completionCallback.run();
+    }
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.setReportHandler(object : ReportHandler {
+    override fun onBeforeReportCreated(report: Report, isTerminating: Boolean, completionCallback: Runnable) {
+        report.summary = "[${BuildConfig.FLAVOR}] ${report.summary}"
+        completionCallback.run()
+    }
+})
+```
+
+  </TabItem>
+</Tabs>
+
+Setting a new handler replaces the previous one. Pass `null` to remove it.
+
+## The two callbacks
+
+Both are `default` methods on the interface, so implement only the one you need.
+
+|Callback|When it runs|Use it for|
+|---|---|---|
+|`onBeforeReportCreated`|Before the report payload is assembled|Rewriting summary, description, severity, labels, and attributes; scrubbing user-entered text|
+|`onAfterReportCreated`|After assembly, before upload|Adding attachments, and any change that should see the assembled report|
+
+Each receives the `Report`, an `isTerminating` flag, and a `completionCallback`.
+
+## Completing the callback
+
+The reporting pipeline **waits** for you: nothing is uploaded until you call `completionCallback.run()`. This is what makes asynchronous work possible — you can hand the report off to a background thread and complete the callback when that work finishes.
+
+Because a handler that never completes would strand the report, the SDK arms a timeout. If `completionCallback` has not fired within `ReportHandlerCallbackTimeout` seconds (default **30**), it fires automatically and the report proceeds with whatever changes you had made by then. Set the option to `0` to disable the timeout.
+
+```xml
+<meta-data
+    android:name="com.bugsee.option.config.report-handler-callback-timeout"
+    android:value="10" />
+```
+
+The callback is safe to invoke more than once — only the first call advances the pipeline.
+
+## Threading
+
+Non-terminating reports invoke your callbacks on the **main thread**. Keep them short: anything slow — file I/O, network calls, compression — should run on your own background thread, with `completionCallback.run()` called when it finishes.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+@Override
+public void onAfterReportCreated(Report report, boolean isTerminating, Runnable completionCallback) {
+    if (isTerminating) {
+        // The process is going away — do the minimum, inline.
+        completionCallback.run();
+        return;
+    }
+    executor.execute(() -> {
+        writeDiagnosticsAttachment(report);
+        completionCallback.run();
+    });
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+override fun onAfterReportCreated(report: Report, isTerminating: Boolean, completionCallback: Runnable) {
+    if (isTerminating) {
+        // The process is going away — do the minimum, inline.
+        completionCallback.run()
+        return
+    }
+    executor.execute {
+        writeDiagnosticsAttachment(report)
+        completionCallback.run()
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Crashes and other terminating reports
+
+When `isTerminating` is `true` the process is about to exit, and the rules change:
+
+- Your callback runs on a background thread the SDK already had alive, and the SDK waits only a **few seconds** before finalizing the report anyway.
+- Work you schedule for later is lost — the process will not be there to run it. Do the minimum inline and return.
+- `completionCallback` no longer gates anything. Call it immediately or not at all; the pipeline continues either way.
+- The `ReportHandlerCallbackTimeout` option does not apply to this path.
+
+A handler that behaves well on a crash therefore checks `isTerminating` first, as in the example above.
+
+## If your handler throws
+
+An exception thrown out of either callback is caught and logged, and the pipeline advances so the report is still delivered. Your changes up to the throw are kept. Don't rely on this — it exists so a bug in a handler cannot cost you reports.
+
+## What you can change
+
+The `Report` handed to you exposes:
+
+|Area|Members|
+|---|---|
+|Identity|`getId()`, `getType()`|
+|Text|`getSummary()` / `setSummary(...)`, `getDescription()` / `setDescription(...)`, `getEmail()` / `setEmail(...)`|
+|Severity|`getSeverity()` / `setSeverity(IssueSeverity)`|
+|Labels|`getLabels()`, `addLabel(...)`, `addLabels(...)`, `setLabels(...)`, `clearLabels()`|
+|Attributes|`getAttributes()`, `getAttribute(...)`, `setAttribute(...)`, `removeAttribute(...)`, `clearAllAttributes()`|
+|Attachments|`getAttachments()`, `createAndAddAttachment(...)`, `clearAttachments()`|
+|Screenshots|`getScreenshot(...)`, `setScreenshot(...)`, `setScreenshotAsync(...)`, `enumerateScreenshots(...)`|
+
+Attributes set here apply to this report only; for values that should ride along with every report, see [user & session data](/sdk/android/user-session-data).
+
+## Attachments
+
+Attachments are added from `onAfterReportCreated`. `createAndAddAttachment(name)` returns a mutable `Attachment` that you describe with fluent setters and fill through its output stream:
+
+- `setName(String)` — display name shown in the dashboard.
+- `setFileName(String)` — file name, with extension, used for the download.
+- `setMimeType(String)` — MIME type, for example `"application/json"`.
+- `openStream()` — opens a truncating `OutputStream` for the attachment's bytes. It may return `null` if the attachment cannot be opened, and you own closing it.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Attachment attachment = report.createAndAddAttachment("config")
+        .setName("config")
+        .setFileName("config.json")
+        .setMimeType("application/json");
+
+try (OutputStream out = attachment.openStream()) {
+    if (out != null) {
+        out.write(loadConfigSnapshot());
+    }
+} catch (IOException ignored) {
+}
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+report.createAndAddAttachment("config")
+    .setName("config")
+    .setFileName("config.json")
+    .setMimeType("application/json")
+    .openStream()?.use { it.write(loadConfigSnapshot()) }
+```
+
+  </TabItem>
+</Tabs>
+
+A single report holds at most **1000** attachments. Past that the SDK logs a warning and skips the attachment — `createAndAddAttachment` still returns an object, but it is not part of the report. Keep attachments small regardless: they travel with the report on the user's connection.
+
+## Example: scrubbing sensitive text
+
+Anything a user types into the report form reaches you before it reaches Bugsee, which makes `onBeforeReportCreated` the place to redact it.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.setReportHandler(new ReportHandler() {
+    @Override
+    public void onBeforeReportCreated(Report report, boolean isTerminating, Runnable completionCallback) {
+        String description = report.getDescription();
+        if (description != null) {
+            report.setDescription(description.replaceAll("\\d{16}", "[CARD]"));
+        }
+        report.removeAttribute("internal_session_token");
+        completionCallback.run();
+    }
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.setReportHandler(object : ReportHandler {
+    override fun onBeforeReportCreated(report: Report, isTerminating: Boolean, completionCallback: Runnable) {
+        report.description = report.description?.replace(Regex("\\d{16}"), "[CARD]")
+        report.removeAttribute("internal_session_token")
+        completionCallback.run()
+    }
+})
+```
+
+  </TabItem>
+</Tabs>
+
+## See also
+
+- [Bug reporting](/sdk/android/manual/bug-reporting) — triggers, the report dialog, and programmatic report creation.
+- [Crash & error reporting](/sdk/android/manual/crash-error-reporting) — default severities and handled errors.
+- [Privacy and report fields](/sdk/android/privacy/report) — what reaches Bugsee, and the other privacy controls.

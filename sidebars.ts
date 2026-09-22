@@ -151,6 +151,7 @@ const sidebars: SidebarsConfig = {
             { type: "doc", id: "sdk/android/manual/crash-error-reporting", label: "Crash & error reporting" },
           ],
         },
+        { type: "doc", id: "sdk/android/report-handler", label: "Report handler" },
         {
           type: "category",
           label: "Data capture",
