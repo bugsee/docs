@@ -9,6 +9,7 @@
         "SIGSEGV",
         "uncatchable",
         "unredacted",
+        "apikey",
         "zstd",
         "dedup",
         "sourcebundle",
