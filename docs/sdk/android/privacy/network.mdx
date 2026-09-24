@@ -93,13 +93,14 @@ Bugsee.setNetworkEventFilter { event, callback ->
 
 Without a filter, Bugsee runs its default sanitizer on every network event
 (the `CaptureNetworkUseDefaultSanitizer` option, on by default). It replaces
-these values with `<redacted>`:
+these values with `<redacted>` (`%3Credacted%3E` inside URLs). Key matching is
+case-insensitive.
 
 - **Headers:** `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`,
   `X-Api-Key`, `X-Auth-Token`, `X-CSRF-Token`, `X-Forwarded-For`, `X-Real-IP`.
-- **URL query parameters and JSON or form bodies:** keys such as `pass`, `pin`,
-  `ssn`, `cvv`, `card_number`, `private_key`, `sid` and presigned-URL
-  signatures.
+- **URL query parameters and JSON, form-encoded or `key: value` line bodies:**
+  keys such as `pass`, `pin`, `ssn`, `cvv`, `card_number`, `private_key`, `sid`
+  and presigned-URL signatures.
 - **Any header, query or body key** whose name contains `password`, `passwd`,
   `passcode`, `secret`, `token`, `session` or `apikey` / `api_key` / `api-key`.
 - Sensitive query values quoted in error messages.
@@ -112,7 +113,8 @@ or [in the manifest](#declaring-the-filter-in-the-manifest), the default
 sanitizer no longer runs and your filter is the only redaction. A filter that
 only adds or renames a field records `Authorization` headers, cookies and
 `password` fields as they are. Removing the filter with
-`Bugsee.setNetworkEventFilter(null)` turns the default sanitizer back on.
+`Bugsee.setNetworkEventFilter(null)` turns the default sanitizer back on,
+unless you disabled `CaptureNetworkUseDefaultSanitizer`.
 :::
 
 To keep the built-in redaction and add your own, call
@@ -154,10 +156,11 @@ registration is required.
 You can also point Bugsee at a network filter from `AndroidManifest.xml`, with
 no code. Add a `com.bugsee.filter.network-event` `<meta-data>` whose value is a
 class that implements `EventFilter<NetworkEvent>` and has a public no-arg
-constructor. Bugsee installs it itself during launch, so it does not depend on
+constructor. Bugsee installs it itself as part of launch, so it does not depend on
 when your code runs. With auto-initialization, capture can start before your
 `Application.onCreate()`, and a filter set there in code misses what was
-captured before the call (those events get the built-in redaction instead).
+captured before the call (those events get the built-in redaction instead,
+when it is enabled).
 
 ```xml
 <application>
