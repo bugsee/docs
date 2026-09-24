@@ -160,6 +160,7 @@ Notes on the filter shape:
 - Event types are `NetworkEvent` / `LogEvent` in `com.bugsee.library.contracts`.
 - Mutators (`setUrl`, `setMethod`, `setBody`, headers, etc.) and `getBodyAbsenceReason()` are available.
 - The filter applies uniformly to events coming from every network extension — OkHttp, Ktor 2, Ktor 3, and Cronet all feed the same pipeline.
+- Installing a filter turns off the built-in redaction of credentials (`Authorization`, cookies, `password` and `token` fields); your filter must redact them, or call `NetworkDataSanitizer.sanitize(event)` to keep the built-in redaction. See [Privacy → Network traffic](/sdk/android/privacy/network#a-filter-replaces-the-built-in-redaction).
 
 See also the [Logs page](/sdk/android/logs) for the matching `setLogEventFilter(...)` API.
 

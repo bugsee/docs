@@ -77,8 +77,10 @@ Bugsee.setLogEventFilter { log, callback ->
 You can also point Bugsee at a log filter from `AndroidManifest.xml`, with no
 code. Add a `com.bugsee.filter.log-event` `<meta-data>` whose value is a class
 that implements `EventFilter<LogEvent>` and has a public no-arg constructor.
-The benefit: the filter is in force from the very first captured event, even
-under auto-initialization, before any of your own code runs.
+Bugsee installs it itself as part of launch, so it does not depend on when your
+code runs. With auto-initialization, capture can start before your
+`Application.onCreate()`, and a filter set there in code misses what was
+captured before the call, including logcat lines read before then.
 
 ```xml
 <application>
@@ -135,7 +137,8 @@ class MyLogFilter : EventFilter<LogEvent> {
 </Tabs>
 
 A filter set in code with `Bugsee.setLogEventFilter(...)` takes precedence over
-the manifest one. Because the class is referenced only by name, keep it from R8
+the manifest one; use one or the other, not both. Because the class is
+referenced only by name, keep it from R8
 — annotate it `@Keep` or add `-keep class com.example.MyLogFilter { <init>(); }`.
 
 The same mechanism is available for [network events](/sdk/android/privacy/network#declaring-the-filter-in-the-manifest)
