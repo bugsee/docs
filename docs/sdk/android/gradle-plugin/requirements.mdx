@@ -12,7 +12,7 @@ slug: "/sdk/android/gradle-plugin/requirements"
 | Plugin (`com.bugsee:bugsee-android-gradle-plugin`) | **4.0.0** |
 | Bugsee Android SDK (`com.bugsee:bugsee-android`) | **7.0.0** (min-compatible) |
 | Android Gradle Plugin (AGP) | **8.6.0** |
-| Gradle | **8.7+** |
+| Gradle | **8.7+** (Gradle 9 needs plugin **4.0.3+**, see [Gradle 9](#gradle-9)) |
 
 The Gradle plugin and the SDK runtime library are versioned independently but
 released as a **matched pair**. There is no cross-line compatibility — the
@@ -28,6 +28,59 @@ plugin expects the exact runtime-library shape shipped alongside it.
 - Plugin 4.x introduces new instrumentation hooks and auto-install rules keyed on the `bugsee-android-*` artifact names introduced in SDK 7.x; it cannot target the single-AAR 6.x layout.
 - Plugin 3.x has no knowledge of the 7.x module split, APM operation dispatch, Compose transforms, or the new manifest-metadata auto-launch, so SDK 7.x will not function correctly under it.
 :::
+
+## Gradle 9
+
+Gradle 9 is supported from plugin **4.0.3**. Upgrading from an earlier 4.0.x
+is a drop-in change: no DSL changes are needed.
+
+| Plugin | Gradle 8.x | Gradle 9.x |
+| --- | --- | --- |
+| 4.0.0 – 4.0.2 | ✅ | ❌ |
+| **4.0.3 and newer** | ✅ | ✅ |
+
+Plugin 4.0.0 – 4.0.2 call a Gradle API that Gradle 9 removed, so the build
+fails while the project is being configured:
+
+```text
+A problem occurred configuring project ':app'.
+> Failed to notify project evaluation listener.
+   > 'org.gradle.api.Project org.gradle.api.artifacts.ProjectDependency.getDependencyProject()'
+```
+
+If you see this error, upgrade the plugin to the [latest release](/sdk/android/gradle-plugin/releases).
+
+### Verified combinations
+
+Each combination below was built with plugin **4.0.7** as a minified release
+build (R8), checking bytecode instrumentation, `BUILD_UUID` manifest injection
+and the mapping upload. Plugin 4.0.3 – 4.0.6 were also verified on Gradle 9.8.0
+with AGP 9.4.1.
+
+| Gradle | AGP | Configuration cache | Result |
+| --- | --- | --- | --- |
+| 9.8.0 | 9.4.1 | ✅ | ✅ Also verified on a multi-module app (library module, product flavors, Compose, NDK) |
+| 9.7.0 | 9.4.1 | ✅ | ✅ |
+| 9.1.0 | 9.0.1 | Not tested | ✅ |
+| 9.0.0 | 8.13.2 | ✅ | ✅ |
+| 8.14.3 | 8.13.2 | Not tested | ✅ |
+
+The AGP and Gradle versions must also be compatible with each other; see
+Google's [AGP–Gradle compatibility table](https://developer.android.com/build/releases/about-agp#updating-gradle).
+For example, AGP 8.13 does not run on Gradle 9.7, with or without Bugsee.
+
+### AGP 9 and Kotlin
+
+AGP 9 compiles Kotlin itself. In a module built with AGP 9, do not apply the
+`org.jetbrains.kotlin.android` plugin. The build fails with the error below,
+whether or not the Bugsee plugin is applied:
+
+```text
+Cannot add extension with name 'kotlin', as there is an extension already registered with that name.
+```
+
+Remove `id("org.jetbrains.kotlin.android")` from the module's `plugins { }` block.
+Keep any other Kotlin compiler plugins you use, such as `org.jetbrains.kotlin.plugin.compose`.
 
 ## Minimum-compatible SDK version
 
