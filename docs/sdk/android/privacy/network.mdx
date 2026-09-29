@@ -155,9 +155,8 @@ headers, body and error messages, it has `sanitizeUrl(event)` and
 messages.
 
 :::note
-`Bugsee.getDefaultNetworkSanitizer()` is new in the next SDK release after
-7.2.0. On SDK 7.0.3 through 7.2.0, call the static
-`NetworkDataSanitizer.sanitize(event)` (package
+`Bugsee.getDefaultNetworkSanitizer()` is new in SDK 7.3.0. On SDK 7.0.3 through 7.2.0, call the
+static `NetworkDataSanitizer.sanitize(event)` (package
 `com.bugsee.library.shared.security.privacy`) instead; earlier versions have no
 public sanitizer. That class still works in later releases but is deprecated.
 
