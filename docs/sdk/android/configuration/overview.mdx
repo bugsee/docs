@@ -33,10 +33,13 @@ Every Bugsee SDK option can be set in two equivalent ways. The literal string ke
 | `Duration` | `com.bugsee.option.config.duration` | int (seconds) | `60` | Maximum length of the cyclical capture buffer (video, logs, breadcrumbs); older data rolls off once the window is full. |
 | `WifiOnlyUpload` | `com.bugsee.option.config.wifi-only-upload` | boolean | `false` | Defer report uploads until the device is on Wi-Fi. |
 | `ReportProcessingInProcess` | `com.bugsee.option.config.report-processing-in-process` | boolean | `true` | When `true`, report export and upload run in-process on background threads; when `false` they go through Android's `JobScheduler` so they survive process death, at the cost of upload latency. |
-| `ReportHandlerCallbackTimeout` | `com.bugsee.option.config.report-handler-callback-timeout` | int (seconds) | `30` | How long to wait for a `ReportHandler` completion callback before auto-firing it so the report isn't lost. `0` disables the timeout. Not applied to terminating (crash) sequences. |
+| `ReportHandlerCallbackTimeout` | `com.bugsee.option.config.report-handler-callback-timeout` | int (seconds) | `30` | How long to wait for a `ReportHandler` completion callback before auto-firing it so the report isn't lost. `0` disables the per-handler timeout; since 7.3.0 the whole handler chain for one callback is still capped at 60 s (or at this timeout, if longer). Not applied to terminating (crash) sequences. |
 | `NotifyFlushDelay` | `com.bugsee.option.config.notify-flush-delay` | int (ms) | `0` | Coalescing window before the [notification relay](/sdk/android/notification-relay) queue drains; `0` starts the drain as soon as a notification is persisted. Only affects the non-urgent, batched drain — not an urgent `notify()` skip-ahead POST. |
+| `MaxDataSize` | `com.bugsee.option.config.max-data-size` | int (MB) | `150` | Maximum disk space that reports waiting to be sent may occupy. When exceeded, whole pending reports are deleted — errors first, then bug reports, then crashes, oldest first within each — until they fit. The newest crash and any report being exported or uploaded are never deleted. Values below `10` are treated as `10`. *(7.3.0)* |
+| `MaxPendingReports` | `com.bugsee.option.config.max-pending-reports` | int | `30` | Maximum number of reports waiting to be sent; over it, pending reports are deleted in the same order as for `MaxDataSize`. Values below `1` are treated as `1`. *(7.3.0)* |
+| `MaxPendingReportAge` | `com.bugsee.option.config.max-pending-report-age` | int (days) | `30` | Maximum age of a report waiting to be sent; older reports are deleted whatever their type. `0` or a negative value turns aging off. *(7.3.0)* |
 
-`Duration` caps the cyclical capture buffer (video, logs, breadcrumbs) at the given number of seconds. `WifiOnlyUpload` defers report uploads until Wi-Fi. `ReportProcessingInProcess = false` routes report processing through `JobScheduler` so it survives process death (at the cost of upload latency). `ReportHandlerCallbackTimeout = 0` disables the timeout — but it doesn't apply to crash sequences. `NotifyFlushDelay` delays the notification-relay drain so nearby `Bugsee.notify(...)` calls can batch together.
+`Duration` caps the cyclical capture buffer (video, logs, breadcrumbs) at the given number of seconds. `WifiOnlyUpload` defers report uploads until Wi-Fi. `ReportProcessingInProcess = false` routes report processing through `JobScheduler` so it survives process death (at the cost of upload latency). `ReportHandlerCallbackTimeout = 0` disables the per-handler timeout (the 60 s chain cap still applies since 7.3.0) — and the timeout doesn't apply to crash sequences. `NotifyFlushDelay` delays the notification-relay drain so nearby `Bugsee.notify(...)` calls can batch together.
 
 <Tabs groupId="config">
   <TabItem value="manifest" label="AndroidManifest.xml">
@@ -80,6 +83,7 @@ The full set of detection options is documented on each detector's own page in [
 | `DetectFrustration` | `com.bugsee.option.detect.frustration` | boolean | `false` | Detect user-frustration patterns (rage taps, dead taps, stuck loading, frozen UI) and report them as simulated errors grouped by screen and element. |
 | `DetectAndReportExit` | `com.bugsee.option.detect.exit` | boolean | `true` | Detect and report application exits. The per-reason flags below select which exit reasons are reported. |
 | `DetectAndReportExitLowMemory` | `com.bugsee.option.detect.exit.low_memory` | boolean | `true` | Report exits where the OS killed the app to reclaim memory. |
+| `DetectAndReportExitLowMemoryBackgroundAsError` | `com.bugsee.option.detect.exit.bg_low_memory_as_error` | boolean | `false` | Report a low-memory kill of a process that was not in the foreground (importance foreground or foreground service) as a non-fatal error instead of a crash. Foreground kills stay crashes. Applies only on devices that report low-memory kills; elsewhere a background kill is already a non-fatal error. Requires `DetectAndReportExitLowMemory`. *(7.3.0)* |
 | `DetectAndReportExitNotResponding` | `com.bugsee.option.detect.exit.not_responding` | boolean | `true` | Report exits caused by the app not responding (ANR). |
 | `DetectAndReportExitNotRespondingAsCrash` | `com.bugsee.option.detect.exit.not_responding.as_crash` | boolean | `false` | Report ANR exits as crashes rather than as exits, so they group with crashes in the dashboard. Requires `DetectAndReportExitNotResponding`. *(7.1.0)* |
 | `DetectAndReportAnrSampling` | `com.bugsee.option.detect.anr.sampling` | boolean | `true` | Sample the main thread's stack during an ANR and attribute the report to the derived culprit frames rather than to a single snapshot taken once the OS confirms the ANR. Only has effect when `DetectAndReportExitNotResponding` is enabled. *(7.2.0)* |
@@ -235,7 +239,7 @@ See [Performance monitoring](/sdk/android/performance) for the APM overview.
 
 ## Enum reference
 
-Enum-typed options accept the enum constant programmatically, or the enum value **name** as a string in the manifest (for example, `android:value="Blocker"` for `IssueSeverity.Blocker`).
+Enum-typed options accept the enum constant programmatically, or the enum value **name** as a string in the manifest (for example, `android:value="Blocker"` for `IssueSeverity.Blocker`). Since 7.3.0 the launch map accepts the name as a string too, matched case-insensitively. An integer is not accepted in place of an enum constant in the map.
 
 | Enum | Values |
 | --- | --- |
@@ -263,6 +267,8 @@ Map<String, Serializable>   toMap();
 val opts: OptionsContainer = Bugsee.getLaunchOptions()
 val duration: Int = opts.getOption(Options.Duration, 60)
 ```
+
+`Bugsee.getHostLaunchOptions()` *(7.3.0)* returns only the options your app supplied — through `Bugsee.launch(...)` or manifest `<meta-data>` — without the SDK defaults merged in, as an unmodifiable `Map<String, Serializable>`. Only option keys the SDK recognizes are included, with the values it accepted. The map is replaced, not merged, by the next `launch()` or `relaunch()`.
 
 ## Worked examples
 
