@@ -41,9 +41,10 @@ is more reliable, and new options limit how much unsent report data stays on the
 
 **New features**
 
-- **Reports say what is missing, and why.** When a report's video, a screenshot, a capture stream
-  or its crash details could not be included, the report now lists that part as absent with a
-  reason, instead of leaving it out silently. Attachments are never listed as absent.
+- **Reports say what is missing, and why.** When a file that belongs to a report goes missing
+  before the report is sent, or a crash or error report has no crash details, the report now lists
+  that part as missing, with a reason, instead of leaving it out silently. Attachments are never
+  listed as missing.
 
 - **Limits on reports waiting to be sent.** Three new options cap how much unsent report data the
   SDK keeps on the device:
