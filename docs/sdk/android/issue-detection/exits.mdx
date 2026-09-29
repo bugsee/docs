@@ -70,6 +70,8 @@ Bugsee.launch(this, "<APP_TOKEN>", options);
 | Other | `DetectAndReportExitOther` | `com.bugsee.option.detect.exit.other` | `false` |
 | Unknown | `DetectAndReportExitUnknown` | `com.bugsee.option.detect.exit.unknown` | `false` |
 
+By default, low-memory kills are reported as crashes. To report a kill while the app was not in the foreground as a non-fatal error instead, set `DetectAndReportExitLowMemoryBackgroundAsError` (`com.bugsee.option.detect.exit.bg_low_memory_as_error`, default `false`, new in 7.3.0). Foreground kills stay crashes.
+
 The reasons map directly onto `ApplicationExitInfo.getReason()` codes — see [the platform reference](https://developer.android.com/reference/android/app/ApplicationExitInfo) for the upstream documentation.
 
 ## See also

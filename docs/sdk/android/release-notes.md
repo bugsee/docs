@@ -7,6 +7,232 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.3.0
+
+A security and reliability release. Reports no longer carry your app's request URLs or user values
+in the SDK's internal log, and they now say which of their parts is missing and why. Report video
+is more reliable, and new options limit how much unsent report data stays on the device.
+
+**Security**
+
+- **The SDK's internal log no longer records your app's URLs or user values.** In 7.0.0-beta1
+  through 7.2.0, the "Internal log" attached to every report could include:
+  - your app's HTTP request URLs, with any embedded credentials (`user:password@`) and full query
+    strings;
+  - values passed to `Bugsee.setUserIdentifier()` and `Bugsee.setAttribute()`;
+  - URLs in performance transaction names;
+  - the text and error messages of filters and listeners your app registers.
+
+  7.3.0 keeps this data out of the internal log, and internal-log data written by an earlier
+  version is deleted on the first launch after the upgrade and never attached to a report. The data
+  went only to your own Bugsee project; no third party received it. The 6.x SDK is not affected.
+  We recommend upgrading any app on 7.0.0-beta1 through 7.2.0.
+
+  :::note[Known limits]
+  - If you downgrade after running 7.3.0 and then upgrade again, the internal-log data the older
+    version wrote in between is not deleted.
+  - Reports already waiting to upload when you upgrade are sent as they are.
+  - With the `$$DEBUG` option on, SDK log lines appear in logcat unredacted.
+  - Option values the SDK rejects at launch are still logged as given.
+  - **React Native:** apps are affected through native code that uses HttpURLConnection and, in
+    some cases, through `react-native-webview`. JavaScript `fetch` and `XMLHttpRequest` exposed at
+    most a host name, and only when `bugsee-android-okhttp` is in the app.
+  :::
+
+**New features**
+
+- **Reports say what is missing, and why.** When a file that belongs to a report goes missing
+  before the report is sent, or a crash or error report has no crash details, the report now lists
+  that part as missing, with a reason, instead of leaving it out silently. Attachments are never
+  listed as missing.
+
+- **Limits on reports waiting to be sent.** Three new options cap how much unsent report data the
+  SDK keeps on the device:
+
+  | `Options` constant | Manifest key | Default |
+  | --- | --- | --- |
+  | `MaxDataSize` | `com.bugsee.option.config.max-data-size` | `150` (MB, minimum `10`) |
+  | `MaxPendingReports` | `com.bugsee.option.config.max-pending-reports` | `30` (minimum `1`) |
+  | `MaxPendingReportAge` | `com.bugsee.option.config.max-pending-report-age` | `30` (days; `0` or less turns aging off) |
+
+  Past a limit, the oldest reports are deleted, errors before bug reports and bug reports before
+  crashes. The newest crash and reports being sent are always kept.
+
+  :::note
+  The limits are on by default. A device that stays offline for more than 30 days, or collects
+  more than 30 unsent reports, now loses the oldest ones instead of keeping them all.
+  :::
+
+- **Report background low-memory kills as errors.** Set
+  `DetectAndReportExitLowMemoryBackgroundAsError`
+  (`com.bugsee.option.detect.exit.bg_low_memory_as_error`, default `false`) to report a low-memory
+  kill of your app while it was not in the foreground as a non-fatal error instead of a crash.
+  Foreground kills are still reported as crashes. On devices that don't report low-memory kills,
+  background kills are already reported as errors.
+
+- **A public network sanitizer for your network filter.** A network filter replaces the built-in
+  redaction; to keep it, call `Bugsee.getDefaultNetworkSanitizer().sanitize(event)` in your
+  filter. See
+  [Privacy → Network traffic](/sdk/android/privacy/network#a-filter-replaces-the-built-in-redaction).
+  The static `com.bugsee.library.shared.security.privacy.NetworkDataSanitizer` is deprecated but
+  keeps working.
+
+- **See the options your app passed at launch.** `Bugsee.getHostLaunchOptions()` returns the
+  options your app supplied to `Bugsee.launch()` or in the manifest, without the SDK defaults.
+  `Bugsee.getLaunchOptions()` still returns the options in effect.
+
+- **Attach large files to a report.** In a report handler, `Report.addAttachment(File file, String
+  name, String mimeType, boolean move)` moves or copies a file into the report without loading it
+  into memory, and `Report.addAttachment(byte[] data, String name, String mimeType)` adds small
+  in-memory content. Both return `null` if the attachment could not be added, including after the
+  report has been submitted.
+
+- **Annotated screenshots are marked as such.** Only screenshots the user drew on are now shown as
+  annotations on the issue; before, every Android screenshot was. Use
+  `Report.setScreenshot(displayId, bitmap, annotated)` and `Report.isScreenshotAnnotated(displayId)`
+  to set and read the flag yourself.
+
+- **Fold state on foldable devices.** Reports from foldable devices now include the fold posture
+  and hinge angle as system traces.
+
+- **Stylus tilt and direction.** Stylus touches now record the pen's tilt and direction, as on
+  iOS.
+
+**Fixes**
+
+- **Report videos no longer show green, stale or blended frames.** This affected some devices,
+  and reports sent right after an early crash.
+
+- **Report videos no longer show garbled or frozen frames.**
+
+- **Video right after a rotation is no longer drawn in the old orientation.**
+
+- **Touches line up with the video from the start of the recording.**
+
+- **One report that failed to export no longer stops all other reports from being sent.** A report
+  that keeps failing is sent without its video, and eventually deleted.
+
+- **Crash reports always account for their crash details.** When the crash details cannot be
+  saved, the report now includes a shorter version of them or lists them as absent, instead of
+  arriving without them. `Bugsee.logException()` and `Bugsee.sendBugReport()` no longer do disk
+  work on the calling thread.
+
+  :::note[Behavior change]
+  `Bugsee.logException(null)` now reports a simulated exception from the calling code. On the
+  dashboard these reports now group by call site, instead of all landing in one
+  `<missing crash details>` issue.
+  :::
+
+- **Report handlers no longer run on the main thread,** so they also run for hang and ANR reports.
+  With `ReportHandlerCallbackTimeout` set to `0`, a handler that never completes no longer holds up
+  its report indefinitely.
+
+  :::caution[Behavior change]
+  If your `ReportHandler` touches views or other UI state, post that work to the main thread
+  yourself, for example with `new Handler(Looper.getMainLooper()).post(...)`. While a crash is
+  being handled, a handler can still occasionally run on the main thread, so keep it short.
+  :::
+
+- **Native crashes and system-reported exits are attributed to the app version that crashed,** not
+  to the version installed when they were sent. Some of these reports were previously not
+  delivered at all; they now are.
+
+- **A crash on a second thread no longer causes the first crash's report to be lost.**
+
+- **Network events are no longer lost after the device clock changes.** If you create network
+  events yourself with `Bugsee.getExchangeFactory()`, stamp them with the new
+  `BugseeExchangeFactory.currentTimestamp()`.
+
+- **Breadcrumbs added as your own `Breadcrumb` objects, and breadcrumbs returned late by a
+  breadcrumb filter, are no longer lost.** Long performance transactions are no longer missing
+  from reports.
+
+- **Report delivery is more reliable.** Fixed:
+  - on a full disk, a report was deleted along with its crash details, screenshot and attachments;
+    it is now sent with what it has;
+  - in apps with several processes, a report could arrive with all of its capture data missing;
+  - a retried report could upload extra data;
+  - reports could be missing video frames or performance data;
+  - with many unsent reports, apps on low-memory devices could run out of memory at launch;
+  - a whole log or event stream could be missing from a report.
+
+- **Rare crashes and hangs caused by the SDK are fixed.** Fixed:
+  - crashes when stopping or relaunching the SDK;
+  - a crash when two reports were exported at the same time;
+  - a crash at launch on some Android 16 devices;
+  - crashes from SDK background work, and background work that stopped for the rest of the
+    session;
+  - a crash or ANR when the SDK's saved settings could not be read;
+  - black video after the SDK was stopped and started again in quick succession.
+
+- **The Ktor extensions compile again.** With the 7.2.0 `bugsee-android-ktor-2` and
+  `bugsee-android-ktor-3` artifacts, `install(BugseeKtor2Plugin)`, `install(BugseeKtor3Plugin.Plugin)`
+  and the `bugseeWebSocket` helpers did not compile in Kotlin apps.
+
+- **Enum options can be passed by name in the launch map,** for example `"High"` for
+  `VideoQuality`, matched case-insensitively as in the manifest. Before, such a value was accepted
+  but did not work.
+
+- **The leak detection extension no longer keeps destroyed fragments' views in memory,** and now
+  also watches fragments that are destroyed together with their activity.
+
+- **Anomaly issues no longer split by URL port,** and new endpoints are no longer ignored after
+  many others have been seen.
+
+  :::note
+  Existing anomaly issues whose URL had an explicit port regroup once.
+  :::
+
+- **HTTP-error reports for one endpoint no longer suppress reports for another.**
+
+- **A log or network filter that never calls its callback now logs a warning.** A filter that
+  throws after calling its callback no longer corrupts the event.
+
+**Privacy**
+
+- **Filters set before `Bugsee.launch()`, or declared in the manifest, now also apply to data
+  captured during launch.**
+
+- **Removing the only screenshot in the bug-report dialog now removes it from the report.**
+
+- **Secure fields are no longer identified by their id or tag** in breadcrumbs, rage-tap reports
+  or the view hierarchy. Breadcrumbs for them carry `view.secure: true`.
+
+- **Credentials in URLs (`user:password@`) are now removed.** The built-in redaction removes them
+  from captured network URLs and error messages, and performance transactions and HTTP-error
+  reports always drop them.
+
+- **Network bodies too large to capture are no longer recorded partially and unredacted,** and
+  network error messages are now redacted too.
+
+- **More fields are treated as secure:** input fields in Stripe, Braintree and card.io payment
+  views, views with the `creditCardExpirationDay` or `newPassword` autofill hint, and character
+  keys specific to Brazilian and Japanese keyboards.
+
+- **A warning when Compose masking is missing.** The SDK logs a warning if your app shows Compose
+  UI without the `bugsee-android-compose` extension, which is what masks Compose password fields.
+
+**Compatibility**
+
+- New public API: `Bugsee.getDefaultNetworkSanitizer()` and the `NetworkDataSanitizer` interface,
+  `Bugsee.getHostLaunchOptions()`, `Report.addAttachment(...)` (two overloads),
+  `Report.setScreenshot(displayId, bitmap, annotated)` and its async variant,
+  `Report.isScreenshotAnnotated()`, `BugseeExchangeFactory.currentTimestamp()`, and the
+  `MaxDataSize`, `MaxPendingReports`, `MaxPendingReportAge` and
+  `DetectAndReportExitLowMemoryBackgroundAsError` options. The new `Report` methods have default
+  implementations, so your own `Report` implementations keep compiling.
+
+- `com.bugsee.library.shared.security.privacy.NetworkDataSanitizer` is deprecated. If your code
+  wildcard-imports both `com.bugsee.library.contracts.exchange.*` and
+  `com.bugsee.library.shared.security.privacy.*`, the compiler reports `NetworkDataSanitizer` as
+  ambiguous after the upgrade. Import the one you mean by name, or use
+  `Bugsee.getDefaultNetworkSanitizer()`, which needs no import.
+
+- A few members of internal SDK packages that apps are not meant to call were removed from the
+  published API listing. The `FeedbackActivity.showActivity()` and `isShown()` companion methods
+  were listed as public but were never present in the published artifact; use
+  `Feedback.showFeedbackActivity()`.
+
 ## 7.2.0
 
 A feature release. Your app can now send a message straight to your Slack or Teams integration
