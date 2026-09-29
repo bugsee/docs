@@ -152,8 +152,8 @@ limit how much unsent report data the SDK keeps on the device.
   per rotation. This applies to the default PixelCopy capture (`VideoMode.V2`).
 
 - **Touches line up with the video from the first frame.** A recording whose frames never needed
-  padding carried no video geometry at all, so the viewer had no screen size to place
-  touches against. Geometry is now recorded on the first frame and on every rotation.
+  padding carried no video geometry at all, so the viewer had no screen size to place touches
+  against. Geometry is now recorded on the first frame and on every rotation.
 
 - **One stuck report no longer blocks every other report.** Reports are exported one at a time.
   On Android 6, a video whose frame times went backwards could deadlock the encoder, and no report
@@ -168,9 +168,9 @@ limit how much unsent report data the SDK keeps on the device.
   without the thread dump or cause chain. If that fails too, the report lists the crash details as
   absent (`export_failed`). A crash or error report that reaches upload with no crash details at
   all — for example, one recovered after the process died before they were written — lists them
-  as absent with reason `unknown`. The SDK now also saves the report as soon as its crash
-  details are registered, which narrows that window. `Bugsee.logException()` and `Bugsee.sendBugReport()` now
-  do this disk work off the main thread.
+  as absent with reason `unknown`. The SDK now also saves the report as soon as its crash details
+  are registered, which narrows that window. `Bugsee.logException()` and `Bugsee.sendBugReport()`
+  now do this disk work off the main thread.
 
   :::note[Behavior change]
   `Bugsee.logException(null)` now reports a simulated exception, built on the thread that called
@@ -219,8 +219,8 @@ limit how much unsent report data the SDK keeps on the device.
 - **Breadcrumbs and long transactions are no longer dropped.** A breadcrumb passed to
   `Bugsee.addBreadcrumb()` as your own `Breadcrumb` implementation lost its timestamp and was
   discarded, and a breadcrumb that a breadcrumb filter returned after a delay could be discarded
-  too. A performance transaction that outlasted the current
-  one-second capture segment was left out of report capture as well.
+  too. A performance transaction that outlasted the current one-second capture segment was left
+  out of report capture as well.
 
 - **Report delivery is more reliable.**
   - A report whose capture data could not be exported, for example on a full disk, was deleted with
@@ -260,9 +260,9 @@ limit how much unsent report data the SDK keeps on the device.
 
 - **Enum options can be passed by name in the launch map.** An enum option passed to
   `Bugsee.launch(context, token, options)` as a string naming the constant (for example `"High"`
-  for `VideoQuality`) was accepted but never converted, so the option could fail when the SDK read it. Names are now matched
-  case-insensitively, the same as in the manifest. An integer is still not accepted in place of an
-  enum constant.
+  for `VideoQuality`) was accepted but never converted, so the option could fail when the SDK read
+  it. Names are now matched case-insensitively, the same as in the manifest. An integer is still
+  not accepted in place of an enum constant.
 
 - **Leak detection no longer leaks.** The `bugsee-android-leak` extension held on to the views of
   destroyed fragments — between 2.5 and 21 MB in testing. Fragments destroyed together with their
@@ -309,9 +309,8 @@ limit how much unsent report data the SDK keeps on the device.
 
 - **A truncated body is no longer recorded unredacted.** A JSON body too large to capture in full
   could be recorded cut short, and cut-off JSON cannot be parsed for redaction, so it was recorded
-  as it was. Such a
-  body is now left out and marked as too large. The built-in redaction also covers network error
-  messages now.
+  as it was. Such a body is now left out and marked as too large. The built-in redaction also
+  covers network error messages now.
 
 - **More fields are recognized as secure.** The built-in rule for Stripe, Braintree and card.io
   payment widgets now reaches their input fields, not only their containers. View-based fields
