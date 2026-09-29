@@ -117,16 +117,15 @@ only adds or renames a field records `Authorization` headers, cookies and
 unless you disabled `CaptureNetworkUseDefaultSanitizer`.
 :::
 
-To keep the built-in redaction and add your own, call
-`NetworkDataSanitizer.sanitize(event)` (package
-`com.bugsee.library.shared.security.privacy`) at the start of your filter:
+To keep the built-in redaction and add your own, call the SDK's default
+sanitizer, `Bugsee.getDefaultNetworkSanitizer()`, at the start of your filter:
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 
 ```java
 Bugsee.setNetworkEventFilter((event, callback) -> {
-    NetworkDataSanitizer.sanitize(event); // built-in redaction
+    Bugsee.getDefaultNetworkSanitizer().sanitize(event); // built-in redaction
     // ...your own redaction...
     callback.run(event);
 });
@@ -137,7 +136,7 @@ Bugsee.setNetworkEventFilter((event, callback) -> {
 
 ```kotlin
 Bugsee.setNetworkEventFilter { event, callback ->
-    NetworkDataSanitizer.sanitize(event) // built-in redaction
+    Bugsee.getDefaultNetworkSanitizer().sanitize(event) // built-in redaction
     // ...your own redaction...
     callback.run(event)
 }
@@ -145,6 +144,26 @@ Bugsee.setNetworkEventFilter { event, callback ->
 
   </TabItem>
 </Tabs>
+
+`getDefaultNetworkSanitizer()` works before `Bugsee.launch()`, so you can use
+it in a [manifest-declared filter](#declaring-the-filter-in-the-manifest), and
+you can call it for every event. Besides `sanitize(event)`, which redacts the
+URL, headers, body and error messages, it has `sanitizeUrl(event)` and
+`sanitizeErrorMessage(event)`, which redact only the URL or only the error
+messages.
+
+:::note
+`Bugsee.getDefaultNetworkSanitizer()` is new in SDK 7.3.0. On SDK 7.0.3
+through 7.2.0, call the static `NetworkDataSanitizer.sanitize(event)` (package
+`com.bugsee.library.shared.security.privacy`) instead; that class is deprecated
+from 7.3.0 but still works. Earlier versions have no public sanitizer.
+
+If your code wildcard-imports both `com.bugsee.library.contracts.exchange.*` and
+`com.bugsee.library.shared.security.privacy.*`, the compiler reports
+`NetworkDataSanitizer` as ambiguous after the upgrade. Import the one you mean by
+its full name, or use `Bugsee.getDefaultNetworkSanitizer()`, which needs no
+import.
+:::
 
 Capture from OkHttp 3/4, Ktor 2/3, and Cronet is wired automatically by the
 Bugsee Gradle plugin through the matching
