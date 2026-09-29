@@ -49,7 +49,7 @@ Bugsee.setReportHandler(new ReportHandler() {
     @Override
     public void onAfterReportCreated(Report report, boolean isTerminating,
                                      Runnable completionCallback) {
-        // max 3 attachments × 3 MB — write your data via openStream()
+        // Write your data through the attachment's output stream
         Attachment attachment = report.createAndAddAttachment("config")
                 .setFileName("config.json")
                 .setMimeType("application/json");
@@ -80,7 +80,7 @@ Bugsee.setReportHandler(object : ReportHandler {
         isTerminating: Boolean,
         completionCallback: Runnable
     ) {
-        // max 3 attachments × 3 MB — write your data via openStream()
+        // Write your data through the attachment's output stream
         val attachment = report.createAndAddAttachment("config")
             .setFileName("config.json")
             .setMimeType("application/json")
@@ -93,10 +93,7 @@ Bugsee.setReportHandler(object : ReportHandler {
   </TabItem>
 </Tabs>
 
-The previous quota of **3 attachments × 3 MB each** is preserved — enforce
-it inside your own `ReportHandler` if needed.
-
-For programmatic report creation see
-[manual reports](/sdk/android/manual/bug-reporting). For the complete list of
-listener interfaces see the
-[public API reference](/sdk/android/configuration).
+The full contract — when each callback runs, what happens during a crash,
+which thread you are on, the completion timeout, and how attachments work —
+is documented on the [report handler](/sdk/android/report-handler) page. This
+page covers only the privacy side of it.

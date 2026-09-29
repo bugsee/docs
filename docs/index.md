@@ -197,7 +197,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
    	<tr>
 		<th>File attachments</th>
 		<td><a href="/sdk/ios/custom/">View</a></td>
-		<td><a href="/sdk/android/manual/bug-reporting#attachments">View</a></td>
+		<td><a href="/sdk/android/report-handler#attachments">View</a></td>
 		<td><a href="/sdk/cordova/custom/">View</a></td>
 		<td><a href="/sdk/react_native/custom/#file-attachments">View</a></td>
 		<td><a href="/sdk/flutter/custom/#file-attachments">View</a></td>

@@ -158,89 +158,9 @@ Crash, error, and bug reports get a default severity unless one is specified or 
 
 ## Customize reports with `ReportHandler`
 
-`ReportHandler` is the idiomatic way to inspect or rewrite reports before they are uploaded. It runs for **every** outgoing report — crashes and errors included, not just bug reports.
+`ReportHandler` lets you inspect or rewrite a report before it is uploaded, and it runs for **every** outgoing report — crashes and handled errors included, not just the bug reports on this page. It is documented in full on its own page:
 
-Two callbacks are provided as default methods on the interface:
-
-- `onBeforeReportCreated(Report, boolean isTerminating, Runnable completionCallback)` — runs before the report payload is assembled.
-- `onAfterReportCreated(Report, boolean isTerminating, Runnable completionCallback)` — runs after assembly, ideal for attachments.
-
-You **must** invoke `completionCallback.run()` for the pipeline to proceed — unless `isTerminating` is `true`, in which case the pipeline continues regardless (the process is about to exit).
-
-<Tabs groupId="lang-android">
-  <TabItem value="java" label="Java">
-
-```java
-Bugsee.setReportHandler(new ReportHandler() {
-    @Override
-    public void onBeforeReportCreated(Report report, boolean isTerminating, Runnable completionCallback) {
-        report.setSummary("[" + BuildConfig.FLAVOR + "] " + report.getSummary());
-        report.setSeverity(IssueSeverity.High);
-        completionCallback.run();
-    }
-
-    @Override
-    public void onAfterReportCreated(Report report, boolean isTerminating, Runnable completionCallback) {
-        Attachment attachment = report.createAndAddAttachment("config")
-            .setName("config")
-            .setFileName("config.json")
-            .setMimeType("application/json");
-        try (OutputStream out = attachment.openStream()) {
-            if (out != null) {
-                out.write(loadConfigSnapshot());
-            }
-        } catch (IOException ignored) {
-        }
-        completionCallback.run();
-    }
-});
-```
-
-  </TabItem>
-  <TabItem value="kotlin" label="Kotlin">
-
-```kotlin
-Bugsee.setReportHandler(object : ReportHandler {
-    override fun onBeforeReportCreated(report: Report, isTerminating: Boolean, completionCallback: Runnable) {
-        report.summary = "[${BuildConfig.FLAVOR}] ${report.summary}"
-        report.severity = IssueSeverity.High
-        completionCallback.run()
-    }
-
-    override fun onAfterReportCreated(report: Report, isTerminating: Boolean, completionCallback: Runnable) {
-        report.createAndAddAttachment("config")
-            .setName("config")
-            .setFileName("config.json")
-            .setMimeType("application/json")
-            .openStream()?.use { it.write(loadConfigSnapshot()) }
-        completionCallback.run()
-    }
-})
-```
-
-  </TabItem>
-</Tabs>
-
-### Attachments
-
-Add attachments from `onAfterReportCreated`. `Report.createAndAddAttachment(name)` returns a mutable `Attachment` that you populate with fluent setters and write to via its output stream:
-
-- `Attachment setName(String)` — display name shown in the dashboard.
-- `Attachment setFileName(String)` — file name (with extension) used for the download.
-- `Attachment setMimeType(String)` — MIME type (e.g. `"application/json"`).
-- `OutputStream openStream()` — opens the (truncating) stream to write the attachment bytes; may return `null` if the attachment cannot be opened. The caller owns closing the stream and should buffer writes.
-
-The setters return the same `Attachment`, so they can be chained. Reports allow up to **3 attachments × 3 MB**; enforce it inside your own handler if relevant.
-
-### Callback timeout
-
-The SDK waits at most `ReportHandlerCallbackTimeout` seconds (default `30`) for `completionCallback` to fire. Tune via manifest:
-
-```xml
-<meta-data
-    android:name="com.bugsee.option.config.report-handler-callback-timeout"
-    android:value="10" />
-```
+- [Report handler](/sdk/android/report-handler) — the two callbacks, the completion contract and its timeout, threading, behaviour during a crash, and attachments.
 
 ## Programmatic report creation
 
@@ -257,7 +177,7 @@ The `Report` you receive is mutable. The most commonly used members:
 - `setSummary(String)` / `setDescription(String)` — the report's title and body text.
 - `setSeverity(IssueSeverity)` — one of `VeryLow`, `Medium`, `High`, `Critical`, `Blocker`.
 - `addLabel(String)` / `addLabels(List<String>)` / `setLabels(List<String>)` / `clearLabels()` — dashboard labels.
-- `getAttachments()` returns the current `List<Attachment>`; `createAndAddAttachment(name)` adds a new one (see [Attachments](#attachments) above).
+- `getAttachments()` returns the current `List<Attachment>`; `createAndAddAttachment(name)` adds a new one (see [Attachments](/sdk/android/report-handler#attachments)).
 
 The same `Report` is what `ReportHandler.onBeforeReportCreated(...)` / `onAfterReportCreated(...)` hands you, so the same mutators apply there.
 
