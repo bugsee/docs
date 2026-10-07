@@ -47,12 +47,34 @@ are recognised by the discovery layer but not yet processed.
 | `--dry-run` | Discover and pack files but skip the HTTP upload. |
 | `--concurrency <N>` | *(`--type sourcemaps` only, CLI 0.7.10+)* Ceiling on uploads in flight, `1..=32`. |
 | `--allow-empty` | *(`--type sourcemaps` only, CLI 0.7.10+)* Treat "nothing to upload" as success. |
+| `--strip-sources-content` | *(`--type sourcemaps` only, CLI 0.7.11+)* Upload each map without its embedded original source. See [Source maps](/cli/sourcemaps/#keeping-your-source-private). |
+| `--extension <SUFFIX>` | *(CLI 0.7.12+)* Also pick up files whose name ends in `SUFFIX`, on top of the names the `--type` already knows. See [Extra file suffixes](#extra-file-suffixes). |
 | `--il2cpp-uuid <UUID>` | *(`--type il2cpp-linemap` only)* Additional module UUID for a multi-ABI build. |
 | `--il2cpp-root <PATH>` | *(`--type il2cpp-linemap` only)* Path to `il2cppFileRoot.txt` when it isn't beside the JSON. |
 
-`--concurrency` and `--allow-empty` are **rejected with exit `20`** for any other
-`--type`, rather than accepted and ignored — so a caller who passed
-`--allow-empty` to keep a build green can't silently still get exit `10`.
+`--concurrency`, `--allow-empty` and `--strip-sources-content` are **rejected with
+exit `20`** for any other `--type`, rather than accepted and ignored — so a caller
+who passed `--allow-empty` to keep a build green can't silently still get exit
+`10`.
+
+### Extra file suffixes
+
+*(CLI 0.7.12 and newer.)* When a toolchain starts emitting a new file spelling
+before the CLI learns it, `--extension` picks it up without waiting for a
+release. Repeat the flag or comma-separate values; the leading `.` is optional
+(`so.sym` means `.so.sym`):
+
+```bash
+bugsee-cli debug-files upload ./libs --type elf --extension so.debug,dbg \
+    --version 1.4.0 --build 1400
+```
+
+Suffixes **add to** each type's built-in names and match the end of the whole file
+name, so multi-part suffixes work. They only widen the *name* match: each type's
+content check still applies (an ELF still needs a GNU build-id, a PDB the MSF
+container, a dSYM its `DWARF` folder), and stylesheet and type-declaration source
+maps are still skipped under the new spelling. An empty, dot-only or path-like
+value is a configuration error (exit `20`).
 
 ## Re-uploads and missing paths
 
@@ -109,9 +131,40 @@ ELF symbols are uploaded with a Breakpad transform so native crashes from the
 Android NDK (or Linux) symbolicate. Each `.so` is uploaded as its own symbol,
 keyed by its **GNU build-id** (`.note.gnu.build-id`) — so an unchanged library
 is skipped before its bytes transfer. A library built **without** a build-id
-can't be matched at crash time and is skipped with a warning; build native
-libraries with `-Wl,--build-id=sha1` to ensure they're symbolicated (see
+(or a file that isn't an ELF at all) can't be matched at crash time and is
+skipped with a warning; build native libraries with `-Wl,--build-id=sha1` to
+ensure they're symbolicated (see
 [Native crashes → Symbolication](/sdk/android/issue-detection/native-crashes#symbolication-and-native-debug-symbol-upload)).
+
+### What you can pass
+
+*(Directories: CLI 0.8.0 and newer.)* Pass one or more paths, each either:
+
+- a **directory**, walked recursively for `.so`, `.so.dbg` and `.so.sym` files
+  (plus any [`--extension`](#extra-file-suffixes) suffix) — typically the Android
+  Gradle plugin's `build/intermediates/merged_native_libs/<variant>`; the
+  libraries are read in place, nothing is re-zipped; or
+- an AGP `native-debug-symbols.zip`.
+
+You can mix them in one command. When several files share a GNU build-id — across
+all the paths you pass — only one is uploaded, preferring the one with DWARF debug
+info, then one with a symbol table, then the larger file. The server deduplicates on the
+build-id, so switching a library from `SYMBOL_TABLE` (`.so.sym`, function names
+only) to `FULL` needs `--force` to replace what it stores; the run tells you when
+it skipped full-debug libraries for that reason.
+
+| Situation | Result |
+|---|---|
+| A directory with no matching libraries | **Exit `10`**, so a mis-wired path can't pass silently (an empty *zip* only warns) |
+| A path that does not exist | **Exit `10`** |
+| A corrupt zip, or any I/O error while scanning a directory (unreadable subdirectory or library, dangling link) | **Exit `11`**, before anything is uploaded |
+| A directory symlink | Not followed; a symlink to a library *file* is read |
+
+:::caution
+Libraries are memory-mapped while they are scanned, so the directory must hold
+**finished** build output. Don't run the upload while a linker is still writing
+into it.
+:::
 
 ## Apple (dSYM)
 
@@ -188,6 +241,13 @@ The mapping is keyed by the IL2CPP module UUID(s) (`libil2cpp` on Android,
 values, repeat `--uuid`, or append with `--il2cpp-uuid`. Sibling
 `MethodMap.tsv` and `il2cppFileRoot.txt` files are picked up automatically when
 they sit next to the JSON.
+
+The mapping JSON is validated before anything is packed or sent *(CLI 0.8.0 and
+newer)*: it must be `cpp_path` → `cs_path` → `{ cpp_line: cs_line }`, with
+non-negative integer line numbers (an optional top-level `__debug-id__` entry is
+ignored). A truncated, empty or wrong file exits `11` with a message naming the
+file and the problem — also in a dry run — instead of uploading a map that can't
+symbolicate anything.
 
 ## Compression
 

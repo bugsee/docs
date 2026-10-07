@@ -35,7 +35,7 @@ bugsee-cli upload build \
 | Option | Description |
 |---|---|
 | `--payload-json <JSON>` | Registration metadata — the POST body for `/v2/apps/<token>/builds`. |
-| `--artifact <PATH>` | Build artefact (`.aab` / `.apk` / `.ipa`), STORED verbatim in the ZIP. |
+| `--artifact <PATH>` | Build artefact (`.aab` / `.apk` / `.ipa`), STORED verbatim in the ZIP. Optional since CLI 0.7.12 — see [Registering without an artefact](#registering-without-an-artefact). |
 | `--mapping <PATH>` | Optional R8/ProGuard `mapping.txt`, zstd-packed alongside the artefact. |
 | `--deps <PATH>` | Optional `dependencies.json` sidecar. |
 | `--timings <PATH>` | Optional `timings.json` sidecar. |
@@ -51,6 +51,24 @@ prints the resulting `build_id` to stdout.
 When `--deps` / `--timings` are supplied **and** your organisation's build-info
 feature is enabled, the build-info bundle ships from the same registration — no
 second request.
+
+### Registering without an artefact
+
+*(CLI 0.7.12 and newer.)* Omit `--artifact` to register a build **without
+shipping its bytes**. The build is registered with the metadata you pass and no
+artefact is uploaded — the normal case on any platform that hasn't turned on
+size analysis, and the only case a web build can express, since it has no single
+artefact to ship.
+
+```bash
+bugsee-cli upload build --payload-json "$PAYLOAD"
+```
+
+`--deps` and `--timings` still travel without an artefact; the build-info bundle
+is a separate upload. The options that only describe how artefact bytes move —
+`--mapping`, `--chunked` and `--out` — are **rejected with exit `20`** rather than
+silently ignored: dropping a `--mapping` would cost symbolication, and passing
+`--chunked` says you expect bytes to move.
 
 ### Large artefacts
 

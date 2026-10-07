@@ -13,6 +13,7 @@
         "Credacted",
         "zstd",
         "dedup",
+        "Subresource",
         "sourcebundle",
         "unparseable",
         "uploaders",

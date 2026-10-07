@@ -57,17 +57,65 @@ attach the debug ID to a crash frame. *(CLI 0.7.9 and newer.)*
 ## `sourcemaps inject`
 
 ```bash
-bugsee-cli sourcemaps inject <paths>... [--dry-run]
+bugsee-cli sourcemaps inject <paths>... [--exclude <glob>] [--allow-sri] [--dry-run]
 ```
 
 | Option | Description |
 |---|---|
 | `<paths>...` | One or more directories or files to inject (typically your JS dist folder). |
+| `--exclude <GLOB>` | *(CLI 0.7.11+)* Leave matching files alone. Repeatable. |
+| `--allow-sri` | *(CLI 0.7.11+)* Proceed even though the build pins its own script hashes — see [Subresource Integrity](#subresource-integrity). |
 | `--dry-run` | Report what would change without writing. |
 
 Run inject **after** your bundler produces the final bundles and maps, and
 **before** uploading. Because injection is idempotent, it's safe to run on every
 build.
+
+### Leaving files alone
+
+*(CLI 0.7.11 and newer.)* A stock `next build` with browser source maps has dozens
+of JavaScript files, and a Nuxt `.output/server/node_modules` holds vendored
+`.mjs` files you don't want stamped. `--exclude` keeps `inject` out of them:
+
+```bash
+bugsee-cli sourcemaps inject ./dist --exclude '**/node_modules/**' --exclude 'dist/vendor/**'
+```
+
+The pattern is matched against the absolute path, the path relative to the
+current directory and the path relative to each root you pass, so
+`dist/vendor/**`, `vendor/**` and an absolute path all work whether you wrote the
+root as `dist`, `./dist` or an absolute path. `*` crosses `/`, so `*.js` also
+matches `vendor/v.js` — anchor with a leading `/` or a directory prefix to avoid
+that. An empty or unparseable pattern is a configuration error (exit `20`), never
+a silent "matches nothing" that would rewrite the files you meant to protect.
+
+### Subresource Integrity
+
+*(CLI 0.7.11 and newer.)* Injecting appends bytes to every `.js` file, so a hash
+your HTML already pins with `integrity="…"` stops matching and the browser
+refuses to run the script: the page loads and **nothing executes**. That is worse
+than having no debug IDs, so `inject` refuses a build that pins its own hashes and
+exits `20`.
+
+It detects `integrity` on `<script>` and on `<link rel="modulepreload">` /
+`rel="preload"` in any `.html`, `.htm` or `.xhtml` under the paths you give it
+(plus any directly in a path's parent, the usual `dist/index.html` beside
+`dist/assets/*.js` layout). URLs are resolved literally first and then by file
+name, so a CDN `publicPath` still resolves to the local bytes it names. It only
+refuses over a file this run would really **rewrite**, so re-running `inject` on
+an already-stamped build stays a no-op, and `--dry-run` refuses too.
+
+If your build recomputes its hashes after this step, pass `--allow-sri`. `inject`
+cannot see integrity that never reaches the emitted HTML — a manifest read by a
+server template, or a page rendered at request time (such as Next.js
+`experimental.sri`) — so check those yourself.
+
+### Failure behaviour
+
+*(CLI 0.8.0 and newer.)* `inject` edits files in place, so permissions, symlinks
+and hard links are kept. A map that can't take the debug ID — not a JSON object,
+invalid JSON, or read-only — is refused **before** the bundle is touched, so a
+failed run never leaves a bundle stamped with an ID its map didn't receive.
 
 ## Uploading injected maps
 
@@ -85,6 +133,26 @@ A map the server already has is skipped and the batch continues, so rebuilding
 an app with unchanged chunks uploads only the ones that changed. `--force`
 re-uploads anyway.
 
+### Keeping your source private
+
+*(CLI 0.7.11 and newer.)* A map's `sourcesContent` carries your original source
+verbatim — it is what lets a symbolicated crash show source lines. If you'd rather
+it didn't leave the build machine, strip it from what is uploaded:
+
+```bash
+bugsee-cli debug-files upload ./dist --type sourcemaps \
+    --version 1.4.0 --build 1400 --strip-sources-content
+```
+
+File, line and column resolution keep working; only the source snippet is lost.
+The map on disk is **never modified** — only the uploaded copy — and the declared
+hash describes the stripped bytes. Indexed maps are stripped too, including their
+nested sections. A map with no `sourcesContent` is uploaded unchanged. If a map
+can't be processed, the upload carries on with the original and **logs a warning
+that it went out unstripped** (CLI 0.8.0+), so check your logs if the privacy
+setting matters. The option is only valid with `--type sourcemaps` (exit `20`
+otherwise).
+
 ### What fails, and when
 
 Directory scans are processed in sorted order, and every map is identified
@@ -98,6 +166,10 @@ behind (a network or server error part-way through still can).
 | A path that does not exist | **Exit `10`**, even when other paths hold maps |
 | Nothing found to upload | **Exit `10`**, unless `--allow-empty` |
 | One upload fails | The rest of the batch is cancelled |
+
+With `--dry-run`, a map without a debug ID is reported and counted instead of
+failing the run (CLI 0.7.11+), so the preview works on a freshly built directory
+that `inject --dry-run` hasn't stamped. A real run still exits `11`.
 
 `--allow-empty` (CLI 0.7.10+) turns "nothing to upload" into success. A monorepo
 package built without maps, or a framework whose server output has none, is a
