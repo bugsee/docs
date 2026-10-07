@@ -12,7 +12,201 @@ Release history for the Bugsee CLI (`bugsee-cli`). To install or upgrade, see
 Android Gradle plugin and the iOS build scripts keep the CLI they manage up to
 date for you.
 
+## 0.8.x
+
+### 0.8.0 (October 7 2026)
+
+Native symbols can be uploaded straight from a directory of libraries, a corrupt
+IL2CPP line map is caught before it is uploaded, uploads and source-map handling
+now run in a small, fixed amount of memory however large the files are, and four
+bugs found by a new round of tests on damaged input files are fixed.
+
+- **`--type elf` accepts directories.** Point it at one or more directories — for
+  example the Android Gradle plugin's `build/intermediates/merged_native_libs/<variant>`
+  — and it walks them recursively for `.so`, `.so.dbg` and `.so.sym` files (plus
+  anything you add with `--extension`), reading the libraries in place instead of
+  requiring a pre-built `native-debug-symbols.zip`. A zip still works, and you can
+  mix directories and zips in one command. Each library is uploaded as its own
+  symbol, keyed by its GNU build-id, and when several files share a build-id
+  (across all the paths you pass) only the richest is uploaded: DWARF first, then
+  a symbol table, then the larger file. See [Native (ELF)](/cli/debug-files/#native-elf).
+
+  Directory input has a few rules worth knowing:
+  - A directory that contains no libraries exits `10` rather than succeeding, so a
+    mis-wired path or a task that ran before the libraries were built can't pass
+    silently. An *empty zip* still only warns, as before.
+  - Directory symlinks are not followed; a symlink to a library file is read.
+  - Any I/O error while scanning (an unreadable subdirectory or library, a dangling
+    link) fails the run with exit `11` instead of uploading a partial set.
+  - Libraries are memory-mapped while they are scanned, so the directory must hold
+    finished build output. Don't run the upload while a linker is still writing
+    into it.
+
+- **Corrupt IL2CPP line maps are rejected before upload.** `debug-files upload
+  --type il2cpp-linemap` now checks `LineNumberMappings.json` against the shape the
+  symbolicator reads (`cpp_path` → `cs_path` → `cpp_line: cs_line`, with
+  non-negative integer line numbers; the optional `__debug-id__` entry is ignored).
+  A truncated, empty, wrong or otherwise damaged file exits `11` with a message
+  naming the file and the problem — including in a dry run — and uploads nothing.
+  Before, it was uploaded successfully and every IL2CPP crash then failed to
+  symbolicate with nothing pointing back at the upload. An empty map is still
+  accepted, with a warning. See [Unity IL2CPP](/cli/debug-files/#unity-il2cpp).
+
+- **Uploads and symbol reads use a small, fixed amount of memory.** The CLI used
+  to read whole files into memory in several places, which mattered for the
+  artefacts and symbol files it routinely handles. It now streams them. Peak memory,
+  measured on large inputs:
+
+  | Operation | 0.7.13 | 0.8.0 |
+  |---|---|---|
+  | `upload build` (300 MB artefact + 200 MB mapping) | 661 MB | 32 MB |
+  | `--type proguard` (200 MB mapping) | 241 MB | 32 MB |
+  | `--type elf` (zip of four 100 MB libraries) | 463 MB | 36 MB |
+  | `--type sourcemaps` (89 MB map) | 274 MB | 32 MB |
+  | `sourcemaps inject` (150 MB bundle) | 317 MB | 2 MB |
+
+  Stripping an 89 MB map with `--strip-sources-content` now takes about 32 MB, and
+  `sourcemaps inject` of the same map about 6 MB. Figures are peak memory on large
+  synthetic inputs.
+
+  Nothing changes in what is uploaded, and debug IDs are identical.
+
+- **`sourcemaps inject` edits files in place and refuses an unusable map first.**
+  The debug-ID stub is appended to the bundle without copying it, and the map is
+  rewritten through the same file, so permissions, symlinks and hard links are
+  kept. If a bundle's map can't take the ID — it isn't a JSON object, it is
+  invalid, or it is read-only — `inject` now fails **before** touching the bundle,
+  so a failed run no longer leaves a bundle stamped with an ID its map never got.
+  Two byte-level differences, both still valid maps: `inject` writes `debug_id`
+  and `debugId` after the map's other keys, and a map uploaded with
+  `--strip-sources-content` keeps its original key order.
+
+- **`--strip-sources-content` can no longer silently fail to strip.** If a map
+  can't be processed, the upload logs a warning that the map is going out
+  **unstripped** instead of passing without comment. Unusual but valid JSON
+  numbers (such as `1e100`) no longer prevent stripping.
+
+- **Exit codes that changed.** Check these if you script around the CLI:
+  - `--type il2cpp-linemap` with a corrupt `LineNumberMappings.json`: `11` (was `0`).
+  - `--type elf` with a path that does not exist: `10` (was `11`).
+  - `--type elf` collects every input before uploading anything, so a corrupt second
+    zip now fails (`11`) before the first zip uploads rather than after.
+
+- **Fixed: a Mach-O with no UUID was reported as the all-zero UUID.** `dsym uuid`
+  and `debug-files upload --type dsym` printed and registered
+  `00000000-0000-0000-0000-000000000000` for a slice without an `LC_UUID`; such a
+  slice can never match a crash report and every one would collide on the same
+  key. It is now skipped, and a bundle with no usable slice is rejected — which
+  fails an `xcode upload-dsyms` build phase, like any other unreadable bundle.
+
+- **Fixed: non-ELF files were accepted as ELF.** A macOS-built `.so` found by a
+  directory scan would have been uploaded as an `elf` symbol keyed by its Mach-O
+  UUID. A file that is not an ELF now has no build-id and is skipped with the usual
+  warning.
+
+- **Fixed: a crash on a deeply nested `Info.plist`.** `build-env read-plist` (and the
+  `xcode` commands that read `Info.plist`) aborted the whole process on a plist
+  nested tens of thousands of levels deep. It now reads as `{}` like any other
+  unusable plist. Plist files over 1 MiB are refused up front.
+
+- **Fixed: nameless dependencies from a mangled `Podfile.lock`.** `ios-deps` no
+  longer reports an entry named `library::` for a truncated or damaged line such as
+  `- (2.0)`.
+
 ## 0.7.x
+
+### 0.7.13 (October 7 2026)
+
+- **The CLI is licensed under MIT.** The repository, the crate and every published
+  package — the release archives, the Homebrew formula and all npm packages —
+  now carry the license.
+- **Fixed: `build-env machine-label` on macOS and Windows.** Outside CI it printed
+  an empty line, because it called `/usr/bin/hostname`, which doesn't exist on
+  macOS or Windows. A local `xcode post-action` therefore registered builds
+  without a machine name, and `CI=true` without `$HOSTNAME` produced a bare `ci`.
+  The hostname is now read directly.
+- **Corrected the `@bugsee/cli` npm instructions.** Run it once as `npx @bugsee/cli`;
+  a bare `npx bugsee-cli` outside a project that installed it fails with `E404`.
+  See [Installation](/cli/installation/).
+
+### 0.7.12 (October 7 2026)
+
+Register a build without its artefact, pick up files under a new suffix without
+waiting for a release, and Android `SYMBOL_TABLE` native symbols upload correctly.
+
+- **`upload build` can register a build without shipping its artefact.** Omit
+  `--artifact`: the build is registered with the metadata you pass, and no
+  artefact bytes are uploaded. That is the normal case on every platform that has
+  not turned on size analysis, and the only case a web build can express.
+  `--deps` and `--timings` still travel without an artefact. The options that only
+  describe how artefact bytes move (`--mapping`, `--chunked`, `--out`) are rejected
+  with exit `20` rather than silently ignored. See
+  [Builds & artefacts](/cli/builds/#registering-without-an-artefact).
+
+- **`debug-files upload --extension <SUFFIX>`.** Picks up files whose name ends
+  in a spelling the CLI doesn't know yet, for any `--type`, so a toolchain change
+  no longer needs a CLI release before its symbols upload. Repeat the flag or
+  comma-separate values; the leading `.` is optional. Suffixes add to each type's
+  built-in names, and the content checks (ELF build-id, PDB container, dSYM
+  `DWARF` folder) still apply. See
+  [Common options](/cli/debug-files/#common-options).
+
+- **Fixed: Android `SYMBOL_TABLE` symbols uploaded nothing.** With
+  `ndk.debugSymbolLevel = 'SYMBOL_TABLE'` — what the React Native config plugin
+  sets — `native-debug-symbols.zip` contains only `lib*.so.sym` files. Every entry
+  was dropped and the upload exited `0` having sent nothing. `.so.sym` files are
+  now keyed by their GNU build-id like `.so`. They carry function names only;
+  `file:line` frames still need `FULL`.
+
+- **Fixed: `--force` was ignored for native uploads.** `--type elf` and Rust ELF
+  uploads dropped it, so switching a library from `SYMBOL_TABLE` to `FULL` (same
+  build-id) was skipped as already on the server. `--force` is now honoured, and
+  when full-debug libraries are skipped that way the run tells you to pass it.
+
+- **Fixed: one upload per build-id.** Two files for one library — a stripped `.so`
+  beside its split-debug companion — were registered concurrently and the stripped
+  one could win. Now only one is uploaded, preferring DWARF, then a symbol table,
+  then the larger file.
+
+### 0.7.11 (September 18 2026)
+
+Source-map tooling for real-world web builds: protection against breaking
+Subresource Integrity, ways to leave third-party code alone, and an option to keep
+your original source off the wire.
+
+- **`sourcemaps inject` refuses a build that pins its own script hashes.**
+  Injecting appends bytes to every `.js` file, so a hash your HTML already carries
+  (Subresource Integrity) stops matching and the browser refuses to run the script:
+  the page loads and nothing executes. `inject` now detects `integrity` on
+  `<script>` and on `modulepreload` / `preload` links in the HTML under the paths
+  you give it and exits `20` instead. It only refuses over files it would actually
+  rewrite, so re-running `inject` on an already-stamped build stays a no-op. Pass
+  `--allow-sri` for a build that recomputes its hashes afterwards. It cannot see
+  integrity that never reaches the emitted HTML (a manifest read by a server
+  template, a page rendered at request time). See
+  [Source maps](/cli/sourcemaps/#subresource-integrity).
+
+- **`sourcemaps inject --exclude <glob>`** (repeatable) leaves part of a build
+  output alone — for example `--exclude '**/node_modules/**'` to keep `inject` out
+  of vendored third-party code inside the build directory. The pattern is matched
+  against the absolute path, the path relative to the current directory and the
+  path relative to each root, so it works whichever way you pass the directory. An
+  empty or unparseable pattern is a configuration error (exit `20`) rather than a
+  silent "matches nothing".
+
+- **`debug-files upload --strip-sources-content`** uploads each source map without
+  its embedded original source. `sourcesContent` carries your code verbatim and is
+  what lets a symbolicated crash show source lines; stripping it keeps
+  file/line/column resolution and drops the snippet. The map on disk is never
+  modified — only the uploaded copy — and indexed maps are stripped too. Only valid
+  with `--type sourcemaps`. See
+  [Source maps](/cli/sourcemaps/#keeping-your-source-private).
+
+- **Fixed: `--dry-run` failed on an un-keyed map.** `debug-files upload --type
+  sourcemaps --dry-run` exited `11` on the first map without a debug ID, which made
+  the safe preview unusable on a freshly built directory (`sourcemaps inject
+  --dry-run` writes nothing, so every map is still un-keyed). Such a map is now
+  reported and counted, and a real run still exits `11`.
 
 ### 0.7.10 (September 18 2026)
 
