@@ -18,11 +18,11 @@ This page documents Bugsee iOS SDK 7.x, currently in beta. Upgrading from 6.x? S
 
 | | |
 | --- | --- |
-| iOS | 13.0 or later |
-| tvOS | 13.0 or later |
+| iOS | 15.0 or later |
+| tvOS | 15.0 or later |
 | visionOS | 1.0 or later |
 
-6.x supported iOS 12; 7.x raises the minimum to iOS 13. tvOS and visionOS are new in 7.x.
+6.x supported iOS 12; 7.x raises the minimum to iOS 15. tvOS and visionOS are new in 7.x.
 
 :::warning
 Simulator slices are built without the native crash reporter, so crash capture is
@@ -50,7 +50,7 @@ import PackageDescription
 let package = Package(
     name: "YourApp",
     platforms: [
-        .iOS(.v13),
+        .iOS(.v15),
     ],
     dependencies: [
         .package(url: "https://github.com/bugsee/spm", exact: "7.x"),
@@ -73,8 +73,33 @@ version ranges, so `from:` and "Up to Next Major Version" will not resolve a 7.x
 ### Optional: in-app feedback
 
 In 7.x the feedback/chat feature is a separate package, `BugseeFeedback`, layered on top of
-the core SDK. It is published alongside the beta; see
-[Feedback moved to its own package](/sdk/ios/v7/migration#5-feedback-moved-to-its-own-package)
+the core SDK. Add it from:
+
+```
+https://github.com/bugsee/feedback-spm
+```
+
+Use the **Exact Version** rule, at the same version as the core SDK: each `BugseeFeedback`
+release requires that core version exactly. In a package manifest:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/bugsee/spm", exact: "7.x"),
+    .package(url: "https://github.com/bugsee/feedback-spm", exact: "7.x"),
+],
+targets: [
+    .target(
+        name: "YourApp",
+        dependencies: [
+            .product(name: "Bugsee", package: "spm"),
+            // The package identity is "feedback-spm".
+            .product(name: "BugseeFeedback", package: "feedback-spm"),
+        ]
+    ),
+]
+```
+
+See [Feedback moved to its own package](/sdk/ios/v7/migration#5-feedback-moved-to-its-own-package)
 for the call sites.
 
 ## Initialization
@@ -207,7 +232,7 @@ import PackageDescription
 let package = Package(
     name: "YourApp",
     platforms: [
-        .iOS(.v13),
+        .iOS(.v15),
     ],
     dependencies: [
         .package(url: "https://github.com/bugsee/spm", exact: "7.x"),

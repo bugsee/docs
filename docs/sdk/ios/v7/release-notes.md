@@ -9,7 +9,88 @@ Release history for Bugsee iOS SDK 7.x. For the current stable line, see the
 [6.x release notes](/sdk/ios/release-notes). See the
 [migration guide](/sdk/ios/v7/migration) when planning your upgrade from 6.x.
 
+## 7.0.0-beta5 (October 7 2026)
+
+### iOS SDK
+
+**Fixes**
+
+- Fix: The Bugsee SDK's own requests no longer show up in your reports (network capture and
+  APM).
+- Fix: A crash on the first launch after an install or an app update, before the app became
+  active, is now reported. So are some crashes shortly after launch that were lost before.
+
+### BugseeFeedback module
+
+- No API or behavior changes.
+
+## 7.0.0-beta4 (October 6 2026)
+
+### iOS SDK
+
+**New features**
+
+- Feat: iPhone Duo support:
+  - the recording follows the app between the cover and the inner display as the device is
+    folded and unfolded;
+  - fold traces record the posture and hinge angle (iOS 27.1 and later);
+  - display traces list every screen.
+- Feat: Multi-window recording. On iPad (Split View, Stage Manager) and iPhone Duo, every
+  window of the app on the screen is recorded.
+
+**Fixes**
+
+- Fix: Attributes, the user identifier and the default severity now reach reports. Before,
+  crash and error reports had no severity.
+- Fix (security): The internal log attached to each report no longer contains Bugsee's
+  tokens or the full URL of some of your app's requests.
+- Fix: The video now follows window and screen size changes during a session, such as an
+  iPad window being resized.
+- Fix: In a landscape app, device info now reports the screen's pixel size in portrait, as
+  it does for points.
+- Fix (React Native, Flutter, Unity): An unhandled exception reported by the wrapper is now
+  the crash report, instead of the native crash that followed it.
+
+### BugseeFeedback module
+
+- No API or behavior changes.
+
+## 7.0.0-beta3 (September 28 2026)
+
+### iOS SDK
+
+**Breaking changes**
+
+- Mach exceptions are caught by default: `BugseeOptionCaptureMachExceptions` is now `YES` on
+  iOS and visionOS. Set it to `NO` to keep BSD signal handlers. tvOS always uses BSD signal
+  handlers.
+- `log:level:enforceFiltering:` is renamed `log:level:requiresFiltering:`.
+- `BugseeReport`: `type` is read-only, `labels` is no longer nullable, and there is no
+  public initializer.
+- A severity outside 1–5 is ignored, on the report, in `BugseeReportFields` and in the
+  default priority options.
+
+**New features**
+
+- Feat: Change the report before it is sent. In `bugseeAttachmentsForReport:`, the
+  `BugseeReport` lets you change the summary, description, email, severity, attributes,
+  labels and attachments, as on Android.
+- Feat: Mouse input. Mouse buttons, modifier keys and scrolling are recorded with touches.
+- Feat: Wrapper SDK support: the React Native, Flutter and Unity SDKs can record their own
+  logs and network events and change reports. Apps using the iOS SDK directly see no change.
+
+**Fixes**
+
+- Fix: A log filter that throws an exception is now reported once in the SDK's internal log
+  instead of failing silently.
+
+### BugseeFeedback module
+
+- No API or behavior changes.
+
 ## 7.0.0-beta2 (September 18 2026)
+
+### iOS SDK
 
 **Requirements**
 
@@ -28,9 +109,6 @@ Release history for Bugsee iOS SDK 7.x. For the current stable line, see the
 
 **New features**
 
-- Feat: The `BugseeFeedback` package is published for the beta. Add
-  `https://github.com/bugsee/feedback-spm` at `7.0.0-beta2`; it depends on the matching
-  core version, iOS 15 or later.
 - Feat: `getHostLaunchOptions` returns the launch options your app supplied, as the SDK
   accepted them. Together with `getLaunchOptions` this matches Android.
 - Feat: Lifecycle events. The delegate now receives `RelaunchedAfterCrash`,
@@ -50,14 +128,27 @@ Release history for Bugsee iOS SDK 7.x. For the current stable line, see the
   crashing address and the CPU architecture.
 - Fix: `setWrapper:` now populates the wrapper information attached to each session.
   Previously only the `wrapper_info` launch option did.
-- Fix (Feedback): stopping the SDK now stops the chat's polling and outgoing requests,
-  a stop during an in-flight send no longer delivers the same message twice, and the
-  SwiftUI chat can dismiss the keyboard.
+
+### BugseeFeedback module
+
+**New features**
+
+- Feat: The `BugseeFeedback` package is published for the beta. Add
+  `https://github.com/bugsee/feedback-spm` at `7.0.0-beta2`; it depends on the matching
+  core version, iOS 15 or later.
+
+**Fixes**
+
+- Fix: Stopping the SDK now stops the chat's polling and outgoing requests, a stop during an
+  in-flight send no longer delivers the same message twice, and the SwiftUI chat can
+  dismiss the keyboard.
 
 ## 7.0.0-beta1 (September 15 2026)
 
 First beta of the 7.x line. See the [migration guide](/sdk/ios/v7/migration) for the full
 list of API changes and the order to apply them in.
+
+### iOS SDK
 
 **Requirements**
 
@@ -70,10 +161,9 @@ list of API changes and the order to apply them in.
   `BugseeOptionDetect*`, `BugseeOptionCapture*`, `BugseeOptionReporting*`,
   `BugseeOptionConfig*`, `BugseeOptionPerformance*`. Launch options passed as hard-coded
   strings rather than constants are no longer recognized and fall back to the defaults.
-- Feedback is no longer part of the core framework. It ships as a separate Swift package,
-  `BugseeFeedback`, reached through `BugseeFeedback.shared`.
-  `showFeedbackController`, `setDefaultFeedbackGreeting:` and the
-  `bugsee:didReceiveNewFeedback:` delegate method are removed.
+- Feedback is no longer part of the core framework. `showFeedbackController`,
+  `setDefaultFeedbackGreeting:` and the `bugsee:didReceiveNewFeedback:` delegate method are
+  removed. See the `BugseeFeedback` module below.
 - `pause` and `resume` are removed.
 - Renamed: `showReportController*` to `showReportDialog*`, `setView:asHidden:` to
   `addSecureView:` / `removeSecureView:`, `addSecureRect:` and friends to
@@ -110,3 +200,14 @@ list of API changes and the order to apply them in.
 - Feat: `relaunch` restarts with the current app token and default options.
 - Feat: An extension registry (`registerExt:` / `ext:`) for optional modules. Feedback is
   the first to use it.
+
+### BugseeFeedback module
+
+**New features**
+
+- Feat: Feedback ships as a separate Swift package, `BugseeFeedback`, layered on the core
+  SDK and reached through `BugseeFeedback.shared`. `showFeedbackUI` replaces
+  `showFeedbackController`, `setGreeting:` replaces `setDefaultFeedbackGreeting:`, and a
+  `BugseeFeedbackListener` set with `setListener:` receives `onNewMessagesReceived:` and the
+  new `onNewMessageSent:`. The package registers itself with the SDK through the extension
+  registry.
