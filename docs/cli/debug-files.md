@@ -40,7 +40,7 @@ are recognised by the discovery layer but not yet processed.
 | `--version <VERSION>` | App version (Android `versionName`) recorded on the symbol document. |
 | `--build <BUILD>` | Build number (Android `versionCode`) recorded on the symbol document. |
 | `--type <TYPE>` | Restrict discovery to a specific debug-file type (default `proguard`). |
-| `--uuid <UUID>` | Override the auto-computed debug-id with a caller-supplied UUID. |
+| `--uuid <UUID>` | Override the auto-computed debug-id with a caller-supplied UUID. **Required** for `--type elf` (the SDK `BUILD_UUID`; each library is still keyed by GNU build-id). Rejected for `--type dsym`, `pdb`, and `rust`. |
 | `--icon <ICON>` | Attach a launcher icon to the symbol zip (entry `icon.<ext>`). |
 | `--zstd-level <N>` | Zstd level `9..=22` (default `11`); or pass `--no-zstd`. |
 | `--force` | Re-upload even if the server already has the symbol. |
@@ -66,7 +66,8 @@ release. Repeat the flag or comma-separate values; the leading `.` is optional
 
 ```bash
 bugsee-cli debug-files upload ./libs --type elf --extension so.debug,dbg \
-    --version 1.4.0 --build 1400
+    --version 1.4.0 --build 1400 \
+    --uuid 6ba7b811-9dad-11d1-80b4-00c04fd430c8
 ```
 
 Suffixes **add to** each type's built-in names and match the end of the whole file
@@ -124,13 +125,24 @@ warning and the override wins.
 
 ```bash
 bugsee-cli debug-files upload ./app/build/intermediates/merged_native_libs \
-    --type elf --version 1.4.0 --build 1400
+    --type elf --version 1.4.0 --build 1400 \
+    --uuid 6ba7b811-9dad-11d1-80b4-00c04fd430c8
 ```
 
+```bash
+bugsee-cli debug-files upload ./native-debug-symbols.zip \
+    --type elf --version 1.4.0 --build 1400 \
+    --uuid 6ba7b811-9dad-11d1-80b4-00c04fd430c8
+```
+
+`--uuid` is **required** (exit `20` without it). Pass the SDK's `BUILD_UUID` —
+the same value the Gradle plugin writes into the asset channel. It only
+correlates logs: each library is still keyed by its **GNU build-id**
+(`.note.gnu.build-id`), so an unchanged library is skipped before its bytes
+transfer.
+
 ELF symbols are uploaded with a Breakpad transform so native crashes from the
-Android NDK (or Linux) symbolicate. Each `.so` is uploaded as its own symbol,
-keyed by its **GNU build-id** (`.note.gnu.build-id`) — so an unchanged library
-is skipped before its bytes transfer. A library built **without** a build-id
+Android NDK (or Linux) symbolicate. A library built **without** a build-id
 (or a file that isn't an ELF at all) can't be matched at crash time and is
 skipped with a warning; build native libraries with `-Wl,--build-id=sha1` to
 ensure they're symbolicated (see
