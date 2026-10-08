@@ -18,8 +18,11 @@ const config: Config = {
   baseUrl: '/',
   trailingSlash: true,
 
-  onBrokenLinks: 'warn',
-  onBrokenAnchors: 'warn',
+  // Fail the build (and the PR check) on a dead internal link or #anchor instead of warning:
+  // with 'warn' a broken /sdk/... link reached production unnoticed. Old URLs that must keep working
+  // belong in the client-redirects list below, not in content.
+  onBrokenLinks: 'throw',
+  onBrokenAnchors: 'throw',
 
   markdown: {
     format: 'detect',
