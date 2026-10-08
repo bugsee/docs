@@ -21,8 +21,8 @@ The skill files are structured markdown documents that guide AI agents through p
 
 | Platform | Prompt |
 |----------|--------|
-| **Android** | `Use curl to download, read and follow: https://docs.bugsee.com/ai/agent-skills/sdk/android/SKILL.md` |
-| **Android 7.x (beta)** | `Use curl to download, read and follow: https://docs.bugsee.com/ai/agent-skills/sdk/android/v7/SKILL.md` |
+| **Android 6.x** | `Use curl to download, read and follow: https://docs.bugsee.com/ai/agent-skills/sdk/android/SKILL.md` |
+| **Android 7.x** | `Use curl to download, read and follow: https://docs.bugsee.com/ai/agent-skills/sdk/android/v7/SKILL.md` |
 | **iOS** | `Use curl to download, read and follow: https://docs.bugsee.com/ai/agent-skills/sdk/ios/SKILL.md` |
 | **iOS 7.x (beta)** | `Use curl to download, read and follow: https://docs.bugsee.com/ai/agent-skills/sdk/ios/v7/SKILL.md` |
 | **Flutter** | `Use curl to download, read and follow: https://docs.bugsee.com/ai/agent-skills/sdk/flutter/SKILL.md` |
