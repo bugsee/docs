@@ -420,7 +420,7 @@ Add bugsee fastlane to your project:
 fastlane add_plugin bugsee
 ```
 
-For uploading symbols during build(gym) (non-Bitcode case):
+To upload symbols right after the build (`gym`):
 
 ```
 lane :mybuildlane do
@@ -433,7 +433,7 @@ lane :mybuildlane do
 end
 ```
 
-For refreshing dSYM files from App Store Connect (Bitcode case):
+Builds uploaded with Bitcode (Xcode 13 and earlier) were recompiled by Apple, so their dSYM files have to be downloaded from App Store Connect instead:
 
 ```
 lane :refresh_dsyms do

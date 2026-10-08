@@ -994,6 +994,7 @@ Renamed — a plain search and replace does most of these.
 | `registerEvent:` | `event:` |
 | `registerEvent:withParams:` | `event:params:` (params now optional) |
 | `traceKey:withValue:` | `trace:value:` |
+| Swift `Bugsee.trace(key:value:)` | Swift `Bugsee.trace(_:value:)` |
 | `registerNetworkEvent:` | `addNetworkEvent:` |
 | `registerNetworkEvent:needsToBeFiltered:` | `addNetworkEvent:requiresFiltering:` |
 | `removeNetworkEventFilter` | `setNetworkEventFilter:nil` |
@@ -1027,7 +1028,7 @@ Removed with no direct replacement.
 | `isViewHidden:` | — |
 | `hideKeyboard:` | — |
 | `setInternalSecureRectangles:` | — |
-| `logAssert:withLocation:` | Use `logException:reason:options:completion:` |
+| `logAssert:withLocation:` / `BUGSEE_ASSERT` | Use `logException:reason:options:completion:` |
 | `log:level:timestamp:` | `log:level:requiresFiltering:` takes the slot but does something different — it opts the message into the log filter |
 | `setDefaultCrashPriority:` | `BugseeOptionReportingDefaultCrashPriority` at launch |
 | `setDefaultErrorPriority:` | `BugseeOptionReportingDefaultErrorPriority` at launch |

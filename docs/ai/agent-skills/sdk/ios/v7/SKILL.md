@@ -47,7 +47,7 @@ ls Podfile Package.swift Cartfile 2>/dev/null
 # Existing Bugsee install (and which major version)
 grep -ri bugsee Podfile Package.swift Package.resolved Cartfile 2>/dev/null | head -10
 
-# Deployment target — 7.x requires iOS 13+
+# Deployment target — 7.x requires iOS 15+
 grep -r "IPHONEOS_DEPLOYMENT_TARGET" *.xcodeproj/project.pbxproj 2>/dev/null | sort -u | head -5
 
 # Entry point
@@ -65,7 +65,7 @@ grep -rnE '"(BugseeAppLaunchCrashDetectionKey|BugseeDefaultBugPriority|BugseeDef
 
 | Question | Impact |
 |----------|--------|
-| Deployment target below iOS 13? | Raise it — 7.x will not link otherwise |
+| Deployment target below iOS 15? | Raise it — 7.x will not link otherwise |
 | `Podfile` / `Cartfile` only? | 7.x ships via SPM; the project needs an SPM dependency added |
 | Existing Bugsee 6.x found? | This is a migration, not a fresh install — go to Phase 2b after Phase 2 |
 | Raw option-key strings found? | **Fix these first** — they fail silently, with no compiler error |
@@ -105,7 +105,7 @@ targets: [
 ]
 ```
 
-`exact:` is mandatory. SwiftPM excludes pre-release versions from version ranges, so `from:` silently fails to resolve a 7.x beta. The target must also declare `platforms: [.iOS(.v13)]` or resolution fails.
+`exact:` is mandatory. SwiftPM excludes pre-release versions from version ranges, so `from:` silently fails to resolve a 7.x beta. The target must also declare `platforms: [.iOS(.v15)]` or resolution fails.
 
 **`.xcodeproj` with no package manifest** — the reference lives in `<project>.xcodeproj/project.pbxproj` as an `XCRemoteSwiftPackageReference` plus an `XCSwiftPackageProductDependency` wired into the target's `packageProductDependencies`. Hand-editing that file corrupts projects. Do not attempt it: ask the user to add the package once through Xcode (**File → Add Package Dependencies…**, the URL above, dependency rule **Exact Version**), then continue from Phase 3. Confirm it landed before moving on:
 
@@ -116,11 +116,11 @@ grep -rn "bugsee/spm" *.xcodeproj/project.pbxproj *.xcworkspace/xcshareddata/swi
 
 > **Do not guess the version.** Ask the user which 7.x version to pin. If an existing `Package.swift` or `Package.resolved` already references `bugsee/spm`, change the rule in place rather than adding a second dependency on the same repository.
 
-Requirements: iOS 13+, tvOS 13+, visionOS 1+.
+Requirements: iOS 15+, tvOS 15+, visionOS 1+.
 
 ### Optional: in-app feedback
 
-Feedback is no longer in the core framework. It ships as a separate Swift package, `BugseeFeedback`, published alongside the beta. Add it only if the app uses in-app feedback / chat.
+Feedback is no longer in the core framework. It ships as a separate Swift package, `BugseeFeedback`, published alongside the beta at `https://github.com/bugsee/feedback-spm`. Add it only if the app uses in-app feedback / chat, with the **Exact Version** rule at the same version as the core package — each `BugseeFeedback` release requires that core version exactly. Its package identity is `feedback-spm`: `.product(name: "BugseeFeedback", package: "feedback-spm")`.
 
 ---
 
@@ -145,7 +145,7 @@ Work in this order — it is not arbitrary:
    events and traces keep being recorded. If the app used `pause` to stop *all* capture,
    `[Bugsee stop:]` is the honest replacement.
 
-Raising the deployment target to iOS 13 is a prerequisite for all of the above.
+Raising the deployment target to iOS 15 is a prerequisite for all of the above.
 
 
 **Renamed.** A plain search and replace does most of these.
