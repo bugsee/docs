@@ -24,6 +24,12 @@ struct BugseeSwiftUIApp: App {
 
         Bugsee.launch(token: "<your_app_token>", options: options)
     }
+
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
 }
 ```
 
@@ -40,6 +46,8 @@ import BugseeSwiftUI
 
 :::info
 `BugseeSwiftUI` requires iOS 13.0 or later; on iOS 12 the core `Bugsee` module remains fully usable. The module is part of the Swift Package Manager distribution only — the CocoaPods pod and the Carthage/manual XCFramework ship the core `Bugsee` framework alone.
+
+In 7.x both modules require iOS 15, Swift Package Manager is the only distribution channel, the dictionary launch above becomes `Bugsee.launch(token:dictionaryOptions:)`, and the option keys are renamed to the `BugseeOption*` family (for example `BugseeMaxRecordingTimeKey` → `BugseeOptionConfigDuration`). See the [7.x migration guide](/sdk/ios/v7/migration).
 :::
 
 **Static protection** (view is always hidden):
