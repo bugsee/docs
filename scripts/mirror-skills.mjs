@@ -191,8 +191,15 @@ function main() {
     changed++;
   }
   for (const p of orphans) { rmSync(p); changed++; }
-  if (!localSource && flag('--update')) writeFileSync(PIN_PATH, JSON.stringify({ ref }, null, 2) + '\n');
-  console.log(`Mirrored ${files.size} skills from bugsee-for-ai@${ref.slice(0, 7)}; ${changed} file${changed === 1 ? '' : 's'} changed.`);
+  // Move the pin only when the generated output actually changed. The older pin stays valid (it
+  // produces identical files), and a bugsee-for-ai commit that touches no skill content (CI,
+  // README, ...) must not open a sync PR whose only change is the pin.
+  const pinned = JSON.parse(readFileSync(PIN_PATH, 'utf8')).ref;
+  const updating = !localSource && flag('--update');
+  if (updating && changed > 0) writeFileSync(PIN_PATH, JSON.stringify({ ref }, null, 2) + '\n');
+  const kept = updating && changed === 0 && ref !== pinned;
+  console.log(`Mirrored ${files.size} skills from bugsee-for-ai@${ref.slice(0, 7)}; ${changed} file${changed === 1 ? '' : 's'} changed.` +
+    (kept ? ` No skill content changed since @${pinned.slice(0, 7)}; pin kept.` : ''));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
