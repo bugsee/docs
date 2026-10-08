@@ -2,6 +2,9 @@ import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
+// Wrapper SDKs share one layout: an installation page and a privacy section.
+const wrapperSdks = ['cordova', 'dotnet', 'flutter', 'kmp', 'react_native', 'unity', 'xamarin'];
+
 const config: Config = {
   title: 'Bugsee',
   tagline: 'Documentation',
@@ -67,13 +70,41 @@ const config: Config = {
     [
       '@docusaurus/plugin-client-redirects',
       {
-        // Section roots have no page of their own; send them to the first page.
         redirects: [
+          // Section roots have no page of their own; send them to the first page.
           { from: '/sdk/ios', to: '/sdk/ios/installation/' },
           { from: '/sdk/ios/v7', to: '/sdk/ios/v7/installation/' },
           { from: '/sdk/ios/builds', to: '/sdk/ios/builds/overview/' },
           { from: '/sdk/ios/privacy', to: '/sdk/ios/privacy/overview/' },
+          { from: '/sdk/android', to: '/sdk/android/overview/' },
+          { from: '/sdk/android/manual', to: '/sdk/android/manual/bug-reporting/' },
+          { from: '/sdk/android/privacy', to: '/sdk/android/privacy/overview/' },
+          { from: '/sdk/android/v6', to: '/sdk/android/v6/installation/' },
+          { from: '/sdk/android/v6/privacy', to: '/sdk/android/v6/privacy/overview/' },
+          ...wrapperSdks.flatMap((sdk) => [
+            { from: `/sdk/${sdk}`, to: `/sdk/${sdk}/installation/` },
+            { from: `/sdk/${sdk}/privacy`, to: `/sdk/${sdk}/privacy/overview/` },
+          ]),
+          // Android pages that were split or renamed.
+          { from: '/sdk/android/custom', to: '/sdk/android/events-and-traces/' },
+          { from: '/sdk/android/crashes', to: '/sdk/android/issue-detection/crashes/' },
+          { from: '/sdk/android/gradle-plugin-releases', to: '/sdk/android/gradle-plugin/releases/' },
+          { from: '/sdk/android/v7', to: '/sdk/android/overview/' },
+          { from: '/sdk/android/v7/privacy', to: '/sdk/android/privacy/overview/' },
+          { from: '/sdk/android/v7/custom', to: '/sdk/android/events-and-traces/' },
+          { from: '/sdk/android/v7/crashes', to: '/sdk/android/issue-detection/crashes/' },
+          { from: '/sdk/android/v7/detection', to: '/sdk/android/issue-detection/' },
+          { from: '/sdk/android/v7/extensions', to: '/sdk/android/extensibility/bugsee-extensions/' },
+          { from: '/sdk/android/v7/manual', to: '/sdk/android/manual/bug-reporting/' },
         ],
+        // Android 7.x lived under /sdk/android/v7/ until it became the default;
+        // every current Android page keeps answering at its old v7 address.
+        createRedirects(existingPath: string) {
+          if (existingPath.startsWith('/sdk/android/') && !existingPath.startsWith('/sdk/android/v6/')) {
+            return existingPath.replace('/sdk/android/', '/sdk/android/v7/');
+          }
+          return undefined;
+        },
       },
     ],
   ],
