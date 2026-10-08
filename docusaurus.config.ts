@@ -63,6 +63,21 @@ const config: Config = {
     ],
   ],
 
+  plugins: [
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        // Section roots have no page of their own; send them to the first page.
+        redirects: [
+          { from: '/sdk/ios', to: '/sdk/ios/installation/' },
+          { from: '/sdk/ios/v7', to: '/sdk/ios/v7/installation/' },
+          { from: '/sdk/ios/builds', to: '/sdk/ios/builds/overview/' },
+          { from: '/sdk/ios/privacy', to: '/sdk/ios/privacy/overview/' },
+        ],
+      },
+    ],
+  ],
+
   presets: [
     [
       'classic',
