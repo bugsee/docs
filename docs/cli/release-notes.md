@@ -27,7 +27,8 @@ bugs found by a new round of tests on damaged input files are fixed.
   anything you add with `--extension`), reading the libraries in place instead of
   requiring a pre-built `native-debug-symbols.zip`. A zip still works, and you can
   mix directories and zips in one command. Each library is uploaded as its own
-  symbol, keyed by its GNU build-id, and when several files share a build-id
+  symbol, keyed by its GNU build-id (`--uuid`, the SDK `BUILD_UUID`, is still
+  required and only correlates logs). When several files share a build-id
   (across all the paths you pass) only the richest is uploaded: DWARF first, then
   a symbol table, then the larger file. See [Native (ELF)](/cli/debug-files/#native-elf).
 
