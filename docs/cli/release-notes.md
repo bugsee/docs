@@ -14,6 +14,44 @@ date for you.
 
 ## 0.8.x
 
+### 0.8.1 (October 8 2026)
+
+A native library that was first uploaded as a symbol table now upgrades to full
+debug info by itself, with no `--force`.
+
+- **`--type elf` upgrades a stored symbol table to DWARF automatically.** A library
+  first uploaded with the Android Gradle plugin's `ndk.debugSymbolLevel =
+  'SYMBOL_TABLE'` (a `.so.sym`, function names only) and later available with debug
+  info shares one GNU build-id. The server used to treat the richer file as already
+  present and skip it, and `--force` — which re-sends **every** library in the run —
+  was the only way to replace it. Now each library declares whether it carries debug
+  info or only a symbol table, read from the file itself and not its name, and the
+  server replaces a poorer stored copy:
+
+  | You upload | The server holds | Result |
+  |---|---|---|
+  | Library with debug info | A symbol table | **Replaced.** The file transfers once; the run logs `upgraded SYMBOL_TABLE -> FULL` and reports `upgraded=N` in its summary. |
+  | The same file again | The same file | Skipped, nothing transfers. |
+  | A symbol table | Debug info | Skipped, nothing transfers. A symbol is never downgraded. |
+
+  Directory uploads (`merged_native_libs/<variant>`) benefit most: unchanged
+  prebuilt libraries (the C++ runtime, React Native's own `.so` files) still transfer nothing, and only the one that
+  gained debug info is sent. `--force` still means "always replace", and the
+  library's richness is still recorded when you use it. See
+  [Native (ELF)](/cli/debug-files/#native-elf).
+
+  Things to know:
+  - This needs the matching Bugsee server update. Against a server without it the
+    CLI behaves as in 0.8.0 — the extra fields are ignored — and a full-debug
+    library that was skipped still gets the "re-run with `--force`" hint. A current
+    server no longer prints that hint, because it would be wrong.
+  - Only `--type elf` sends the new fields; every other upload type is unchanged.
+  - `--type rust` does not take part yet, so a Rust ELF still needs `--force` to go
+    from stripped to unstripped.
+  - A library that carries only dynamic symbols is classed as a symbol table, so a
+    later true `SYMBOL_TABLE` upload for it will not replace it. That can miss an
+    upgrade but never loses a symbol.
+
 ### 0.8.0 (October 7 2026)
 
 Native symbols can be uploaded straight from a directory of libraries, a corrupt

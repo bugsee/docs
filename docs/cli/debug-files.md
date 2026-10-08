@@ -161,9 +161,19 @@ ensure they're symbolicated (see
 You can mix them in one command. When several files share a GNU build-id — across
 all the paths you pass — only one is uploaded, preferring the one with DWARF debug
 info, then one with a symbol table, then the larger file. The server deduplicates on the
-build-id, so switching a library from `SYMBOL_TABLE` (`.so.sym`, function names
-only) to `FULL` needs `--force` to replace what it stores; the run tells you when
-it skipped full-debug libraries for that reason.
+build-id.
+
+*(Automatic upgrade: CLI 0.8.1 and newer.)* Each library declares whether it
+carries debug info or only a symbol table, read from the file itself and not its
+name, and the server replaces a poorer stored copy with a richer one — so
+switching a library from `SYMBOL_TABLE` (`.so.sym`, function names only) to `FULL`
+needs no `--force`. The file transfers once and the run logs `upgraded
+SYMBOL_TABLE -> FULL`. Uploading the same file again, or a symbol table when the
+server already holds debug info, transfers nothing; a symbol is never downgraded.
+`--force` still means "always replace" and re-sends every library, so reach for it
+only when you want exactly that. Against a server without this behaviour (and CLI
+0.8.0 or older) a full-debug library that was already uploaded as a symbol table
+is skipped, the run says so, and `--force` is the only way to replace it.
 
 | Situation | Result |
 |---|---|
