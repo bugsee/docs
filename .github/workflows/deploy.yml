@@ -49,6 +49,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The agent skills under docs/ai/agent-skills/sdk are generated from bugsee/bugsee-for-ai
+      # (see scripts/mirror-skills.mjs). Fail on hand edits to them.
+      - name: Agent skills mirror (tests + no hand edits)
+        run: |
+          npm run test:mirror
+          npm run check-skills
+
       - name: Spell check
         run: npx cspell "docs/**/*.md" "docs/**/*.mdx" --no-cache -c cspell.json
 

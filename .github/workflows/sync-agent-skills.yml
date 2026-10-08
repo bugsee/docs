@@ -1,0 +1,119 @@
+name: Sync agent skills
+
+# Keeps docs/ai/agent-skills/sdk/** in step with bugsee/bugsee-for-ai, the single source of
+# truth for agent skills. Whenever bugsee-for-ai main has new skill content this opens (or
+# updates) ONE rolling pull request with the regenerated copies.
+#
+# Triggers
+#   * repository_dispatch "bugsee-for-ai-updated" — sent by bugsee-for-ai on every push to main
+#     that touches skills/ (needs the DOCS_SYNC_TOKEN secret there; without it that repo just
+#     skips the notification).
+#   * schedule — polling fallback, so a sync happens even if the notification is not set up.
+#   * workflow_dispatch — run it by hand from the Actions tab.
+#
+# One-time setup (see the PR that introduced this file):
+#   * Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests".
+#   * Optional but recommended: a SKILLS_SYNC_TOKEN secret (fine-grained PAT or GitHub App token
+#     with Contents + Pull requests write on this repo). PRs opened with the default GITHUB_TOKEN do
+#     not trigger the "Build and Deploy" checks; this job therefore runs the spell check and the
+#     site build itself and opens the PR as a DRAFT if either fails.
+
+on:
+  repository_dispatch:
+    types: [bugsee-for-ai-updated]
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-agent-skills
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Regenerate from bugsee-for-ai main
+        id: mirror
+        run: |
+          old="$(node -p "require('./scripts/skills-source.json').ref")"
+          node scripts/mirror-skills.mjs --update
+          new="$(node -p "require('./scripts/skills-source.json').ref")"
+          echo "old=$old" >> "$GITHUB_OUTPUT"
+          echo "new=$new" >> "$GITHUB_OUTPUT"
+          if [ -z "$(git status --porcelain -- docs scripts/skills-source.json)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing to sync."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Spell check
+        id: spell
+        if: steps.mirror.outputs.changed == 'true'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npx cspell "docs/**/*.md" "docs/**/*.mdx" --no-cache -c cspell.json 2>&1 | tee spell.log
+
+      - name: Build site
+        id: build
+        if: steps.mirror.outputs.changed == 'true'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee build.log
+
+      - name: Compose PR body
+        if: steps.mirror.outputs.changed == 'true'
+        run: |
+          {
+            echo "Regenerates the SDK agent skills from [bugsee-for-ai](https://github.com/bugsee/bugsee-for-ai)."
+            echo
+            echo "Changes upstream: https://github.com/bugsee/bugsee-for-ai/compare/${{ steps.mirror.outputs.old }}...${{ steps.mirror.outputs.new }}"
+            echo
+            echo "- Spell check: **${{ steps.spell.outcome }}**"
+            echo "- Site build: **${{ steps.build.outcome }}**"
+            if [ "${{ steps.spell.outcome }}" = "failure" ]; then
+              echo
+              echo "Spell check failed. Valid terms belong in \`cspell.json\`; push that to this branch."
+              echo '```'
+              grep -E 'Unknown word' spell.log | sort -u | head -30
+              echo '```'
+            fi
+            echo
+            echo "Generated files must not be edited here — fix the skill in bugsee-for-ai instead."
+            echo
+            echo "🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+          } > pr-body.md
+
+      - name: Open or update the sync PR
+        if: steps.mirror.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v8.1.1
+        with:
+          token: ${{ secrets.SKILLS_SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+          branch: automation/sync-agent-skills
+          delete-branch: true
+          add-paths: |
+            docs/ai/agent-skills
+            scripts/skills-source.json
+          commit-message: "chore(skills): sync agent skills from bugsee-for-ai@${{ steps.mirror.outputs.new }}"
+          title: "chore(skills): sync agent skills from bugsee-for-ai"
+          body-path: pr-body.md
+          draft: ${{ steps.spell.outcome == 'failure' || steps.build.outcome == 'failure' }}

@@ -1,12 +1,13 @@
 ---
-title: "Bugsee Unity SDK"
+title: Bugsee Unity SDK
 name: bugsee-unity-sdk
 description: Full Bugsee SDK setup for Unity. Use when asked to add Bugsee to Unity, install Bugsee Unity package, or set up bug reporting, crash reporting, and video recording for Unity games.
-sidebar_label: "Unity"
+sidebar_label: Unity
 sidebar_position: 5
 slug: "/ai/agent-skills/sdk/unity/SKILL"
-license: proprietary
+license: MIT
 category: sdk-setup
+generated_from: bugsee-for-ai/skills/bugsee-unity-sdk/SKILL.md
 ---
 
 # Bugsee Unity SDK
@@ -49,7 +50,7 @@ grep -r "AndroidManifest" Assets/Plugins 2>/dev/null | head -3
 
 ## Phase 2: Install
 
-1. Download the latest [Bugsee.unitypackage](https://download.bugsee.com/sdk/unity/BugseeUnity-stable.unitypackage) (or see [all versions](https://docs.bugsee.com/sdk/unity/versions/))
+1. Download the latest [Bugsee.unitypackage](https://download.bugsee.com/sdk/unity/BugseeUnity-stable.unitypackage) (or see [all versions](https://docs.bugsee.com/sdk/unity/versions/)). Source repo: [github.com/bugsee/bugsee-unity](https://github.com/bugsee/bugsee-unity).
 
 2. Import the package in Unity: Assets > Import Package > Custom Package
 
@@ -136,6 +137,23 @@ Full options: [docs.bugsee.com/sdk/unity/configuration/](https://docs.bugsee.com
 ## Verification
 
 Build and run on a device. The Bugsee floating button should appear. Tap it to file a test bug report, then check the Bugsee dashboard.
+
+---
+
+## Debug Symbols
+
+An IL2CPP build needs the line-number mapping **in addition to** the platform's native symbols (iOS dSYMs, Android ELF). Upload it with the [Bugsee CLI](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-cli/SKILL.md):
+
+```bash
+bugsee-cli debug-files upload path/to/Symbols/LineNumberMappings.json \
+    --type il2cpp-linemap \
+    --version 1.2.3 --build 45 \
+    --uuid <arm64-build-id>,<armeabi-build-id>
+```
+
+The mapping is keyed by the IL2CPP module UUID(s) (`libil2cpp` / `UnityFramework`) — comma-separate them, or repeat `--uuid`, for a multi-ABI Android build. Sibling `MethodMap.tsv` / `il2cppFileRoot.txt` are picked up automatically when they sit next to the JSON. CLI **0.8.0+** validates the JSON before packing; a truncated or corrupt file exits **11** and uploads nothing.
+
+Full workflow: [`bugsee-upload-symbols`](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-upload-symbols/SKILL.md) · [Unity crashes](https://docs.bugsee.com/sdk/unity/crashes/).
 
 ---
 

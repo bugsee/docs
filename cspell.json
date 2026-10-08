@@ -228,6 +228,8 @@
         "jsbundle",
         "rustflags",
         "sandboxing",
-        "libil"
+        "libil",
+        "unbreak",
+        "Podspec"
     ]
 }

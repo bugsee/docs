@@ -1,21 +1,16 @@
 ---
-title: "Bugsee Xamarin SDK"
+title: Bugsee Xamarin SDK
 name: bugsee-xamarin-sdk
-description: Full Bugsee SDK setup for Xamarin. DEPRECATED — Microsoft ended Xamarin support on May 1, 2024 and this SDK is no longer actively maintained; prefer the Bugsee .NET SDK for new projects. Use when asked to add Bugsee to Xamarin, install Bugsee NuGet for Xamarin, or set up bug reporting, crash reporting, and video recording for existing Xamarin applications.
-sidebar_label: "Xamarin"
+description: Full Bugsee SDK setup for Xamarin. Use when asked to add Bugsee to Xamarin, install Bugsee NuGet for Xamarin, or set up bug reporting, crash reporting, and video recording for Xamarin applications.
+sidebar_label: Xamarin
 sidebar_position: 7
 slug: "/ai/agent-skills/sdk/xamarin/SKILL"
-license: proprietary
+license: MIT
 category: sdk-setup
+generated_from: bugsee-for-ai/skills/bugsee-xamarin-sdk/SKILL.md
 ---
 
 # Bugsee Xamarin SDK
-
-> **Deprecated — tell the user before proceeding.**
-> Microsoft ended support for Xamarin on May 1, 2024, and the Bugsee Xamarin SDK is no longer
-> actively maintained. For a **new** project, use the [Bugsee .NET SDK](/ai/agent-skills/sdk/dotnet/SKILL)
-> instead, which supports .NET MAUI and modern .NET workloads. Only continue with this skill when
-> the user is working in an existing Xamarin codebase and has confirmed they want to stay on it.
 
 Opinionated wizard that guides you through complete Bugsee setup in Xamarin — bug reporting with video, crash reporting, network monitoring, and console logs for iOS, Android, and Xamarin.Forms.
 
@@ -66,8 +61,10 @@ In Visual Studio: right-click project > Add > Add NuGet Packages > search "Bugse
 Or via CLI:
 
 ```bash
-nuget install Bugsee
+nuget install Bugsee -Version 6.0.3
 ```
+
+Current NuGet latest (re-verified 2026-08-25): **Bugsee 6.0.3** (same package as .NET / MAUI).
 
 > Install the Bugsee package in each platform-specific project (iOS and Android), not the shared/PCL project.
 
@@ -143,6 +140,16 @@ Full options: [docs.bugsee.com/sdk/xamarin/configuration/](https://docs.bugsee.c
 ## Verification
 
 Build and run on a device. The Bugsee floating button should appear. Tap it to file a test bug report, then check the Bugsee dashboard.
+
+---
+
+## Debug Symbols
+
+Upload the symbol files for the release build so managed and native frames resolve — and the platform's native symbols (iOS dSYMs, Android R8 mapping) alongside them, or the native half of a trace stays raw.
+
+The [Bugsee CLI](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-cli/SKILL.md) handles every format from a CI script.
+
+Full workflow: [`bugsee-upload-symbols`](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-upload-symbols/SKILL.md) · [Xamarin symbolication](https://docs.bugsee.com/sdk/xamarin/symbolication/).
 
 ---
 

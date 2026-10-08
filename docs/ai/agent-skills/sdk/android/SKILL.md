@@ -1,25 +1,30 @@
 ---
-title: "Bugsee Android SDK"
-name: bugsee-android-sdk
-description: Full Bugsee SDK setup for Android. Use when asked to add Bugsee to Android, install bugsee-android, or set up bug reporting, crash reporting, and video recording for Android applications.
-sidebar_label: "Android"
+title: Bugsee Android SDK 6.x
+name: bugsee-android-sdk-6x
+description: Bugsee SDK setup for legacy Android 6.x apps. Use only when maintaining an app already on bugsee-android 6.x, or when the user explicitly asks for the 6.x line. For new apps and the current SDK, use bugsee-android-sdk (7.x).
+sidebar_label: Android (6.x)
 sidebar_position: 1
 slug: "/ai/agent-skills/sdk/android/SKILL"
-license: proprietary
+license: MIT
 category: sdk-setup
+generated_from: bugsee-for-ai/skills/bugsee-android-sdk-6x/SKILL.md
 ---
 
-# Bugsee Android SDK
+# Bugsee Android SDK (6.x, Legacy)
 
-Opinionated wizard that scans your Android project and guides you through complete Bugsee setup — bug reporting with video, crash reporting, network monitoring, and console logs.
+Opinionated wizard for the **6.x** line of the Bugsee Android SDK — bug reporting with video, crash reporting, network monitoring, and console logs, using the classic `Bugsee.launch(...)` API (the Gradle plugin is optional on 6.x — the 3.x line only uploads symbols; it does no instrumentation).
+
+> **Legacy.** 7.x is the current Android SDK and the default for new apps — use [`bugsee-android-sdk`](https://docs.bugsee.com/ai/agent-skills/sdk/android/v7/SKILL.md) instead. Use this 6.x skill **only** to maintain an app already pinned to `com.bugsee:bugsee-android` 6.x, or when the user explicitly asks for the 6.x line. 7.x is a different, plugin-based SDK with a new API; see the [migration guide](https://docs.bugsee.com/sdk/android/migration/) when upgrading.
 
 ## Invoke This Skill When
 
-- User asks to "add Bugsee to Android" or "set up Bugsee" in an Android app
-- User wants bug reporting, crash reporting, video recording, or network monitoring in Android
-- User mentions `bugsee-android`, `com.bugsee:bugsee-android`, or Bugsee for Kotlin/Java Android
+- The user is maintaining an existing app already on `com.bugsee:bugsee-android` 6.x
+- The user explicitly asks for Bugsee Android "6.x" / the "legacy" / "old" SDK
+- The user's project pins a 6.x version (`com.bugsee:bugsee-android:6.x.y`) and they want to keep it
 
-> **Note:** Always verify against [docs.bugsee.com/sdk/android/installation/](https://docs.bugsee.com/sdk/android/installation/) before implementing.
+For a fresh "add Bugsee to Android" with no 6.x signal, use the current [`bugsee-android-sdk`](https://docs.bugsee.com/ai/agent-skills/sdk/android/v7/SKILL.md) (7.x) skill instead.
+
+> **Note:** Always verify against [docs.bugsee.com/sdk/android/v6/installation/](https://docs.bugsee.com/sdk/android/v6/installation/) before implementing. 6.x docs live under `/sdk/android/v6/`.
 
 ---
 
@@ -73,7 +78,7 @@ Add the Bugsee dependency to the app module's build file.
 
 ```gradle
 dependencies {
-    implementation 'com.bugsee:bugsee-android:+'
+    implementation 'com.bugsee:bugsee-android:6.0.4'
 }
 ```
 
@@ -81,11 +86,11 @@ dependencies {
 
 ```kotlin
 dependencies {
-    implementation("com.bugsee:bugsee-android:+")
+    implementation("com.bugsee:bugsee-android:6.0.4")
 }
 ```
 
-> The `+` fetches the latest version. Pin to a specific version from [release notes](https://docs.bugsee.com/sdk/android/release-notes/) for production stability.
+> `6.0.4` is the latest 6.x release — pin to it (or another 6.x version from the [6.x release notes](https://docs.bugsee.com/sdk/android/v6/release-notes/)). **Do not** use `+`: that resolves to 7.x, which is the plugin-based SDK with a different API — switch to the [`bugsee-android-sdk`](https://docs.bugsee.com/ai/agent-skills/sdk/android/v7/SKILL.md) (7.x) skill for that.
 
 If your `compileSdkVersion` is below 29 and you get `android:foregroundServiceType not found`, set `compileSdkVersion` to 29 or higher.
 
@@ -179,7 +184,7 @@ Common options:
 | `ScreenshotEnabled` | `true` | Attach screenshot to report |
 | `WifiOnlyUpload` | `false` | Upload only on WiFi |
 
-Full options: [docs.bugsee.com/sdk/android/configuration/](https://docs.bugsee.com/sdk/android/configuration/)
+Full options: [docs.bugsee.com/sdk/android/v6/configuration/](https://docs.bugsee.com/sdk/android/v6/configuration/)
 
 ---
 
@@ -201,13 +206,48 @@ Check the Bugsee dashboard for the incoming report.
 
 ---
 
+## Debug Symbols
+
+The 6.x line pairs with the **3.x** Gradle plugin (latest **3.6**) — never 4.x, which targets the 7.x module layout ([compatibility](https://docs.bugsee.com/sdk/android/gradle-plugin/requirements/)). Plugin 3.x does no bytecode instrumentation; it uploads the R8/ProGuard `mapping.txt` (and, with `ndk(true)`, NDK symbols) on each release build and injects a `BUILD_UUID` into the merged manifest ([6.x Gradle plugin](https://docs.bugsee.com/sdk/android/v6/gradle-plugin/)):
+
+```kotlin
+// app/build.gradle.kts
+plugins {
+    id("com.android.application")
+    id("com.bugsee.android.gradle") version "3.6"
+}
+
+bugsee {
+    appToken("<your_app_token>")
+    ndk(true)   // only if the app ships native libraries
+}
+```
+
+3.x takes the boolean `ndk(true)`; the nested `ndk { enabled.set(true) }` block is 4.x-only.
+
+Without the plugin — or from CI with no Gradle — upload the mapping through the [Bugsee CLI](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-cli/SKILL.md) (or the dashboard's manual upload):
+
+```bash
+bugsee-cli debug-files upload ./app/build/outputs/mapping/release \
+    --version 1.4.0 --build 1400
+```
+
+`--version` / `--build` must match the shipped build — a mismatch uploads a mapping that is accepted and then never resolves a crash. Native NDK symbols go up with `--type elf` and a `--uuid` matching what the SDK reports.
+
+Upgrading to 7.x moves to plugin 4.x, which adds instrumentation on top of the uploads.
+
+Full workflow: [`bugsee-upload-symbols`](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-upload-symbols/SKILL.md).
+
+---
+
 ## Documentation Links
 
-- [Installation](https://docs.bugsee.com/sdk/android/installation/)
-- [Configuration](https://docs.bugsee.com/sdk/android/configuration/)
-- [Custom data](https://docs.bugsee.com/sdk/android/v6/custom/)
-- [Network events](https://docs.bugsee.com/sdk/android/network/)
-- [Console logs](https://docs.bugsee.com/sdk/android/logs/)
-- [Privacy](https://docs.bugsee.com/sdk/android/privacy/overview/)
-- [Manual invocation](https://docs.bugsee.com/sdk/android/v6/manual/)
-- [Release notes](https://docs.bugsee.com/sdk/android/release-notes/)
+- [Installation (6.x)](https://docs.bugsee.com/sdk/android/v6/installation/)
+- [Configuration (6.x)](https://docs.bugsee.com/sdk/android/v6/configuration/)
+- [Custom data (6.x)](https://docs.bugsee.com/sdk/android/v6/custom/)
+- [Network events (6.x)](https://docs.bugsee.com/sdk/android/v6/network/)
+- [Console logs (6.x)](https://docs.bugsee.com/sdk/android/v6/logs/)
+- [Privacy (6.x)](https://docs.bugsee.com/sdk/android/v6/privacy/overview/)
+- [Manual invocation (6.x)](https://docs.bugsee.com/sdk/android/v6/manual/)
+- [Release notes (6.x)](https://docs.bugsee.com/sdk/android/v6/release-notes/)
+- [Migrate to 7.x](https://docs.bugsee.com/sdk/android/migration/)

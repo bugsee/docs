@@ -1,12 +1,13 @@
 ---
-title: "Bugsee React Native SDK"
+title: Bugsee React Native SDK
 name: bugsee-react-native-sdk
 description: Full Bugsee SDK setup for React Native. Use when asked to add Bugsee to React Native, install react-native-bugsee, or set up bug reporting, crash reporting, and video recording for React Native applications.
-sidebar_label: "React Native"
+sidebar_label: React Native
 sidebar_position: 4
 slug: "/ai/agent-skills/sdk/react-native/SKILL"
-license: proprietary
+license: MIT
 category: sdk-setup
+generated_from: bugsee-for-ai/skills/bugsee-react-native-sdk/SKILL.md
 ---
 
 # Bugsee React Native SDK
@@ -54,8 +55,10 @@ ls App.js App.tsx index.js 2>/dev/null
 ### 1. Install the npm module
 
 ```bash
-npm install --save react-native-bugsee
+npm install --save react-native-bugsee@6.0.5
 ```
+
+Current npm latest (re-verified 2026-08-25): **6.0.5**. Pin the version; an unpinned `npm install` can silently resolve an older cache.
 
 ### 2. Prepare iOS project
 
@@ -78,6 +81,7 @@ After installing the module, perform a Gradle Sync. No additional manual configu
 Add Bugsee launch to your main `App.js` or `App.tsx`:
 
 ```javascript
+import React from 'react';
 import Bugsee from 'react-native-bugsee';
 import { Platform } from 'react-native';
 
@@ -108,8 +112,8 @@ export default class App extends React.Component {
 For functional components:
 
 ```javascript
-import Bugsee from 'react-native-bugsee';
 import { useEffect } from 'react';
+import Bugsee from 'react-native-bugsee';
 import { Platform } from 'react-native';
 
 function App() {
@@ -159,6 +163,38 @@ npx react-native run-android
 ```
 
 You should see the Bugsee floating button. Tap it to file a test bug report, then check the Bugsee dashboard.
+
+---
+
+## Debug Symbols
+
+A React Native crash has **two layers**, and each needs its own symbols. Uploading only one leaves half the trace raw.
+
+**JavaScript — source maps.** The `bugsee-sourcemaps` npm tool is the documented React Native path and still the safe default:
+
+It ships as a `react-native-bugsee` devDependency — **do not install it globally unpinned**:
+
+```bash
+npx bugsee-sourcemaps make -t <APP_TOKEN> -p ios -v 1.2.3 ./
+```
+
+See [React Native crashes](https://docs.bugsee.com/sdk/react_native/crashes/) and [docs.bugsee.com/tools/sourcemaps](https://docs.bugsee.com/tools/sourcemaps/).
+
+The [Bugsee CLI](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-cli/SKILL.md) can do it instead — one binary for JS *and* native — but mind the file extension:
+
+```bash
+npm i -D @bugsee/cli@0.8.1
+# bundle with a .js name: --bundle-output ios/main.js --sourcemap-output ios/main.js.map
+npx bugsee-cli sourcemaps inject ios/main.js
+npx bugsee-cli debug-files upload ios/main.js.map --type sourcemaps \
+    --version 1.4.0 --build 1400
+```
+
+> **`inject` only rewrites `.js`, `.cjs`, and `.mjs` files.** React Native's default `main.jsbundle` output is **skipped silently** — it reports `js_injected=0` and exits 0, and the upload then fails because the map carries no debug ID. Either emit the bundle with a `.js` name, or stay on `bugsee-sourcemaps`.
+
+**Native.** iOS needs dSYMs — `bugsee-cli xcode upload-dsyms` from a Run Script build phase (CLI 0.7.7+) is the shape a config plugin can generate via `withXcodeProject`. Android needs the R8/ProGuard mapping, which the Bugsee Android Gradle plugin uploads automatically.
+
+Full workflow: [`bugsee-upload-symbols`](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-upload-symbols/SKILL.md).
 
 ---
 

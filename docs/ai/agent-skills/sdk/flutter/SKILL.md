@@ -1,12 +1,13 @@
 ---
-title: "Bugsee Flutter SDK"
+title: Bugsee Flutter SDK
 name: bugsee-flutter-sdk
 description: Full Bugsee SDK setup for Flutter. Use when asked to add Bugsee to Flutter, install bugsee_flutter, or set up bug reporting, crash reporting, and video recording for Flutter applications.
-sidebar_label: "Flutter"
+sidebar_label: Flutter
 sidebar_position: 3
 slug: "/ai/agent-skills/sdk/flutter/SKILL"
-license: proprietary
+license: MIT
 category: sdk-setup
+generated_from: bugsee-for-ai/skills/bugsee-flutter-sdk/SKILL.md
 ---
 
 # Bugsee Flutter SDK
@@ -19,7 +20,7 @@ Opinionated wizard that scans your Flutter project and guides you through comple
 - User wants bug reporting, crash reporting, video recording, or network monitoring in Flutter
 - User mentions `bugsee_flutter`, Bugsee for Dart, or Bugsee Flutter plugin
 
-> **Note:** Always verify against [docs.bugsee.com/sdk/flutter/installation/](https://docs.bugsee.com/sdk/flutter/installation/) before implementing.
+> **Note:** Always verify against [docs.bugsee.com/sdk/flutter/installation/](https://docs.bugsee.com/sdk/flutter/installation/) before implementing. Install from **pub.dev** (`bugsee_flutter`). Do not add a git dependency on `github.com/bugsee/flutter-bugsee` — that repo is not the current package source.
 
 ---
 
@@ -57,8 +58,10 @@ Add to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  bugsee_flutter: ^8.0.0
+  bugsee_flutter: ^9.0.4
 ```
+
+Current pub.dev latest (re-verified 2026-08-25): **9.0.4**. Docs still show `^8.0.0` — pin from the registry, not the installation page.
 
 Then run:
 
@@ -118,7 +121,7 @@ class MyApp extends StatelessWidget {
 > Replace `<android-app-token>` and `<ios-app-token>` with tokens from your Bugsee dashboard. It is common to use different app tokens for iOS and Android.
 
 **Key points:**
-- `HttpOverrides.global = Bugsee.defaultHttpOverrides;` is required to intercept network requests
+- `HttpOverrides.global = Bugsee.defaultHttpOverrides;` is required to intercept Dart network requests (`dart:io` `HttpClient`, including `package:http`) — there is no default for it. Capture needs **both** this and the `monitorNetwork` launch option (default `true`); setting `monitorNetwork` to `false` disables capture regardless of the overrides ([network](https://docs.bugsee.com/sdk/flutter/network/))
 - `Bugsee.launch()` with `appRunCallback` ensures all errors in the app are captured in the proper zone
 
 ---
@@ -174,6 +177,16 @@ flutter run
 ```
 
 You should see the Bugsee floating button. Tap it to file a test bug report, then check the Bugsee dashboard.
+
+---
+
+## Debug Symbols
+
+A Flutter release obfuscates Dart symbols, and the platform layers below it are stripped separately. Upload the Dart split debug info **and** the native symbols — iOS dSYMs, Android R8 mapping and ELF — or half the trace stays raw.
+
+The Flutter integration downloads and invokes the [Bugsee CLI](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-cli/SKILL.md) for the upload; you can also run it directly from CI.
+
+Full workflow: [`bugsee-upload-symbols`](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-upload-symbols/SKILL.md) · [Flutter symbolication](https://docs.bugsee.com/sdk/flutter/symbolication/).
 
 ---
 

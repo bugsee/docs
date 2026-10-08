@@ -5,6 +5,9 @@
   "scripts": {
     "docusaurus": "docusaurus",
     "sync-skills": "node scripts/sync-skills.mjs",
+    "mirror-skills": "node scripts/mirror-skills.mjs",
+    "check-skills": "node scripts/mirror-skills.mjs --check",
+    "test:mirror": "node --test scripts/mirror-skills.test.mjs",
     "prestart": "node scripts/sync-skills.mjs",
     "start": "docusaurus start --port 8000",
     "prebuild": "node scripts/sync-skills.mjs",
