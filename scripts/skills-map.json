@@ -1,0 +1,22 @@
+{
+  "source": {
+    "repo": "https://github.com/bugsee/bugsee-for-ai.git",
+    "blobBase": "https://github.com/bugsee/bugsee-for-ai/blob/main",
+    "docsBase": "https://docs.bugsee.com"
+  },
+  "skills": [
+    { "plugin": "bugsee-android-sdk-6x",   "dest": "sdk/android",       "title": "Bugsee Android SDK 6.x", "label": "Android (6.x)",  "position": 1 },
+    { "plugin": "bugsee-android-sdk",      "dest": "sdk/android/v7",    "title": "Bugsee Android SDK 7.x", "label": "Android (7.x)",  "position": 2 },
+    { "plugin": "bugsee-ios-sdk",          "dest": "sdk/ios",           "title": "Bugsee iOS SDK",         "label": "iOS",            "position": 2 },
+    { "plugin": "bugsee-flutter-sdk",      "dest": "sdk/flutter",       "title": "Bugsee Flutter SDK",     "label": "Flutter",        "position": 3 },
+    { "plugin": "bugsee-react-native-sdk","dest": "sdk/react-native",  "title": "Bugsee React Native SDK","label": "React Native",   "position": 4 },
+    { "plugin": "bugsee-unity-sdk",        "dest": "sdk/unity",         "title": "Bugsee Unity SDK",       "label": "Unity",          "position": 5 },
+    { "plugin": "bugsee-dotnet-sdk",       "dest": "sdk/dotnet",        "title": "Bugsee .NET SDK",        "label": ".NET / MAUI",    "position": 6 },
+    { "plugin": "bugsee-xamarin-sdk",      "dest": "sdk/xamarin",       "title": "Bugsee Xamarin SDK",     "label": "Xamarin",        "position": 7 },
+    { "plugin": "bugsee-cordova-sdk",      "dest": "sdk/cordova",       "title": "Bugsee Cordova SDK",     "label": "Cordova",        "position": 8 },
+    { "plugin": "bugsee-kmp-sdk",          "dest": "sdk/kmp",           "title": "Bugsee KMP SDK",         "label": "KMP",            "position": 9 }
+  ],
+  "docsOwned": [
+    "sdk/ios/v7"
+  ]
+}

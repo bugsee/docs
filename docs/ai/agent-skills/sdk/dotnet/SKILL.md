@@ -1,12 +1,13 @@
 ---
-title: "Bugsee .NET SDK"
+title: Bugsee .NET SDK
 name: bugsee-dotnet-sdk
 description: Full Bugsee SDK setup for .NET MAUI. Use when asked to add Bugsee to .NET, MAUI, install Bugsee NuGet, or set up bug reporting, crash reporting, and video recording for .NET mobile applications.
-sidebar_label: ".NET / MAUI"
+sidebar_label: .NET / MAUI
 sidebar_position: 6
 slug: "/ai/agent-skills/sdk/dotnet/SKILL"
-license: proprietary
+license: MIT
 category: sdk-setup
+generated_from: bugsee-for-ai/skills/bugsee-dotnet-sdk/SKILL.md
 ---
 
 # Bugsee .NET SDK
@@ -53,10 +54,12 @@ find . -name "AppDelegate.cs" -o -name "MainApplication.cs" -o -name "MauiProgra
 Install via NuGet:
 
 ```bash
-dotnet add package Bugsee
+dotnet add package Bugsee --version 6.0.3
 ```
 
-Or in Visual Studio: right-click Dependencies > Manage NuGet Packages > search "Bugsee" > Install.
+Or in Visual Studio: right-click Dependencies > Manage NuGet Packages > search "Bugsee" > Install **6.0.3**.
+
+Current NuGet latest (re-verified 2026-08-25): **Bugsee 6.0.3**. Pin it; `dotnet add package Bugsee` without `--version` is acceptable only after confirming that still resolves to 6.0.3.
 
 ---
 
@@ -142,6 +145,16 @@ Full options: [docs.bugsee.com/sdk/dotnet/configuration/](https://docs.bugsee.co
 ## Verification
 
 Build and run on a device. The Bugsee floating button should appear. Tap it to file a test bug report, then check the Bugsee dashboard.
+
+---
+
+## Debug Symbols
+
+Upload the symbol files for the release build so managed and native frames resolve. The .NET MAUI MSBuild target bundles and invokes the [Bugsee CLI](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-cli/SKILL.md); in CI you can run the same binary directly.
+
+A MAUI app crashing on iOS or Android also needs that platform's native symbols — dSYMs or the R8 mapping — not just the managed ones.
+
+Full workflow: [`bugsee-upload-symbols`](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-upload-symbols/SKILL.md) · [.NET symbolication](https://docs.bugsee.com/sdk/dotnet/symbolication/).
 
 ---
 

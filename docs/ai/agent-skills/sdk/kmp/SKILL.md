@@ -1,12 +1,13 @@
 ---
-title: "Bugsee KMP SDK"
+title: Bugsee KMP SDK
 name: bugsee-kmp-sdk
 description: Full Bugsee SDK setup for Kotlin Multiplatform. Use when asked to add Bugsee to KMP, install bugsee-kotlin-multiplatform, or set up bug reporting, crash reporting, and video recording for KMP applications.
-sidebar_label: "KMP"
+sidebar_label: KMP
 sidebar_position: 9
 slug: "/ai/agent-skills/sdk/kmp/SKILL"
-license: proprietary
+license: MIT
 category: sdk-setup
+generated_from: bugsee-for-ai/skills/bugsee-kmp-sdk/SKILL.md
 ---
 
 # Bugsee KMP SDK
@@ -74,16 +75,18 @@ kotlin {
     cocoapods {
         // ... your existing cocoapods configuration
 
-        pod("Bugsee")
+        pod("Bugsee")  // native iOS SDK; trunk latest 6.3.2. CocoaPods trunk becomes read-only on December 2, 2026 — see the iOS skill for SPM/Carthage if you are not using the Kotlin CocoaPods plugin.
     }
 
     sourceSets {
         commonMain.dependencies {
-            implementation("com.bugsee:bugsee-kotlin-multiplatform:0.1.1")
+            implementation("com.bugsee:bugsee-kotlin-multiplatform:0.1.2")
         }
     }
 }
 ```
+
+Current Maven latest (re-verified 2026-09-24): **0.1.2**. Pin that version — docs still show `+`, which the KMP installation page itself warns against (`Pin your dependency to a specific version rather than using a floating range`).
 
 > **Note:** The CocoaPods integration approach can't be used together with the `embedAndSignAppleFrameworkForXcode` mechanism used for direct integration. See [Kotlin CocoaPods overview](https://kotlinlang.org/docs/multiplatform/multiplatform-cocoapods-overview.html#set-up-an-environment-to-work-with-cocoapods).
 
@@ -138,8 +141,9 @@ Add `Bugsee.launch()` in your `ComposeUIViewController` entry point:
 import androidx.compose.ui.window.ComposeUIViewController
 import com.bugsee.kmp.Bugsee
 import com.bugsee.kmp.BugseeLaunchOptions
+import platform.UIKit.UIViewController
 
-fun MainViewController() = ComposeUIViewController {
+fun MainViewController(): UIViewController {
     val options = BugseeLaunchOptions()
     options.monitorNetwork = true
     options.captureLogs = true
@@ -148,7 +152,9 @@ fun MainViewController() = ComposeUIViewController {
     options.shakeToReport = true
     Bugsee.launch("<your_app_token>", options)
 
-    App()
+    return ComposeUIViewController {
+        App()
+    }
 }
 ```
 
@@ -194,17 +200,19 @@ Full options: [docs.bugsee.com/sdk/kmp/configuration/](https://docs.bugsee.com/s
 
 ## Phase 5: Debug symbols (Production builds)
 
-For readable stack traces from release builds, upload platform debug symbols. There is no KMP-specific upload tool — follow the native workflows on each platform.
+For readable stack traces from release builds, upload platform debug symbols. There is no KMP-specific upload tool — follow the native workflows on each platform. Both run on the [Bugsee CLI](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-cli/SKILL.md) underneath, so a CI job without Gradle or Xcode can invoke it directly.
 
 ### Android
 
-In a typical KMP/Compose Multiplatform project, wire the Bugsee Gradle plugin into `composeApp/build.gradle.kts`:
+In a typical KMP/Compose Multiplatform project, wire the Bugsee Gradle plugin into `composeApp/build.gradle.kts`. **Match the plugin line to the native Android SDK the KMP release wraps** — lines are not cross-compatible ([requirements](https://docs.bugsee.com/sdk/android/gradle-plugin/requirements/)): plugin **3.x ↔ SDK 6.x**, plugin **4.x ↔ SDK 7.x**.
+
+KMP **0.1.2** wraps native Android SDK **6.0.4** (its Maven POM's `com.bugsee:bugsee-android` dependency; check the [KMP release notes](https://docs.bugsee.com/sdk/kmp/release-notes/) for later releases), so pin plugin **3.6** — the latest 3.x — and use the boolean `ndk(true)`. **Do not** reach for plugin 4.x here: it expects the 7.x module layout, auto-pulls `com.bugsee:bugsee-android` on the 7.x range, and its nested `ndk { enabled.set(true) }` block does not exist on 3.x (using it there fails with `Type mismatch: inferred type is () -> Unit but Boolean was expected`). Once a KMP release wraps SDK 7.x, switch to plugin 4.0.8 (never 4.0.6) and the nested block — see [`bugsee-android-sdk`](https://docs.bugsee.com/ai/agent-skills/sdk/android/v7/SKILL.md).
 
 ```kotlin
 // gradle/libs.versions.toml
 //
 // [versions]
-// bugseeGradle = "x.y.z"   // plugin line paired with the native SDK this KMP release wraps — see release notes
+// bugseeGradle = "3.6"   // plugin line paired with the native SDK this KMP release wraps (6.x -> 3.x)
 //
 // [plugins]
 // bugsee-gradle-plugin = { id = "com.bugsee.android.gradle", version.ref = "bugseeGradle" }
@@ -229,8 +237,6 @@ android {
 }
 ```
 
-> **Note:** The Gradle plugin line must match the native Android SDK this KMP release wraps. Check the [KMP release notes](https://docs.bugsee.com/sdk/kmp/release-notes/) for the wrapped SDK version, then pick the paired plugin line from [Gradle plugin — Requirements & compatibility](https://docs.bugsee.com/sdk/android/gradle-plugin/requirements/). The NDK syntax differs by line: plugin 4.x takes a nested block (`ndk { enabled.set(true) }`), earlier lines take the boolean `ndk(true)` shown above. Using the nested block on a line that expects the boolean fails to compile with `Type mismatch: inferred type is () -> Unit but Boolean was expected`.
-
 The plugin uploads the ProGuard/R8 `mapping.txt` automatically at build time.
 
 ### iOS
@@ -240,6 +246,8 @@ Add a `Run Script` build phase to the **Post-actions** stage of your **iosApp** 
 Set `DEBUG_INFORMATION_FORMAT` to `dwarf-with-dsym` for the configurations you want to symbolicate. When using the Kotlin CocoaPods plugin, apply this in the Podfile `post_install` hook so all pods (including the Bugsee pod) produce dSYMs.
 
 Full instructions and the BugseeAgent script: [docs.bugsee.com/sdk/kmp/debug-symbols/](https://docs.bugsee.com/sdk/kmp/debug-symbols/).
+
+If editing `.xcscheme` XML is awkward — a generated `iosApp` project, or a CI-only setup — `bugsee-cli xcode upload-dsyms` (CLI 0.7.7+) does the dSYM upload from an ordinary **Run Script build phase** instead, with no build registration. See [`bugsee-upload-symbols`](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-upload-symbols/SKILL.md) for both shapes and their failure policies.
 
 ---
 

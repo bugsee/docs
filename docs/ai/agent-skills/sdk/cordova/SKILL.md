@@ -1,12 +1,13 @@
 ---
-title: "Bugsee Cordova SDK"
+title: Bugsee Cordova SDK
 name: bugsee-cordova-sdk
 description: Full Bugsee SDK setup for Cordova. Use when asked to add Bugsee to Cordova, install bugsee cordova plugin, or set up bug reporting, crash reporting, and video recording for Cordova applications.
-sidebar_label: "Cordova"
+sidebar_label: Cordova
 sidebar_position: 8
 slug: "/ai/agent-skills/sdk/cordova/SKILL"
-license: proprietary
+license: MIT
 category: sdk-setup
+generated_from: bugsee-for-ai/skills/bugsee-cordova-sdk/SKILL.md
 ---
 
 # Bugsee Cordova SDK
@@ -51,11 +52,13 @@ ls platforms 2>/dev/null
 ## Phase 2: Install
 
 ```bash
-cordova plugin add com.bugsee.cordova-plugin --save
+cordova plugin add com.bugsee.cordova-plugin@7.0.1 --save
 
 # Optional: install device plugin for platform detection
 cordova plugin add cordova-plugin-device --save
 ```
+
+Current npm latest (re-verified 2026-08-25): **7.0.1**. Pin it rather than leaving the add unversioned.
 
 ---
 
@@ -116,6 +119,25 @@ cordova run ios
 ```
 
 The Bugsee floating button should appear. Tap it to file a test bug report, then check the Bugsee dashboard.
+
+---
+
+## Debug Symbols
+
+A Cordova crash can land in the web layer or the native one, and each needs its own symbols.
+
+**JavaScript — source maps**, via the [Bugsee CLI](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-cli/SKILL.md):
+
+```bash
+npm i -D @bugsee/cli@0.8.1
+npx bugsee-cli sourcemaps inject <build-output-dir>
+npx bugsee-cli debug-files upload <build-output-dir> --type sourcemaps \
+    --version 1.4.0 --build 1400
+```
+
+Point both at whatever directory the web build emits its bundles and `.map` files into. `inject` must run after the bundler and before the upload, on the same output.
+
+**Native.** iOS needs dSYMs, Android the R8/ProGuard mapping — see [`bugsee-upload-symbols`](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-upload-symbols/SKILL.md) for both.
 
 ---
 

@@ -1,33 +1,36 @@
 ---
-title: "Bugsee Android SDK 7.x (Beta)"
-name: bugsee-android-sdk-7x
-description: Full Bugsee 7.x (beta) setup for Android. Use when the user explicitly asks for Bugsee Android 7.x / beta, or wants the next-gen features (APM, extension modules, auto-init, new detection providers). For stable production setup, use the 6.x skill instead.
-sidebar_label: "Android (7.x Beta)"
+title: Bugsee Android SDK 7.x
+name: bugsee-android-sdk
+description: Full Bugsee SDK setup for Android (7.x — the current SDK). Use when asked to add Bugsee to Android, install bugsee-android, or set up bug reporting, crash reporting, video recording, APM, or network monitoring for Android apps. For legacy 6.x apps, use bugsee-android-sdk-6x.
+sidebar_label: Android (7.x)
 sidebar_position: 2
 slug: "/ai/agent-skills/sdk/android/v7/SKILL"
-license: proprietary
+license: MIT
 category: sdk-setup
+generated_from: bugsee-for-ai/skills/bugsee-android-sdk/SKILL.md
 ---
 
-# Bugsee Android SDK 7.x (Beta)
+# Bugsee Android SDK
 
-Opinionated wizard that scans the Android project and wires up Bugsee 7.x — core SDK, Gradle plugin, extension modules for network clients / Compose / feedback, APM, and manifest-based auto-launch.
+Opinionated wizard that scans the Android project and wires up Bugsee 7.x — core SDK, Gradle plugin, extension modules for network clients / Compose / feedback / NDK, APM, and manifest-based auto-launch.
 
-> **Beta warning.** 7.x is in active beta. Option keys, module names, and internal APIs may still change. For production apps shipping today, prefer the stable [6.x skill](/ai/agent-skills/sdk/android/SKILL). Continue only if the user explicitly asks for 7.x / beta, or needs APM, Ktor/Cronet capture, manifest auto-launch, the Gradle plugin, or individual `bugsee-android-*` artifacts.
+> **7.x is the current Android SDK** (`com.bugsee:bugsee-android:7.3.0`, Gradle plugin `com.bugsee.android.gradle` / `com.bugsee:bugsee-android-gradle-plugin:4.0.8`, re-verified 2026-10-08 on Maven Central; SDK lastUpdated 2026-09-29, plugin 2026-10-08) and the default for new and existing apps. Keep the two pins paired — the plugin's Compose launch crash fix (4.0.6+) requires SDK 7.1.4+; **7.3.0** satisfies that. **Never pin plugin 4.0.6** — it silently disables every SDK extension (see Phase 2). Plugin latest is **4.0.8** (7.3.0 does not require a plugin bump). 7.3.0 is a security/reliability release — upgrade apps on 7.0.0-beta1 through 7.2.0. It is plugin-based with a new API. If you are maintaining an app still pinned to the 6.x line, use the legacy [6.x skill](https://docs.bugsee.com/ai/agent-skills/sdk/android/SKILL.md) instead; when upgrading from 6.x, follow the [migration guide](https://docs.bugsee.com/sdk/android/migration/).
 
 ## Invoke This Skill When
 
-- User explicitly says "Bugsee 7.x", "beta", "next-gen Bugsee", or `7.0.0-beta*`.
+- User asks to "add Bugsee to Android" or "set up Bugsee" / bug reporting / crash reporting / video recording in an Android app (Kotlin or Java).
+- User mentions `bugsee-android`, `com.bugsee:bugsee-android`, or the **Bugsee Gradle plugin** (`com.bugsee.android.gradle`).
 - User mentions **APM**, transactions, or spans (`Bugsee.startTransaction`, `startSpan`).
-- User mentions **extension modules** (`bugsee-android-okhttp`, `bugsee-android-ktor-2`, `bugsee-android-ktor-3`, `bugsee-android-cronet`, `bugsee-android-compose`, `bugsee-android-feedback`).
+- User mentions **extension modules** (`bugsee-android-okhttp`, `bugsee-android-ktor-2`, `bugsee-android-ktor-3`, `bugsee-android-cronet`, `bugsee-android-compose`, `bugsee-android-feedback`, `bugsee-android-ndk`, `bugsee-android-leak`).
 - User asks for **manifest auto-launch** / no Application subclass.
-- User mentions the **Bugsee Gradle plugin** (`com.bugsee.android.gradle`).
-- User asks about **Compose secure modifier**, `Modifier.bugseeSecure()`, Ktor / Cronet / `HttpEngine` integration.
-- User mentions new detection providers: `DetectAndReportMainThreadMisuse`, `DetectAndReportExit*`, `DetectAndReportEarlyCrash`.
+- User asks about **Compose secure modifier**, `Modifier.bugseeSecure()`, Ktor / Cronet / `HttpEngine` integration, **WebSocket** capture, **`FLAG_SECURE`**, or `Bugsee.getStatus()`.
+- User mentions detection providers: `DetectAndReportMainThreadMisuse`, `DetectAndReportExit*`, `DetectAndReportEarlyCrash`, `DetectAndReportHangSampling`, `DetectAndReportAnrSampling`.
+- User mentions **`Bugsee.notify()`**, notification relay, or sending a message to Slack/Teams without creating an issue.
+- User mentions **pending-report caps** (`MaxDataSize`, `MaxPendingReports`, `MaxPendingReportAge`), **`Bugsee.getDefaultNetworkSanitizer()`**, **`Bugsee.getHostLaunchOptions()`**, or a **`ReportHandler`** that touches UI.
 
-For generic "add Bugsee to Android" / "set up bug reporting" with no 7.x signal, switch to the 6.x skill.
+For an app explicitly pinned to the **6.x** line (or when the user asks for "6.x" / the "legacy" SDK), switch to the [6.x skill](https://docs.bugsee.com/ai/agent-skills/sdk/android/SKILL.md).
 
-> **Always verify against** [docs.bugsee.com/sdk/android/installation/](https://docs.bugsee.com/sdk/android/installation/) before implementing. 7.x docs live under `/sdk/android/`; `/sdk/android/v6/` is the legacy 6.x tree.
+> **Always verify against** [docs.bugsee.com/sdk/android/installation/](https://docs.bugsee.com/sdk/android/installation/) before implementing. Prefer Maven/Plugin Portal versions over the installation page's placeholders when they disagree.
 
 ---
 
@@ -54,6 +57,10 @@ grep -rE 'com\.squareup\.okhttp3|io\.ktor:ktor-client|org\.chromium\.net|okhttp3
 # Compose?
 grep -rE 'androidx\.compose|@Composable' app/build.gradle* app/src 2>/dev/null | head -5
 
+# Native / NDK?
+ls app/src/main/cpp app/src/main/jni 2>/dev/null
+grep -rE 'ndk|externalNativeBuild|cmake' app/build.gradle* 2>/dev/null | head -5
+
 # Application subclass + manifest (for programmatic-vs-auto-launch decision)
 grep -r "extends Application\|: Application()" app/src/main --include="*.java" --include="*.kt" 2>/dev/null | head -3
 grep -E 'android:name=|<application' app/src/main/AndroidManifest.xml 2>/dev/null | head -5
@@ -67,12 +74,13 @@ Decision table:
 | `minSdk` < 21 | **Stop** — 7.x requires `minSdk = 21`. |
 | `build.gradle.kts` present | Use Kotlin DSL snippets below. |
 | `build.gradle` (Groovy) | Use Groovy snippets. |
-| OkHttp 3/4 detected | Plugin auto-installs `bugsee-android-okhttp`; no manual wiring. |
-| OkHttp 2 only | Not supported in 7.x — user must migrate to OkHttp 3/4 or drop to 6.x. |
-| Ktor 2.x / 3.x detected | Plugin auto-installs extension, but user must `install(BugseeKtor2Plugin)` / `install(BugseeKtor3Plugin.Plugin)` on every `HttpClient`. |
+| OkHttp 3/4 detected | Plugin auto-installs `bugsee-android-okhttp`; no manual wiring. WebSocket via `OkHttpClient.newWebSocket(...)` is captured automatically (plugin **4.0.3+**). |
+| OkHttp 2 only | Not supported in 7.x — user must migrate to OkHttp 3/4 or use the [6.x skill](https://docs.bugsee.com/ai/agent-skills/sdk/android/SKILL.md). |
+| Ktor 2.x / 3.x detected | Plugin auto-installs extension, but user must `install(BugseeKtor2Plugin)` / `install(BugseeKtor3Plugin.Plugin)` on every `HttpClient`. WebSocket on the OkHttp engine is automatic; on CIO, route calls through the `bugseeWebSocket` helper (plugin 4.0.3+). |
 | Cronet detected | Plugin auto-installs extension, but user must wrap every engine with `BugseeCronet.instrument(engine)`. |
 | Compose detected | Plugin auto-installs `bugsee-android-compose` + Kotlin compiler plugin (secure modifier + input capture). |
-| Feedback UI wanted | Manually add `bugsee-android-feedback` — **not** auto-installed. |
+| Native / NDK code | Enable `ndk { enabled.set(true) }` — pulls `bugsee-android-ndk`. |
+| Feedback UI wanted | `feedback.set(true)` — **not** auto-installed from other dependencies. |
 | No Application subclass | Prefer manifest auto-launch (Phase 3 Option A). |
 
 ---
@@ -81,7 +89,7 @@ Decision table:
 
 ### Step 1 — Apply the Bugsee Gradle plugin (mandatory)
 
-7.x requires the plugin. Without it, APM, main-thread misuse detection, log capture rewrites, OkHttp injection, and Compose secure redaction do not work.
+7.x requires the plugin. Without it, APM, main-thread misuse detection, log capture rewrites, OkHttp injection, and Compose secure redaction do not work. Pin plugin **4.0.8** with SDK **7.3.0** (current Maven Central release as of 2026-10-08; keep the two pins paired). Do not stay on 4.0.7: it pins bugsee-cli 0.6.0, which silently uploads nothing for NDK `SYMBOL_TABLE` symbols when the CLI's auto-update is off or its download host is unreachable; 4.0.8 pins bugsee-cli 0.8.1. Plugin 4.x pairs with SDK 7.x; do not mix with plugin 3.x / SDK 6.x. There is no separate Gradle-plugin skill — apply the notes below from the [plugin release notes](https://docs.bugsee.com/sdk/android/gradle-plugin/releases/).
 
 **Kotlin DSL (`app/build.gradle.kts`):**
 
@@ -89,19 +97,25 @@ Decision table:
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.bugsee.android.gradle") version "7.0.0-beta3"
+    id("com.bugsee.android.gradle") version "4.0.8"
 }
 
 bugsee {
     appToken("<your-app-token>")
+    // In-app feedback messenger UI (default: off) — plugin pulls bugsee-android-feedback
+    // feedback.set(true)
+    // Native crash capture + NDK symbol upload (default: off) — plugin pulls bugsee-android-ndk
     // ndk {
-    //     enabled.set(true)                       // upload NDK symbols for native crash symbolication
+    //     enabled.set(true)
     //     // forceDebugSymbolsUpload.set(true)    // re-upload even when the build UUID hasn't changed
     // }
+    // Memory & thread leak detection (default: off) — plugin pulls bugsee-android-leak
+    // leak { enabled.set(true) }
     // instrumentation {
     //     mainThreadMisuse.set(false)   // disable any individual hook if needed
     //     ktor.set(false)                // suppress auto-install of an extension
     // }
+    // Do not disable mainThreadMisuse / log / thread / operationDispatch just to unbreak JVM unit tests — SDK 7.1.4+ keeps those tests passing with instrumentation on.
 }
 ```
 
@@ -111,14 +125,12 @@ bugsee {
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'com.bugsee.android.gradle' version '7.0.0-beta3'
+    id 'com.bugsee.android.gradle' version '4.0.8'
 }
 
 bugsee {
     appToken '<your-app-token>'
-    // ndk {
-    //     enabled.set true
-    // }
+    // ndk { enabled.set true }
 }
 ```
 
@@ -134,15 +146,28 @@ pluginManagement {
 }
 ```
 
-### Step 2 — Add the core artifact
+With the plugin applied, the core `com.bugsee:bugsee-android` artifact is auto-pulled (bounded to the same MAJOR.MINOR series as the plugin's `sdk-min-version`). Dependency-driven extensions (OkHttp, Ktor 2/3, Cronet, Compose) are auto-installed when the matching library is in the graph. Feedback, NDK, and leak are **not** dependency-driven — enable them with the DSL toggles above.
+
+From plugin **4.0.6** (carried into 4.0.7 and 4.0.8): variants that do **not** include Bugsee (e.g. `debugImplementation` only) are no longer instrumented or wired. Flavors are handled the same way. Plain `implementation` is unchanged — do not invent extra plugin flags for that case. The Compose launch crash fix requires SDK **7.1.4+**; **7.3.0** satisfies that — do not pair plugin 4.0.6+ with an older 7.1.x SDK. No DSL changes. Plugin latest is **4.0.8** (Maven Central lastUpdated 2026-10-08; re-verified 2026-10-08).
+
+> **Plugin 4.0.6 is broken — upgrade it on sight.** In apps built against the published SDK, 4.0.6 stripped the extension providers from the manifest without registering the extensions in their place: **NDK crash reporting, feedback, Compose, OkHttp, Ktor, Cronet and leak detection never ran**, with a green build and a normally working app. Because the Compose extension never installed, content marked `bugseeSecure` was **not masked** in report screenshots. 4.0.7 fixes it. If an app is on 4.0.6 and cannot move yet, stay on 4.0.5 or set `optimizeExtensionsLoading.set(false)` in `bugsee {}`. Also in 4.0.7 ([release notes](https://docs.bugsee.com/sdk/android/gradle-plugin/releases/)):
+> - Only Bugsee's own extension providers are consolidated — a `Bugsee<Something>InitProvider` in the app or a wrapper SDK is no longer silently removed (4.0.0-beta10 → 4.0.6 removed them).
+> - If the plugin would strip extension providers it cannot register (e.g. an SDK older than 7.0.0-beta11 declared with a non-literal version such as `7.+`), the build now **fails** naming the providers and pointing at `optimizeExtensionsLoading` — that error means "pin a literal SDK version", not "disable the plugin".
+> - The built-in fallback uploader treats the server's "already uploaded" reply as success, so an unchanged mapping is no longer re-uploaded on every build.
+> - The auto-added SDK floor is still 7.2.0 (plugin 4.0.8). Auto-pull on `[7.2.0,8.0.0)` can resolve 7.3.0, but pin **7.3.0** explicitly so the security release is locked.
+
+### Step 2 — Pin the core SDK (recommended)
+
+An explicit `com.bugsee:bugsee-android` declaration wins over auto-pull and locks the runtime. Pin **7.3.0**. Avoid `+`.
 
 **Kotlin DSL:**
 
 ```kotlin
 dependencies {
-    implementation("com.bugsee:bugsee-android:7.0.0-beta3")
-    // Feedback UI is NOT auto-installed. Add it if the user wants the feedback flow:
-    // implementation("com.bugsee:bugsee-android-feedback:7.0.0-beta3")
+    implementation("com.bugsee:bugsee-android:7.3.0")
+    // Only if you did not use feedback.set(true) / ndk { enabled.set(true) } and need a manual pin:
+    // implementation("com.bugsee:bugsee-android-feedback:7.3.0")
+    // implementation("com.bugsee:bugsee-android-ndk:7.3.0")
 }
 ```
 
@@ -150,14 +175,27 @@ dependencies {
 
 ```groovy
 dependencies {
-    implementation 'com.bugsee:bugsee-android:7.0.0-beta3'
-    // implementation 'com.bugsee:bugsee-android-feedback:7.0.0-beta3'
+    implementation 'com.bugsee:bugsee-android:7.3.0'
 }
 ```
 
-The plugin auto-adds `bugsee-android-okhttp`, `bugsee-android-ktor-2`, `bugsee-android-ktor-3`, `bugsee-android-cronet`, and `bugsee-android-compose` when it detects the matching dependency in the graph. To suppress any of these, set the corresponding flag in the `bugsee { instrumentation { ... } }` block (e.g. `cronet.set(false)`).
+To suppress auto-install of a dependency-driven extension, set the corresponding flag in `bugsee { instrumentation { ... } }` (e.g. `cronet.set(false)`). To opt out of core auto-pull entirely, `sdkAutoLoad.set(false)`.
 
-> 7.0.0-beta3 is the latest beta at the time of writing. Pin to a concrete version; avoid `+`.
+> **Current stable releases (re-verified 2026-10-08 against Maven Central; SDK lastUpdated 2026-09-29):** SDK `com.bugsee:bugsee-android:7.3.0` (and matching `bugsee-android-compose`, `bugsee-android-ndk`, `bugsee-android-feedback`, `bugsee-android-okhttp`, `bugsee-android-ktor-2`, `bugsee-android-ktor-3`, `bugsee-android-cronet`, `bugsee-android-leak` at **7.3.0**) and Gradle plugin `4.0.8` (`com.bugsee:bugsee-android-gradle-plugin` / Plugin Portal `com.bugsee.android.gradle`; plugin lastUpdated 2026-10-08). The plugin tracks its own 4.x line, separate from the SDK — pin both together. 7.3.0 does not require a plugin bump.
+>
+> **SDK 7.3.0 / plugin 4.0.8 — cite, do not invent APIs.** [Android SDK 7.3.0](https://docs.bugsee.com/sdk/android/release-notes/) is a security and reliability release; the public API is **additive**. [Gradle plugin 4.0.8](https://docs.bugsee.com/sdk/android/gradle-plugin/releases/) is the latest release (it adopts bugsee-cli 0.8.1 and fixes NDK symbol uploads). Agents should **not** advise workarounds 7.1.4 / 4.0.6 made unnecessary:
+> - **Upgrade from 7.2.0 (and any 7.0.0-beta1+).** The SDK internal log attached to reports no longer records app HTTP URLs (including embedded credentials and query strings), `setUserIdentifier` / `setAttribute` values, performance-transaction URLs, or filter/listener text. Data written by an earlier 7.x is deleted on the first 7.3.0 launch and never attached. Recommend the upgrade; do not invent a third-party leak — it stayed in the app's own Bugsee project.
+> - **Ktor.** 7.2.0 `bugsee-android-ktor-2` / `bugsee-android-ktor-3` did not compile `install(BugseeKtor2Plugin)`, `install(BugseeKtor3Plugin.Plugin)`, or `bugseeWebSocket` in Kotlin apps. Pin **7.3.0**.
+> - **Pending-report caps (defaults on).** `MaxDataSize` (150 MB), `MaxPendingReports` (30), `MaxPendingReportAge` (30 days). Past a limit, oldest unsent reports are deleted (errors before bugs before crashes). A device offline more than 30 days now drops the oldest instead of keeping them all.
+> - **ReportHandler.** Handlers no longer run on the main thread (they now also run for hang/ANR). If a handler touches views, post to the main thread. With `ReportHandlerCallbackTimeout` `0`, a handler that never completes no longer holds the report indefinitely.
+> - **`Bugsee.logException(null)`.** Now reports a simulated exception from the call site (groups by call site, not one empty issue).
+> - **Network sanitizer.** Use `Bugsee.getDefaultNetworkSanitizer().sanitize(event)` inside a custom network filter to keep built-in redaction. Static `com.bugsee.library.shared.security.privacy.NetworkDataSanitizer` is deprecated; if both that package and `com.bugsee.library.contracts.exchange.*` are wildcard-imported, import one by name.
+> - **JVM unit tests.** 7.1.4+ stops Bugsee from failing ordinary JVM unit tests. If someone disabled `mainThreadMisuse` / `log` / `thread` / `operationDispatch` instrumentation only to get a green test run, they can turn those back on.
+> - **Host logging.** Logging statements in the host app are unaffected by failures inside Bugsee capture.
+> - **Report UI / notifications.** Crash when the report screen is restored after process death; crash on light/dark theme change while a notification-opened report is on screen; Huawei Android 6 notification small-icon fallback; screenshot loss on some storage configs.
+> - **Variant / flavor wiring (4.0.6+).** Variants (and flavors) that do not include Bugsee are left uninstrumented. Plain `implementation` is unchanged.
+> - **Compose.** The Compose launch crash fix **requires SDK 7.1.4+**. **7.3.0** satisfies that. Keep the two pins paired.
+> - **Instrumentation / APM.** Thread-instrumentation crash fix; failed DB/file operations are now timed (host exception handling unchanged). Manifest optimization is applied only when the SDK version supports it; already-minified third-party libraries are left as-is.
 
 ---
 
@@ -180,14 +218,14 @@ No Application subclass needed, no `Bugsee.launch(...)` call. Add the token as `
 The SDK launches automatically at process start via `BugseeInitProvider`. Any option can be set via manifest metadata using the `com.bugsee.option.<group>.<name>` key; enums take the value name as a string (e.g. `"High"` for `FrameRate.High`).
 
 ```xml
-<meta-data android:name="com.bugsee.option.detect.crash-ndk"   android:value="true" />
 <meta-data android:name="com.bugsee.option.capture.breadcrumbs" android:value="true" />
 <meta-data android:name="com.bugsee.option.config.duration"     android:value="120" />
+<meta-data android:name="com.bugsee.option.capture.video.adaptive" android:value="true" />
 ```
 
 ### Option B — Programmatic launch
 
-Use when the token is fetched at runtime or options need dynamic values. Context is auto-discovered.
+Use when the token is fetched at runtime or options need dynamic values. Context is auto-discovered. If the token is also in the manifest, disable auto-init with `com.bugsee.auto-init` = `false`.
 
 **Kotlin:**
 
@@ -200,12 +238,14 @@ class MyApplication : Application() {
         super.onCreate()
         val options = hashMapOf<String, java.io.Serializable>(
             Options.Duration to 60,
-            Options.DetectAndReportCrashNdk to true
+            Options.CaptureVideoAdaptive to true
         )
         Bugsee.launch(this, "<your-app-token>", options)
     }
 }
 ```
+
+Shortest form (context resolved automatically): `Bugsee.launch("<your-app-token>")`.
 
 **Java:**
 
@@ -218,34 +258,100 @@ public class MyApplication extends Application {
         super.onCreate();
         HashMap<String, Serializable> options = new HashMap<>();
         options.put(Options.Duration, 60);
-        options.put(Options.DetectAndReportCrashNdk, true);
+        options.put(Options.CaptureVideoAdaptive, true);
         Bugsee.launch(this, "<your-app-token>", options);
     }
 }
 ```
 
-Options passed to `launch(...)` override manifest metadata. The 6.x `LaunchOptions` builder is removed. There is no shortest-form `Bugsee.launch(token)` — pass context (or use manifest auto-launch).
+A `Map` passed to `launch(...)` is a **full override**, not a merge with manifest metadata: any key left out of the map falls back to its registered default, not to the manifest value. The 6.x `LaunchOptions` builder is removed.
 
 ---
 
 ## Phase 4: Configure (Optional)
 
-All configuration flows through either (a) manifest `<meta-data>` entries, or (b) the `Map<String, Serializable>` passed to `Bugsee.launch(...)`. Keys live on `com.bugsee.library.contracts.options.Options`.
+All configuration flows through either (a) manifest `<meta-data>` entries, or (b) the `Map<String, Serializable>` passed to `Bugsee.launch(...)`. Keys live on `com.bugsee.library.contracts.options.Options`. Canonical table: [configuration](https://docs.bugsee.com/sdk/android/configuration/).
 
-Common toggles:
+Common toggles (including 7.1.x / 7.2.0 / 7.3.0 setup-relevant options):
 
 | `Options` constant | Manifest key | Default | Description |
 |---|---|---|---|
 | `Duration` | `com.bugsee.option.config.duration` | `60` | Video ring buffer duration (seconds). |
 | `WifiOnlyUpload` | `com.bugsee.option.config.wifi-only-upload` | `false` | Restrict uploads to Wi-Fi. |
-| `DetectAndReportCrashNdk` | `com.bugsee.option.detect.crash-ndk` | `false` | Enable Breakpad native crash capture. |
+| `NotifyFlushDelay` | `com.bugsee.option.config.notify-flush-delay` | `0` | **7.2.0.** Coalescing window (ms) before the non-urgent `Bugsee.notify()` queue drains. `0` starts the drain as soon as a notification is persisted. Does not affect an urgent skip-ahead POST. |
+| `MaxDataSize` | `com.bugsee.option.config.max-data-size` | `150` | **7.3.0.** Cap on unsent report data on device (MB, minimum `10`). Past a limit, oldest reports are deleted. |
+| `MaxPendingReports` | `com.bugsee.option.config.max-pending-reports` | `30` | **7.3.0.** Max unsent reports (minimum `1`). |
+| `MaxPendingReportAge` | `com.bugsee.option.config.max-pending-report-age` | `30` | **7.3.0.** Max age of unsent reports in days. `0` or less turns aging off. |
 | `DetectAndReportHang` | `com.bugsee.option.detect.hang` | `false` | Main-thread hang detection. |
+| `DetectAndReportHangSampling` | `com.bugsee.option.detect.hang.sampling` | `true` | **7.2.0.** Sample the main thread during a hang and attribute the report to the culprit stack. Takes effect only when `DetectAndReportHang` is enabled. |
 | `DetectAndReportMainThreadMisuse` | `com.bugsee.option.detect.main_thread_misuse` | `false` | Flag I/O / network / DB / `SharedPreferences` on main thread. Requires plugin `mainThreadMisuse` instrumentation. |
-| `DetectAndReportExit` | `com.bugsee.option.detect.exit` | `false` | Master switch for `ApplicationExitInfo`-based exit reports. |
+| `DetectAndReportExit` | `com.bugsee.option.detect.exit` | `true` | Master switch for `ApplicationExitInfo`-based exit reports (7.1 default). |
+| `DetectAndReportAnrSampling` | `com.bugsee.option.detect.anr.sampling` | `true` | **7.2.0.** Sample the main thread during an ANR and attribute the report to the culprit stack. Takes effect only when `DetectAndReportExitNotResponding` is enabled. |
+| `DetectAndReportExitLowMemoryBackgroundAsError` | `com.bugsee.option.detect.exit.bg_low_memory_as_error` | `false` | **7.3.0.** Report a background low-memory kill as a non-fatal error instead of a crash. Foreground kills stay crashes. |
 | `CaptureVideoFrameRate` | `com.bugsee.option.capture.video.frame-rate` | `High` | `Low` / `Medium` / `High`. |
+| `CaptureVideoAdaptive` | `com.bugsee.option.capture.video.adaptive` | `false` | **7.1.0.** Skip capturing new frames while nothing on screen has been redrawn (at least one frame per second). Lowers CPU/battery on idle screens. |
+| `CaptureNetworkOnLaunch` | `com.bugsee.option.capture.network.on-launch` | `false` | **7.1.0.** Subscribe the network provider during `launch()` instead of when capture starts, so startup requests are not missed. |
+| `CaptureRespectFlagSecure` | `com.bugsee.option.capture.respect-flag-secure` | `true` | **7.1.0.** Honor `WindowManager.LayoutParams.FLAG_SECURE`: those windows are blanked in video and screenshots, excluded from the view hierarchy, and their input is dropped. An app that sets `FLAG_SECURE` broadly will see empty recordings after upgrading — set to `false` to restore pre-7.1.0 behavior. |
 | `ReportingTriggerByShake` | `com.bugsee.option.reporting.triggers.shake` | `true` | Shake-to-report gesture. |
 | `PerformanceMonitoring` | `com.bugsee.option.performance.enabled` | `true` | APM master switch. |
 | `PerformanceSampleRate` | `com.bugsee.option.performance.sample-rate` | `0.01` | Standalone-upload probability per transaction (capture is unaffected). |
+
+### NDK native crashes (`bugsee-android-ndk`)
+
+Native crash detection is **not** in the core artifact. Enable it with the plugin DSL (`ndk { enabled.set(true) }`) or `implementation("com.bugsee:bugsee-android-ndk:7.3.0")`. The programmatic constant is `NdkOptions.DetectAndReport` (`com.bugsee.library.ndk.contracts.options.NdkOptions`), **not** the removed `Options.DetectAndReportCrashNdk`. Manifest key `com.bugsee.option.detect.crash-ndk` is unchanged; default is `true` once the module is on the classpath. See [native crashes](https://docs.bugsee.com/sdk/android/issue-detection/native-crashes/).
+
+### WebSocket
+
+OkHttp `newWebSocket(...)` traffic (connection lifecycle, frames, close/error) is captured automatically when the OkHttp extension is installed (Gradle plugin **4.0.3+**; use 4.0.8 — 4.0.6 never registered the OkHttp extension). Ktor on the OkHttp engine is automatic; on CIO, route calls through the `bugseeWebSocket` helper. `NetworkEventStage.WebSocket` is the stage value for custom events.
+
+### `FLAG_SECURE`
+
+Windows that set `FLAG_SECURE` (including payment/DRM surfaces that set it for you) are protected by default since 7.1.0 via `CaptureRespectFlagSecure`. See [privacy / video](https://docs.bugsee.com/sdk/android/privacy/video/).
+
+### `Bugsee.notify()` (7.2.0)
+
+Sends a title (required; empty title is a no-op), optional body, optional `IssueSeverity`, and optional `Map<String, String>` extra rows to the app's configured Slack/Teams/webhook integrations **without** creating an issue or running the report pipeline. No-op if the SDK has not launched (not buffered). Queued to disk and delivered in batches while offline; payloads larger than 256 KiB are rejected. The five-argument overload's `urgent` flag attempts an immediate skip-ahead POST when the call is in the main process, a session is active, and the network is reachable (honoring `WifiOnlyUpload`); otherwise it queues like a non-urgent call. Tune batching with `NotifyFlushDelay` (default `0`). Full contract: [notification relay](https://docs.bugsee.com/sdk/android/notification-relay/).
+
+```kotlin
+import com.bugsee.library.Bugsee
+import com.bugsee.library.contracts.options.IssueSeverity
+
+Bugsee.notify("Payment webhook failed")
+Bugsee.notify("Payment webhook failed", "returned 500 for order 42", IssueSeverity.High)
+
+val fields = linkedMapOf("order_id" to "42", "status_code" to "500")
+Bugsee.notify("Payment webhook failed", "returned 500 for order 42", IssueSeverity.Critical, fields, true)
+```
+
+### Hang / ANR culprit-stack sampling (7.2.0)
+
+When hang or ANR detection is on, the SDK samples the main thread for the duration of the freeze and uses the derived culprit stack as the report signature (the original stack still travels in the thread list). Controlled by `DetectAndReportHangSampling` and `DetectAndReportAnrSampling` — both **on by default**, and each takes effect only when its parent is enabled (`DetectAndReportHang` / `DetectAndReportExitNotResponding`). Existing hang and ANR issues regroup once after upgrade. Background ANRs on API 30+ keep the old single-snapshot stack for now.
+
+### View hierarchy v3 (7.2.0)
+
+The captured view-hierarchy document is version 3: every window on the display (dialogs, popups, toasts, …), a root `display` object (size, rotation, insets, cutouts), `window_kind`, Z-order, and richer per-node fields (layout id, `clip_children`, background color). Other exported streams stay at version 2. No new `Options` toggle — `CaptureViewHierarchy` is unchanged.
+
+### SDK 7.3.0 — agent notes
+
+- **Pending-report caps are on by default.** Raise or disable them only if the app must retain a long offline queue; otherwise leave the defaults. Deletion order is errors, then bug reports, then crashes; the newest crash and in-flight uploads are kept.
+- **Report handlers and UI.** `ReportHandler` runs off the main thread. Post view work with `Handler(Looper.getMainLooper())`. Crash handling can still occasionally invoke the handler on the main thread — keep it short. `Report.addAttachment(File, name, mimeType, move)` (and the `byte[]` overload) add files without loading them into memory; both return `null` if the report is already submitted. `Report.setScreenshot(displayId, bitmap, annotated)` / `isScreenshotAnnotated(displayId)` mark user-drawn screenshots; only annotated ones show as annotations on the issue.
+- **Launch map enums.** Pass enum options by name in the launch `Map` (e.g. `"High"` for `VideoQuality`), matched case-insensitively like the manifest. Before 7.3.0 a string value was accepted but ignored.
+- **`Bugsee.getHostLaunchOptions()`** returns options the app supplied (launch map or manifest) without SDK defaults. `Bugsee.getLaunchOptions()` still returns the options in effect.
+- **Custom network events.** If you build events with `Bugsee.getExchangeFactory()`, stamp them with `BugseeExchangeFactory.currentTimestamp()` — clock changes no longer drop events.
+
+### `Bugsee.getStatus()`
+
+```kotlin
+import com.bugsee.library.contracts.lifecycle.BugseeStatus
+
+when (Bugsee.getStatus()) {
+    BugseeStatus.Launched -> { /* running */ }
+    BugseeStatus.Launching, BugseeStatus.Stopping -> { /* in transition */ }
+    BugseeStatus.Stopped -> { /* not running */ }
+}
+```
+
+`Bugsee.getLaunched()` remains the boolean shortcut (`true` between a successful launch/auto-init and the next `stop()`). See [lifecycle](https://docs.bugsee.com/sdk/android/lifecycle/).
 
 Network client wiring (required for non-OkHttp clients):
 
@@ -279,12 +385,37 @@ Check the Bugsee dashboard for the incoming report. If APM is enabled, hit a few
 
 ---
 
+## Debug Symbols
+
+The Bugsee Gradle plugin applied in Phase 2 already uploads the R8/ProGuard `mapping.txt` on each release build, and NDK symbols when `ndk { enabled.set(true) }` is set. **For a Gradle project that is the whole answer** — nothing else to wire.
+
+Outside Gradle — a prebuilt APK, or a CI job that only has the artifacts — upload with the [Bugsee CLI](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-cli/SKILL.md):
+
+```bash
+bugsee-cli debug-files upload ./app/build/outputs/mapping/release \
+    --version 1.4.0 --build 1400
+```
+
+`--version` / `--build` must match the shipped build, or the symbol is accepted and never resolves a crash.
+
+Full workflow: [`bugsee-upload-symbols`](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-upload-symbols/SKILL.md) · [Gradle plugin](https://docs.bugsee.com/sdk/android/gradle-plugin/).
+
+---
+
 ## Documentation Links
 
-- [Installation (7.x)](https://docs.bugsee.com/sdk/android/installation/)
-- [Configuration (7.x)](https://docs.bugsee.com/sdk/android/configuration/)
-- [Gradle plugin (7.x)](https://docs.bugsee.com/sdk/android/gradle-plugin/)
-- [Network events (7.x)](https://docs.bugsee.com/sdk/android/network/)
-- [Issue detection (7.x)](https://docs.bugsee.com/sdk/android/issue-detection)
-- [Performance / APM (7.x)](https://docs.bugsee.com/sdk/android/performance/)
+- [Installation](https://docs.bugsee.com/sdk/android/installation/)
+- [Configuration](https://docs.bugsee.com/sdk/android/configuration/)
+- [NDK options](https://docs.bugsee.com/sdk/android/configuration/ndk/)
+- [Gradle plugin](https://docs.bugsee.com/sdk/android/gradle-plugin/)
+- [SDK release notes](https://docs.bugsee.com/sdk/android/release-notes/)
+- [Gradle plugin releases](https://docs.bugsee.com/sdk/android/gradle-plugin/releases/)
+- [Network events](https://docs.bugsee.com/sdk/android/network/)
+- [Issue detection](https://docs.bugsee.com/sdk/android/issue-detection/)
+- [Native crashes](https://docs.bugsee.com/sdk/android/issue-detection/native-crashes/)
+- [Privacy / video (`FLAG_SECURE`)](https://docs.bugsee.com/sdk/android/privacy/video/)
+- [Privacy / network (`getDefaultNetworkSanitizer`)](https://docs.bugsee.com/sdk/android/privacy/network/)
+- [Notification relay / `Bugsee.notify()`](https://docs.bugsee.com/sdk/android/notification-relay/)
+- [Lifecycle / `getStatus`](https://docs.bugsee.com/sdk/android/lifecycle/)
+- [Performance / APM](https://docs.bugsee.com/sdk/android/performance/)
 - [Migration from 6.x](https://docs.bugsee.com/sdk/android/migration/)

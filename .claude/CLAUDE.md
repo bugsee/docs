@@ -58,6 +58,7 @@ All markdown content, organized by section:
 ### Build Pipeline (`scripts/`)
 - **build.sh** — Runs spell check → `npm run build` → `node scripts/copy-raw-markdown.mjs`
 - **deploy.sh** — Manual fallback deploy: S3 sync + CloudFront invalidation (requires `S3CMD_CONFIG`, `DEPLOY_ENDPOINT`, `CLOUDFRONT_ID` env vars). CI normally deploys automatically on every push to `main` — see **Deployment & Git remote**.
+- **mirror-skills.mjs** — Generates `docs/ai/agent-skills/sdk/**/SKILL.md` from `bugsee/bugsee-for-ai` (the single source of truth for agent skills). **Never edit those files here** — change the skill in `bugsee-for-ai`; `.github/workflows/sync-agent-skills.yml` opens a PR with the regenerated copies. Inputs: `skills-map.json` (which plugin skill feeds which docs path; `docsOwned` lists files that are not generated, currently `sdk/ios/v7`) and `skills-source.json` (the pinned `bugsee-for-ai` commit). `npm run mirror-skills` regenerates at the pin, `node scripts/mirror-skills.mjs --update` moves the pin to `main`, `npm run check-skills` fails on hand edits, `npm run test:mirror` runs the unit tests.
 - **copy-raw-markdown.mjs** — Post-build: copies docs to `build/` as raw `.md` files for AI agents. Strips JSX from `.mdx` files (`<Tabs>` → bold labels), simplifies front matter to title/description/url only
 - **migrate-content.mjs** — One-time MkDocs → Docusaurus migration script (already run, kept for reference)
 
