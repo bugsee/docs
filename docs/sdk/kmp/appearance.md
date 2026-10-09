@@ -96,8 +96,8 @@ These properties are available on both platforms.
 |Property|Description|
 |---|---|
 |reportCellBackgroundColor|Table cell background color|
-|reportSendButtonColor|Send button text color|
-|reportCloseButtonColor|Close button color|
+|reportSendButtonColor|Not applied: the report screen uses the system Done button (iOS SDK 6.0+)|
+|reportCloseButtonColor|Not applied: the report screen uses the system Cancel button (iOS SDK 6.0+)|
 |reportPlaceholderColor|Input field placeholder color|
 |reportNavigationBarColor|Navigation bar background color|
 
