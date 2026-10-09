@@ -7,6 +7,155 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.3.1
+
+A network-capture and reliability release. Network capture no longer holds large bodies in memory,
+requests are reported from the moment they are sent until their transfer really ends, and requests
+that fail or are cancelled are no longer left open. Several cases where a crash report was
+duplicated, arrived without crash details, or lost its breadcrumbs are fixed.
+
+**Network capture**
+
+- **Large bodies are no longer held in memory, and are never cut off.** Network capture could keep
+  a body of any size in memory, and some paths delivered a body truncated at the limit. A body
+  within `CaptureNetworkBodySizeLimit` is captured whole; a larger one is skipped whole and the
+  event reports `SizeTooLarge`. The request itself is still reported. In detail:
+  - **Ktor 2 and 3:** a response was read completely into memory before your code received it, so a
+    very large download could run out of memory and an endless stream, such as server-sent events,
+    never arrived. Responses now reach your code as it reads them, without being held back.
+  - **OkHttp:** request bodies were read once before the call to preview them, so a body that can
+    only be sent once could reach the server empty or partial, and a body of unknown length was
+    buffered without a limit. Request bodies are now captured while they are sent, and are never
+    read ahead. Response bodies no longer hold up your app on a slow or endless stream.
+  - **Cronet, HttpEngine and WebSocket text messages:** an oversized body is skipped whole instead
+    of truncated.
+
+  :::note[Behavior change]
+  With the Ktor plugins, a streamed response (for example `prepareGet().execute { }`) can be read
+  once, as in plain Ktor. Bugsee decodes `gzip` and `deflate` bodies itself to capture them; other
+  content encodings report `EncodedContent`.
+  :::
+
+- **A request is reported from the moment it is sent until its transfer really ends.** This
+  applies to OkHttp, Ktor 2 and 3, Cronet and HttpEngine:
+  - a request starts when it is on the wire; a request body that only becomes known later follows
+    as an additional start event for the same request, with the same id and time;
+  - a response or stream too large to capture no longer ends the request early: it completes when
+    the transfer ends, with that time;
+  - a download that fails partway through is now reported as an error, and keeps the status and
+    headers of the response that had arrived;
+  - a response your app abandons without finishing is reported as completed, with the outcome that
+    was known.
+
+  `HttpURLConnection` also reports the request body as an additional start event, but its error
+  reporting is unchanged.
+
+  :::note[Known limit]
+  `HttpURLConnection` reports a 4xx or 5xx response as an error, unlike the other clients, which
+  report it as completed with its status. It also reports a failure while the body is being read
+  as completed, not as an error.
+  :::
+
+  :::note[Behavior change]
+  A network event filter can now receive more than one event for the same request: the start, then
+  an additional start event that carries the request body. The additional event has the new
+  `NetworkEvent.isOverride()` set to `true`. Each event reaches the filter on its own, in no
+  guaranteed order, so redact each one by what it carries (the body may be on the additional event,
+  not on the start) and key any per-request state by event id. A filter that answers with its own
+  `NetworkEvent` implementation keeps the flag.
+  :::
+
+- **Request bodies sent through Cronet and the framework HttpEngine are captured.** They were never
+  included in captured requests before.
+
+- **HttpEngine requests that fail or are cancelled before any response are reported.** A refused
+  connection, a failed DNS lookup, a reset, a redirect loop, or a cancel or timeout while waiting
+  for the response left the request open: no error or abort event, so performance spans and
+  anything waiting for the end of the request never finished. HttpEngine also no longer copies
+  response bodies when network capture is turned off.
+
+- **An OkHttp response your app drops without reading or closing is reported as completed** once
+  your app lets go of it, with its real status and headers, instead of staying open for the life
+  of the app. Always close responses: an unclosed response also holds its connection.
+
+- **`HttpURLConnection` no longer reports a request body twice.**
+
+- **Performance monitoring no longer accumulates spans for network requests that never end.**
+
+- **A device clock change no longer hides or falsely reports a stuck network request.**
+
+**Reports and crashes**
+
+- **An unhandled exception files one crash report, not a crash and an error.** This affected
+  exceptions reported through `Bugsee.onUncaughtException`, `Bugsee.logUnhandledException`, and the
+  unhandled-error hooks of the Flutter, React Native, Cordova and Capacitor wrappers, throughout 7.x.
+  The crash report also names the thread you passed.
+
+  :::note[Behavior change]
+  You now get one issue per unhandled error instead of two, and report handlers and lifecycle
+  events fire once.
+  :::
+
+- **`DetectAndReportCrash` set to `false` now also turns off native crash reporting.** With the
+  `bugsee-android-ndk` extension present, native crashes were reported whatever `DetectAndReportCrash`
+  said. A native crash that an earlier run with detection on left on the device is still reported
+  once.
+
+- **A crash report recovered after a background low-memory kill or a native crash no longer
+  arrives without crash details** when the app was killed again at the wrong moment.
+
+- **After repeated crashes shortly after launch, the SDK no longer starts a thread for every
+  pending report.** Hundreds of threads could be started within a second, which could crash the app
+  again and extend the crash loop.
+
+- **SDK breadcrumbs reach reports again.** The `ui.*` and `app.lifecycle` breadcrumbs the SDK
+  records itself were missing.
+
+- **Background report export works in apps shrunk with R8 or ProGuard.** In 7.3.0 the background
+  job that exports reports could not be created in such apps.
+
+- **`Bugsee.deleteCollectedDataOnDevice()` removes all captured data.** It reported success while
+  leaving capture data on the device.
+
+- **The options listed in a report's environment show their values** (for example `Critical`)
+  instead of numbers.
+
+**Video and view hierarchy**
+
+- **A report that ends on a still screen no longer ends in black frames.** The last frame the app
+  showed is held until the end of the video. A pause in the middle of the video, or the app going
+  to the background, is still shown as black.
+
+- **Fewer reports arrive with a screenshot but no video,** and stopping the SDK no longer waits for
+  the video encoder to time out.
+
+- **The view hierarchy reports the same display size as the rest of the report.** On some devices,
+  such as virtualized phones, it differed. When the two disagree, the cutout, insets and corner
+  radii are left out rather than drawn in the wrong place.
+
+**User interface**
+
+- **`Report::ActionBarColor` is applied** to the report and screenshot-editing screens. It was
+  accepted but ignored.
+
+- **`setDefaultFeedbackGreeting` text is shown in an empty chat,** until the first message.
+
+- **The feedback screens honor `Feedback::ActionBarColor`, `Feedback::EmailContinueActiveColor`,
+  `Feedback::EmailContinueNotActiveColor` and `Feedback::InputTextHintColor`.** With none of them
+  set, the screens look as before.
+
+**Performance monitoring**
+
+- **Performance data in reports now follows the OpenTelemetry trace format.** Transactions are
+  recorded as spans, HTTP request spans are named by method instead of by URL, and each span
+  carries device, app and network context. Span ids are 16 hexadecimal characters.
+
+**Compatibility**
+
+- New public API: `NetworkEvent.isOverride()` and `NetworkEvent.setOverride(boolean)`. Both have
+  default implementations, so your own `NetworkEvent` implementations keep compiling.
+- No new options.
+
 ## 7.3.0
 
 A security and reliability release. Reports no longer carry your app's request URLs or user values
