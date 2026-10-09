@@ -956,6 +956,10 @@ Same default as Android's `com.bugsee.option.config.notify-flush-delay`.
 `+[Bugsee appearance]` is renamed to `+[Bugsee getAppearance]`. `BugseeTheme` itself is
 unchanged — every color and string property behaves exactly as in 6.x.
 
+`reportCloseButtonColor` and `reportSendButtonColor` are now marked deprecated. The report
+screen has used the system Cancel and Done buttons since 6.0, so neither color has been
+applied; the compiler now says so. Setting them still compiles and still changes nothing.
+
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 

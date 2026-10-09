@@ -27,10 +27,10 @@ You can always change colors of the [Report](/sdk/flutter/manual/) and [Feedback
 | setReportBackgroundColor | Background color of Report Controller |
 | setFeedbackBarsColor | Navigation bar and bottom bar colors |
 | setReportCellBackgroundColor | UITableView cells background color |
-| setReportCloseButtonColor | Close UIButton cross color |
+| setReportCloseButtonColor | Not applied: the report screen uses the system Cancel button (iOS SDK 6.0+) |
 | setReportNavigationBarColor | UINavigation bar background color |
 | setReportPlaceholderColor | UIInputFields placeholder color |
-| setReportSendButtonColor | Send UIButton text color |
+| setReportSendButtonColor | Not applied: the report screen uses the system Done button (iOS SDK 6.0+) |
 | setReportTextColor | UILabels text color |
 | setReportVersionColor | UILabel with version number text color |
 
