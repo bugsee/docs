@@ -7,7 +7,7 @@ slug: "/mcp/usage"
 
 ## Tools
 
-The Bugsee MCP server exports thirteen tools across four resource families. All are read-only except `create_application`, which creates a new application, and `trigger_build_vuln_scan`, which queues a vulnerability scan against an existing build.
+The Bugsee MCP server exports fourteen tools across four resource families. All are read-only except `create_application`, which creates a new application, and `trigger_build_vuln_scan`, which queues a vulnerability scan against an existing build.
 
 | Family | Tool | Purpose |
 |---|---|---|
@@ -23,6 +23,7 @@ The Bugsee MCP server exports thirteen tools across four resource families. All 
 | Builds | [`get_build_regressions`](#get_build_regressions) | Flat regression view: size / deps / timings vs baseline |
 | Builds | [`list_build_vulnerabilities`](#list_build_vulnerabilities) | Vulnerability-scan summary + diff for a build |
 | Builds | [`trigger_build_vuln_scan`](#trigger_build_vuln_scan) | Queue a vulnerability scan against a build (mutating) |
+| Symbols | [`list_symbols`](#list_symbols) | Browse debug files uploaded for an application |
 | Symbols | [`get_symbol_by_uuid`](#get_symbol_by_uuid) | Diagnose missing symbols by module / debug UUID |
 
 ### list_applications
@@ -315,6 +316,28 @@ This is one of two mutating tools the MCP server exports (the other is [`create_
 
 After a `"queued"` response, poll `list_build_vulnerabilities` (or `get_build` with `include: ["vuln_scan_summary"]`) to read the result — the scan typically completes within a few minutes.
 
+### list_symbols
+
+List debug files uploaded for a given application — dSYM, ELF, PDB, R8/ProGuard mapping, source map, or il2cpp line-map. Returns a paginated response (50 symbols per page, newest first by default). Shared system symbols are **not** included; use [`get_symbol_by_uuid`](#get_symbol_by_uuid) to look up a specific module UUID (including system symbols).
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `application_id_or_key` | string | Yes | The application ID or key (e.g., `"MYAPP"`). |
+| `query` | string | No | Free-text search. Matches symbol name by case-insensitive substring, and image UUID by **full** id only (with or without dashes, upper or lower case). A partial UUID matches nothing, which does not mean it is missing — for a UUID lookup use [`get_symbol_by_uuid`](#get_symbol_by_uuid). |
+| `status` | string | No | Filter by pipeline status: `"uploading"`, `"processing"`, `"ready"`, or `"broken"`. |
+| `sort` | string | No | Sort order by creation date. One of: `"date_desc"` (default), `"date_asc"`. |
+| `cursor` | string | No | Pagination cursor from a previous response. Must be sent with the same `application_id_or_key`, `query`, `status`, and `sort` that produced it; a mismatched or invalid cursor is rejected. |
+
+**Response fields:**
+
+- `symbols` — array of records, each containing `id`, `name`, `version`, `build`, `format`, `status`, `system`, `path`, `transform`, `images` (uuid + arch), `raw_size` and `compressed_size` (bytes), `uploaded_on`, `created_on`
+- `total` — total number of matching symbols
+- `nextCursor` — present if more pages exist; pass it as `cursor` to fetch the next page
+
+Use this tool to browse or filter what is uploaded for an app. Use [`get_symbol_by_uuid`](#get_symbol_by_uuid) when you already have a module / debug UUID.
+
 ### get_symbol_by_uuid
 
 Look up debugging symbols by module UUID — a dSYM, ELF, PDB, R8/ProGuard mapping, source map, or il2cpp line-map debug id. This is a **diagnostic** tool: it returns every matching symbol file in *any* status (`uploading`, `processing`, `ready`, `broken`, `deleted`), not just the ready ones, which is what makes it useful for investigating `missing_sym` markers and unsymbolicated frames.
@@ -427,8 +450,10 @@ When `list_issues` returns an issue with `symbolication_status="missing_sym"` an
 > *"MyApp has crashes that aren't symbolicated — pull one and tell me which symbol file we forgot to upload."*
 >
 > *"Is anything uploaded for debug UUID 8A3F1C2E-…? Show me its status."*
+>
+> *"List the debug symbols uploaded for MyApp that are still processing or broken."*
 
-`get_symbol_by_uuid` returns matches in **any** status, so it distinguishes "never uploaded" from "uploaded but still processing" or "broken" — the usual reason a crash sits in `missing_sym`.
+`list_symbols` browses what is uploaded for the app (status, format, UUIDs). `get_symbol_by_uuid` returns matches in **any** status, including system symbols that `list_symbols` omits, so it distinguishes "never uploaded" from "uploaded but still processing" or "broken" — the usual reason a crash sits in `missing_sym`.
 
 ### 11. Onboard a new app
 
