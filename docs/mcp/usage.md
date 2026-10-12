@@ -325,7 +325,7 @@ List debug files uploaded for a given application — dSYM, ELF, PDB, R8/ProGuar
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `application_id_or_key` | string | Yes | The application ID or key (e.g., `"MYAPP"`). |
-| `query` | string | No | Free-text search. Matches symbol name by case-insensitive substring, and image UUID by **full** id only (any spelling: dashed, dashless, upper/lower). A partial UUID matches nothing, which does not mean it is missing — for a UUID lookup use [`get_symbol_by_uuid`](#get_symbol_by_uuid). |
+| `query` | string | No | Free-text search. Matches symbol name by case-insensitive substring, and image UUID by **full** id only (with or without dashes, upper or lower case). A partial UUID matches nothing, which does not mean it is missing — for a UUID lookup use [`get_symbol_by_uuid`](#get_symbol_by_uuid). |
 | `status` | string | No | Filter by pipeline status: `"uploading"`, `"processing"`, `"ready"`, or `"broken"`. |
 | `sort` | string | No | Sort order by creation date. One of: `"date_desc"` (default), `"date_asc"`. |
 | `cursor` | string | No | Pagination cursor from a previous response. Must be sent with the same `application_id_or_key`, `query`, `status`, and `sort` that produced it; a mismatched or invalid cursor is rejected. |
