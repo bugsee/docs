@@ -40,7 +40,6 @@ Release history for Bugsee iOS SDK 7.x. For the current stable line, see the
   completion now reports whether the deletion succeeded.
 - Fix: `setName` on a performance transaction sets its operation, as it does on a span. It
   does nothing once the transaction has finished.
-- Fix: The feedback chat is painted with the theme's background color.
 
 **Changes**
 
@@ -52,8 +51,6 @@ Release history for Bugsee iOS SDK 7.x. For the current stable line, see the
 - The SDK version is stamped into the XCFramework's `Info.plist`.
 - `PrivateHeaders` are no longer shipped in the XCFramework.
 - The direct-download zip includes the `Tools` scripts.
-- The SwiftUI module no longer needs a conditional `overlay` call and builds on iOS 15 and
-  later.
 
 ### BugseeFeedback module
 
@@ -62,6 +59,7 @@ Release history for Bugsee iOS SDK 7.x. For the current stable line, see the
   it, **Skip** settles the screen without one, and closing it with the cross asks again next
   time. A user identifier containing `@` spares the screen. The `feedbackEmail*` theme keys
   now apply to it.
+- Fix: The feedback chat is painted with the theme's background color.
 - Change: The module requires iOS 15 or later, matching the SDK. The UIKit chat for iOS 13
   and 14 is removed.
 
