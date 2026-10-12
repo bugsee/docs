@@ -9,7 +9,7 @@ The Bugsee MCP server is designed to be safe to expose to remote AI clients you 
 
 ## Read-only by default
 
-The server exports thirteen tools. Eleven of them are declared `readOnlyHint: true` and `destructiveHint: false` and cannot alter Bugsee data — the bulk of the connector's value is in delivering crash, bug, and build context into the agent's conversation.
+The server exports fourteen tools. Twelve of them are declared `readOnlyHint: true` and `destructiveHint: false` and cannot alter Bugsee data — the bulk of the connector's value is in delivering crash, bug, and build context into the agent's conversation.
 
 Two tools mutate, and each is gated behind a permission the read-only tools do not require:
 
@@ -70,7 +70,7 @@ The Bugsee MCP server exposes two scopes:
 
 | Scope | Grants |
 |---|---|
-| `mcp:read` | Read access to the eleven read-only tools, scoped to the user's accessible applications. Equivalent to what the user sees in the Bugsee dashboard. |
+| `mcp:read` | Read access to the twelve read-only tools, scoped to the user's accessible applications. Equivalent to what the user sees in the Bugsee dashboard. |
 | `mcp:write` | Additionally permits [`create_application`](/mcp/usage#create_application). Still subject to organization admin or explicit `app_create` permission — the scope alone does not grant it. |
 
 `mcp:read` is the default scope: a client that self-registers via Dynamic Client Registration without naming a scope is registered for `mcp:read` only, so a client that never asked for write access cannot present a consent screen requesting it. When a client does request `mcp:write`, the consent screen shows it and you can narrow the approval back to `mcp:read` before approving. Future scopes will be additive and explicitly requested by clients.

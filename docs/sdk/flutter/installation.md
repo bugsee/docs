@@ -21,8 +21,10 @@ Install the Bugsee plugin in your Dart project by adding it to dependencies in y
 
 ```
 dependencies:
-  bugsee_flutter: ^8.0.0
+  bugsee_flutter: ^9.0.0
 ```
+
+See the [9.0.0 release notes](/sdk/flutter/release-notes/#900-march-6-2026) for 9.x breaking changes before upgrading from 8.x.
 
 ## Initialization
 
