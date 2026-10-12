@@ -9,6 +9,62 @@ Release history for Bugsee iOS SDK 7.x. For the current stable line, see the
 [6.x release notes](/sdk/ios/release-notes). See the
 [migration guide](/sdk/ios/v7/migration) when planning your upgrade from 6.x.
 
+## 7.0.0-beta6 (October 12 2026)
+
+### iOS SDK
+
+**New features**
+
+- Feat: The report handler (`onBeforeReportCreated` / `onAfterReportCreated`) can edit a crash
+  recovered on the next launch, however long it takes to call its completion, within the
+  handler window. Before, an edit made a few milliseconds after the handler was called, such
+  as labels set from async work, was missing from the recovered report.
+
+**Fixes**
+
+- Fix: `BugseeOptionCaptureVideo` set to `NO` now records no video and no touches. The report
+  screenshot no longer follows it: turn the screenshot off with `screenshotEnabled = NO`.
+- Fix: `BugseeOptionCaptureNetworkBodySizeLimit` is applied at any value. Before, a value
+  under 20480 bytes was raised to 20480. A body over the limit is skipped whole with
+  `SizeTooLarge` instead of being cut, a limit of `0` captures no bodies, and WebSocket
+  frames of exactly the limit are kept.
+- Fix: `BugseeOptionCaptureBluetoothStatus` set to `NO` (the default) now records no
+  bluetooth trace, and Bugsee no longer creates a Bluetooth central manager in that case.
+- Fix: `BugseeOptionDetectAndReportEarlyCrash` set to `NO` now turns the early-crash
+  protection off. Before, it was read by nothing.
+- Fix: A recovered crash, an app-exit report and an unhandled exception reported by a wrapper
+  take the crash priority of the run that crashed, not the priority of the launch that
+  recovered them.
+- Fix: `deleteCollectedDataOnDevice` now deletes the captured data of the 7.x SDK. Before,
+  it reported success without deleting it, and its completion always reported success. The
+  completion now reports whether the deletion succeeded.
+- Fix: `setName` on a performance transaction sets its operation, as it does on a span. It
+  does nothing once the transaction has finished.
+- Fix: The feedback chat is painted with the theme's background color.
+
+**Changes**
+
+- Change: `reportCloseButtonColor` and `reportSendButtonColor` are deprecated. The report
+  screen uses the system Cancel and Done buttons, so they have no effect.
+
+**Build and distribution**
+
+- The SDK version is stamped into the XCFramework's `Info.plist`.
+- `PrivateHeaders` are no longer shipped in the XCFramework.
+- The direct-download zip includes the `Tools` scripts.
+- The SwiftUI module no longer needs a conditional `overlay` call and builds on iOS 15 and
+  later.
+
+### BugseeFeedback module
+
+- Feat: On first open, the feedback screen asks for an e-mail address ("Get notified by
+  email when the reply is available") before the chat, as on Android. **Continue** saves
+  it, **Skip** settles the screen without one, and closing it with the cross asks again next
+  time. A user identifier containing `@` spares the screen. The `feedbackEmail*` theme keys
+  now apply to it.
+- Change: The module requires iOS 15 or later, matching the SDK. The UIKit chat for iOS 13
+  and 14 is removed.
+
 ## 7.0.0-beta5 (October 7 2026)
 
 ### iOS SDK
