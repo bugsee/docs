@@ -7,6 +7,14 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.4.1
+
+A single fix for touch capture.
+
+- **Touches are captured again in apps whose views use small numeric ids.** This affected React
+  Native apps in particular, and any native app with a view whose id matched an internal one, since
+  7.0.0. Reports from such apps had video but no touch data. No change is needed in your app.
+
 ## 7.4.0
 
 A reliability and API-clarity release. Crash reports are registered earlier and carry the crash
