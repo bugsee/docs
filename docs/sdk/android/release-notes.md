@@ -64,7 +64,7 @@ also remove finished report bundles.
 
 **Compatibility**
 
-- New public API: `Bugsee.deleteCollectedDataOnDevice(boolean, boolean, Callback)` and
+- New public API: `Bugsee.deleteCollectedDataOnDevice(boolean, boolean, Callback1<Boolean>)` and
   `Bugsee.logException(Throwable, String, int)`. `Bugsee.logException(Throwable, Map)` is
   deprecated.
 - No new options.
