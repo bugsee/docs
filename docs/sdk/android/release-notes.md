@@ -7,6 +7,68 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.4.0
+
+A reliability and API-clarity release. Crash reports are registered earlier and carry the crash
+time, stopping the SDK always completes, `capture.logs` no longer swallows your own `Bugsee.log()`
+lines, and a blackout requested before `launch()` is honored. `deleteCollectedDataOnDevice` can now
+also remove finished report bundles.
+
+**New features**
+
+- **`Bugsee.deleteCollectedDataOnDevice` can delete finished report bundles.** The new overload
+  `deleteCollectedDataOnDevice(includingIntermediate, includingBundles, callback)` removes unsent
+  report bundles too, for example on logout or a privacy request. The existing two-argument method
+  behaves as before and keeps the bundles. A bundle that is being uploaded at that moment is kept,
+  and the result is `false`.
+- **`Bugsee.logException(Throwable, String domain, int skipFrames)`** is the new way to set the
+  domain and the number of stack frames to skip.
+
+  :::note[Deprecation]
+  `logException(Throwable, Map)` is deprecated. Only its `domain` and `skipFrames` keys ever had an
+  effect; `labels` and `includeVideo` were documented but ignored. Add labels with
+  `Report.addLabels` in a report handler. Leaving the video out of a single report is not
+  supported.
+  :::
+
+**Fixes**
+
+- **`capture.logs = false` turns off automatic log capture only.** Lines you send with
+  `Bugsee.log()` are always recorded, also when a log filter changes the line's source.
+  Previously they were dropped together with logcat.
+- **`Bugsee.startBlackout()` before `launch()` is honored.** Capture starts blacked out until
+  `endBlackout()`. It was ignored with a warning. A blackout ends when the SDK stops, so call
+  `startBlackout()` again before the next `launch()`.
+
+  :::note[Behavior change]
+  A launch that starts blacked out reports `BlackoutStarted` right after `Launched`, and a stop of
+  a launched SDK reports `BlackoutEnded` before `Stopped` if a blackout was active.
+  :::
+
+- **`Bugsee.stop(callback)` during a stop in progress waits for that stop.** The callback used to
+  run immediately, before the SDK had stopped; it now runs when the stop completes. A callback that
+  throws is logged and no longer affects other callbacks or the stop.
+- **Stopping the SDK always completes.** If a part of capture failed while stopping, the SDK could
+  stay in the stopping state and refuse every later `launch()`.
+- **Crash reports registered earlier.** A crash reported through `Bugsee.logUnhandledException` or
+  a wrapper's crash hook could arrive without crash details if the process died while the report
+  was being prepared.
+- **Uncaught Java crashes carry the crash time.** The crash timestamp was `0`.
+- **OkHttp records the body of a POST that failed before it was written** (connection refused, DNS
+  failure, timeout) when the body is one OkHttp itself can safely read. Other bodies are reported
+  as unreadable and are never read by the SDK. React Native `fetch` requests fall in this group.
+- **Reports no longer wait for a crashed system video encoder.** When the device's video codec
+  process has died, the SDK stops retrying and the report is sent without video, without the
+  5 second delay.
+- **A failure while loading the cached chat no longer blocks the feedback greeting.**
+
+**Compatibility**
+
+- New public API: `Bugsee.deleteCollectedDataOnDevice(boolean, boolean, Callback)` and
+  `Bugsee.logException(Throwable, String, int)`. `Bugsee.logException(Throwable, Map)` is
+  deprecated.
+- No new options.
+
 ## 7.3.1
 
 A network-capture and reliability release. Network capture no longer holds large bodies in memory,
