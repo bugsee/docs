@@ -588,10 +588,12 @@ through. See [§9.3](#93-breadcrumbs).
 | `showReportControllerWithSummary:description:severity:labels:` | `showReportDialogWithSummary:description:severity:labels:` |
 | _(not available)_ | `showReportDialogWithSummary:description:` |
 
-### 7.2 `includeVideo:` overloads are gone
+### 7.2 `includeVideo:` overloads and `logError:labels:` are gone
 
-Both `uploadWithSummary:…:includeVideo:` and `logError:labels:includeVideo:` lose their
-last parameter. Drop the argument; the shorter overloads already exist in 6.x.
+`uploadWithSummary:…:includeVideo:` loses its last parameter. Drop the argument; the shorter
+overload already exists in 6.x. `logError:labels:includeVideo:` and `logError:labels:` are
+gone too: call `logError:`, and add labels in `bugseeAttachmentsForReport:` (see
+[§7.5](#75-bugseeexceptionloggingoptions-is-gone) for how far such a label reaches).
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
@@ -603,6 +605,12 @@ last parameter. Drop the argument; the shorter overloads already exist in 6.x.
 
 // 7.x
 [Bugsee uploadWithSummary:@"s" description:@"d" severity:BugseeSeverityHigh labels:nil];
+
+// 6.x
+[Bugsee logError:error labels:@[@"checkout"]];
+
+// 7.x: labels in bugseeAttachmentsForReport:, see §7.5
+[Bugsee logError:error];
 ```
 
   </TabItem>
@@ -615,6 +623,12 @@ Bugsee.upload(summary: "s", description: "d", severity: BugseeSeverityHigh,
 
 // 7.x
 Bugsee.upload(summary: "s", description: "d", severity: BugseeSeverityHigh, labels: nil)
+
+// 6.x
+Bugsee.logError(error: error, labels: ["checkout"])
+
+// 7.x: labels in bugsee(attachmentsFor:), see §7.5
+Bugsee.logError(error: error)
 ```
 
   </TabItem>
@@ -1091,7 +1105,7 @@ Renamed — a plain search and replace does most of these.
 | `testExceptionCrash` / `testSignalCrash` | `testCrash` |
 | `deleteCollectedDataOnDevice:` | `deleteCollectedDataOnDevice:completion:` |
 | `uploadWithSummary:…:includeVideo:` | `uploadWithSummary:description:severity:labels:` |
-| `logError:labels:includeVideo:` | `logError:labels:` |
+| `logError:labels:includeVideo:` / `logError:labels:` | `logError:`; labels through the delegate's report — see [§7.2](#72-includevideo-overloads-and-logerrorlabels-are-gone) |
 | `logException:options:completion:` | `logException:completion:` / `logException:domain:skipFrames:completion:` — see [§7.5](#75-bugseeexceptionloggingoptions-is-gone) |
 | `logException:reason:options:completion:` | `logException:reason:completion:` / `logException:reason:domain:skipFrames:completion:` |
 | `BugseeExceptionLoggingOptions` | `domain:` / `skipFrames:` parameters of `logException`; labels through the delegate's report |

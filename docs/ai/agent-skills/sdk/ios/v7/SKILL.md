@@ -55,7 +55,7 @@ find . -name "AppDelegate.swift" -o -name "AppDelegate.m" 2>/dev/null | head -3
 grep -r "@main" --include="*.swift" 2>/dev/null | head -3
 
 # 6.x call sites that will not compile against 7.x
-grep -rnE "showReportController|showFeedbackController|setDefaultFeedbackGreeting|didReceiveNewFeedback|setView:.*asHidden|setView\(.*asHidden|addSecureRect\b|removeSecureRect\b|removeAllSecureRects|getAllSecureRects|isViewHidden|registerEvent|traceKey|registerNetworkEvent|removeNetworkEventFilter|setEmail|getEmail|clearEmail|getDeviceId|logAssert|hideKeyboard|testExceptionCrash|testSignalCrash|BugseeExceptionLoggingOptions|BugseeMergingRulesSkipFramesKey|logException.*options:|setDefaultCrashPriority|setDefaultErrorPriority|setDefaultBugPriority|Bugsee\.pause|Bugsee\.resume|\[Bugsee pause\]|\[Bugsee resume\]" \
+grep -rnE "showReportController|showFeedbackController|setDefaultFeedbackGreeting|didReceiveNewFeedback|setView:.*asHidden|setView\(.*asHidden|addSecureRect\b|removeSecureRect\b|removeAllSecureRects|getAllSecureRects|isViewHidden|registerEvent|traceKey|registerNetworkEvent|removeNetworkEventFilter|setEmail|getEmail|clearEmail|getDeviceId|logAssert|hideKeyboard|testExceptionCrash|testSignalCrash|BugseeExceptionLoggingOptions|BugseeMergingRulesSkipFramesKey|logException.*options:|logError:[^;]*labels:|logError\(error:.*labels:|setDefaultCrashPriority|setDefaultErrorPriority|setDefaultBugPriority|Bugsee\.pause|Bugsee\.resume|\[Bugsee pause\]|\[Bugsee resume\]" \
   --include="*.swift" --include="*.m" --include="*.mm" . 2>/dev/null | grep -v "/Pods/" | head -40
 
 # Raw option-key strings — the ONLY silent break in 7.x
@@ -171,7 +171,7 @@ Raising the deployment target to iOS 15 is a prerequisite for all of the above.
 | `testExceptionCrash` / `testSignalCrash` | `testCrash` |
 | `deleteCollectedDataOnDevice:` | `deleteCollectedDataOnDevice:completion:` |
 | `uploadWithSummary:…:includeVideo:` | `uploadWithSummary:description:severity:labels:` |
-| `logError:labels:includeVideo:` | `logError:labels:` |
+| `logError:labels:includeVideo:` / `logError:labels:` | `logError:`; labels via `addLabels:` on the report in `bugseeAttachmentsForReport:` |
 | `logException:options:completion:` | `logException:completion:` / `logException:domain:skipFrames:completion:` |
 | `logException:reason:options:completion:` | `logException:reason:completion:` / `logException:reason:domain:skipFrames:completion:` |
 | `BugseeExceptionLoggingOptions` (`exceptionDomain`, `mergingRules[BugseeMergingRulesSkipFramesKey]`, `labels`) | `domain:` / `skipFrames:` parameters of `logException`; labels via `addLabels:` on the report in `bugseeAttachmentsForReport:` (applies to every error report, not one call); `includeVideo` has no replacement |
