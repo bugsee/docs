@@ -676,6 +676,70 @@ func bugsee(attachmentsFor report: BugseeReport) -> [BugseeAttachment] {
   </TabItem>
 </Tabs>
 
+### 7.5 `BugseeExceptionLoggingOptions` is gone
+
+`logException` takes the exception domain, the number of frames to skip and the labels as
+parameters; `domain` and `skipFrames` match Android 7.x. `BugseeExceptionLoggingOptions`,
+`BugseeMergingRulesSkipFramesKey` and both `options:` overloads are removed.
+
+| 6.x | 7.x |
+| --- | --- |
+| `logException:options:completion:` with `nil` options | `logException:completion:` |
+| `logException:reason:options:completion:` with `nil` options | `logException:reason:completion:` |
+| `logException:options:completion:` with options | `logException:domain:skipFrames:labels:completion:` |
+| `logException:reason:options:completion:` with options | `logException:reason:domain:skipFrames:labels:completion:` |
+| `exceptionDomain` | `domain:` |
+| `mergingRules[BugseeMergingRulesSkipFramesKey]` | `skipFrames:` |
+| `labels` | `labels:` |
+| `includeVideo` | — leaving the video out of a single report is not supported |
+
+A 6.x call that passed an options object without setting `includeVideo` to `YES` filed its
+report without video. In 7.x the same call files it with video.
+
+`domain` is recorded with the report. `skipFrames` is how many top frames of the stack
+recorded for the report are left out of its signature, which groups reports into issues;
+a negative value counts as `0`.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// 6.x
+BugseeExceptionLoggingOptions *options = [BugseeExceptionLoggingOptions new];
+options.exceptionDomain = @"Payments";
+options.labels = @[@"checkout"];
+options.mergingRules = @{BugseeMergingRulesSkipFramesKey : @1};
+[Bugsee logException:exception options:options completion:nil];
+
+// 7.x
+[Bugsee logException:exception
+              domain:@"Payments"
+          skipFrames:1
+              labels:@[@"checkout"]
+          completion:nil];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// 6.x
+let options = BugseeExceptionLoggingOptions()
+options.exceptionDomain = "Payments"
+options.labels = ["checkout"]
+options.mergingRules = [BugseeMergingRulesSkipFramesKey: 1]
+Bugsee.logException(exception: exception, options: options, completion: nil)
+
+// 7.x
+Bugsee.logException(exception: exception, domain: "Payments", skipFrames: 1,
+                    labels: ["checkout"], completion: nil)
+```
+
+  </TabItem>
+</Tabs>
+
+On simulators and Mac Catalyst `logException` files nothing; its completion is still called.
+
 ---
 
 ## 8. Privacy and secure areas
@@ -1013,6 +1077,9 @@ Renamed — a plain search and replace does most of these.
 | `deleteCollectedDataOnDevice:` | `deleteCollectedDataOnDevice:completion:` |
 | `uploadWithSummary:…:includeVideo:` | `uploadWithSummary:description:severity:labels:` |
 | `logError:labels:includeVideo:` | `logError:labels:` |
+| `logException:options:completion:` | `logException:completion:` / `logException:domain:skipFrames:labels:completion:` — see [§7.5](#75-bugseeexceptionloggingoptions-is-gone) |
+| `logException:reason:options:completion:` | `logException:reason:completion:` / `logException:reason:domain:skipFrames:labels:completion:` |
+| `BugseeExceptionLoggingOptions` | `domain:` / `skipFrames:` / `labels:` parameters of `logException` |
 | Swift `Bugsee.launch(token:options:)` _(dictionary)_ | Swift `Bugsee.launch(token:dictionaryOptions:)` |
 | Swift `Bugsee.relaunch(options:)` _(dictionary)_ | Swift `Bugsee.relaunch(dictionaryOptions:)` |
 | Swift `Bugsee.uploadReport(_:)` | Swift `Bugsee.upload(_:)` |
@@ -1031,7 +1098,7 @@ Removed with no direct replacement.
 | `isViewHidden:` | — |
 | `hideKeyboard:` | — |
 | `setInternalSecureRectangles:` | — |
-| `logAssert:withLocation:` / `BUGSEE_ASSERT` | Use `logException:reason:options:completion:` |
+| `logAssert:withLocation:` / `BUGSEE_ASSERT` | Use `logException:reason:completion:` |
 | `log:level:timestamp:` | `log:level:requiresFiltering:` takes the slot but does something different — it opts the message into the log filter |
 | `setDefaultCrashPriority:` | `BugseeOptionReportingDefaultCrashPriority` at launch |
 | `setDefaultErrorPriority:` | `BugseeOptionReportingDefaultErrorPriority` at launch |

@@ -55,7 +55,7 @@ find . -name "AppDelegate.swift" -o -name "AppDelegate.m" 2>/dev/null | head -3
 grep -r "@main" --include="*.swift" 2>/dev/null | head -3
 
 # 6.x call sites that will not compile against 7.x
-grep -rnE "showReportController|showFeedbackController|setDefaultFeedbackGreeting|didReceiveNewFeedback|setView:.*asHidden|setView\(.*asHidden|addSecureRect\b|removeSecureRect\b|removeAllSecureRects|getAllSecureRects|isViewHidden|registerEvent|traceKey|registerNetworkEvent|removeNetworkEventFilter|setEmail|getEmail|clearEmail|getDeviceId|logAssert|hideKeyboard|testExceptionCrash|testSignalCrash|setDefaultCrashPriority|setDefaultErrorPriority|setDefaultBugPriority|Bugsee\.pause|Bugsee\.resume|\[Bugsee pause\]|\[Bugsee resume\]" \
+grep -rnE "showReportController|showFeedbackController|setDefaultFeedbackGreeting|didReceiveNewFeedback|setView:.*asHidden|setView\(.*asHidden|addSecureRect\b|removeSecureRect\b|removeAllSecureRects|getAllSecureRects|isViewHidden|registerEvent|traceKey|registerNetworkEvent|removeNetworkEventFilter|setEmail|getEmail|clearEmail|getDeviceId|logAssert|hideKeyboard|testExceptionCrash|testSignalCrash|BugseeExceptionLoggingOptions|BugseeMergingRulesSkipFramesKey|logException.*options:|setDefaultCrashPriority|setDefaultErrorPriority|setDefaultBugPriority|Bugsee\.pause|Bugsee\.resume|\[Bugsee pause\]|\[Bugsee resume\]" \
   --include="*.swift" --include="*.m" --include="*.mm" . 2>/dev/null | grep -v "/Pods/" | head -40
 
 # Raw option-key strings — the ONLY silent break in 7.x
@@ -172,6 +172,9 @@ Raising the deployment target to iOS 15 is a prerequisite for all of the above.
 | `deleteCollectedDataOnDevice:` | `deleteCollectedDataOnDevice:completion:` |
 | `uploadWithSummary:…:includeVideo:` | `uploadWithSummary:description:severity:labels:` |
 | `logError:labels:includeVideo:` | `logError:labels:` |
+| `logException:options:completion:` | `logException:completion:` / `logException:domain:skipFrames:labels:completion:` |
+| `logException:reason:options:completion:` | `logException:reason:completion:` / `logException:reason:domain:skipFrames:labels:completion:` |
+| `BugseeExceptionLoggingOptions` (`exceptionDomain`, `mergingRules[BugseeMergingRulesSkipFramesKey]`, `labels`) | `domain:` / `skipFrames:` / `labels:` parameters of `logException`; `includeVideo` has no replacement |
 | Swift `Bugsee.launch(token:options:)` _(dictionary)_ | Swift `Bugsee.launch(token:dictionaryOptions:)` |
 | Swift `Bugsee.relaunch(options:)` _(dictionary)_ | Swift `Bugsee.relaunch(dictionaryOptions:)` |
 | Swift `Bugsee.uploadReport(_:)` | Swift `Bugsee.upload(_:)` |
@@ -189,7 +192,7 @@ Raising the deployment target to iOS 15 is a prerequisite for all of the above.
 | `isViewHidden:` | — |
 | `hideKeyboard:` | — |
 | `setInternalSecureRectangles:` | — |
-| `logAssert:withLocation:` | Use `logException:reason:options:completion:` |
+| `logAssert:withLocation:` | Use `logException:reason:completion:` |
 | `log:level:timestamp:` | `log:level:enforceFiltering:` takes the slot but does something different — it opts the message into the log filter |
 | `setDefaultCrashPriority:` | `BugseeOptionReportingDefaultCrashPriority` at launch |
 | `setDefaultErrorPriority:` | `BugseeOptionReportingDefaultErrorPriority` at launch |
