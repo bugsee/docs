@@ -172,9 +172,9 @@ Raising the deployment target to iOS 15 is a prerequisite for all of the above.
 | `deleteCollectedDataOnDevice:` | `deleteCollectedDataOnDevice:completion:` |
 | `uploadWithSummary:…:includeVideo:` | `uploadWithSummary:description:severity:labels:` |
 | `logError:labels:includeVideo:` | `logError:labels:` |
-| `logException:options:completion:` | `logException:completion:` / `logException:domain:skipFrames:labels:completion:` |
-| `logException:reason:options:completion:` | `logException:reason:completion:` / `logException:reason:domain:skipFrames:labels:completion:` |
-| `BugseeExceptionLoggingOptions` (`exceptionDomain`, `mergingRules[BugseeMergingRulesSkipFramesKey]`, `labels`) | `domain:` / `skipFrames:` / `labels:` parameters of `logException`; `includeVideo` has no replacement |
+| `logException:options:completion:` | `logException:completion:` / `logException:domain:skipFrames:completion:` |
+| `logException:reason:options:completion:` | `logException:reason:completion:` / `logException:reason:domain:skipFrames:completion:` |
+| `BugseeExceptionLoggingOptions` (`exceptionDomain`, `mergingRules[BugseeMergingRulesSkipFramesKey]`, `labels`) | `domain:` / `skipFrames:` parameters of `logException`; labels via `addLabels:` on the report in `bugseeAttachmentsForReport:` (applies to every error report, not one call); `includeVideo` has no replacement |
 | Swift `Bugsee.launch(token:options:)` _(dictionary)_ | Swift `Bugsee.launch(token:dictionaryOptions:)` |
 | Swift `Bugsee.relaunch(options:)` _(dictionary)_ | Swift `Bugsee.relaunch(dictionaryOptions:)` |
 | Swift `Bugsee.uploadReport(_:)` | Swift `Bugsee.upload(_:)` |

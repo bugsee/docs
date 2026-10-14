@@ -678,19 +678,19 @@ func bugsee(attachmentsFor report: BugseeReport) -> [BugseeAttachment] {
 
 ### 7.5 `BugseeExceptionLoggingOptions` is gone
 
-`logException` takes the exception domain, the number of frames to skip and the labels as
-parameters; `domain` and `skipFrames` match Android 7.x. `BugseeExceptionLoggingOptions`,
-`BugseeMergingRulesSkipFramesKey` and both `options:` overloads are removed.
+`logException` takes the exception domain and the number of frames to skip as parameters, as
+on Android 7.x. `BugseeExceptionLoggingOptions`, `BugseeMergingRulesSkipFramesKey` and both
+`options:` overloads are removed.
 
 | 6.x | 7.x |
 | --- | --- |
 | `logException:options:completion:` with `nil` options | `logException:completion:` |
 | `logException:reason:options:completion:` with `nil` options | `logException:reason:completion:` |
-| `logException:options:completion:` with options | `logException:domain:skipFrames:labels:completion:` |
-| `logException:reason:options:completion:` with options | `logException:reason:domain:skipFrames:labels:completion:` |
+| `logException:options:completion:` with options | `logException:domain:skipFrames:completion:` |
+| `logException:reason:options:completion:` with options | `logException:reason:domain:skipFrames:completion:` |
 | `exceptionDomain` | `domain:` |
 | `mergingRules[BugseeMergingRulesSkipFramesKey]` | `skipFrames:` |
-| `labels` | `labels:` |
+| `labels` | `addLabels:` on the report in `bugseeAttachmentsForReport:` — see [§7.4](#74-the-report-the-delegate-receives-is-live) |
 | `includeVideo` | — leaving the video out of a single report is not supported |
 
 A 6.x call that passed an options object without setting `includeVideo` to `YES` filed its
@@ -712,11 +712,15 @@ options.mergingRules = @{BugseeMergingRulesSkipFramesKey : @1};
 [Bugsee logException:exception options:options completion:nil];
 
 // 7.x
-[Bugsee logException:exception
-              domain:@"Payments"
-          skipFrames:1
-              labels:@[@"checkout"]
-          completion:nil];
+[Bugsee logException:exception domain:@"Payments" skipFrames:1 completion:nil];
+
+// 7.x labels, in your BugseeDelegate
+- (NSArray<BugseeAttachment *> *)bugseeAttachmentsForReport:(BugseeReport *)report {
+    if ([report.type isEqualToString:BugseeReportTypeError]) {
+        [report addLabels:@[@"checkout"]];
+    }
+    return @[];
+}
 ```
 
   </TabItem>
@@ -731,12 +735,23 @@ options.mergingRules = [BugseeMergingRulesSkipFramesKey: 1]
 Bugsee.logException(exception: exception, options: options, completion: nil)
 
 // 7.x
-Bugsee.logException(exception: exception, domain: "Payments", skipFrames: 1,
-                    labels: ["checkout"], completion: nil)
+Bugsee.logException(exception: exception, domain: "Payments", skipFrames: 1, completion: nil)
+
+// 7.x labels, in your BugseeDelegate
+func bugsee(attachmentsFor report: BugseeReport) -> [BugseeAttachment] {
+    if report.type == BugseeReportTypeError {
+        report.addLabels(["checkout"])
+    }
+    return []
+}
 ```
 
   </TabItem>
 </Tabs>
+
+The delegate is asked about every report. `type` tells an error report from a bug or crash
+report, but not a `logException` report from a `logError` report or from an error report
+Bugsee files on its own, so a label added this way goes on all of them.
 
 On simulators and Mac Catalyst `logException` files nothing; its completion is still called.
 
@@ -1077,9 +1092,9 @@ Renamed — a plain search and replace does most of these.
 | `deleteCollectedDataOnDevice:` | `deleteCollectedDataOnDevice:completion:` |
 | `uploadWithSummary:…:includeVideo:` | `uploadWithSummary:description:severity:labels:` |
 | `logError:labels:includeVideo:` | `logError:labels:` |
-| `logException:options:completion:` | `logException:completion:` / `logException:domain:skipFrames:labels:completion:` — see [§7.5](#75-bugseeexceptionloggingoptions-is-gone) |
-| `logException:reason:options:completion:` | `logException:reason:completion:` / `logException:reason:domain:skipFrames:labels:completion:` |
-| `BugseeExceptionLoggingOptions` | `domain:` / `skipFrames:` / `labels:` parameters of `logException` |
+| `logException:options:completion:` | `logException:completion:` / `logException:domain:skipFrames:completion:` — see [§7.5](#75-bugseeexceptionloggingoptions-is-gone) |
+| `logException:reason:options:completion:` | `logException:reason:completion:` / `logException:reason:domain:skipFrames:completion:` |
+| `BugseeExceptionLoggingOptions` | `domain:` / `skipFrames:` parameters of `logException`; labels through the delegate's report |
 | Swift `Bugsee.launch(token:options:)` _(dictionary)_ | Swift `Bugsee.launch(token:dictionaryOptions:)` |
 | Swift `Bugsee.relaunch(options:)` _(dictionary)_ | Swift `Bugsee.relaunch(dictionaryOptions:)` |
 | Swift `Bugsee.uploadReport(_:)` | Swift `Bugsee.upload(_:)` |
