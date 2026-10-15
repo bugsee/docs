@@ -196,6 +196,7 @@ Raising the deployment target to iOS 15 is a prerequisite for all of the above.
 | `setDefaultBugPriority:` | `BugseeOptionReportingDefaultBugPriority` at launch |
 | `BugseeAttachmentOverrideLabels` | — |
 | `BugseeOptions.captureVideoAdaptive` | `BugseeOptionCaptureVideoAdaptive` key |
+| `BugseeKillDetectionKey` / `BugseeOptions.killDetection` | Out-of-memory kills are reported through `BugseeOptionDetectAndReportExit`, on by default |
 
 
 Full detail, with before/after code for each: [migration guide](https://docs.bugsee.com/sdk/ios/v7/migration/).

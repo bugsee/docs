@@ -67,7 +67,7 @@ Bugsee no longer recognizes them and uses its defaults instead.
 | `BugseeCrashReportKey` | `BugseeOptionDetectAndReportCrash` |
 | `BugseeAppLaunchCrashDetectionKey` | `BugseeOptionDetectAndReportEarlyCrash` |
 | `BugseeDetectAppExitKey` | `BugseeOptionDetectAndReportExit` |
-| `BugseeKillDetectionKey` | `BugseeOptionDetectAndReportKill` |
+| `BugseeKillDetectionKey` | _(removed)_ |
 | _(not available)_ | `BugseeOptionDetectAndReportAnomaly` |
 | _(not available)_ | `BugseeOptionDetectAndReportHang` |
 | _(not available)_ | `BugseeOptionDetectAndReportHangFairLevel` |
@@ -78,6 +78,9 @@ Bugsee no longer recognizes them and uses its defaults instead.
 | _(not available)_ | `BugseeOptionDetectCrashFillEmptyExceptionStacks` |
 | _(not available)_ | `BugseeOptionDetectCrashSwiftAsyncStackTraces` |
 | _(not available)_ | `BugseeOptionDetectFrustration` |
+
+`BugseeKillDetectionKey` is removed. Out-of-memory kills are reported through
+`BugseeOptionDetectAndReportExit`, which is on by default (see [§3](#3-defaults-that-changed)).
 
 ### 2.2 Capture
 
