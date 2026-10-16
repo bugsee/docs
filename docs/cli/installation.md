@@ -60,7 +60,9 @@ work for direct installs too.
 | npm | `@bugsee/cli` (per-OS `optionalDependencies` pull the right binary) |
 | npm | `@bugsee/bugsee-cli` (single package; downloads the binary on install) |
 | Homebrew | the Bugsee tap |
-| Maven Central | `com.bugsee:bugsee-cli` (consumed by the Android Gradle plugin) |
+
+The Android Gradle plugin does not use a package manager: it downloads and pins the
+CLI from `download.bugsee.com`, the same host as the install script above.
 
 :::tip
 Prefer `@bugsee/cli` in JavaScript projects. Its binary ships inside per-platform
