@@ -90,6 +90,7 @@ const config: Config = {
           ]),
           // Hyphenated spelling of the React Native section root (deep pages are covered by createRedirects).
           { from: '/sdk/react-native', to: '/sdk/react_native/installation/' },
+          { from: '/sdk/react-native/privacy', to: '/sdk/react_native/privacy/overview/' },
           // Android pages that were split or renamed.
           { from: '/sdk/android/custom', to: '/sdk/android/events-and-traces/' },
           { from: '/sdk/android/crashes', to: '/sdk/android/issue-detection/crashes/' },
