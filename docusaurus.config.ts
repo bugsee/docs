@@ -88,6 +88,8 @@ const config: Config = {
             { from: `/sdk/${sdk}`, to: `/sdk/${sdk}/installation/` },
             { from: `/sdk/${sdk}/privacy`, to: `/sdk/${sdk}/privacy/overview/` },
           ]),
+          // Hyphenated spelling of the React Native section root (deep pages are covered by createRedirects).
+          { from: '/sdk/react-native', to: '/sdk/react_native/installation/' },
           // Android pages that were split or renamed.
           { from: '/sdk/android/custom', to: '/sdk/android/events-and-traces/' },
           { from: '/sdk/android/crashes', to: '/sdk/android/issue-detection/crashes/' },
@@ -102,9 +104,15 @@ const config: Config = {
         ],
         // Android 7.x lived under /sdk/android/v7/ until it became the default;
         // every current Android page keeps answering at its old v7 address.
+        //
+        // The React Native docs live under /sdk/react_native/; the hyphenated spelling is
+        // what people (and the other platform URLs) naturally try.
         createRedirects(existingPath: string) {
           if (existingPath.startsWith('/sdk/android/') && !existingPath.startsWith('/sdk/android/v6/')) {
             return existingPath.replace('/sdk/android/', '/sdk/android/v7/');
+          }
+          if (existingPath.startsWith('/sdk/react_native/')) {
+            return existingPath.replace('/sdk/react_native/', '/sdk/react-native/');
           }
           return undefined;
         },
