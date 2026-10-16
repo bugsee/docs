@@ -433,7 +433,7 @@ lane :mybuildlane do
 end
 ```
 
-Bitcode was removed in Xcode 14, so for current builds the dSYMs from your own archive are the right ones. Builds uploaded with Bitcode (Xcode 13 and earlier) were recompiled by Apple, so their dSYM files have to be downloaded from App Store Connect instead:
+Xcode 14 deprecated Bitcode and stopped building it by default, and Xcode 15 removed it, so for current builds the dSYMs from your own archive are the right ones. Builds uploaded with Bitcode (Xcode 13 and earlier) were recompiled by Apple, so their dSYM files have to be downloaded from App Store Connect instead:
 
 ```
 lane :refresh_dsyms do
@@ -449,9 +449,9 @@ end
 
 ### Other fastlane actions
 
-Besides `upload_symbols_to_bugsee`, the plugin has two more actions. Update the plugin (`bundle update fastlane-plugin-bugsee`) to get them. Both are optional: the [Bugsee Android Gradle plugin](/sdk/android/gradle-plugin) and the iOS SDK's build phase already do these uploads in a standard setup.
+Besides `upload_symbols_to_bugsee`, the plugin has two more actions. Update the plugin (`bundle update fastlane-plugin-bugsee`) to get them. Both are optional. The [Bugsee Android Gradle plugin](/sdk/android/gradle-plugin) handles mapping and build-info uploads, but artifact bytes need `buildInfo.sizeAnalysis.enabled = true`. The iOS SDK's Archive post-action handles dSYM and build-info uploads, but IPA bytes need `BUGSEE_SIZE_ANALYSIS_ENABLED=1`.
 
-**`upload_artifact_to_bugsee`** packages a built `.app` and uploads it for [app size analysis](/cli/builds). Use it when your CI does not run the SDK's build phase, or when the build machine has no token and a separate publish machine does.
+**`upload_artifact_to_bugsee`** packages a built `.app` and uploads it for [app size analysis](/cli/builds). Use it when your CI does not run the SDK's Archive post-action, or when the build machine has no token and a separate publish machine does.
 
 ```ruby
 upload_artifact_to_bugsee(
