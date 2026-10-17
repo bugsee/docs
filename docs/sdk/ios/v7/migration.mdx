@@ -85,9 +85,9 @@ Bugsee no longer recognizes them and uses its defaults instead.
 | --- | --- |
 | `BugseeCaptureAVPlayerKey` | `BugseeOptionCaptureAVPlayer` |
 | `BugseeMonitorBluetoothStatusKey` | `BugseeOptionCaptureBluetoothStatus` |
+| `BugseeEnableMachExceptionsKey` | `BugseeOptionCaptureCrashHandlerType` (see below) |
 | `BugseeMonitorDiskSpaceKey` | `BugseeOptionCaptureDiskSpace` |
 | `BugseeCaptureLogsKey` | `BugseeOptionCaptureLogs` |
-| `BugseeEnableMachExceptionsKey` | `BugseeOptionCaptureMachExceptions` |
 | `BugseeMonitorNetworkKey` | `BugseeOptionCaptureNetwork` |
 | `BugseeMaxNetworkBodySizeKey` | `BugseeOptionCaptureNetworkBodySizeLimit` |
 | `BugseeSanitizeNetworkDataKey` | `BugseeOptionCaptureNetworkUseDefaultSanitizer` |
@@ -116,6 +116,23 @@ Bugsee no longer recognizes them and uses its defaults instead.
 | _(not available)_ | `BugseeOptionCaptureVideoQuality` |
 | _(not available)_ | `BugseeOptionCaptureWebViewAdvanced` |
 | _(not available)_ | `BugseeOptionCaptureWebViewReportTrigger` |
+
+`BugseeEnableMachExceptionsKey` and the `BugseeOptions.enableMachExceptions` property are
+removed. The crash handler is chosen with `BugseeOptionCaptureCrashHandlerType`
+(`BugseeOptions.crashHandlerType`), which takes a `BugseeCrashHandlerType`:
+
+| 6.x | 7.x | What Bugsee installs |
+| --- | --- | --- |
+| `BugseeEnableMachExceptionsKey: NO` (6.x default) | `BugseeCrashHandlerTypeBSD` (`.bsd`) | BSD signal handlers |
+| `BugseeEnableMachExceptionsKey: YES` | `BugseeCrashHandlerTypeMach` (`.mach`) | A Mach exception handler, plus a BSD signal handler for `SIGABRT`. Other signals raised by software (`raise()`, `kill()`) are not reported |
+| _(not available)_ | `BugseeCrashHandlerTypeMachAndBSD` (`.machAndBSD`, 7.x default) | Both, so hardware faults and signals raised by software are reported |
+
+tvOS always uses BSD signal handlers, whatever the value.
+
+The removed key is ignored if it is still passed, including as a plain string
+(`@"BugseeEnableMachExceptions"`, `@"enableMachExceptions"`,
+`@"com.bugsee.option.capture.mach-exceptions"`). Bugsee logs a warning to the console the
+first time it sees one.
 
 ### 2.3 Reporting
 
@@ -196,7 +213,7 @@ Bugsee.launch(token: "<your_app_token>", options: options)
 ## 3. Defaults that changed
 
 Nine registered defaults changed. Eight were realigned with the Android SDK, so the same
-option means the same thing on both platforms. The ninth, Mach exception capture, is iOS's
+option means the same thing on both platforms. The ninth, the crash handler type, is iOS's
 own. Six of them are values a 6.x app is running today.
 
 | Option | 6.x | 7.x |
@@ -206,7 +223,7 @@ own. Six of them are values a 6.x app is running today.
 | `BugseeOptionDetectAndReportExit` | NO | **YES** |
 | `BugseeOptionDetectAndReportEarlyCrash` | NO | **YES** |
 | `BugseeOptionCaptureVideoAdaptive` | NO | **YES** |
-| `BugseeOptionCaptureMachExceptions` | NO | **YES** (iOS and visionOS) |
+| `BugseeOptionCaptureCrashHandlerType` | BSD | **MachAndBSD** (iOS and visionOS) |
 
 :::caution[Nothing tells you this happened]
 These are behavioral changes, not compile-time ones. Nothing fails to build and nothing
@@ -218,8 +235,9 @@ shaking the device now does.** If your users were taught the screenshot gesture,
 keys explicitly.
 :::
 
-With `BugseeOptionCaptureMachExceptions` on, Bugsee installs a Mach exception handler to
-catch crashes. tvOS always uses BSD signal handlers.
+With `BugseeCrashHandlerTypeMachAndBSD`, Bugsee installs a Mach exception handler and BSD
+signal handlers, so it also reports signals raised by software (`raise()`, `kill()`). tvOS
+always uses BSD signal handlers. See [§2.2](#22-capture) for the three handler types.
 
 To keep 6.x behavior, pin all six:
 
@@ -233,7 +251,7 @@ NSDictionary *options = @{
     BugseeOptionDetectAndReportExit:          @NO,
     BugseeOptionDetectAndReportEarlyCrash:    @NO,
     BugseeOptionCaptureVideoAdaptive:         @NO,
-    BugseeOptionCaptureMachExceptions:        @NO,
+    BugseeOptionCaptureCrashHandlerType:      @(BugseeCrashHandlerTypeBSD),
 };
 
 [Bugsee launchWithToken:@"<your_app_token>" andOptions:options];
@@ -249,7 +267,7 @@ let options: [String: Any] = [
     BugseeOptionDetectAndReportExit:          false,
     BugseeOptionDetectAndReportEarlyCrash:    false,
     BugseeOptionCaptureVideoAdaptive:         false,
-    BugseeOptionCaptureMachExceptions:        false,
+    BugseeOptionCaptureCrashHandlerType:      BugseeCrashHandlerType.bsd.rawValue,
 ]
 
 Bugsee.launch(token: "<your_app_token>", dictionaryOptions: options)
