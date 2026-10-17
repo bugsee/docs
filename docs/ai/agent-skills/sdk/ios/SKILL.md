@@ -28,7 +28,7 @@ Current stable pin (re-verified 2026-10-08 against the SPM tags and CocoaPods tr
 > - **Minimum is iOS 15 / tvOS 15** (raised in beta2; beta1's iOS 13 / tvOS 13 floor is obsolete). visionOS 1 unchanged. SPM is the only channel (CocoaPods and Carthage retired).
 > - Every option constant is renamed into the `BugseeOption*` family (hard-coded strings silently fall back to defaults). `pause`/`resume` and several other methods are removed or renamed.
 > - Feedback is a separate package: add `https://github.com/bugsee/feedback-spm` at the same Exact Version as core. Each `BugseeFeedback` release requires that core version exactly.
-> - Nine defaults changed. The ninth: `BugseeOptionCaptureCrashHandlerType` is **`BugseeCrashHandlerTypeMachAndBSD`** on iOS and visionOS (6.x used BSD signal handlers; set `BugseeCrashHandlerTypeBSD` to keep that; tvOS always uses BSD). It replaces `BugseeEnableMachExceptionsKey`, which is removed and ignored.
+> - Nine defaults changed. The ninth (beta3): `BugseeOptionCaptureMachExceptions` is **YES** on iOS and visionOS (set `NO` for BSD signal handlers; tvOS always uses BSD).
 > - Every `BugseeDelegate` method has a new Swift name ([migration §4.6](https://docs.bugsee.com/sdk/ios/v7/migration/)). A 6.x-named Swift implementation compiles but is **never called**.
 > - The `BugseeReport` passed to the delegate is a live handle — mutations are what gets uploaded (`type` is read-only; no public initializer; do not keep it past the callback).
 > - `addSecureRectangle:` drops touches as well as pixels. Multi-window recording (beta4) records every window on screen; convert rectangles to screen coordinates.
