@@ -196,6 +196,7 @@ Raising the deployment target to iOS 15 is a prerequisite for all of the above.
 | `setDefaultBugPriority:` | `BugseeOptionReportingDefaultBugPriority` at launch |
 | `BugseeAttachmentOverrideLabels` | — |
 | `BugseeOptions.captureVideoAdaptive` | `BugseeOptionCaptureVideoAdaptive` key |
+| `BugseeEnableMachExceptionsKey` / `BugseeOptions.enableMachExceptions` | `BugseeOptionCaptureCrashHandlerType` / `crashHandlerType`: 6.x NO → `BugseeCrashHandlerTypeBSD`, YES → `BugseeCrashHandlerTypeMach`; the 7.x default is `BugseeCrashHandlerTypeMachAndBSD`. The old key, also as a plain string, is ignored with a console warning |
 
 
 Full detail, with before/after code for each: [migration guide](https://docs.bugsee.com/sdk/ios/v7/migration/).
