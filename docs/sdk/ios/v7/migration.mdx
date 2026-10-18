@@ -67,7 +67,7 @@ Bugsee no longer recognizes them and uses its defaults instead.
 | `BugseeCrashReportKey` | `BugseeOptionDetectAndReportCrash` |
 | `BugseeAppLaunchCrashDetectionKey` | `BugseeOptionDetectAndReportEarlyCrash` |
 | `BugseeDetectAppExitKey` | `BugseeOptionDetectAndReportExit` |
-| `BugseeKillDetectionKey` | `BugseeOptionDetectAndReportKill` |
+| `BugseeKillDetectionKey` | _(removed)_ |
 | _(not available)_ | `BugseeOptionDetectAndReportAnomaly` |
 | _(not available)_ | `BugseeOptionDetectAndReportHang` |
 | _(not available)_ | `BugseeOptionDetectAndReportHangFairLevel` |
@@ -78,6 +78,9 @@ Bugsee no longer recognizes them and uses its defaults instead.
 | _(not available)_ | `BugseeOptionDetectCrashFillEmptyExceptionStacks` |
 | _(not available)_ | `BugseeOptionDetectCrashSwiftAsyncStackTraces` |
 | _(not available)_ | `BugseeOptionDetectFrustration` |
+
+`BugseeKillDetectionKey` is removed. Out-of-memory kills are reported through
+`BugseeOptionDetectAndReportExit`, which is on by default (see [§3](#3-defaults-that-changed)).
 
 ### 2.2 Capture
 
@@ -588,10 +591,12 @@ through. See [§9.3](#93-breadcrumbs).
 | `showReportControllerWithSummary:description:severity:labels:` | `showReportDialogWithSummary:description:severity:labels:` |
 | _(not available)_ | `showReportDialogWithSummary:description:` |
 
-### 7.2 `includeVideo:` overloads are gone
+### 7.2 `includeVideo:` overloads and `logError:labels:` are gone
 
-Both `uploadWithSummary:…:includeVideo:` and `logError:labels:includeVideo:` lose their
-last parameter. Drop the argument; the shorter overloads already exist in 6.x.
+`uploadWithSummary:…:includeVideo:` loses its last parameter. Drop the argument; the shorter
+overload already exists in 6.x. `logError:labels:includeVideo:` and `logError:labels:` are
+gone too: call `logError:`, and add labels in `bugseeAttachmentsForReport:` (see
+[§7.5](#75-bugseeexceptionloggingoptions-is-gone) for how far such a label reaches).
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
@@ -603,6 +608,12 @@ last parameter. Drop the argument; the shorter overloads already exist in 6.x.
 
 // 7.x
 [Bugsee uploadWithSummary:@"s" description:@"d" severity:BugseeSeverityHigh labels:nil];
+
+// 6.x
+[Bugsee logError:error labels:@[@"checkout"]];
+
+// 7.x: labels in bugseeAttachmentsForReport:, see §7.5
+[Bugsee logError:error];
 ```
 
   </TabItem>
@@ -615,6 +626,12 @@ Bugsee.upload(summary: "s", description: "d", severity: BugseeSeverityHigh,
 
 // 7.x
 Bugsee.upload(summary: "s", description: "d", severity: BugseeSeverityHigh, labels: nil)
+
+// 6.x
+Bugsee.logError(error: error, labels: ["checkout"])
+
+// 7.x: labels in bugsee(attachmentsFor:), see §7.5
+Bugsee.logError(error: error)
 ```
 
   </TabItem>
@@ -675,6 +692,85 @@ func bugsee(attachmentsFor report: BugseeReport) -> [BugseeAttachment] {
 
   </TabItem>
 </Tabs>
+
+### 7.5 `BugseeExceptionLoggingOptions` is gone
+
+`logException` takes the exception domain and the number of frames to skip as parameters, as
+on Android 7.x. `BugseeExceptionLoggingOptions`, `BugseeMergingRulesSkipFramesKey` and both
+`options:` overloads are removed.
+
+| 6.x | 7.x |
+| --- | --- |
+| `logException:options:completion:` with `nil` options | `logException:completion:` |
+| `logException:reason:options:completion:` with `nil` options | `logException:reason:completion:` |
+| `logException:options:completion:` with options | `logException:domain:skipFrames:completion:` |
+| `logException:reason:options:completion:` with options | `logException:reason:domain:skipFrames:completion:` |
+| `exceptionDomain` | `domain:` |
+| `mergingRules[BugseeMergingRulesSkipFramesKey]` | `skipFrames:` |
+| `labels` | `addLabels:` on the report in `bugseeAttachmentsForReport:` — see [§7.4](#74-the-report-the-delegate-receives-is-live) |
+| `includeVideo` | — leaving the video out of a single report is not supported |
+
+A 6.x call that passed an options object without setting `includeVideo` to `YES` filed its
+report without video. In 7.x the same call files it with video.
+
+`domain` is recorded with the report. `skipFrames` is how many top frames of the stack
+recorded for the report are left out of its signature, which groups reports into issues;
+a negative value counts as `0`.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// 6.x
+BugseeExceptionLoggingOptions *options = [BugseeExceptionLoggingOptions new];
+options.exceptionDomain = @"Payments";
+options.labels = @[@"checkout"];
+options.mergingRules = @{BugseeMergingRulesSkipFramesKey : @1};
+[Bugsee logException:exception options:options completion:nil];
+
+// 7.x
+[Bugsee logException:exception domain:@"Payments" skipFrames:1 completion:nil];
+
+// 7.x labels, in your BugseeDelegate
+- (NSArray<BugseeAttachment *> *)bugseeAttachmentsForReport:(BugseeReport *)report {
+    if ([report.type isEqualToString:BugseeReportTypeError]) {
+        [report addLabels:@[@"checkout"]];
+    }
+    return @[];
+}
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// 6.x
+let options = BugseeExceptionLoggingOptions()
+options.exceptionDomain = "Payments"
+options.labels = ["checkout"]
+options.mergingRules = [BugseeMergingRulesSkipFramesKey: 1]
+Bugsee.logException(exception: exception, options: options, completion: nil)
+
+// 7.x
+Bugsee.logException(exception: exception, domain: "Payments", skipFrames: 1, completion: nil)
+
+// 7.x labels, in your BugseeDelegate
+func bugsee(attachmentsFor report: BugseeReport) -> [BugseeAttachment] {
+    if report.type == BugseeReportTypeError {
+        report.addLabels(["checkout"])
+    }
+    return []
+}
+```
+
+  </TabItem>
+</Tabs>
+
+The delegate is asked about every report. `type` tells an error report from a bug or crash
+report, but not a `logException` report from a `logError` report or from an error report
+Bugsee files on its own, so a label added this way goes on all of them.
+
+On simulators and Mac Catalyst `logException` files nothing; its completion is still called.
 
 ---
 
@@ -1012,7 +1108,10 @@ Renamed — a plain search and replace does most of these.
 | `testExceptionCrash` / `testSignalCrash` | `testCrash` |
 | `deleteCollectedDataOnDevice:` | `deleteCollectedDataOnDevice:completion:` |
 | `uploadWithSummary:…:includeVideo:` | `uploadWithSummary:description:severity:labels:` |
-| `logError:labels:includeVideo:` | `logError:labels:` |
+| `logError:labels:includeVideo:` / `logError:labels:` | `logError:`; labels through the delegate's report — see [§7.2](#72-includevideo-overloads-and-logerrorlabels-are-gone) |
+| `logException:options:completion:` | `logException:completion:` / `logException:domain:skipFrames:completion:` — see [§7.5](#75-bugseeexceptionloggingoptions-is-gone) |
+| `logException:reason:options:completion:` | `logException:reason:completion:` / `logException:reason:domain:skipFrames:completion:` |
+| `BugseeExceptionLoggingOptions` | `domain:` / `skipFrames:` parameters of `logException`; labels through the delegate's report |
 | Swift `Bugsee.launch(token:options:)` _(dictionary)_ | Swift `Bugsee.launch(token:dictionaryOptions:)` |
 | Swift `Bugsee.relaunch(options:)` _(dictionary)_ | Swift `Bugsee.relaunch(dictionaryOptions:)` |
 | Swift `Bugsee.uploadReport(_:)` | Swift `Bugsee.upload(_:)` |
@@ -1031,7 +1130,7 @@ Removed with no direct replacement.
 | `isViewHidden:` | — |
 | `hideKeyboard:` | — |
 | `setInternalSecureRectangles:` | — |
-| `logAssert:withLocation:` / `BUGSEE_ASSERT` | Use `logException:reason:options:completion:` |
+| `logAssert:withLocation:` / `BUGSEE_ASSERT` | Use `logException:reason:completion:` |
 | `log:level:timestamp:` | `log:level:requiresFiltering:` takes the slot but does something different — it opts the message into the log filter |
 | `setDefaultCrashPriority:` | `BugseeOptionReportingDefaultCrashPriority` at launch |
 | `setDefaultErrorPriority:` | `BugseeOptionReportingDefaultErrorPriority` at launch |
