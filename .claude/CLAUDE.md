@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Bugsee documentation site (https://docs.bugsee.com/), built with **Docusaurus 3.9** and TypeScript. Documents SDKs for 8 platforms (iOS, Android, React Native, Cordova, Flutter, Unity, .NET/MAUI, Xamarin), dashboard features, 30+ integration providers, webhooks, and MCP.
+Bugsee documentation site (https://docs.bugsee.com/), built with **Docusaurus 3.9** and TypeScript. Documents SDKs for 9 platforms (iOS, Android, React Native, Cordova, Flutter, Unity, .NET/MAUI, Kotlin Multiplatform, Xamarin), dashboard features, 30+ integration providers, webhooks, and MCP.
 
 ## Commands
 
@@ -41,7 +41,7 @@ npx cspell "docs/**/*.md" "docs/**/*.mdx" --no-cache -c cspell.json  # Spell che
 
 ### Content (`docs/`)
 All markdown content, organized by section:
-- `sdk/<platform>/` — 8 platform SDKs, each with consistent sub-pages
+- `sdk/<platform>/` — 9 platform SDKs, each with consistent sub-pages
 - `integrations/providers/` — 30+ integration providers
 - `dashboard/`, `mcp/`, `webhooks/`, `tools/` — Other sections
 - `index.md` — Home page with feature comparison table
