@@ -9,6 +9,9 @@ slug: "/sdk/kmp/release-notes"
 Bugsee KMP SDK is currently in beta. APIs and options may change before the stable release.
 :::
 
+## 0.1.2 (August 18, 2026)
+- Feat: Updated native SDKs to their latest versions (Android: [6.0.4](/sdk/android/v6/release-notes/#604-june-22-2026), iOS: [6.3.1](/sdk/ios/release-notes/#631-july-31-2026))
+
 ## 0.1.1 (May 3, 2026)
 - Internal improvements.
 
