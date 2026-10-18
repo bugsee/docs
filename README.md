@@ -1,8 +1,8 @@
 # Bugsee Documentation
 
 Source for the Bugsee documentation site, built with
-[Docusaurus 3](https://docusaurus.io/) and TypeScript. Covers the SDKs for 8 platforms
-(iOS, Android, React Native, Cordova, Flutter, Unity, .NET/MAUI, Xamarin), dashboard
+[Docusaurus 3](https://docusaurus.io/) and TypeScript. Covers the SDKs for 9 platforms
+(iOS, Android, React Native, Cordova, Flutter, Unity, .NET/MAUI, Kotlin Multiplatform, Xamarin), dashboard
 features, 30+ integration providers, webhooks, and MCP.
 
 ## Prerequisites
