@@ -199,6 +199,7 @@ Raising the deployment target to iOS 15 is a prerequisite for all of the above.
 | `setDefaultBugPriority:` | `BugseeOptionReportingDefaultBugPriority` at launch |
 | `BugseeAttachmentOverrideLabels` | — |
 | `BugseeOptions.captureVideoAdaptive` | `BugseeOptionCaptureVideoAdaptive` key |
+| `BugseeEnableMachExceptionsKey` / `BugseeOptions.enableMachExceptions` | `BugseeOptionCaptureCrashHandlerType` / `crashHandlerType`: 6.x NO → `BugseeCrashHandlerTypeBSD`, YES → `BugseeCrashHandlerTypeMach`; the 7.x default is `BugseeCrashHandlerTypeMachAndBSD`. The old key, also as a plain string, is ignored with a console warning |
 | `BugseeKillDetectionKey` / `BugseeOptions.killDetection` | Out-of-memory kills are reported through `BugseeOptionDetectAndReportExit`, on by default |
 
 
