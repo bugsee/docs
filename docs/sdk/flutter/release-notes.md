@@ -5,6 +5,9 @@ sidebar_position: 11
 slug: "/sdk/flutter/release-notes"
 ---
 
+## 9.0.4 (August 18 2026)
+- Feat: Updated native SDKs to their latest versions (Android: [6.0.4](/sdk/android/v6/release-notes/#604-june-22-2026), iOS: [6.3.1](/sdk/ios/release-notes/#631-july-31-2026))
+
 ## 9.0.3 (March 26 2026)
 - Fix: Improper artifacts placement for iOS
 
