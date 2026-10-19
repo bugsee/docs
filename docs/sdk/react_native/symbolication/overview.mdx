@@ -1,0 +1,109 @@
+---
+title: "Symbolication overview"
+description: "What Bugsee needs to turn React Native 7.x Release crash frames back into source, which build step uploads each piece, and how to check that the uploads happened."
+sidebar_position: 1
+slug: "/sdk/react_native/symbolication/overview"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+A Release build ships minified JavaScript compiled to Hermes bytecode, Java and Kotlin code renamed by R8, and stripped native libraries. A crash from that build carries addresses and minified names. To show you your own file names, functions and lines, Bugsee needs the matching debug files for that exact build, uploaded while the build runs.
+
+A React Native app has up to three kinds of frames in one report, and each kind has its own debug file and its own build step. This page explains the pieces. [Symbolication: Android](/sdk/react_native/symbolication/android) and [Symbolication: iOS](/sdk/react_native/symbolication/ios) have the setup for a bare app. An Expo app gets all of it from the [config plugin](/sdk/react_native/expo).
+
+## What gets symbolicated
+
+| Frames | Platform | Debug file | Uploaded by |
+| --- | --- | --- | --- |
+| JavaScript | Android | Composed Hermes source map, with a debug ID | The package's Gradle hook (`scripts/bugsee-sourcemaps.gradle`) and Hermes wrapper (`react.hermesCommand`) |
+| JavaScript | iOS | Composed Hermes source map, with a debug ID | The package's `scripts/bugsee-xcode.sh`, run by the **Bundle React Native code and images** build phase |
+| Java and Kotlin | Android | R8/ProGuard `mapping.txt` | The Bugsee Gradle plugin (`uploadBugsee<Variant>Mapping`) |
+| Native (C/C++) | Android | Native debug symbols of every `.so` | The Bugsee Gradle plugin (`uploadBugsee<Variant>Native`, with `plugin.ndk.enabled=true`) |
+| Native (Objective-C, Swift, C++) | iOS | dSYMs from the Archive | A scheme **Archive** post-action that runs `bugsee-cli xcode post-action` |
+| React Native's own frameworks | iOS | React Native's dSYMs | The same post-action, once `pod install` ran with `RCT_SYMBOLICATE_PREBUILT_FRAMEWORKS=1` |
+
+Without these uploads the app still builds and runs, and reports still arrive. Only the frames stay unreadable: JavaScript frames point into the bundle, and native frames are raw addresses.
+
+## How JavaScript frames are matched: debug IDs
+
+JavaScript symbolication in 7.x does not depend on file names or on the app version. It uses a **debug ID**, a UUID derived from the bundle's content:
+
+1. After React Native composes the final source map, the build hook runs `bugsee-cli sourcemaps inject`. It writes the debug ID into the JavaScript bundle and into the composed map, together with a small runtime stub that registers the ID in `globalThis._bugseeDebugIds`.
+2. With Hermes, the hook then compiles the stamped JavaScript to bytecode again, so the stub is in the bytecode that ships, and copies the ID back onto the recomposed map.
+3. The hook uploads the composed map with `bugsee-cli debug-files upload --type sourcemaps`, under the build's version and build number.
+4. At runtime, when the SDK reports a JavaScript error or crash, it reads the registered IDs and sends them with the exception, per frame. The server picks the map with the matching ID.
+
+Because the ID comes from the bundle's content, a rebuilt but unchanged bundle has the same ID, and a map the server already has is not uploaded twice. See [Source maps](/cli/sourcemaps) in the Bugsee CLI documentation for how the CLI injects and uploads.
+
+Two details matter for Hermes, and are why you should use the package's hooks instead of running the CLI yourself:
+
+- The ID has to go on the **composed** map, the one written after `compose-source-maps.js`. The intermediate compiler map is never consulted, and composing again drops the ID.
+- The stub has to be in the JavaScript that `hermesc` compiles. On Android, that is what the Hermes wrapper in `react.hermesCommand` is for: it keeps the JavaScript aside before `hermesc` runs, so the hook can stamp it and compile it again.
+
+Before upload, the hooks rewrite absolute paths in the map's `sources` to paths relative to the project root (`/src/App.tsx`, or `../packages/ui/Button.tsx` for a workspace package outside the root), so the dashboard does not show your build machine's directory layout. The map on disk is not changed. The map is uploaded with its `sourcesContent`, so your source code goes with it; the hooks have no switch to strip it in this beta.
+
+## The pieces and who does what
+
+| Piece | What it is | What it does here |
+| --- | --- | --- |
+| `@bugsee/cli` | The Bugsee CLI, a dependency of `@bugsee/react-native` (pinned exactly, 0.7.12 in `7.0.0-beta2`). Its binary comes from a platform-specific optional dependency. | Stamps and uploads source maps for the package's build hooks, and uploads dSYMs from the iOS post-action. See [Bugsee CLI](/cli). |
+| Package build hooks | `scripts/bugsee-sourcemaps.gradle` and `scripts/hermesc-preserve-js.*` (Android), `scripts/bugsee-xcode.sh` (iOS), shipped in the package. | Give each Release bundle a debug ID and upload its source map. They do not need the Bugsee Gradle plugin. |
+| Bugsee Gradle plugin | `com.bugsee.android.gradle`, version 4.0.8 for `7.0.0-beta2`. A Gradle plugin, so autolinking cannot add it. | Uploads the R8 mapping, the native symbols and the build info of each Release build, with its own copy of the CLI. It also instruments OkHttp, which is how `fetch` and `XMLHttpRequest` reach Bugsee's network capture on Android; see [Installation](/sdk/react_native/installation#android). |
+| iOS bundle phase | Xcode's **Bundle React Native code and images** phase, pointed at `bugsee-xcode.sh` instead of React Native's `react-native-xcode.sh`. | Runs React Native's script, then stamps and uploads the source map. |
+| iOS Archive post-action | A Run Script in the scheme's **Archive** post-actions that runs `bugsee-cli xcode post-action`. | Registers the build and uploads its dSYMs, React Native's included when they are in the Archive. See [iOS build publishing](/cli/xcode). |
+| Expo config plugin | `@bugsee/react-native` in the `plugins` of `app.json`. | Writes all of the above on `expo prebuild`. React Native's dSYMs are opt-in, with `symbolicateReactNativeFrameworks`. See [Expo](/sdk/react_native/expo#what-the-plugin-changes). |
+
+The Bugsee Gradle plugin and the Archive post-action also register the build itself with Bugsee (build info). The [Gradle plugin documentation](/sdk/android/gradle-plugin/builds-upload) and [iOS build publishing](/cli/xcode) describe that part.
+
+## What to set up
+
+| You use | Do this |
+| --- | --- |
+| Expo prebuild | Add the [config plugin](/sdk/react_native/expo) with your `appToken` and run `npx expo prebuild`. Add `symbolicateReactNativeFrameworks: true` if you want React Native's own frames on iOS. |
+| Expo with a Kotlin DSL Gradle file | The config plugin refuses every prebuild while any of `settings.gradle.kts`, `build.gradle.kts` or the app `build.gradle.kts` exists, even after you make its edits by hand. Remove `@bugsee/react-native` from `plugins`, which also drops its iOS edits, and make every edit by hand, as in [Symbolication: Android](/sdk/react_native/symbolication/android) and [Symbolication: iOS](/sdk/react_native/symbolication/ios). |
+| A bare app, Android | Add the source-map hooks, the Bugsee Gradle plugin and `android/bugsee.properties`: [Symbolication: Android](/sdk/react_native/symbolication/android). |
+| A bare app, iOS | Point the bundle phase at `bugsee-xcode.sh`, give it a token, add the Archive post-action, and optionally React Native's dSYMs: [Symbolication: iOS](/sdk/react_native/symbolication/ios). |
+| CI | Export `BUGSEE_APP_TOKEN` in the job, per platform; see [Tokens and endpoints](#tokens-and-endpoints). On iOS, also export `RCT_SYMBOLICATE_PREBUILT_FRAMEWORKS=1` where the job runs `pod install`, if you want React Native's dSYMs. |
+| Builds that must not upload | Expo: `uploadSourcemaps: false` and `uploadSymbols: false`. Bare app: `-PbugseeUploadSourcemaps=false` or `BUGSEE_UPLOAD_SOURCEMAPS=false` for source maps; on Android, disable the Gradle plugin's `uploadBugsee*` tasks as in [Turning uploads off](/sdk/react_native/symbolication/android#turning-uploads-off); leave out the post-action on iOS. A missing or placeholder token skips the source-map upload and the iOS post-action. The Bugsee Gradle plugin skips only when no token is set; with Expo, the config plugin leaves the placeholder out of `android/bugsee.properties`. |
+
+## When uploads run
+
+- **Release only.** On Android, React Native bundles only non-debuggable variants (a debug build loads its JavaScript from Metro), so the source-map hook runs for Release builds. On iOS the bundle phase skips the upload in a configuration whose name contains `Debug`, unless `BUGSEE_UPLOAD_DEBUG_SOURCEMAPS=true`. The dSYM post-action runs on **Archive** of a Release configuration (the CLI's default gating; see [Gating](/cli/xcode#gating)).
+- **A real token is required.** No token, or the placeholder token `00000000-0000-4000-8000-000000000000`, skips the source-map upload and the dSYM post-action with one line in the build log, and the build carries on.
+- **A failed upload never fails the build.** The source-map hooks print a warning and continue. The dSYM post-action runs in the background by default, so it does not hold up or fail the Archive.
+
+## Tokens and endpoints
+
+The uploads use the same **Bugsee app token** your app passes to `Bugsee.launch`. Tokens are per platform: upload Android files with your Android app's token and iOS files with your iOS app's token. You find the token in the Bugsee dashboard, in your application's settings.
+
+| Upload | Where the token comes from |
+| --- | --- |
+| Android source map | `app_token` in `android/bugsee.properties`, then the `BUGSEE_APP_TOKEN` environment variable, then `BUGSEE_TOKEN_ANDROID` |
+| Android mapping and native symbols | The Bugsee Gradle plugin's token: `app_token` in `android/bugsee.properties`, or the plugin's `appToken` setting; see [Gradle plugin configuration](/sdk/android/gradle-plugin/configuration) |
+| iOS source map | The token the Expo plugin wrote into the bundle phase, then `BUGSEE_APP_TOKEN`, then `BUGSEE_TOKEN_IOS`, from the build environment (for example `ios/.xcode.env.local`) |
+| iOS dSYMs | The token the Expo plugin wrote into the post-action, then `BUGSEE_APP_TOKEN`, then `BUGSEE_TOKEN_IOS`, from the environment the Archive runs in. The post-action does not read `ios/.xcode.env.local` for its token; see [Symbolication: iOS](/sdk/react_native/symbolication/ios). |
+
+Everything uploads to Bugsee's production API unless you set an endpoint. For a self-hosted, staging or regional Bugsee, set the API base: `plugin.endpoint` in `android/bugsee.properties` (read by the Gradle plugin and the Android source-map hook) or `BUGSEE_ENDPOINT` in the environment (read by the source-map hooks and the CLI). The Expo plugin's `endpoint` option writes all of these, and the runtime endpoint too; see [Custom endpoint](/sdk/react_native/expo#custom-endpoint).
+
+:::note[Tokens in committed files]
+`android/bugsee.properties`, an `ios/.xcode.env.local`, and with Expo the `ios/` project and shared scheme, all hold the token in plain text. Keep `android/bugsee.properties` and `ios/.xcode.env.local` out of version control if the token is private, and inject it from your CI secrets instead.
+:::
+
+## Check that the uploads happened
+
+Build a Release build (an Archive, on iOS) and read the build log:
+
+- **Source maps**: a line `bugsee: uploaded source map <debug id>` from the bundle task (Android: `createBundle<Variant>JsAndAssets`; iOS: the **Bundle React Native code and images** phase). A skipped upload says why, for example `bugsee: source map upload skipped: no app token is configured`, and a failed one `bugsee: source map upload failed (…); the app build continues`.
+- **Android mapping and native symbols**: the `uploadBugsee<Variant>Mapping` and `uploadBugsee<Variant>Native` tasks run after `assemble<Variant>` or `bundle<Variant>`.
+- **iOS dSYMs**: the post-action runs in the background and writes its log to `$PROJECT_TEMP_DIR/bugsee-cli.log`; see [Background vs. foreground](/cli/xcode#background-vs-foreground). A skipped post-action prints `warning: bugsee: dSYM upload skipped: …`.
+
+Then check the result end to end: in a Release build, trigger a test crash with `Bugsee.testJsCrash()` or `Bugsee.testNativeCrash()` (see [Crash & error reporting](/sdk/react_native/manual/crash-error-reporting)), relaunch the app so the report uploads, and open it in the dashboard. JavaScript frames should name your source files, and native frames your functions. Use a real device for iOS: the iOS Simulator has no crash reporting.
+
+## Related pages
+
+- [Symbolication: Android](/sdk/react_native/symbolication/android): source-map hooks, the Bugsee Gradle plugin and native symbols.
+- [Symbolication: iOS](/sdk/react_native/symbolication/ios): the bundle phase, the dSYM post-action and React Native's dSYMs.
+- [Expo](/sdk/react_native/expo): the config plugin that wires all of this on prebuild.
+- [Bugsee CLI](/cli): the tool behind every upload.
