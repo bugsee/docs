@@ -1,0 +1,223 @@
+---
+title: "Performance monitoring"
+description: "Measure flows in your React Native app with Bugsee React Native SDK 7.x transactions and spans: startTransaction, startSpan, getActiveSpan, the span object, statuses, sampling, and what the native SDKs capture on their own."
+sidebar_position: 21
+slug: "/sdk/react_native/performance"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+Performance monitoring (APM) measures how long the flows in your app take, such as a checkout or a screen load, and attaches those measurements to Bugsee reports.
+
+## Concept
+
+APM is built around two primitives, **transactions** and **spans**:
+
+- A **transaction** is the root of a performance trace. It has a name (`Checkout`), an operation type (`ui.checkout`), optional attributes, and a status.
+- A **span** is a unit of work inside a transaction. Spans form a tree: a span can have child spans for finer steps. Each span has its own operation, description, attributes and status.
+
+When you start a span while another span is active, the new span becomes a child of the active one, so you get the hierarchy without passing parent objects around.
+
+Transactions and spans you start from JavaScript are the same transactions and spans the SDK records natively: each JavaScript object stands for one of them, and every call on it applies to it.
+
+## What is captured automatically
+
+The React Native package records no spans from JavaScript on its own: there are no automatic spans for React renders, navigation, or `fetch` calls made in JavaScript. Add them with the API below.
+
+While performance monitoring is on, the SDK also measures native components, not React screens, on its own:
+
+- **Android**: the providers listed in the native SDK reference, [Android built-in providers](/sdk/android/performance#built-in-providers). Some of them, such as database and file I/O spans, depend on the Bugsee Gradle plugin.
+- **iOS**: an `http.client` transaction for each HTTP request (only while network capture is on), `file.*` child spans for file operations made inside an active transaction, a `ui.load` transaction for each native screen (view controller) that appears, and one `app.start.cold` or `app.start.warm` transaction for app startup. The iOS documentation has no performance page for 7.x yet; the option keys are in the [iOS 7.x migration guide](/sdk/ios/v7/migration#25-performance).
+
+## Transactions and spans
+
+```ts
+import Bugsee, { SpanStatus } from '@bugsee/react-native';
+
+async function checkout(items: number, pay: () => Promise<void>): Promise<void> {
+  const tx = Bugsee.startTransaction('Checkout', 'ui.checkout', { 'cart.items': items });
+  try {
+    const validate = Bugsee.startSpan('validate', 'Validate cart');
+    validate.finish(SpanStatus.OK);
+
+    const charge = tx.startChildSpan('http.client', 'POST /charge');
+    try {
+      await pay();
+      charge.finish(SpanStatus.OK);
+    } catch (error) {
+      charge.finish(SpanStatus.Error);
+      throw error;
+    }
+
+    tx.finish(SpanStatus.OK);
+  } catch (error) {
+    tx.finish(SpanStatus.Error);
+    throw error;
+  }
+}
+```
+
+### `startTransaction`
+
+`Bugsee.startTransaction(name, operation, attributes?)` starts a transaction and returns it as a `BugseeTransaction`. The transaction becomes the active span, so a later `startSpan` is its child.
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `name` | `string` | The transaction name. Must not be empty or only whitespace. |
+| `operation` | `string` | The operation type, such as `ui.load`. Must not be empty or only whitespace. |
+| `attributes` | object | Optional initial attributes. Each value is a string, a finite number or a boolean. |
+
+### `startSpan`
+
+`Bugsee.startSpan(operation, description?)` starts a span as a child of the active span. `description` is a string, `null` or left out.
+
+### `startChildSpan`
+
+`span.startChildSpan(operation, description?)` starts a span under that specific span, whatever is active. Use it when the parent matters, such as a transaction whose steps run in parallel promises or across `await`s where another transaction may have started in between.
+
+### `getActiveSpan`
+
+`Bugsee.getActiveSpan()` returns the active span, or `null` when there is none. Use it to add an attribute from code that does not have the span:
+
+```ts
+Bugsee.getActiveSpan()?.setAttribute('retry.count', 2);
+```
+
+If JavaScript already holds an object for that span, you get the same object back.
+
+### Which span is active
+
+All your JavaScript calls see the same active span:
+
+| Platform | Thread the span calls run on |
+| --- | --- |
+| Android | The thread the JavaScript calls arrive on. |
+| iOS | The main thread: each call runs there synchronously. |
+
+## Performance monitoring off
+
+With `com.bugsee.option.performance.enabled` set to `false`, the SDK returns no-op spans, on both platforms: `startTransaction` and `startSpan` still return objects, and calls on them do nothing. `startSpan` with no active transaction also returns a no-op span. You do not need to check for `null`.
+
+Call `finish` on these objects too: it releases the resources they hold.
+
+## The span object
+
+`BugseeSpan` and `BugseeTransaction` have these properties:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `spanId` | `string` | The span's id. |
+| `traceId` | `string` | The id of the trace the span belongs to. |
+| `operation` | `string` | The operation. |
+| `description` | `string \| null` | The description. |
+| `status` | `SpanStatus` | The status. |
+| `finished` | `boolean` | Whether the span has finished. |
+| `attributes` | object | The attributes. |
+| `name` | `string` | Transaction only: the transaction name. |
+| `sampled` | `boolean` | Transaction only: whether the transaction won the sample-rate draw when it started (see [Sampling](#sampling)), which this beta uses for no upload. Read once at start and never updated: a transaction that adaptive sampling promotes when it finishes still reads `false`. |
+
+The properties are read when the object is created and then follow the changes you make through it. They are not read again.
+
+The setters return the span, so calls can be chained:
+
+| Method | Description |
+| --- | --- |
+| `setName(name)` | Sets the span's **operation** on both SDKs. On a transaction, `name` is not changed. |
+| `setDescription(description)` | Sets the description, or clears it with `null`. |
+| `setAttribute(key, value)` | Adds or replaces an attribute. `value` is a string, a finite number or a boolean. |
+| `setStatus(status)` | Sets the status. |
+| `startChildSpan(operation, description?)` | Starts a child span of this span. |
+| `finish(status?)` | Finishes the span and releases it. |
+
+```ts
+const span = Bugsee.startSpan('db.query', 'load cart')
+  .setAttribute('cache', false)
+  .setDescription('load cart from storage');
+span.finish();
+```
+
+### Finishing
+
+Call `finish` exactly once on every span and transaction you start. The span stays open until then.
+
+`finish()` with no argument is the SDK's own no-argument finish, which ends the span as `OK` on both platforms, **even after `setStatus`**: it overwrites a status you set earlier. To end with another status, pass it to `finish` (for example `finish(SpanStatus.Error)`). The object's `status` property is not updated by `finish`, so after `setStatus(SpanStatus.Error)` and a bare `finish()` it still reads `Error` while the recorded span is `OK`.
+
+Finishing a span also ends its child spans that are still open, with the status `Cancelled`, on both platforms. The package releases those children too, and their objects behave as finished.
+
+After a span is finished, every method on its object throws `BugseeSpanError` with the code `SpanErrorCode.HandleDead` (`E_SPAN_HANDLE_DEAD`), including a second `finish`. Properties can still be read.
+
+```ts
+import { BugseeSpanError, SpanErrorCode, type BugseeSpan } from '@bugsee/react-native';
+
+function markLate(span: BugseeSpan): void {
+  try {
+    span.setAttribute('late', true);
+  } catch (error) {
+    if (error instanceof BugseeSpanError && error.code === SpanErrorCode.HandleDead) {
+      return; // the span was already finished
+    }
+    throw error;
+  }
+}
+```
+
+### Development reloads
+
+When the JavaScript runtime reloads, the spans of the old runtime are released **without being finished**, so a transaction still open stays open. The objects from the old runtime are gone. In the new runtime, `getActiveSpan` can return a span that is still active.
+
+## `SpanStatus`
+
+| Constant | Value |
+| --- | --- |
+| `SpanStatus.OK` | `0` |
+| `SpanStatus.Error` | `1` |
+| `SpanStatus.Timeout` | `2` |
+| `SpanStatus.Cancelled` | `3` |
+| `SpanStatus.DeadlineExceeded` | `4` |
+| `SpanStatus.Unknown` | `5` |
+
+## Errors
+
+The calls check their input before doing anything:
+
+| Input | Thrown |
+| --- | --- |
+| `name`, `operation`, a `setName` value or a `setAttribute` key that is not a string, or is empty or only whitespace | `TypeError` |
+| `attributes` that is not an object (including `null` and arrays) | `TypeError` |
+| An attribute value that is not a string, a finite number or a boolean | `TypeError` |
+| A `description` that is not a string or `null` | `TypeError` |
+| A status that is not a number | `TypeError` |
+| A status that is not a whole number from `0` to `5` | `RangeError` |
+| Any method on a finished span | `BugseeSpanError` (`E_SPAN_HANDLE_DEAD`) |
+
+If no span can be started at all, `startTransaction` and `startSpan` throw an ordinary `Error`, and `startChildSpan` throws `BugseeSpanError` (`E_SPAN_HANDLE_DEAD`).
+
+## Sampling
+
+These launch options control APM. They have no accessor; set them with `setCustomOption` or in a plain map.
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `com.bugsee.option.performance.enabled` | `true` | Master switch. `false` makes every span a no-op and stops the native providers. |
+| `com.bugsee.option.performance.sample-rate` | `0.01` | Probability (`0` to `1`) that a transaction is sampled for a standalone APM upload. Accepted, but that upload is not active in this beta. |
+| `com.bugsee.option.performance.adaptive-sampling` | `true` | Promote transactions that lost the random draw into the standalone upload. Accepted, but that upload is not active in this beta. |
+| `com.bugsee.option.performance.upload-mode` | `"batched"` | Android only. How a standalone upload would send sampled transactions. Accepted, but that upload is not active in this beta. |
+
+```ts
+import Bugsee, { createDefaultLaunchOptions } from '@bugsee/react-native';
+
+const options = createDefaultLaunchOptions();
+options.setCustomOption('com.bugsee.option.performance.sample-rate', 0.1);
+
+Bugsee.launch('<your app token>', options);
+```
+
+Performance data reaches Bugsee **with reports**: the captured transactions are written into every report. In this beta, transactions are not sent on their own, on either platform: the standalone APM upload that the sampling options are meant for is not active. The sample rate therefore changes nothing that is sent today; only `com.bugsee.option.performance.enabled` does.
+
+## Related pages
+
+- [Configuration](/sdk/react_native/configuration): every launch option.
+- [Network events](/sdk/react_native/network): network capture on each platform.
+- Native SDK reference: [Android performance monitoring](/sdk/android/performance) and, for iOS, the performance keys in the [iOS 7.x migration guide](/sdk/ios/v7/migration#25-performance).
