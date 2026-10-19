@@ -1,0 +1,201 @@
+---
+title: "Expo"
+description: "Setting up Bugsee React Native SDK 7.x in an Expo app with the config plugin: its options, what it writes on expo prebuild, and its limits."
+sidebar_position: 2
+slug: "/sdk/react_native/expo"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+Expo apps regenerate `ios/` and `android/` on every `expo prebuild`, so native edits made by hand do not survive. `@bugsee/react-native` ships an Expo config plugin that makes the Bugsee build edits for you on each prebuild: the Bugsee Gradle plugin, the Hermes debug-id hooks, the source-map uploads and the iOS dSYM upload on Archive.
+
+The config plugin covers the **build**. Your app still starts the SDK from JavaScript with `Bugsee.launch`, as on [Installation](/sdk/react_native/installation#4-launch-bugsee).
+
+## Requirements
+
+The same as for any `@bugsee/react-native` app: React Native 0.81 or later with the New Architecture, Hermes, iOS 15.0 or later and Android API 21 or later. Any Expo SDK whose React Native is 0.81 or later meets this; the package's own Expo example uses Expo SDK 57 with React Native 0.86. The plugin edits Groovy Gradle files only; see [Limits](#limits).
+
+:::caution[No Expo Go]
+The package contains native code, so it does not run in Expo Go: the native module is looked up when the package loads, and is missing there. Use a [development build](https://docs.expo.dev/develop/development-builds/introduction/) instead.
+:::
+
+## 1. Add the package
+
+```sh
+yarn add @bugsee/react-native@beta
+```
+
+`npm install` and `pnpm add` work the same way; see [Installation](/sdk/react_native/installation#1-add-the-package), including the [pnpm notes](/sdk/react_native/installation#pnpm).
+
+## 2. Add the plugin
+
+Add `@bugsee/react-native` to `plugins` in `app.json` (or `app.config.js`):
+
+```json title="app.json"
+{
+  "expo": {
+    "plugins": [
+      ["@bugsee/react-native", { "appToken": { "ios": "YOUR_IOS_APP_TOKEN", "android": "YOUR_ANDROID_APP_TOKEN" } }]
+    ]
+  }
+}
+```
+
+`appToken` is either one string for both platforms or one token per platform. Bugsee app tokens are per platform, so the object form is the usual one. A token may contain only letters, digits, `.`, `_` and `-`; anything else, such as a placeholder like `<token>`, fails the prebuild.
+
+## 3. Run prebuild
+
+```sh
+npx expo prebuild
+```
+
+Run it again whenever you change the plugin's options. The plugin's edits are its own: a later prebuild with a new value replaces them, and one without an option removes what that option wrote, with one exception. Turning `autoLaunch` off does not remove the `com.bugsee.app-token` entry that an earlier prebuild added to `AndroidManifest.xml`, so the SDK would still start before your code calls `Bugsee.launch`. After turning `autoLaunch` off, run a clean prebuild (`npx expo prebuild --clean`) or delete that entry yourself.
+
+Release builds then upload their source maps, and Archives upload their dSYMs, whenever a real token is set.
+
+:::caution[7.0.0-beta1 and 7.0.0-beta2: Android Release builds need `chmod`]
+In 7.0.0-beta1 and 7.0.0-beta2 the package's shell scripts are published without the executable bit. The `hermesCommand` the plugin writes runs `hermesc-preserve-js.sh` directly, so an Android Release build on macOS or Linux fails with "Permission denied". Run `chmod +x node_modules/@bugsee/react-native/scripts/*.sh` after each install, for example from a `postinstall` script; see [Symbolication: Android](/sdk/react_native/symbolication/android#1-javascript-source-maps). The iOS bundle phase the plugin writes runs its script through `/bin/bash` and is not affected.
+:::
+
+## 4. Launch the SDK
+
+Launch from JavaScript as in a bare app:
+
+```ts title="index.js"
+import { Platform } from 'react-native';
+import Bugsee, { createDefaultLaunchOptions } from '@bugsee/react-native';
+
+Bugsee.launch(
+  Platform.OS === 'ios' ? 'YOUR_IOS_APP_TOKEN' : 'YOUR_ANDROID_APP_TOKEN',
+  createDefaultLaunchOptions(),
+);
+```
+
+See [Installation](/sdk/react_native/installation#4-launch-bugsee) for what `launch` does and resolves to, and [Configuration](/sdk/react_native/configuration) for the options. To have Android start the SDK before JavaScript runs instead, see [`autoLaunch`](#auto-launch-on-android).
+
+## Plugin options
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `appToken` | string, or `{ ios?: string; android?: string }` | none | The token the build uploads use. Android: `app_token` in `android/bugsee.properties`. iOS: written into the Archive dSYM post-action, and into the bundle phase when `uploadSourcemaps` is on, so an Archive started from the Xcode GUI, which does not inherit a shell environment, still has it. A value that is not token-shaped fails the prebuild. |
+| `uploadSourcemaps` | boolean | `true` | Upload the composed JavaScript source map of Release builds. `false` writes `bugseeUploadSourcemaps=false` into `android/gradle.properties` and `BUGSEE_UPLOAD_SOURCEMAPS=false` into the iOS bundle phase. |
+| `uploadSymbols` | boolean | `true` | Upload native symbols. `false` removes the iOS Archive dSYM post-action (including one an earlier prebuild left) and, on Android, disables the Bugsee Gradle plugin's `uploadBugsee*` tasks (R8 mapping, NDK symbols, build info) in a marked block. Source maps follow `uploadSourcemaps`. |
+| `nativeCrashReporting` | boolean | `true` | Android native (NDK) crash reporting. On: writes `plugin.ndk.enabled=true` for a real token and adds `com.bugsee:bugsee-android-ndk`. `false`: skips the flag, removes that dependency and excludes the package's NDK artifact. |
+| `symbolicateReactNativeFrameworks` | boolean | `false` | Make `pod install` download React Native's own dSYMs, so React frames in iOS crashes symbolicate. See [React Native's dSYMs](#react-native-dsyms-on-ios). |
+| `autoLaunch` | boolean | `false` | Android only. Writes the `com.bugsee.app-token` manifest meta-data, so the native SDK launches at process start. See [Auto-launch on Android](#auto-launch-on-android). |
+| `endpoint` | string | none (production) | A self-hosted, staging or regional Bugsee API base. See [Custom endpoint](#custom-endpoint). |
+| `gradlePluginVersion` | string | the version the package is built against (4.0.8 in `7.0.0-beta2`) | The `com.bugsee.android.gradle` version to declare. |
+
+## What the plugin changes
+
+### Android
+
+- **`android/settings.gradle`**: adds `mavenCentral()` to `pluginManagement { repositories { … } }`. The Bugsee Gradle plugin is published to Maven Central, which Gradle does not search for plugins unless told to. If there is no `repositories` block, it adds the Gradle Plugin Portal, Google and Maven Central together, since declaring any block replaces Gradle's implicit Plugin Portal.
+- **`android/build.gradle`**: declares `com.bugsee.android.gradle` with `apply false`, at the plugin's version. A declaration that is already there, whoever wrote it, is taken as the plugin's own pin and its version follows the package's on each prebuild.
+- **`android/app/build.gradle`**: applies `com.bugsee.android.gradle`, points `react.hermesCommand` at the package's Hermes wrapper (which keeps the JavaScript so the debug id can reach the bytecode), applies the package's `scripts/bugsee-sourcemaps.gradle`, and adds the NDK dependency unless `nativeCrashReporting` is `false`.
+- **`android/bugsee.properties`**: `app_token`, `plugin.ndk.enabled` and `plugin.endpoint`, as the options set them. A missing or placeholder token is left out.
+- **`android/gradle.properties`**: `bugseeUploadSourcemaps=false` when `uploadSourcemaps` is `false`.
+- **`AndroidManifest.xml`**: the `com.bugsee.app-token` meta-data with `autoLaunch`, and the endpoint meta-data with `endpoint`.
+
+The plugin never removes or changes a line of your own code, on a clean or a `--no-clean` prebuild. It adds its own marked lines, replaces only those, and rewrites exactly one of yours, `react.hermesCommand`, keeping any trailing comment. A `bugsee-android-ndk` dependency of your own is never touched: the plugin then adds none and says so in the prebuild log.
+
+The plugin writes no `ndk { debugSymbolLevel … }`: the Bugsee Gradle plugin uploads native symbols from the unstripped libraries, whatever that level says, so it is your own choice for Google Play. Earlier versions of the config plugin wrote a `SYMBOL_TABLE` block under a `// bugsee-symbol-table:` comment; the next prebuild removes it if you have not changed it.
+
+### iOS
+
+- **"Bundle React Native code and images" build phase**: the call to React Native's `react-native-xcode.sh` is swapped for the package's `bugsee-xcode.sh`, which runs React Native's script, then composes the Hermes source map, gives the bundle and the map a debug id, and uploads the map. The rest of Expo's phase stays as it is.
+- **Shared schemes**: an Archive post-action that uploads the dSYMs with `bugsee-cli`, in every shared scheme under `ios/`. Without a real token it stops before it runs `bugsee-cli`.
+- **`Info.plist`**: `BugseeReactNativeEndpoint` when `endpoint` is set.
+- **`Podfile`**: a marked `# @generated begin bugsee-symbolicate-prebuilt` … `# @generated end bugsee-symbolicate-prebuilt` block with `symbolicateReactNativeFrameworks`.
+
+### Uploads without a token
+
+No upload runs with a missing token or the placeholder token (`00000000-0000-4000-8000-000000000000`). The source-map upload, the Archive dSYM post-action and the Bugsee Gradle plugin's mapping, symbol and build uploads each skip with one line in the build log, and the build or Archive carries on. For the post-action, the line is:
+
+```text
+warning: bugsee: dSYM upload skipped: the app token is the placeholder
+```
+
+A failed source-map upload warns and does not fail the build.
+
+:::note[Committed native projects]
+If you commit `ios/` (`project.pbxproj` and the shared scheme) or `android/bugsee.properties`, they carry the token. Keep `android/bugsee.properties` out of version control if the token is private.
+:::
+
+## Auto-launch on Android
+
+With `autoLaunch: true` and a real Android token, the plugin writes the token as `com.bugsee.app-token` application meta-data. The SDK then launches itself at process start on Android, before any JavaScript runs.
+
+```json title="app.json"
+["@bugsee/react-native", { "appToken": { "ios": "YOUR_IOS_APP_TOKEN", "android": "YOUR_ANDROID_APP_TOKEN" }, "autoLaunch": true }]
+```
+
+On Android, do not call `Bugsee.launch` then. The SDK is already running, so `launch` would resolve `true` but not apply its options (logging a warning to logcat when the call carries options), while the JavaScript side applied them; see [Launching again](/sdk/react_native/lifecycle#launching-again). Call `Bugsee.attach()` instead, which wires up the JavaScript layer (exception handlers and console capture) from the options the SDK is running with. See [Attach to a running SDK](/sdk/react_native/lifecycle#attach-to-a-running-sdk).
+
+```ts
+import { Platform } from 'react-native';
+import Bugsee from '@bugsee/react-native';
+
+if (Platform.OS === 'android') {
+  Bugsee.attach();
+} else {
+  Bugsee.launch('YOUR_IOS_APP_TOKEN');
+}
+```
+
+iOS has no auto-launch: launch it from JavaScript. A placeholder token is never written to the manifest.
+
+Two consequences of auto-launch on Android:
+
+- **Launch options from JavaScript are not applied.** The SDK starts from the manifest, before your options object exists. Configure it with `com.bugsee.option.*` application meta-data in `AndroidManifest.xml` (in an Expo app, through a config plugin of your own; the Bugsee plugin writes none), or call `Bugsee.relaunch(options)` after `attach()` to restart the session with your options.
+- **Reports lack the JavaScript details.** At process start the package registers only the React Native SDK type and version. `launch` and `relaunch` replace that with the full identity (React Native version, JavaScript engine, development build), but `attach()` does not, so until a `relaunch`, the session's reports carry the React Native wrapper type and version without those details.
+
+## Custom endpoint
+
+To send everything to a self-hosted, staging or regional Bugsee API, set `endpoint`:
+
+```json title="app.json"
+["@bugsee/react-native", { "appToken": "YOUR_APP_TOKEN", "endpoint": "https://bugsee.example.com" }]
+```
+
+The value is the API base: `https://`, a host, an optional port and an optional path, with no credentials, query, fragment or `/v2` (each reader adds the API version itself). Anything else fails the prebuild. Unset, the default, everything stays on Bugsee's production API.
+
+Set, it reaches every upload and the runtime:
+
+- **Android**: `plugin.endpoint` in `android/bugsee.properties`, for the Gradle plugin's uploads and the source-map upload, and `com.bugsee.reactnative.endpoint` application meta-data for the SDK.
+- **iOS**: `BUGSEE_ENDPOINT` in the bundle phase (source maps, when `uploadSourcemaps` is on) and in the Archive dSYM post-action, and `BugseeReactNativeEndpoint` in `Info.plist` for the SDK.
+- **Runtime**: `Bugsee.launch()` and `relaunch()` use it whenever their options carry no endpoint; an endpoint you pass yourself wins. `getLaunchOptions()` reads it back. With `autoLaunch`, it is also written as the auto-launched SDK's `com.bugsee.option.$$ENDPOINT`, unless your manifest already has one, which is then left as it is.
+
+## React Native dSYMs on iOS
+
+React Native's prebuilt `React.xcframework` ships without dSYMs, so after an Archive the `React` frames in a crash stay raw addresses while your own and Bugsee's frames symbolicate. React Native downloads the dSYMs only when `pod install` runs with `RCT_SYMBOLICATE_PREBUILT_FRAMEWORKS=1`.
+
+```json title="app.json"
+["@bugsee/react-native", { "appToken": "YOUR_IOS_APP_TOKEN", "symbolicateReactNativeFrameworks": true }]
+```
+
+`expo prebuild` then adds `ENV['RCT_SYMBOLICATE_PREBUILT_FRAMEWORKS'] ||= '1'` to the top of `ios/Podfile`, and a later prebuild without the option removes it. A value you export yourself, such as `0`, wins.
+
+It is off by default because of the trade-off: `pod install` makes an extra download, and React Native fetches the dSYMs in the same step as the prebuilt framework, so a failed download drops the prebuilt React for that install, and a failure while unpacking aborts `pod install`. The variable also does nothing for a `React-Core-prebuilt` pod already in `ios/Pods` or the CocoaPods cache; see [Symbolication: iOS](/sdk/react_native/symbolication/ios).
+
+## Limits
+
+Where the plugin cannot make an edit with certainty, it refuses the prebuild with one error that names the file, the reason and the fix, and writes nothing. It refuses:
+
+- a Kotlin DSL `settings.gradle.kts`, `build.gradle.kts` or app `build.gradle.kts`. The refusal does not depend on what the file contains, so making the edits by hand does not get past it, whatever the error message suggests. With Kotlin DSL files, remove `@bugsee/react-native` from `plugins`, which also drops its iOS edits, and make every edit by hand, as in [Symbolication: Android](/sdk/react_native/symbolication/android) and [Symbolication: iOS](/sdk/react_native/symbolication/ios);
+- a Gradle file it cannot read for sure: a string that does not close on its line, a comment or string still open at the end of the file, braces that do not balance, or a `/` that could start a slashy string as well as divide;
+- a `react.hermesCommand` that spans several lines or shares its line with another statement after `;`;
+- an anchor brace that shares its line with code: a one-line `dependencies { … }`, a `buildscript { … }; …`, or a one-line `pluginManagement` or `repositories` block;
+- a `gradlePluginVersion` option, or an NDK version baked into the package, that is not a plain version string.
+
+On iOS, the prebuild fails when there is no shared `.xcscheme` under `ios/`, because the dSYM post-action goes into the shared schemes.
+
+The feedback package, `@bugsee/react-native-feedback`, needs no config plugin; see [Feedback](/sdk/react_native/feedback).
+
+## Related pages
+
+- [Installation](/sdk/react_native/installation): requirements and launching the SDK.
+- [Symbolication](/sdk/react_native/symbolication/overview): what each upload is for.
+- [Lifecycle & status](/sdk/react_native/lifecycle): `launch`, `attach` and status.

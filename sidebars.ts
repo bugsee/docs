@@ -566,6 +566,11 @@ const sidebars: SidebarsConfig = {
               id: "sdk/react_native/installation",
               label: "Installation",
             },
+            {
+              type: "doc",
+              id: "sdk/react_native/expo",
+              label: "Expo",
+            },
           ],
         },
         {
