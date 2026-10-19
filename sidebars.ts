@@ -662,6 +662,11 @@ const sidebars: SidebarsConfig = {
               id: "sdk/react_native/privacy/logs",
               label: "Console logs",
             },
+            {
+              type: "doc",
+              id: "sdk/react_native/privacy/network",
+              label: "Network",
+            },
           ],
         },
         {
