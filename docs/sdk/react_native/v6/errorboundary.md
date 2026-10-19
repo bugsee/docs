@@ -2,8 +2,12 @@
 title: "React Error Boundary"
 description: "Use Bugsee's ErrorBoundary component to automatically catch and report JavaScript errors thrown inside a React component tree."
 sidebar_position: 10
-slug: "/sdk/react_native/errorboundary"
+slug: "/sdk/react_native/v6/errorboundary"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee React Native SDK **6.x** (`react-native-bugsee`), the current stable release. The new **7.x** SDK (`@bugsee/react-native`) is in beta: see [Migrating from 6.x to 7.x](/sdk/react_native/migration) to evaluate it, or the [7.x overview](/sdk/react_native/overview) to start a new integration.
+:::
 
 The Bugsee React Native SDK exports an error boundary component that provides [React component APIs](https://reactjs.org/docs/error-boundaries.html) to automatically catch and send JavaScript errors from inside a React component tree to Bugsee
 

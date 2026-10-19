@@ -2,8 +2,12 @@
 title: "Release notes"
 description: "Changelog for the Bugsee React Native SDK listing new features, bug fixes, and breaking changes for each released version."
 sidebar_position: 11
-slug: "/sdk/react_native/release-notes"
+slug: "/sdk/react_native/v6/release-notes"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee React Native SDK **6.x** (`react-native-bugsee`), the current stable release. The new **7.x** SDK (`@bugsee/react-native`) is in beta: see [Migrating from 6.x to 7.x](/sdk/react_native/migration) to evaluate it, or the [7.x overview](/sdk/react_native/overview) to start a new integration.
+:::
 
 ## 6.0.5 (August 18 2026)
 - Internal improvements.

@@ -2,13 +2,17 @@
 title: "Crash reports"
 description: "How to configure automatic source map uploads and symbolication for readable JavaScript and native crash stack traces in React Native."
 sidebar_position: 9
-slug: "/sdk/react_native/crashes"
+slug: "/sdk/react_native/v6/crashes"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Bugsee automatically intercepts uncaught exceptions and sends crash reports on app restart. Refer to [installation](/sdk/react_native/installation/) for more details. However, due to various optimizations, stack traces in these reports can be mangled. To make them human readable and point to correct code locations Bugsee requires additional debug information which should be collected and sent as described in this section.
+:::caution[Previous version]
+This page documents Bugsee React Native SDK **6.x** (`react-native-bugsee`), the current stable release. The new **7.x** SDK (`@bugsee/react-native`) is in beta: see [Migrating from 6.x to 7.x](/sdk/react_native/migration) to evaluate it, or the [7.x overview](/sdk/react_native/overview) to start a new integration.
+:::
+
+Bugsee automatically intercepts uncaught exceptions and sends crash reports on app restart. Refer to [installation](/sdk/react_native/v6/installation/) for more details. However, due to various optimizations, stack traces in these reports can be mangled. To make them human readable and point to correct code locations Bugsee requires additional debug information which should be collected and sent as described in this section.
 
 ## Symbolication
 

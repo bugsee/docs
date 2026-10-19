@@ -2,8 +2,12 @@
 title: "Adding custom data"
 description: "Attach user email, custom events, traces, session attributes, and file attachments to Bugsee reports in React Native."
 sidebar_position: 3
-slug: "/sdk/react_native/custom"
+slug: "/sdk/react_native/v6/custom"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee React Native SDK **6.x** (`react-native-bugsee`), the current stable release. The new **7.x** SDK (`@bugsee/react-native`) is in beta: see [Migrating from 6.x to 7.x](/sdk/react_native/migration) to evaluate it, or the [7.x overview](/sdk/react_native/overview) to start a new integration.
+:::
 
 When you already have your users identified within your app, you might want to automatically attach their email to the bug report. Bugsee provides APIs for setting, getting, and clearing the email.
 

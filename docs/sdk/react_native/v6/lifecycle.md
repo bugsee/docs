@@ -2,8 +2,12 @@
 title: "Lifecycle events"
 description: "Subscribe to Bugsee SDK lifecycle events in React Native to be notified when the SDK starts, stops, pauses, or uploads reports."
 sidebar_position: 8
-slug: "/sdk/react_native/lifecycle"
+slug: "/sdk/react_native/v6/lifecycle"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee React Native SDK **6.x** (`react-native-bugsee`), the current stable release. The new **7.x** SDK (`@bugsee/react-native`) is in beta: see [Migrating from 6.x to 7.x](/sdk/react_native/migration) to evaluate it, or the [7.x overview](/sdk/react_native/overview) to start a new integration.
+:::
 
 Bugsee SDK silently works within your app, recording everything to assist you in debugging when something unexpected happens. Our SDK is designed as a black box, but there may be cases when you want to be notified about changes/events within Bugsee itself. Lifecycle events are designed exactly for that. Whenever internal state changes or some important event is raised, a lifecycle event is dispatched to the user code.
 
