@@ -677,6 +677,11 @@ const sidebars: SidebarsConfig = {
               id: "sdk/react_native/privacy/report",
               label: "Report",
             },
+            {
+              type: "doc",
+              id: "sdk/react_native/privacy/cleanup",
+              label: "Cleanup",
+            },
           ],
         },
         {
