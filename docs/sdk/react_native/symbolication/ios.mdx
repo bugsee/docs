@@ -1,0 +1,277 @@
+---
+title: "Symbolication: iOS"
+description: "Setting up a bare React Native 7.x iOS app to upload JavaScript source maps from the bundle phase and dSYMs from the Archive, including React Native's own dSYMs, and fixing what goes wrong."
+sidebar_position: 3
+slug: "/sdk/react_native/symbolication/ios"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+An iOS Release build needs two uploads for readable reports, made at two different stages of the build:
+
+| What | Where | Why there |
+| --- | --- | --- |
+| JavaScript source map | The **Bundle React Native code and images** build phase, pointed at the package's `bugsee-xcode.sh` | The bundle and its map exist only while the build runs. |
+| dSYMs (your code, Bugsee's, and optionally React Native's) | A Run Script in the scheme's **Archive** post-actions, running `bugsee-cli xcode post-action` | The Archive and its `dSYMs/` folder exist only after the Archive. |
+
+This page is for a bare app, where you own `ios/`. With Expo prebuild, the [config plugin](/sdk/react_native/expo) makes the same edits on each prebuild; see [Expo prebuild](#expo-prebuild). [Symbolication overview](/sdk/react_native/symbolication/overview) explains what each upload is for.
+
+The setup is the same whether the app gets the SDK through CocoaPods or through React Native's Swift Package Manager integration.
+
+## 1. The bundle phase: JavaScript source maps
+
+In Xcode, select the app target, open **Build Phases**, and find **Bundle React Native code and images**. It runs React Native's `react-native-xcode.sh`. Point it at the package's `bugsee-xcode.sh` instead:
+
+```sh title="Bundle React Native code and images"
+set -e
+
+WITH_ENVIRONMENT="$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh"
+REACT_NATIVE_XCODE="${SRCROOT}/../node_modules/@bugsee/react-native/scripts/bugsee-xcode.sh"
+
+/bin/sh -c "\"$WITH_ENVIRONMENT\" \"$REACT_NATIVE_XCODE\""
+```
+
+:::caution[7.0.0-beta1 and 7.0.0-beta2: scripts without the executable bit]
+In 7.0.0-beta1 and 7.0.0-beta2 the package's shell scripts are published without the executable bit (mode 644). `with-environment.sh` runs the script it is given directly, so the phase above fails with "Permission denied". Use one of these:
+
+- **Run the script through `/bin/bash`**, as the Expo config plugin's phase does. This phase reads `.xcode.env` and `.xcode.env.local` the same way, then runs `bugsee-xcode.sh` with `bash`, so it works with or without the executable bit:
+
+  ```sh title="Bundle React Native code and images"
+  set -e
+
+  WITH_ENVIRONMENT="$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh"
+  REACT_NATIVE_XCODE="${SRCROOT}/../node_modules/@bugsee/react-native/scripts/bugsee-xcode.sh"
+
+  /bin/bash -c 'hook="$1"; set --; . "$0"; exec /bin/bash "$hook"' "$WITH_ENVIRONMENT" "$REACT_NATIVE_XCODE"
+  ```
+
+- **Make the scripts executable after every install**, for example with `"postinstall": "chmod +x node_modules/@bugsee/react-native/scripts/*.sh"` in your app's `package.json`, and keep the phase above. A CI job that installs with `--ignore-scripts` needs the same `chmod` as its own step.
+:::
+
+The path in `REACT_NATIVE_XCODE` assumes the package is installed in the app's own `node_modules`, next to `ios/`. In a monorepo or another hoisted layout, point it at where `@bugsee/react-native` really is (for example `${SRCROOT}/../../../node_modules/…`). To check, run `node --print "require.resolve('@bugsee/react-native/package.json')"` from the app's root.
+
+`bugsee-xcode.sh` runs React Native's own `react-native-xcode.sh`, so the bundle is built exactly as before. It then composes the Hermes source map, gives the bundle and the map a debug ID (compiling the stamped JavaScript to bytecode again, so the ID is in what ships), and uploads the map with `@bugsee/cli`.
+
+Give the upload your iOS app token in the build environment. React Native's `with-environment.sh` reads `ios/.xcode.env` and then `ios/.xcode.env.local`, so a line there reaches the phase:
+
+```sh title="ios/.xcode.env.local"
+export BUGSEE_APP_TOKEN=<your iOS app token>
+```
+
+`BUGSEE_TOKEN_IOS` works too. React Native's template keeps `.xcode.env.local` out of version control, which suits a token; your CI can write the file, or export the variable for `xcodebuild`.
+
+### Upload settings
+
+- **Release only.** A configuration whose name contains `Debug` skips the upload, unless `BUGSEE_UPLOAD_DEBUG_SOURCEMAPS=true`. A Debug build for the Simulator does not bundle at all, as React Native leaves that to Metro.
+- **Version and build number.** Xcode's `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION`. Without them the upload is skipped.
+- **Endpoint.** `BUGSEE_ENDPOINT`, for a self-hosted, staging or regional Bugsee. Unset, the map goes to Bugsee's production API.
+- **Turning it off.** `BUGSEE_UPLOAD_SOURCEMAPS=false` in the build environment. The debug ID is still injected.
+- **Failures.** Without a token the phase bundles as usual and logs that it skipped the upload. A failed upload logs a warning and the build continues: the CLI's own `error:` lines are relayed as `warning: bugsee: …`, so Xcode does not read them as build errors.
+
+## 2. The Archive post-action: dSYMs
+
+Native frames, yours and Bugsee's, resolve through the dSYMs of the Archive. A scheme post-action uploads them after each Archive:
+
+1. Open **Product > Scheme > Edit Scheme**, and select **Archive**.
+2. Expand it, select **Post-actions**, click **+** and choose **New Run Script Action**.
+3. Set **Provide build settings from** to your app target. Without it the script gets none of the build settings it reads, such as `PROJECT_DIR`.
+4. Paste the script below.
+5. Make sure the scheme is **Shared** (the checkbox in **Manage Schemes**), so it lives in `xcshareddata/` and your team and CI get it too.
+
+This is the script the Expo config plugin writes. It finds the token, stops without a real one, finds `node` and the package's `@bugsee/cli`, and runs `bugsee-cli xcode post-action`:
+
+{/* cspell:disable */}
+
+```sh title="Archive post-action: Upload dSYMs"
+CREDS="${PROJECT_DIR}/../credentials.json"
+TOKEN="$BUGSEE_APP_TOKEN"
+if [ -z "$TOKEN" ]; then
+  TOKEN="$BUGSEE_TOKEN_IOS"
+fi
+if [ -z "$TOKEN" ] && [ -f "$CREDS" ]; then
+  TOKEN=$(/usr/bin/plutil -extract ios raw -o - "$CREDS" 2>/dev/null || true)
+fi
+TOKEN_CHECK=$(printf '%s' "$TOKEN" | /usr/bin/tr -d ' \t\r\n-')
+if [ -z "$TOKEN_CHECK" ]; then
+  echo "warning: bugsee: dSYM upload skipped: no app token is configured"
+  exit 0
+fi
+case "$TOKEN_CHECK" in
+  000000000000[0123456789abcdefABCDEF]000[0123456789abcdefABCDEF]000000000000000)
+    echo "warning: bugsee: dSYM upload skipped: the app token is the placeholder"
+    exit 0
+    ;;
+esac
+# An "error:" line reads as a build error to Xcode; a failed upload is a warning.
+run_cli() {
+  CLI_OUT=$("$@" 2>&1)
+  CLI_RC=$?
+  if [ -n "$CLI_OUT" ]; then
+    printf '%s\n' "$CLI_OUT" | /usr/bin/sed -E 's/^(.*: )?([Ff]atal [Ee]rror|[Ee]rror): (.*)$/warning: bugsee: \3/'
+  fi
+  return $CLI_RC
+}
+if [ -n "$TOKEN" ]; then
+  export BUGSEE_APP_TOKEN="$TOKEN"
+fi
+if [ -z "$BUGSEE_ENDPOINT" ] && [ -f "$CREDS" ]; then
+  ENDPOINT=$(/usr/bin/plutil -extract endpoint raw -o - "$CREDS" 2>/dev/null || true)
+  if [ -n "$ENDPOINT" ]; then
+    export BUGSEE_ENDPOINT="$ENDPOINT"
+  fi
+fi
+
+# Archive's PATH has no node, and the npm shim's shebang searches PATH.
+if [ ! -x "$NODE_BINARY" ]; then
+  if [ -f "${PROJECT_DIR}/.xcode.env" ]; then
+    . "${PROJECT_DIR}/.xcode.env"
+  fi
+  if [ -f "${PROJECT_DIR}/.xcode.env.local" ]; then
+    . "${PROJECT_DIR}/.xcode.env.local"
+  fi
+fi
+if [ ! -x "$NODE_BINARY" ]; then
+  RN_FIND=""
+  if [ -n "$REACT_NATIVE_PATH" ] && [ -f "$REACT_NATIVE_PATH/scripts/find-node-for-xcode.sh" ]; then
+    RN_FIND="$REACT_NATIVE_PATH/scripts/find-node-for-xcode.sh"
+  elif [ -f "${PROJECT_DIR}/../node_modules/react-native/scripts/find-node-for-xcode.sh" ]; then
+    RN_FIND="${PROJECT_DIR}/../node_modules/react-native/scripts/find-node-for-xcode.sh"
+  fi
+  if [ -n "$RN_FIND" ]; then
+    NODE_BINARY=$(/bin/bash -c '. "$1" >/dev/null 2>&1; command -v node' _ "$RN_FIND" || true)
+  fi
+fi
+if [ -n "$NODE_BINARY" ] && [ -x "$NODE_BINARY" ]; then
+  PATH="$(dirname "$NODE_BINARY"):$PATH"
+  export PATH NODE_BINARY
+  APP_ROOT="${PROJECT_DIR}/.."
+  if [ "$(uname -m)" = "x86_64" ]; then
+    NATIVE_PKG="$("$NODE_BINARY" --print "try { const path = require('path'); const appRoot = process.argv[1]; const wrapperPkg = require.resolve('@bugsee/react-native/package.json', { paths: [appRoot] }); const wrapperDir = path.dirname(wrapperPkg); const cliPkg = require.resolve('@bugsee/cli/package.json', { paths: [wrapperDir] }); const cliDir = path.dirname(cliPkg); require.resolve('@bugsee/cli-darwin-x64/package.json', { paths: [cliDir] }); } catch (e) { '' }" "$APP_ROOT")"
+  else
+    NATIVE_PKG="$("$NODE_BINARY" --print "try { const path = require('path'); const appRoot = process.argv[1]; const wrapperPkg = require.resolve('@bugsee/react-native/package.json', { paths: [appRoot] }); const wrapperDir = path.dirname(wrapperPkg); const cliPkg = require.resolve('@bugsee/cli/package.json', { paths: [wrapperDir] }); const cliDir = path.dirname(cliPkg); require.resolve('@bugsee/cli-darwin-arm64/package.json', { paths: [cliDir] }); } catch (e) { '' }" "$APP_ROOT")"
+  fi
+  if [ -n "$NATIVE_PKG" ]; then
+    NATIVE_BIN="$(dirname "$NATIVE_PKG")/bin/bugsee-cli"
+    if [ -x "$NATIVE_BIN" ]; then
+      run_cli "$NATIVE_BIN" xcode post-action
+      exit $?
+    fi
+  fi
+  CLI_JS="$("$NODE_BINARY" --print "try { const fs = require('fs'); const path = require('path'); const appRoot = process.argv[1]; const wrapperPkg = require.resolve('@bugsee/react-native/package.json', { paths: [appRoot] }); const wrapperDir = path.dirname(wrapperPkg); const cliPkg = require.resolve('@bugsee/cli/package.json', { paths: [wrapperDir] }); const cliDir = path.dirname(cliPkg); const rel = JSON.parse(fs.readFileSync(cliPkg, 'utf8')).bin['bugsee-cli']; rel ? path.join(cliDir, rel) : ''; } catch (e) { '' }" "$APP_ROOT")"
+  if [ -n "$CLI_JS" ]; then
+    run_cli "$NODE_BINARY" "$CLI_JS" xcode post-action
+    exit $?
+  fi
+fi
+
+echo "bugsee-cli: not found" >&2
+exit 1
+```
+
+{/* cspell:enable */}
+
+Keep its token check. Without a real token the script has to stop, exit 0, before it runs `bugsee-cli`, which would otherwise register the build and send the placeholder token to your endpoint, or to production when none is set.
+
+### Give the post-action a token
+
+The post-action reads its token from `BUGSEE_APP_TOKEN`, then `BUGSEE_TOKEN_IOS`, in the environment the Archive runs in. It does **not** read the token from `ios/.xcode.env.local`: it reads `.xcode.env` and `.xcode.env.local` only later, and only to find `node`.
+
+- **Archives from the command line or CI** (`xcodebuild archive`): export `BUGSEE_APP_TOKEN` in the shell that runs `xcodebuild`.
+- **Archives from the Xcode GUI**, which does not inherit a shell environment: write the token into the script, as the Expo config plugin does. Replace the line `TOKEN="$BUGSEE_APP_TOKEN"` with:
+
+  ```sh
+  TOKEN='<your iOS app token>'
+  if [ -z "$TOKEN" ]; then
+    TOKEN="$BUGSEE_APP_TOKEN"
+  fi
+  ```
+
+  The token is then in the scheme file, so keep that in mind before you commit it.
+
+For a custom endpoint, export `BUGSEE_ENDPOINT` the same way (or add an `export BUGSEE_ENDPOINT='…'` line at the top of the script).
+
+### What `xcode post-action` does
+
+`bugsee-cli xcode post-action` registers the build with Bugsee and uploads the Archive's dSYMs. By default it runs only on **Archive** of a **Release** configuration, and it detaches into the background, so it never holds up or fails the Archive; its log goes to `$PROJECT_TEMP_DIR/bugsee-cli.log`. Its gating, the build information it collects, and the environment variables that tune it are on [iOS build publishing](/cli/xcode).
+
+Release configurations generate dSYMs by default. If you changed it, set **Debug Information Format** back to **DWARF with dSYM File** for Release.
+
+## 3. React Native's own dSYMs
+
+React Native's prebuilt `React.xcframework` ships without dSYMs. After an Archive, the `React` frames in a crash stay raw addresses (`React 0x10271dbc4`) while your own frames and Bugsee's symbolicate. **Leaving this off means React Native frames on iOS show as raw addresses.**
+
+React Native downloads its dSYMs only when `pod install` runs with `RCT_SYMBOLICATE_PREBUILT_FRAMEWORKS=1`:
+
+```sh
+cd ios && RCT_SYMBOLICATE_PREBUILT_FRAMEWORKS=1 pod install
+```
+
+With it set, the Archive's `dSYMs/` folder includes React's dSYMs, and the post-action uploads them with the rest. Export it wherever you run `pod install`, CI included.
+
+The dSYMs are fetched together with the prebuilt `React-Core-prebuilt` pod, so the variable does nothing for a pod already in `ios/Pods`, or in the CocoaPods cache, from an earlier `pod install` without it: the log then shows no `Resolved stable dSYMs`, and the Archive has no `React.framework.dSYM`. On such a machine, remove the pod and install again, from the app's root directory:
+
+```sh
+rm -rf ios/Pods/React-Core-prebuilt
+pod cache clean React-Core-prebuilt --all
+(cd ios && RCT_SYMBOLICATE_PREBUILT_FRAMEWORKS=1 pod install)
+```
+
+A fresh CI checkout is not affected. To check that it worked, look for `dSYMs/React.framework.dSYM` in the Archive.
+
+The trade-off: `pod install` makes an extra download. React Native fetches the dSYMs in the same step as the prebuilt framework, so a failed download drops the prebuilt React for that install, and a failure while unpacking aborts `pod install`. Apps that build React Native from source already have its dSYMs.
+
+## Release build checklist
+
+- [ ] The **Bundle React Native code and images** phase runs `@bugsee/react-native/scripts/bugsee-xcode.sh` through `with-environment.sh`.
+- [ ] `ios/.xcode.env.local` (or your CI) exports `BUGSEE_APP_TOKEN` with your iOS app token.
+- [ ] The target has a `MARKETING_VERSION` and a `CURRENT_PROJECT_VERSION`.
+- [ ] The shared scheme's **Archive** has the post-action, with **Provide build settings from** set to the app target.
+- [ ] The post-action gets a token: from the environment for command-line Archives, written into the script for Xcode GUI Archives.
+- [ ] If you want React Native's frames: `pod install` runs with `RCT_SYMBOLICATE_PREBUILT_FRAMEWORKS=1`, and the Archive contains `dSYMs/React.framework.dSYM`.
+- [ ] The Archive's build log shows `bugsee: uploaded source map <debug id>`, and `$PROJECT_TEMP_DIR/bugsee-cli.log` shows the dSYM upload.
+
+Then trigger a test crash on a device and check the report's frames; see [Check that the uploads happened](/sdk/react_native/symbolication/overview#check-that-the-uploads-happened).
+
+## iOS Simulator
+
+A crash on the iOS Simulator produces no report in this beta, so there is nothing to symbolicate. Test crash reporting, and symbolication with it, on a physical device. See [Crash & error reporting](/sdk/react_native/manual/crash-error-reporting#native-crashes).
+
+## Turning uploads off
+
+- **Source maps**: `BUGSEE_UPLOAD_SOURCEMAPS=false` in the build environment, for example in `ios/.xcode.env.local`. The bundle still gets its debug ID.
+- **dSYMs and build info**: remove the Archive post-action from the scheme, or set `BUGSEE_BUILD_INFO_ENABLED=0` in the environment the Archive runs in, which makes `bugsee-cli xcode post-action` do nothing; see [Gating](/cli/xcode#gating). The Expo config plugin's `uploadSymbols: false` removes the post-action.
+
+## Expo prebuild
+
+With the [config plugin](/sdk/react_native/expo), `expo prebuild` makes all of these edits: it swaps the bundle phase's call to `react-native-xcode.sh` for `bugsee-xcode.sh`, inserts the dSYM post-action into every shared scheme under `ios/`, and writes your `appToken` into both, so an Archive from the Xcode GUI has it. React Native's dSYMs are opt-in, with `symbolicateReactNativeFrameworks: true`, which adds `ENV['RCT_SYMBOLICATE_PREBUILT_FRAMEWORKS'] ||= '1'` to the top of `ios/Podfile`. See [What the plugin changes](/sdk/react_native/expo#what-the-plugin-changes) and [React Native dSYMs on iOS](/sdk/react_native/expo#react-native-dsyms-on-ios).
+
+## Troubleshooting
+
+**The bundle phase fails with "Permission denied" on `bugsee-xcode.sh`.** The scripts of 7.0.0-beta1 and 7.0.0-beta2 are published without the executable bit. Run the script through `/bin/bash`, or `chmod +x` the package's scripts after each install; see the caution in [The bundle phase](#1-the-bundle-phase-javascript-source-maps).
+
+**`bugsee: source map upload skipped: no app token is configured`** (or `the app token is the placeholder`). The bundle phase has no real token. Export `BUGSEE_APP_TOKEN` in `ios/.xcode.env.local`; a plain assignment without `export` does not reach the script.
+
+**`bugsee: source map upload skipped: Debug configuration …`.** Expected for Debug builds. Archive a Release configuration, or set `BUGSEE_UPLOAD_DEBUG_SOURCEMAPS=true` if you really want Debug maps.
+
+**`bugsee: source map upload skipped: the app version or build number is unknown`.** Set **Version** (`MARKETING_VERSION`) and **Build** (`CURRENT_PROJECT_VERSION`) on the target.
+
+**The bundle phase fails with "hermesc not found; the debug-id stub would not be in the bytecode".** The script could not find the Hermes compiler. It looks at `HERMES_CLI_PATH`, then `Pods/hermes-engine/destroot/bin/hermesc`, then React Native's `hermes-compiler` package. Run `pod install` again, or set `HERMES_CLI_PATH`.
+
+**`warning: bugsee: dSYM upload skipped: no app token is configured` after an Archive.** The post-action has no token in its environment. A token in `ios/.xcode.env.local` does not reach it; see [Give the post-action a token](#give-the-post-action-a-token).
+
+**The post-action prints `bugsee-cli: not found`.** It found no `node`, or no `@bugsee/cli` next to `@bugsee/react-native`. Check `NODE_BINARY` in `ios/.xcode.env`, and that `@bugsee/cli` and its platform package (`@bugsee/cli-darwin-arm64` or `@bugsee/cli-darwin-x64`) are installed. Installs that skip optional dependencies leave the platform package out; under pnpm, see [pnpm](/sdk/react_native/installation#pnpm).
+
+**No dSYMs were uploaded, and the post-action printed nothing.** It runs in the background: read `$PROJECT_TEMP_DIR/bugsee-cli.log`. Check that **Provide build settings from** names the app target, and that you archived a Release configuration.
+
+**`React` frames stay raw addresses.** See [React Native's own dSYMs](#3-react-natives-own-dsyms), including the stale `React-Core-prebuilt` pod.
+
+**JavaScript frames stay minified though the upload succeeded.** Check that the report came from the same build: the debug ID in the build log identifies the bundle. A report from a Debug build that loaded its JavaScript from Metro points at Metro's bundle, which is never uploaded.
+
+## Related pages
+
+- [Symbolication overview](/sdk/react_native/symbolication/overview): what each upload is for, tokens and verification.
+- [Symbolication: Android](/sdk/react_native/symbolication/android): the Android side.
+- [iOS crash symbolication](/sdk/ios/symbolication): dSYMs for the native iOS SDK, including manual upload from the dashboard.
+- [iOS build publishing](/cli/xcode): the `xcode post-action` command in depth.
