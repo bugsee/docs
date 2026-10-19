@@ -657,6 +657,11 @@ const sidebars: SidebarsConfig = {
               id: "sdk/react_native/privacy/video",
               label: "Video",
             },
+            {
+              type: "doc",
+              id: "sdk/react_native/privacy/logs",
+              label: "Console logs",
+            },
           ],
         },
         {
