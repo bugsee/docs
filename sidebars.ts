@@ -574,6 +574,11 @@ const sidebars: SidebarsConfig = {
           ],
         },
         {
+          type: "doc",
+          id: "sdk/react_native/configuration",
+          label: "Configuration",
+        },
+        {
           type: "category",
           label: "Previous versions",
           collapsed: true,
