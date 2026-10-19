@@ -109,6 +109,7 @@ Bugsee no longer recognizes them and uses its defaults instead.
 | _(not available)_ | `BugseeOptionCaptureBreadcrumbs` |
 | _(not available)_ | `BugseeOptionCaptureBreadcrumbsExtras` |
 | _(not available)_ | `BugseeOptionCaptureCameraPreview` |
+| _(not available)_ | `BugseeOptionCaptureCrashSignals` (see below) |
 | _(not available)_ | `BugseeOptionCaptureDeviceAndNetworkNames` |
 | _(not available)_ | `BugseeOptionCaptureLogsLevel` |
 | _(not available)_ | `BugseeOptionCaptureNetworkBodyWithoutType` |
@@ -136,6 +137,58 @@ The removed key is ignored if it is still passed, including as a plain string
 (`@"BugseeEnableMachExceptions"`, `@"enableMachExceptions"`,
 `@"com.bugsee.option.capture.mach-exceptions"`). Bugsee logs a warning to the console the
 first time it sees one.
+
+`BugseeOptionCaptureCrashSignals` (`BugseeOptions.crashSignals`) is new. It chooses which
+fatal signals Bugsee intercepts on iOS, tvOS and visionOS. Combine `BugseeCrashSignals`
+values:
+
+| 7.x | Swift | Signal |
+| --- | --- | --- |
+| `BugseeCrashSignalABRT` | `.abrt` | `SIGABRT`: `abort()`, failed assertions, uncaught exceptions |
+| `BugseeCrashSignalSEGV` | `.segv` | `SIGSEGV`: invalid memory access |
+| `BugseeCrashSignalBUS` | `.bus` | `SIGBUS`: misaligned or otherwise invalid memory access |
+| `BugseeCrashSignalILL` | `.ill` | `SIGILL`: illegal instruction |
+| `BugseeCrashSignalFPE` | `.fpe` | `SIGFPE`: arithmetic exception |
+| `BugseeCrashSignalTRAP` | `.trap` | `SIGTRAP`: breakpoint or trap instruction, including Swift runtime traps |
+| `BugseeCrashSignalsAll` | `.all` | Every signal above |
+| `BugseeCrashSignalsDefault` | `.default` | Bugsee chooses (default) |
+
+With the default, Bugsee intercepts every signal, except that the Xamarin and .NET SDKs
+leave out `SIGSEGV` and `SIGBUS`: the .NET runtime turns them into `NullReferenceException`.
+Any other value is used as given, so list every signal you want. `BugseeCrashSignalsDefault`
+works only on its own, not combined with other values.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.crashSignals = BugseeCrashSignalABRT | BugseeCrashSignalILL | BugseeCrashSignalTRAP;
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.defaultOptions()
+options.crashSignals = [.abrt, .ill, .trap]
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+- A bad memory access arrives as either `SIGSEGV` or `SIGBUS`, depending on the fault. It is
+  intercepted if either of the two is selected. Leave both out to ignore bad memory accesses.
+- Leaving out `SIGABRT` also stops uncaught Objective-C exceptions from being reported,
+  because they end in `abort()`.
+- With `BugseeCrashHandlerTypeMach`, `SIGABRT` is the only signal raised by software that
+  Bugsee reports. The other selected signals are reported only as hardware faults.
+- With no signals selected (`BugseeCrashSignalsNone`), Bugsee reports no crashes and no
+  uncaught exceptions, and logs a warning to the console.
 
 ### 2.3 Reporting
 
@@ -359,16 +412,26 @@ window. Prefer `status`, or the `started:` completion block, for launch sequenci
 
 `+[Bugsee relaunch]` restarts with the current app token and default options.
 
-### 4.5 `deleteCollectedDataOnDevice:` gained a parameter
+### 4.5 Deleting collected data
+
+The 6.x call keeps its Objective-C selector. In Swift it is renamed from
+`deleteCollectedData(completion:)` to `deleteCollectedDataOnDevice(completion:)`. It deletes
+everything Bugsee has collected on the device: the recording, reports not uploaded yet
+(their uploads are cancelled), crashes not reported yet and the performance baselines
+learned by anomaly detection.
+
+7.x adds a second form that deletes less. `deleteCollectedDataOnDevice:completion:` always
+deletes the recording and keeps the reports waiting for upload. Pass `YES` to also delete
+the data already set aside for reports that are not assembled yet.
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-// 6.x
+// 6.x and 7.x — deletes everything
 [Bugsee deleteCollectedDataOnDevice:^(BOOL success) { /* ... */ }];
 
-// 7.x — YES also deletes intermediate capture data
+// 7.x only — keeps the reports waiting for upload
 [Bugsee deleteCollectedDataOnDevice:YES completion:^(BOOL success) { /* ... */ }];
 ```
 
@@ -379,14 +442,24 @@ window. Prefer `status`, or the `started:` completion block, for launch sequenci
 // 6.x
 Bugsee.deleteCollectedData { success in /* ... */ }
 
-// 7.x
+// 7.x — deletes everything
+Bugsee.deleteCollectedDataOnDevice { success in /* ... */ }
+
+// 7.x only — keeps the reports waiting for upload
 Bugsee.deleteCollectedDataOnDevice(includingIntermediate: true) { success in /* ... */ }
 ```
 
   </TabItem>
 </Tabs>
 
-Recording must be stopped with `+[Bugsee stop:]` before calling it, as in 6.x.
+For both forms:
+
+- Stop recording with `+[Bugsee stop:]` first, as in 6.x. Otherwise nothing is deleted and
+  the completion receives `NO`.
+- The completion is called on the main thread once the deletion has finished, with `YES`
+  if the data was deleted.
+- A launch called before the deletion has finished starts after it, unless you call
+  `stop` before it starts.
 
 ### 4.6 `BugseeDelegate` methods have new Swift names
 
@@ -1124,7 +1197,6 @@ Renamed — a plain search and replace does most of these.
 | `setEmail:` / `getEmail` / `clearEmail` | `setUserIdentifier:` / `getUserIdentifier` / `clearUserIdentifier` |
 | `clearAllAttribute` | `clearAllAttributes` |
 | `testExceptionCrash` / `testSignalCrash` | `testCrash` |
-| `deleteCollectedDataOnDevice:` | `deleteCollectedDataOnDevice:completion:` |
 | `uploadWithSummary:…:includeVideo:` | `uploadWithSummary:description:severity:labels:` |
 | `logError:labels:includeVideo:` / `logError:labels:` | `logError:`; labels through the delegate's report — see [§7.2](#72-includevideo-overloads-and-logerrorlabels-are-gone) |
 | `logException:options:completion:` | `logException:completion:` / `logException:domain:skipFrames:completion:` — see [§7.5](#75-bugseeexceptionloggingoptions-is-gone) |
@@ -1133,6 +1205,7 @@ Renamed — a plain search and replace does most of these.
 | Swift `Bugsee.launch(token:options:)` _(dictionary)_ | Swift `Bugsee.launch(token:dictionaryOptions:)` |
 | Swift `Bugsee.relaunch(options:)` _(dictionary)_ | Swift `Bugsee.relaunch(dictionaryOptions:)` |
 | Swift `Bugsee.uploadReport(_:)` | Swift `Bugsee.upload(_:)` |
+| Swift `Bugsee.deleteCollectedData(completion:)` | Swift `Bugsee.deleteCollectedDataOnDevice(completion:)` — see [§4.5](#45-deleting-collected-data) |
 | Swift `BugseeDelegate` methods | New Swift names — see [§4.6](#46-bugseedelegate-methods-have-new-swift-names) |
 | `showFeedbackController` | `[BugseeFeedback.shared showFeedbackUI]` |
 | `setDefaultFeedbackGreeting:` | `[BugseeFeedback.shared setGreeting:]` |

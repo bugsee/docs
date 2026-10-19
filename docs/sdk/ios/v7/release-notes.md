@@ -9,6 +9,76 @@ Release history for Bugsee iOS SDK 7.x. For the current stable line, see the
 [6.x release notes](/sdk/ios/release-notes). See the
 [migration guide](/sdk/ios/v7/migration) when planning your upgrade from 6.x.
 
+## 7.0.0-beta7 (October 18 2026)
+
+### iOS SDK
+
+**Breaking changes**
+
+- `crashHandlerType` replaces `enableMachExceptions`. Set `BugseeOptions.crashHandlerType`
+  (`BugseeOptionCaptureCrashHandlerType`) to a `BugseeCrashHandlerType`: `BSD`, `Mach` or
+  `MachAndBSD` (Swift `.bsd`, `.mach`, `.machAndBSD`). The default is `MachAndBSD`.
+  `BugseeOptions.enableMachExceptions`, `BugseeOptionCaptureMachExceptions` and
+  `BugseeEnableMachExceptionsKey` are removed. The old keys passed as strings are ignored,
+  and Bugsee logs a warning to the console: if your app turned Mach exceptions off, set
+  `crashHandlerType` to `BSD` to keep it that way. tvOS always uses BSD signal handlers.
+- `logException` takes the domain and the number of frames to skip as parameters:
+  `logException(exception:domain:skipFrames:completion:)` and
+  `logException(name:reason:domain:skipFrames:completion:)`, plus shorter forms without
+  them. `BugseeExceptionLoggingOptions` and `BugseeMergingRulesSkipFramesKey` are removed,
+  and `includeVideo` has no replacement.
+- `logError:labels:` is removed, and `logException` no longer takes labels. Add labels to the
+  report in `bugseeAttachmentsForReport:`, which receives every report.
+- `killDetection`, `BugseeOptionDetectAndReportKill` and `BugseeKillDetectionKey` are
+  removed. The option had no effect in 7.x. Out-of-memory kills are still reported through
+  `BugseeOptionDetectAndReportExit`, which is on by default.
+
+**New features**
+
+- Feat: Hybrid crash handler. The default `MachAndBSD` catches both hardware faults and fatal
+  signals raised by software, such as a Unity fatal error. Before, with Mach exceptions on,
+  a signal raised by software was not reported unless it was `SIGABRT`.
+- Feat: `crashSignals` (`BugseeOptionCaptureCrashSignals`) chooses which fatal signals Bugsee
+  intercepts: `SIGABRT`, `SIGSEGV`, `SIGBUS`, `SIGILL`, `SIGFPE` and `SIGTRAP`. Combine
+  `BugseeCrashSignals` values (Swift `.abrt`, `.segv`, `.bus`, `.ill`, `.fpe`, `.trap`). By
+  default every signal is intercepted, except that the Xamarin and .NET SDKs leave out
+  `SIGSEGV` and `SIGBUS`, which the .NET runtime handles itself. Leaving out `SIGABRT` also
+  stops uncaught Objective-C exceptions from being reported.
+- Feat: `deleteCollectedDataOnDevice(completion:)` deletes everything Bugsee has collected on
+  the device: the recording, reports not uploaded yet (their uploads are cancelled), crashes
+  not reported yet and the performance baselines learned by anomaly detection. As with the
+  other form, call `stop` first.
+
+**Fixes**
+
+- Fix: `logException`, `logError` and `uploadWithSummary` called right after `launch`,
+  before recording has started, now file the report, without video or logs. Before, the call
+  was dropped silently. A call made while the SDK is not launched is now logged as ignored.
+- Fix: `logException` and `logUnhandledException` call their completion on the simulator and
+  on Mac Catalyst. Before, the completion was never called there. Nothing is filed on these
+  platforms, and Bugsee logs a line that says so.
+- Fix: A report filed with `uploadWithSummary` is marked as sent from code. Before, its
+  source was unknown.
+- Fix: `deleteCollectedDataOnDevice(includingIntermediate:completion:)` calls its completion
+  with `NO` when the SDK is not stopped. Before, the completion was never called. A launch
+  called while a deletion runs, with either form, starts once the deletion has finished.
+- Fix: `BugseeOptionCaptureNetworkBodyWithoutType` set to `NO` (the default) now leaves out
+  a request or response body that has no `Content-Type` header. Before, the body was
+  captured. WebSocket frames are kept.
+- Fix: `captureLogs` set to `NO` now also stops recording CocoaLumberjack logs and the
+  console output forwarded by the React Native, Flutter and Unity SDKs. Lines sent with
+  `Bugsee.log` are always recorded.
+- Fix: A report from `createReport` keeps its own attributes. Before, creating a second
+  report cleared the attributes of the first. `isScreenshotChanged` is set only when an
+  existing screenshot is replaced or removed, and changing a report's attributes from
+  several threads no longer crashes.
+- Fix (Unity): The app no longer crashes a few seconds after launch while Bugsee records
+  the Unity view.
+
+### BugseeFeedback module
+
+- No API or behavior changes.
+
 ## 7.0.0-beta6 (October 12 2026)
 
 ### iOS SDK
