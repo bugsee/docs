@@ -617,6 +617,11 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
+              id: "sdk/react_native/network",
+              label: "Network events",
+            },
+            {
+              type: "doc",
               id: "sdk/react_native/events-and-traces",
               label: "Custom events & traces",
             },
