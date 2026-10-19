@@ -186,14 +186,14 @@ Raising the deployment target to iOS 15 is a prerequisite for all of the above.
 
 | 6.x | Notes |
 | --- | --- |
-| `pause` / `resume` | Closest is `startBlackout` / `endBlackout`, which is narrower — see [§3.2](https://docs.bugsee.com/sdk/ios/v7/migration/) |
+| `pause` / `resume` | Closest is `startBlackout` / `endBlackout`, which is narrower — see [§4.2](https://docs.bugsee.com/sdk/ios/v7/migration/#42-pause-and-resume-are-gone) |
 | `getDeviceId` | — |
 | `accessToken` | — |
 | `isViewHidden:` | — |
 | `hideKeyboard:` | — |
 | `setInternalSecureRectangles:` | — |
 | `logAssert:withLocation:` | Use `logException:reason:completion:` |
-| `log:level:timestamp:` | `log:level:enforceFiltering:` takes the slot but does something different — it opts the message into the log filter |
+| `log:level:timestamp:` | `log:level:requiresFiltering:` takes the slot but does something different — it opts the message into the log filter |
 | `setDefaultCrashPriority:` | `BugseeOptionReportingDefaultCrashPriority` at launch |
 | `setDefaultErrorPriority:` | `BugseeOptionReportingDefaultErrorPriority` at launch |
 | `setDefaultBugPriority:` | `BugseeOptionReportingDefaultBugPriority` at launch |
