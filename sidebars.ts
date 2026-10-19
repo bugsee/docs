@@ -672,6 +672,11 @@ const sidebars: SidebarsConfig = {
               id: "sdk/react_native/privacy/breadcrumbs",
               label: "Breadcrumbs",
             },
+            {
+              type: "doc",
+              id: "sdk/react_native/privacy/report",
+              label: "Report",
+            },
           ],
         },
         {
