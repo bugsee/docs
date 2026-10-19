@@ -617,6 +617,11 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: "doc",
+              id: "sdk/react_native/events-and-traces",
+              label: "Custom events & traces",
+            },
+            {
+              type: "doc",
               id: "sdk/react_native/user-session-data",
               label: "User & session data",
             },

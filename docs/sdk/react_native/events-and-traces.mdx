@@ -1,0 +1,125 @@
+---
+title: "Custom events & traces"
+description: "Record custom events and traces on the report timeline with Bugsee React Native SDK 7.x: Bugsee.event and Bugsee.trace, the values they accept, and how invalid input is rejected."
+sidebar_position: 10
+slug: "/sdk/react_native/events-and-traces"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+Besides what Bugsee captures automatically, you can add your own signals to the session a report replays:
+
+- **Events** mark that something happened (`payment_processed`, `onboarding_skipped`), optionally with parameters.
+- **Traces** follow how one value changes over time (`cart_total`, `logged_in`), so you can see its state right before a problem.
+
+Both are recorded on the report timeline, next to the video, logs and network events. They keep recording during a [blackout](/sdk/react_native/lifecycle#blackout), which hides only what describes the screen.
+
+Calls made before `Bugsee.launch` are not held until launch. Record events and traces after `launch`.
+
+## Custom events
+
+`Bugsee.event(name, params?)` records a named event:
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+// Without parameters
+Bugsee.event('payment_processed');
+
+// With parameters
+Bugsee.event('payment_processed', {
+  amount: 125,
+  currency: 'USD',
+  items: [{ sku: 'A-100', quantity: 2 }],
+  coupon: null,
+});
+```
+
+`params` is a plain object. Leave it out (or pass `undefined`) for an event without parameters; the event is then recorded with no parameters at all, not with an empty object.
+
+### Accepted parameter values
+
+Each value in `params`, at any depth, is one of (`EventParamValue`):
+
+| Value | Rules |
+| --- | --- |
+| `string` | |
+| `number` | Finite (no `NaN` or `Infinity`), and smaller than 2<sup>63</sup> in magnitude. |
+| `boolean` | |
+| `null` | Recorded as `null` on both platforms. |
+| array | Of accepted values. |
+| plain object | Of accepted values. A member whose value is `undefined` is left out, as `JSON.stringify` does. |
+
+Objects and arrays can nest up to 16 levels deep.
+
+The parameters are checked and **copied** when you call `event`, so changing your object afterward does not change what was recorded.
+
+### What is rejected
+
+`event` throws synchronously, and records nothing, when its input is outside that set. The message names the path of the bad value, such as `params.items[0].added`:
+
+| Input | Thrown |
+| --- | --- |
+| `name` that is not a string | `TypeError` |
+| `name` that is an empty string | `RangeError` |
+| `params` that is `null`, an array, or not a plain object | `TypeError` |
+| A `Date`, `Map`, `Set`, typed array, class instance, function, `bigint` or `symbol` value | `TypeError` |
+| `undefined` as an array element | `TypeError` |
+| An object or array that contains itself (a cycle) | `TypeError` |
+| A non-finite number, or one of 2<sup>63</sup> or more in magnitude | `RangeError` |
+| Nesting deeper than 16 levels | `RangeError` |
+
+:::note[Changed from 6.x]
+6.x accepted `null` as "no parameters". In 7.x, `Bugsee.event('name', null)` throws `TypeError`: leave the argument out instead.
+:::
+
+Convert values the SDK does not accept before you pass them, for example a `Date` to `date.toISOString()` and a `Map` to `Object.fromEntries(map)`.
+
+## Custom traces
+
+`Bugsee.trace(name, value)` records the current value of a trace. Each call adds a new point for that name, so call it whenever the value changes:
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+Bugsee.trace('credit_balance', 15);       // number
+Bugsee.trace('current_location', 'USA'); // string
+Bugsee.trace('logged_in', true);          // boolean
+```
+
+The value (`TraceValue`) is a `string`, a `boolean`, or a finite `number` smaller than 2<sup>63</sup> in magnitude. A boolean is recorded as a boolean on both platforms, not as `0` or `1`.
+
+`trace` throws synchronously, and records nothing, for:
+
+| Input | Thrown |
+| --- | --- |
+| `name` that is not a string | `TypeError` |
+| `name` that is an empty string | `RangeError` |
+| A value that is not a string, number or boolean (including `null` and `undefined`) | `TypeError` |
+| A non-finite number, or one of 2<sup>63</sup> or more in magnitude | `RangeError` |
+
+## Handling the checks
+
+Because both calls throw on invalid input, guard calls whose input you do not control, so a bad value does not break the code path that records it:
+
+```ts
+import Bugsee, { type EventParams } from '@bugsee/react-native';
+
+function recordEvent(name: string, params?: EventParams): void {
+  try {
+    Bugsee.event(name, params);
+  } catch (error) {
+    console.warn('Bugsee event not recorded:', error);
+  }
+}
+```
+
+The types `EventParams`, `EventParamValue` and `TraceValue` are exported, so TypeScript catches most invalid values at compile time.
+
+## Related pages
+
+- [User & session data](/sdk/react_native/user-session-data): the user identifier and attributes.
+- [Breadcrumbs](/sdk/react_native/breadcrumbs): user and system events on the same timeline.
+- [Console logs](/sdk/react_native/logs): log lines with the report.
