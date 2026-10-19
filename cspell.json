@@ -241,6 +241,10 @@
         "Podspec",
         "javascriptcore",
         "reactnative",
-        "slashy"
+        "slashy",
+        "avplayer",
+        "ABRT",
+        "SEGV",
+        "oslog"
     ]
 }

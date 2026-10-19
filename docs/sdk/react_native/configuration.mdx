@@ -1,0 +1,370 @@
+---
+title: "Configuration"
+description: "The launch options of Bugsee React Native SDK 7.x: the options object and its accessors, the shared com.bugsee.option.* keys, enums, the endpoint, and reading the effective options back."
+sidebar_position: 3
+slug: "/sdk/react_native/configuration"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+You configure the SDK with the options you pass to `Bugsee.launch` (and later `Bugsee.relaunch`). The same `com.bugsee.option.*` keys work on both platforms, so there is no per-platform key mapping: apart from the endpoint the Expo plugin can supply, the options you pass are the options the SDK applies, on both platforms. Enum-typed options take numbers; see [Enum reference](#enum-reference).
+
+## Two ways to pass options
+
+`launch` and `relaunch` accept either form, and both have the same effect:
+
+- **The options object**, from `createDefaultLaunchOptions()`, with typed accessors. Pass it as is; there is no serialize step to call.
+- **A plain map** of `com.bugsee.option.*` keys, for options you build or merge yourself.
+
+<Tabs groupId="options-form">
+  <TabItem value="object" label="Options object">
+
+```ts
+import Bugsee, { createDefaultLaunchOptions, LogLevel } from '@bugsee/react-native';
+
+const options = createDefaultLaunchOptions();
+options.duration = 120;
+options.captureLogsLevel = LogLevel.Info;
+options.wifiOnlyUpload = true;
+
+Bugsee.launch(token, options);
+```
+
+  </TabItem>
+  <TabItem value="map" label="Plain map">
+
+```ts
+import Bugsee, { LogLevel } from '@bugsee/react-native';
+
+Bugsee.launch(token, {
+  'com.bugsee.option.config.duration': 120,
+  'com.bugsee.option.capture.logs.level': LogLevel.Info,
+  'com.bugsee.option.config.wifi-only-upload': true,
+});
+```
+
+  </TabItem>
+</Tabs>
+
+`BugseeLaunchOptions.serialize(options)` returns the plain map an options object stands for, as a snapshot: a later change to the object does not change a map you already took.
+
+## The options object
+
+`createDefaultLaunchOptions()` returns an empty options object for the running platform: an `IOSLaunchOptions` on iOS, an `AndroidLaunchOptions` on Android. Pass a platform (`'ios'` or `'android'`) to get the other one; any other platform throws.
+
+The object is **not** pre-filled with defaults. An option you leave unset is not sent at all, so the native SDK applies its own default. Setting an accessor to `undefined` removes the key again, rather than sending an empty value that would override the default.
+
+Accessors shared by both platforms live on the base class, `BugseeLaunchOptions`. Platform-only accessors live on `AndroidLaunchOptions` and `IOSLaunchOptions`, so an iOS-only option cannot be set on an Android options object by accident. To reach one, narrow the object first:
+
+```ts
+import {
+  AndroidLaunchOptions,
+  IOSLaunchOptions,
+  createDefaultLaunchOptions,
+} from '@bugsee/react-native';
+
+const options = createDefaultLaunchOptions();
+if (options instanceof AndroidLaunchOptions) {
+  options.triggerByNotification = false;
+} else if (options instanceof IOSLaunchOptions) {
+  options.captureDiskSpace = true;
+}
+```
+
+### Any key: `setCustomOption`
+
+`setCustomOption(key, value)` sets any option by its real `com.bugsee.option.*` key, whether or not it has an accessor. A custom key and an accessor write to the same map, so an option that has no accessor yet, including one added in a later 7.x native release, is reachable without a new release of this package. `undefined` removes the key, as with an accessor.
+
+```ts
+options.setCustomOption('com.bugsee.option.detect.http-errors', true);
+options.setCustomOption('com.bugsee.option.capture.network.body-size-limit', 10240);
+```
+
+## Shared accessors
+
+These accessors exist on both platforms.
+
+| Accessor | Key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `duration` | `com.bugsee.option.config.duration` | number (seconds) | `60` | Length of the rolling capture buffer (video, logs, breadcrumbs). |
+| `wifiOnlyUpload` | `com.bugsee.option.config.wifi-only-upload` | boolean | `false` | Defer report uploads until the device is on Wi-Fi. |
+| `maxDataSize` | `com.bugsee.option.config.max-data-size` | number (MB) | `150` (Android) / `50` (iOS) | Disk space that reports waiting to be sent may take. Enforced on Android. On iOS this beta accepts the key but does not enforce it. See [Automatic retention](/sdk/react_native/privacy/cleanup#automatic-retention). |
+| `captureVideo` | `com.bugsee.option.capture.video` | boolean | `true` | Record the screen for reports. |
+| `captureNetwork` | `com.bugsee.option.capture.network` | boolean | `true` | Record network requests and responses. |
+| `captureLogs` | `com.bugsee.option.capture.logs` | boolean | `true` | Capture logs automatically, including `console.*` output. `false` stops console forwarding; lines you send with `Bugsee.log` are still recorded. |
+| `captureLogsLevel` | `com.bugsee.option.capture.logs.level` | `LogLevel` | `Verbose` | The most verbose level captured; less severe lines are dropped. `LogLevel.Info` keeps `Error`, `Warning` and `Info`. |
+| `captureBreadcrumbs` | `com.bugsee.option.capture.breadcrumbs` | boolean | `false` | Record breadcrumbs. While off, `Bugsee.addBreadcrumb` records nothing, on both platforms. |
+| `detectAndReportCrash` | `com.bugsee.option.detect.crash` | boolean | `true` | Report crashes. `false` also turns off the reporting of uncaught JavaScript errors, unhandled promise rejections and uncaught render errors. See [Turning automatic reporting off](/sdk/react_native/manual/crash-error-reporting#turning-automatic-reporting-off). |
+| `detectAndReportHang` | `com.bugsee.option.detect.hang` | boolean | `false` | Report when the main thread is blocked long enough to count as a hang. |
+
+The **Default** column applies to both platforms unless the row gives one per platform. Read the values in effect with [`getLaunchOptions()`](#reading-the-effective-options).
+
+## Android accessors
+
+`AndroidLaunchOptions` adds these.
+
+| Accessor | Key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `endpoint` | `com.bugsee.option.$$ENDPOINT` | string | production | API endpoint override; see [Endpoint](#endpoint). |
+| `videoMode` | `com.bugsee.option.capture.video.mode` | `VideoMode` | `V2` | Screen-capture strategy. |
+| `logsUseAllSources` | `com.bugsee.option.capture.logs.allsources` | boolean | `false` | Read all logcat buffers instead of the default sources. |
+| `detectAndReportExitLowMemory` | `com.bugsee.option.detect.exit.low_memory` | boolean | `true` | Report exits where the OS killed the app to reclaim memory. |
+| `detectAndReportExitLowMemoryBackgroundAsError` | `com.bugsee.option.detect.exit.bg_low_memory_as_error` | boolean | `false` | Report a low-memory kill of a process that was not in the foreground as a non-fatal error rather than a crash. Applies only while `detectAndReportExitLowMemory` is on. |
+| `maxPendingReports` | `com.bugsee.option.config.max-pending-reports` | number | `30` | Most reports kept waiting to be sent. |
+| `maxPendingReportAge` | `com.bugsee.option.config.max-pending-report-age` | number (days) | `30` | Oldest a report waiting to be sent may get; `0` or less keeps reports until they are sent or evicted. |
+| `triggerByNotification` | `com.bugsee.option.reporting.triggers.notification-bar` | boolean | `true` | Show a notification-bar entry that opens the report UI. |
+
+The other Android-only keys are reachable with `setCustomOption`: see [Platform-only keys](#platform-only-keys).
+
+## iOS accessors
+
+`IOSLaunchOptions` adds these.
+
+| Accessor | Key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `endpoint` | `endpoint` | string | production | API endpoint override; see [Endpoint](#endpoint). Not a `com.bugsee.option.*` key on iOS. |
+| `captureAVPlayer` | `com.bugsee.option.capture.avplayer` | boolean | `false` | Capture video that plays through `AVPlayerLayer` and `AVPlayerViewController` in the recording. |
+| `captureDiskSpace` | `com.bugsee.option.capture.disk-space` | boolean | `false` | Monitor available disk space and include it in reports as a system trace and device properties. |
+| `crashHandlerType` | `com.bugsee.option.capture.crash-handler-type` | `CrashHandlerType` | `MachAndBSD` | How the crash reporter intercepts crashes. |
+| `crashSignals` | `com.bugsee.option.capture.crash-signals` | number (bit set) | every signal | The fatal signals the crash reporter intercepts: `ABRT` 1, `SEGV` 2, `BUS` 4, `ILL` 8, `FPE` 16, `TRAP` 32. Add the values to combine them. |
+
+## Other shared keys
+
+These keys are accepted by both native SDKs but have no accessor. Set them with `setCustomOption`, or in a plain map. Type and default are the same on both platforms, except where a row gives one per platform.
+
+### Detection
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `com.bugsee.option.detect.early-crash` | boolean | `true` | Also catch crashes very early in startup. |
+| `com.bugsee.option.detect.exit` | boolean | `true` | Detect and report application exits. |
+| `com.bugsee.option.detect.hang.level.fair` | number (ms) | `3000` | Main-thread block that counts as a "Fair" hang. |
+| `com.bugsee.option.detect.hang.level.medium` | number (ms) | `5000` | Main-thread block that counts as a "Medium" hang. |
+| `com.bugsee.option.detect.hang.level.severe` | number (ms) | `10000` | Main-thread block that counts as a "Severe" hang. |
+| `com.bugsee.option.detect.http-errors` | boolean | `false` | Turn HTTP 5xx responses into error reports. |
+| `com.bugsee.option.detect.main_thread_misuse` | boolean | `false` | Report file, network or database work done on the main thread. |
+| `com.bugsee.option.detect.anomaly` | boolean | `false` | The statistical performance-anomaly detector. |
+| `com.bugsee.option.detect.frustration` | boolean | `false` | Detect user-frustration patterns such as rage taps and report them. |
+
+### Capture
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `com.bugsee.option.capture.screenshot` | boolean | `true` | Take a screenshot when a report is created. |
+| `com.bugsee.option.capture.screenshot.scale` | number | `1` | Down-then-up scaling of the screenshot, which destroys fine detail; `1` turns it off. |
+| `com.bugsee.option.capture.view-hierarchy` | boolean | `true` | Capture the view hierarchy for reports (also needs [`Bugsee.wrap`](/sdk/react_native/installation#4-launch-bugsee)). |
+| `com.bugsee.option.capture.breadcrumbs.extras` | boolean | `false` | Attach raw system data to the breadcrumbs the native SDK records for system events: the `Intent` extras of system broadcasts on Android, the notification `userInfo` of device events on iOS. |
+| `com.bugsee.option.capture.video.quality` | `VideoQuality` | `Default` | Quality of the encoded video. |
+| `com.bugsee.option.capture.video.frame-rate` | `FrameRate` | `High` | How often frames are captured. |
+| `com.bugsee.option.capture.video.scale` | number | `1` | Extra down-scaling of the recorded video, for example `0.5`. |
+| `com.bugsee.option.capture.video.adaptive` | boolean | `false` (Android) / `true` (iOS) | Skip frames while nothing on screen has been redrawn. |
+| `com.bugsee.option.capture.network.on-launch` | boolean | `false` | Start network capture during `launch` instead of when capture starts, so startup requests are not missed. |
+| `com.bugsee.option.capture.network.body-size-limit` | number (bytes) | `20480` | Largest request or response body captured. |
+| `com.bugsee.option.capture.network.body-without-type` | boolean | `false` | Also keep bodies that declare no content type. |
+| `com.bugsee.option.capture.network.default-sanitizer` | boolean | `true` | Redact known sensitive keys in URLs, headers and JSON bodies. See [Privacy: Network](/sdk/react_native/privacy/network) for how it combines with a network filter on each platform. |
+
+### Reporting
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `com.bugsee.option.reporting.triggers.shake` | boolean | `true` | Open the report UI when the device is shaken. |
+| `com.bugsee.option.reporting.triggers.screenshot` | boolean | `false` | Open the report UI when the user takes a screenshot. |
+| `com.bugsee.option.reporting.defaults.crash-priority` | `IssueSeverity` | `Blocker` | Severity of crash reports. |
+| `com.bugsee.option.reporting.defaults.error-priority` | `IssueSeverity` | `High` | Severity of error reports. |
+| `com.bugsee.option.reporting.defaults.bug-priority` | `IssueSeverity` | `High` | Severity of bug reports. |
+| `com.bugsee.option.reporting.ui.summary-required` | boolean | `false` | Make the Summary field mandatory. |
+| `com.bugsee.option.reporting.ui.description-required` | boolean | `false` | Make the Description field mandatory. |
+| `com.bugsee.option.reporting.ui.email-required` | boolean | `false` | Make the Email field mandatory. |
+| `com.bugsee.option.reporting.ui.labels-enabled` | boolean | `false` | Show the Labels field. |
+| `com.bugsee.option.reporting.ui.labels-required` | boolean | `false` | Make the Labels field mandatory. |
+| `com.bugsee.option.reporting.ui.priority-selector-enabled` | boolean | `false` | Let the user pick the priority. |
+
+### Upload and performance
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `com.bugsee.option.config.notify-flush-delay` | number (ms) | `0` | Coalescing window before queued `Bugsee.notify` items are sent. |
+| `com.bugsee.option.performance.enabled` | boolean | `true` | Master switch for performance monitoring; see [Performance monitoring](/sdk/react_native/performance). |
+| `com.bugsee.option.performance.sample-rate` | number `[0, 1]` | `0.01` | Probability that a transaction is sampled for a standalone upload, which is not active in this beta; see [Sampling](/sdk/react_native/performance#sampling). |
+| `com.bugsee.option.performance.adaptive-sampling` | boolean | `true` | Promote unsampled transactions that look interesting into the standalone upload, which is not active in this beta. |
+
+## Platform-only keys
+
+Keys for native WebView capture, shared or platform-only, are omitted from this page and from the shared tables above.
+
+Some keys are accepted by one SDK only; the other SDK does not recognize them. `setCustomOption` does not check the platform, so set these only on the platform they belong to.
+
+**Android only.** Native SDK reference: [Android configuration](/sdk/android/configuration).
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `com.bugsee.option.capture.respect-flag-secure` | boolean | `true` | Protect windows that set `FLAG_SECURE`: they are blanked in the video and screenshots and left out of the view hierarchy. See [Privacy: Video](/sdk/react_native/privacy/video). |
+| `com.bugsee.option.capture.video.custom-muxer` | boolean | `false` | Encode the video with Bugsee's own MP4 muxer instead of the system one. |
+| `com.bugsee.option.capture.video.fullscreen-keep-running` | boolean | `true` | With `VideoMode.Fullscreen`, keep screen capture running in the background, rather than stopping it and asking the user again on return. |
+| `com.bugsee.option.capture.video.fullscreen-remember-decision` | boolean | `true` | With `VideoMode.Fullscreen`, remember the user's screen-capture consent across launches. |
+| `com.bugsee.option.capture.video.secure-scrolling` | boolean | `false` | With `VideoMode.V1`, skip more frames while secure views are on screen. |
+| `com.bugsee.option.config.report-handler-callback-timeout` | number (seconds) | `30` | Lowers the report handler deadline; see [Report handler](/sdk/react_native/report-handler#async-callbacks-and-deadlines). |
+| `com.bugsee.option.config.report-processing-in-process` | boolean | `true` | Assemble and upload reports in the app's process. `false` schedules them as system jobs, which survive the process at the cost of upload latency. |
+| `com.bugsee.option.detect.anr.sampling` | boolean | `true` | Sample the main thread during an ANR, to attribute the report to the frames that were blocking. |
+| `com.bugsee.option.detect.hang.sampling` | boolean | `true` | The same for hangs, while `detectAndReportHang` is on. |
+| `com.bugsee.option.detect.exit.not_responding` | boolean | `true` | Report exits after the app stopped responding (ANR). |
+| `com.bugsee.option.detect.exit.not_responding.as_crash` | boolean | `false` | Report those exits as crashes rather than errors. |
+| `com.bugsee.option.detect.exit.*`: `dependency_died`, `excessive_resource_usage`, `other`, `package_state_changed`, `package_updated`, `permission_changed`, `unknown`, `user_requested`, `user_was_stopped` | boolean | `false` | Report exits for that reason too. |
+| `com.bugsee.option.performance.upload-mode` | string | `"batched"` | How a standalone performance upload would send data; that upload is not active in this beta. |
+| `com.bugsee.option.reporting.triggers.broadcast` | boolean | `false` | Let a broadcast intent open the report dialog. |
+
+**iOS only**, beyond the accessors above. Native SDK reference: [iOS configuration](/sdk/ios/configuration#available-options), which lists the options under their 6.x names, and the [iOS 7.x migration guide](/sdk/ios/v7/migration#2-option-keys), which maps them to these keys.
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `com.bugsee.option.capture.bluetooth-status` | boolean | `false` | Monitor the Bluetooth state. Needs `NSBluetoothAlwaysUsageDescription` in `Info.plist`. |
+| `com.bugsee.option.capture.camera-preview` | boolean | `false` | Record the live camera image shown in an `AVCaptureVideoPreviewLayer`. This records whatever the camera sees, and adds work to your camera session. Off, a camera preview records as an empty rectangle. |
+| `com.bugsee.option.capture.device-network-names` | boolean | `false` | Capture the device name, the Wi-Fi network name and the mobile carrier name. |
+| `com.bugsee.option.capture.logs.oslog` | boolean | `false` | Accepted and ignored in this beta: `os_log` entries are not captured. |
+| `com.bugsee.option.capture.on-device-symbolication` | boolean | `false` | Symbolicate crash stack frames on the device. |
+| `com.bugsee.option.capture.sample-buffer-display-layer` | boolean | `false` | Capture video shown through an `AVSampleBufferDisplayLayer` in the recording (pixel-buffer samples only). |
+| `com.bugsee.option.capture.status-bar-info` | boolean | `false` | On-screen status indicators for testing the SDK itself. No effect in release builds of the SDK. |
+| `com.bugsee.option.capture.video.max-frame-rate` | number (fps) | `0` | Highest capture frame rate. `0` uses the rate `capture.video.frame-rate` picks. |
+| `com.bugsee.option.capture.video.min-frame-rate` | number (fps) | `0` | Lowest capture frame rate. `0` uses the rate `capture.video.frame-rate` picks. |
+| `com.bugsee.option.capture.video.privacy-blur` | boolean | `true` | Blur the frames of a screen transition instead of leaving them out. `false` freezes the video for the transition. |
+| `com.bugsee.option.capture.websocket` | boolean | `true` | Record WebSocket traffic; see [Network events](/sdk/react_native/network#websocket-traffic). |
+| `com.bugsee.option.config.build-target` | string | none | Build target name, sent with reports. |
+| `com.bugsee.option.config.build-type` | string | none | Build type, such as `debug` or `release`, sent with reports. |
+| `com.bugsee.option.config.data-encryption` | number | `0` | Encryption of the collected data: `0` none, `1` on device (keys kept in the Secure Enclave), `2` end to end (decrypted only on the server, so some features, such as the video preview, are missing). The package exports no constants for it. |
+| `com.bugsee.option.detect.crash.fill_empty_exception_stacks` | boolean | `false` | Fill in the stack of an uncaught `NSException` that has none from the crashing thread. This can change how crashes are grouped. |
+| `com.bugsee.option.detect.crash.swift_async_stacktraces` | boolean | `true` | Stitch Swift async frames into the stacks of C++ exceptions. |
+| `com.bugsee.option.reporting.ui.style` | number | `3` | Style of the report UI: `0` Light, `1` Dusk, `2` based on the status bar, `3` the system style. The package exports no constants for it. |
+
+## Enum reference
+
+Enum-typed options take a number. Use the exported constants rather than writing numbers: the values are each enum's internal value in the native SDKs, not its position in the list, so `LogLevel.Error` is `1` and `VideoMode.Fullscreen` is `20`.
+
+```ts
+import { FrameRate, IssueSeverity, VideoQuality } from '@bugsee/react-native';
+
+options.setCustomOption('com.bugsee.option.capture.video.frame-rate', FrameRate.Medium);
+options.setCustomOption('com.bugsee.option.capture.video.quality', VideoQuality.High);
+options.setCustomOption('com.bugsee.option.reporting.defaults.bug-priority', IssueSeverity.Critical);
+```
+
+| Enum | Values | Used by |
+| --- | --- | --- |
+| `LogLevel` | `Error` 1, `Warning` 2, `Info` 3, `Debug` 4, `Verbose` 5 | `captureLogsLevel`, `Bugsee.log` |
+| `VideoMode` | `None` 0, `V1` 1, `V2` 2, `Fullscreen` 20, `DirectBuffers` 21 | `videoMode` (Android) |
+| `VideoQuality` | `Default` 0, `Medium` 1, `High` 2 | `capture.video.quality` |
+| `FrameRate` | `Low` 1, `Medium` 2, `High` 3 | `capture.video.frame-rate` |
+| `IssueSeverity` | `VeryLow` 1, `Medium` 2, `High` 3, `Critical` 4, `Blocker` 5 | `reporting.defaults.*-priority`, report severities |
+| `CrashHandlerType` | `BSD` 1, `Mach` 2, `MachAndBSD` 3 | `crashHandlerType` (iOS) |
+
+- `FrameRate` has no `Raw`: only Android has that rate, and the same number would mean different capture rates on the two platforms.
+- `CrashHandlerType` is iOS only. `BSD` uses BSD signal handlers. `Mach` uses a Mach exception handler plus a BSD handler for `SIGABRT`; other signals raised by software (`raise()`, `kill()`) are not reported. `MachAndBSD`, the default, uses both, so hardware faults and signals raised by software are reported.
+
+A number that names no value of the enum is handled differently on each platform. Android: it is dropped (as is a number that is not whole), so the option keeps its default. iOS: it is not checked, and is applied as given. Use the exported constants.
+
+## Value types
+
+Option values are booleans, numbers and strings. Other values are dropped without an error. Android: any value that is not one of those three types (an array, an object or `null`). iOS: a value whose type does not fit its key (a string for a boolean key, say). The option then keeps its default.
+
+## Endpoint
+
+The endpoint override is the one option whose key differs per platform, which is why `endpoint` is an accessor on `AndroidLaunchOptions` and `IOSLaunchOptions` rather than on the base class. Set it on the object returned by `createDefaultLaunchOptions()` and the right key is written:
+
+```ts
+const options = createDefaultLaunchOptions();
+options.endpoint = 'https://bugsee.example.com';
+```
+
+| Platform | Key | What is sent |
+| --- | --- | --- |
+| Android | `com.bugsee.option.$$ENDPOINT` | The value, trimmed. Accepted with or without `/v2`. |
+| iOS | `endpoint` | The value, trimmed, without trailing slashes, with `/v2` added unless it already ends in `/v2`. |
+
+The `endpoint` getter returns what will be sent, so on iOS it reads back with `/v2`. An empty or blank value removes the override.
+
+For a plain map, `endpointFor(platform, endpoint)` returns the entry to merge in, or `{}` for an empty value:
+
+```ts
+import { Platform } from 'react-native';
+import Bugsee, { endpointFor } from '@bugsee/react-native';
+
+Bugsee.launch(token, {
+  'com.bugsee.option.config.duration': 60,
+  ...endpointFor(Platform.OS === 'ios' ? 'ios' : 'android', 'https://bugsee.example.com'),
+});
+```
+
+An Expo app can set the endpoint once in the [config plugin](/sdk/react_native/expo#custom-endpoint) instead. `launch` and `relaunch` then use it whenever their options carry no endpoint; an endpoint you pass yourself wins.
+
+## Reading the effective options
+
+`Bugsee.getLaunchOptions()` resolves to the options the native SDK reports as in effect, as a plain `com.bugsee.option.*` map, including the SDK's defaults for what you did not set:
+
+```ts
+async function logDuration() {
+  const effective = await Bugsee.getLaunchOptions();
+  console.log(effective['com.bugsee.option.config.duration']);
+}
+```
+
+Both platforms answer before launch too, with the defaults.
+
+An options object's getters return what you set on it, and nothing else, until you load the reported options into it. `BugseeLaunchOptions.refreshFrom(options, reported)` installs them; each call replaces the previous report. Getters then answer with the value you set, or failing that the reported one. Reported values are never sent back when the object is passed to `launch` or `relaunch`.
+
+```ts
+import Bugsee, { BugseeLaunchOptions, createDefaultLaunchOptions } from '@bugsee/react-native';
+
+async function effectiveDuration() {
+  const options = createDefaultLaunchOptions();
+  BugseeLaunchOptions.refreshFrom(options, await Bugsee.getLaunchOptions());
+  return options.duration; // the duration in effect
+}
+```
+
+## Changing options at runtime
+
+Options apply when the SDK launches. To change them later, pass a new set to `Bugsee.relaunch(options)`, which restarts the session; see [Lifecycle & status](/sdk/react_native/lifecycle).
+
+## Worked example
+
+```ts
+import { Platform } from 'react-native';
+import Bugsee, {
+  AndroidLaunchOptions,
+  CrashHandlerType,
+  IOSLaunchOptions,
+  IssueSeverity,
+  LogLevel,
+  createDefaultLaunchOptions,
+} from '@bugsee/react-native';
+
+const options = createDefaultLaunchOptions();
+options.duration = 90;
+options.captureBreadcrumbs = true;
+options.captureLogsLevel = LogLevel.Info;
+options.detectAndReportHang = true;
+options.setCustomOption('com.bugsee.option.reporting.triggers.shake', false);
+options.setCustomOption('com.bugsee.option.reporting.defaults.bug-priority', IssueSeverity.Medium);
+
+if (options instanceof AndroidLaunchOptions) {
+  options.triggerByNotification = false;
+} else if (options instanceof IOSLaunchOptions) {
+  options.crashHandlerType = CrashHandlerType.MachAndBSD;
+}
+
+Bugsee.launch(
+  Platform.OS === 'ios' ? '<your iOS app token>' : '<your Android app token>',
+  options,
+);
+```
+
+## Related pages
+
+- [Installation](/sdk/react_native/installation): launching the SDK.
+- [Lifecycle & status](/sdk/react_native/lifecycle): `relaunch` with new options.
+- [Privacy](/sdk/react_native/privacy/overview): masking and filters.
+- Native SDK reference: [Android configuration](/sdk/android/configuration) and [iOS configuration](/sdk/ios/configuration#available-options) (6.x option names; the [iOS 7.x migration guide](/sdk/ios/v7/migration#2-option-keys) maps them to the 7.x keys).
