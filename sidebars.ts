@@ -691,6 +691,11 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "sdk/react_native/notification-relay",
+          label: "Notification relay",
+        },
+        {
+          type: "doc",
           id: "sdk/react_native/performance",
           label: "Performance monitoring",
         },
