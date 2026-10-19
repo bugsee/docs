@@ -169,7 +169,6 @@ Raising the deployment target to iOS 15 is a prerequisite for all of the above.
 | `setEmail:` / `getEmail` / `clearEmail` | `setUserIdentifier:` / `getUserIdentifier` / `clearUserIdentifier` |
 | `clearAllAttribute` | `clearAllAttributes` |
 | `testExceptionCrash` / `testSignalCrash` | `testCrash` |
-| `deleteCollectedDataOnDevice:` | `deleteCollectedDataOnDevice:completion:` |
 | `uploadWithSummary:…:includeVideo:` | `uploadWithSummary:description:severity:labels:` |
 | `logError:labels:includeVideo:` / `logError:labels:` | `logError:`; labels via `addLabels:` on the report in `bugseeAttachmentsForReport:` |
 | `logException:options:completion:` | `logException:completion:` / `logException:domain:skipFrames:completion:` |
@@ -178,6 +177,7 @@ Raising the deployment target to iOS 15 is a prerequisite for all of the above.
 | Swift `Bugsee.launch(token:options:)` _(dictionary)_ | Swift `Bugsee.launch(token:dictionaryOptions:)` |
 | Swift `Bugsee.relaunch(options:)` _(dictionary)_ | Swift `Bugsee.relaunch(dictionaryOptions:)` |
 | Swift `Bugsee.uploadReport(_:)` | Swift `Bugsee.upload(_:)` |
+| Swift `Bugsee.deleteCollectedData(completion:)` | Swift `Bugsee.deleteCollectedDataOnDevice(completion:)`. The Objective-C selector `deleteCollectedDataOnDevice:` is unchanged and still deletes everything. Do not switch to `deleteCollectedDataOnDevice:completion:` (Swift `deleteCollectedDataOnDevice(includingIntermediate:completion:)`): it keeps the reports waiting for upload |
 | `showFeedbackController` | `[BugseeFeedback.shared showFeedbackUI]` |
 | `setDefaultFeedbackGreeting:` | `[BugseeFeedback.shared setGreeting:]` |
 | `bugsee:didReceiveNewFeedback:` | `BugseeFeedbackListener` |
@@ -199,7 +199,7 @@ Raising the deployment target to iOS 15 is a prerequisite for all of the above.
 | `setDefaultBugPriority:` | `BugseeOptionReportingDefaultBugPriority` at launch |
 | `BugseeAttachmentOverrideLabels` | — |
 | `BugseeOptions.captureVideoAdaptive` | `BugseeOptionCaptureVideoAdaptive` key |
-| `BugseeEnableMachExceptionsKey` / `BugseeOptions.enableMachExceptions` | `BugseeOptionCaptureCrashHandlerType` / `crashHandlerType`: 6.x NO → `BugseeCrashHandlerTypeBSD`, YES → `BugseeCrashHandlerTypeMach`; the 7.x default is `BugseeCrashHandlerTypeMachAndBSD`. The old key, also as a plain string, is ignored with a console warning |
+| `BugseeEnableMachExceptionsKey` / `BugseeOptions.enableMachExceptions` | `BugseeOptionCaptureCrashHandlerType` / `crashHandlerType`: 6.x NO → `BugseeCrashHandlerTypeBSD`, YES → `BugseeCrashHandlerTypeMach`; the 7.x default is `BugseeCrashHandlerTypeMachAndBSD`. The old key, also as a plain string, is ignored with a console warning. New in 7.x: `BugseeOptionCaptureCrashSignals` / `crashSignals` chooses which fatal signals are intercepted; leave it unset, since the default intercepts every signal (the Xamarin and .NET SDKs leave out `SIGSEGV` and `SIGBUS`), and an explicit value is used as given |
 | `BugseeKillDetectionKey` / `BugseeOptions.killDetection` | Out-of-memory kills are reported through `BugseeOptionDetectAndReportExit`, on by default |
 
 
