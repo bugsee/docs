@@ -579,6 +579,11 @@ const sidebars: SidebarsConfig = {
           label: "Configuration",
         },
         {
+          type: "doc",
+          id: "sdk/react_native/lifecycle",
+          label: "Lifecycle & status",
+        },
+        {
           type: "category",
           label: "Previous versions",
           collapsed: true,
