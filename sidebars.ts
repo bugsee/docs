@@ -547,6 +547,11 @@ const sidebars: SidebarsConfig = {
       collapsed: true,
       items: [
         {
+          type: "link",
+          label: "Stable release (6.x) docs",
+          href: "/sdk/react_native/v6/installation",
+        },
+        {
           type: "category",
           label: "Previous versions",
           collapsed: true,
