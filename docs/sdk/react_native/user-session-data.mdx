@@ -1,0 +1,144 @@
+---
+title: "User & session data"
+description: "Attach a user identifier and custom attributes to every report with Bugsee React Native SDK 7.x: accepted values, platform limits, reading them back, and errors."
+sidebar_position: 11
+slug: "/sdk/react_native/user-session-data"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+Annotate every report with facts about the current user and session: a **user identifier**, which says who the user is, and custom key/value **attributes**, for anything else (plan, region, feature flags). Both go with every report the SDK sends.
+
+## User identity
+
+The user identifier is a stable string, such as your backend user ID, that ties a user's reports together in the Bugsee dashboard. Use attributes for other facts about the user; use the identifier for **who** they are.
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+// Once the user has signed in
+Bugsee.setUserIdentifier('user-8f3a2c');
+
+// Read it back: undefined when none is set
+async function logCurrentUser() {
+  const id = await Bugsee.getUserIdentifier();
+  console.log('Bugsee user:', id ?? 'none');
+}
+
+// On sign-out
+Bugsee.clearUserIdentifier();
+```
+
+| Method | Returns | Notes |
+| --- | --- | --- |
+| `setUserIdentifier(identifier)` | `void` | Synchronous. `identifier` must be a string, or it throws `TypeError`. An empty string clears the identifier, on both platforms. |
+| `getUserIdentifier()` | `Promise<string \| undefined>` | `undefined` when no identifier is set. |
+| `clearUserIdentifier()` | `void` | Synchronous. |
+
+No size limit applies to the identifier, so `setUserIdentifier` does not check one and does not return a promise.
+
+## Attributes
+
+Attributes are key/value pairs attached to every report. They **persist across launches** until you clear them, so set them when the fact changes (at sign-in, when the plan changes) rather than at every launch.
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+async function describeSession(): Promise<void> {
+  await Bugsee.setAttribute('plan', 'pro');
+  await Bugsee.setAttribute('seats', 5);
+  await Bugsee.setAttribute('beta', true);
+}
+```
+
+| Method | Resolves to | Notes |
+| --- | --- | --- |
+| `setAttribute(name, value)` | `void` | Sets one attribute. Rejects when the value is invalid or the native SDK did not keep it. |
+| `getAttribute(name)` | `AttributeReadValue \| undefined` | One attribute's value, or `undefined` when it is not set. |
+| `getAllAttributes()` | `Record<string, AttributeReadValue>` | Every attribute currently set, as reports will carry them. |
+| `clearAttribute(name)` | `void` | Removes one attribute. Does nothing if it was not set. |
+| `clearAllAttributes()` | `void` | Removes every attribute. |
+
+Every attribute method returns a promise, including for an invalid argument: validation errors reject the promise rather than throwing synchronously. Await the calls, or add a `.catch`, so a rejection does not go unhandled.
+
+### Accepted values
+
+`name` must be a non-empty string. `value` (an `AttributeValue`) is one of:
+
+| Type | Rules |
+| --- | --- |
+| `string` | At most 1024 UTF-16 code units. See the iOS limit below. |
+| `number` | Finite (no `NaN` or `Infinity`), and smaller than 2<sup>63</sup> in magnitude. |
+| `boolean` | |
+
+Nothing else is accepted: no `null`, objects, arrays or dates. To remove an attribute, use `clearAttribute`.
+
+### Platform limits
+
+The platforms store values differently, and `setAttribute` reports whether the value was kept:
+
+- **iOS** drops a value whose stored (archived) size is over about 1.1 KB. A string of up to about 800 ASCII characters is safe on both platforms. A longer one, still within the 1024-unit limit above, can be kept on Android and rejected with `E_ATTRIBUTE_REJECTED` on iOS.
+- **Android** stores a whole number up to 2<sup>53</sup> − 1 in magnitude exactly, but stores a fractional number, or a larger whole number, as a 32-bit float. `setAttribute('ratio', 0.1)` then reads back as `0.10000000149011612`, which is the value the report carries.
+
+If a value was not kept, for a size limit or any other reason, the promise from `setAttribute` rejects with `E_ATTRIBUTE_REJECTED`, so a dropped value does not go unnoticed.
+
+### Reading attributes back
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+async function logAttributes(): Promise<void> {
+  const plan = await Bugsee.getAttribute('plan'); // 'pro', or undefined
+  const all = await Bugsee.getAllAttributes();    // { plan: 'pro', seats: 5, beta: true }
+  console.log(plan, all);
+}
+```
+
+A read returns an `AttributeReadValue`: a string, number or boolean, or a `string[]` for a list (on Android, a set) of strings that native code stored directly (`setAttribute` cannot create one). Both `getAttribute` and `getAllAttributes` read the copy reports are built from, so they agree with each other and with the report.
+
+## Before launch
+
+What happens to an identifier or attribute set before `Bugsee.launch` is not specified in this beta: these calls are not held until launch. `setAttribute` still checks that the value was kept, so if it was not, the promise rejects with `E_ATTRIBUTE_REJECTED`; `setUserIdentifier` has no such check. Set the identifier and attributes after the promise from `launch` resolves.
+
+## Errors
+
+A failed attribute call rejects with a `BugseeAttributeError`. Match on its `code`, an `AttributeErrorCode` value:
+
+| `AttributeErrorCode` | `code` | Meaning |
+| --- | --- | --- |
+| `BadArgument` | `E_ATTRIBUTE_BAD_ARGUMENT` | The name or value failed validation in JavaScript; nothing was sent. |
+| `Rejected` | `E_ATTRIBUTE_REJECTED` | The value was not kept. Android: also when a read or clear call (`getAttribute`, `getAllAttributes`, `clearAttribute`, `clearAllAttributes`) failed. iOS: only `setAttribute` rejects with it; the read and clear calls always resolve. |
+
+```ts
+import Bugsee, { AttributeErrorCode, BugseeAttributeError } from '@bugsee/react-native';
+
+async function rememberNote(note: string): Promise<void> {
+  try {
+    await Bugsee.setAttribute('note', note);
+  } catch (error) {
+    if (error instanceof BugseeAttributeError && error.code === AttributeErrorCode.Rejected) {
+      await Bugsee.setAttribute('note', note.slice(0, 500)); // too large for this platform
+      return;
+    }
+    throw error;
+  }
+}
+```
+
+Error messages never include the attribute's value.
+
+## Attributes on one report
+
+`Bugsee.setAttribute` applies to every report. To set an attribute on a single report, use the report's own `setAttribute` in a [report handler](/sdk/react_native/report-handler#changing-a-report), or `update` on a report from [`createReport`](/sdk/react_native/manual/bug-reporting#build-a-report-yourself).
+
+## Privacy
+
+The identifier and every attribute are sent with every report. Do not put passwords, tokens or other secrets in them, and keep personal data to what you need to find a user's reports. Clear them at sign-out, since attributes persist across launches. See [Privacy: Report](/sdk/react_native/privacy/report) for the other controls over what a report sends.
+
+## Related pages
+
+- [Custom events & traces](/sdk/react_native/events-and-traces): record what happened, and how values changed, on the report timeline.
+- [Report handler](/sdk/react_native/report-handler): change attributes on one report.
+- [Privacy: Report](/sdk/react_native/privacy/report): what a report sends.
