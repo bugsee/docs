@@ -1,0 +1,187 @@
+---
+title: "Breadcrumbs"
+description: "What breadcrumbs are in Bugsee React Native SDK 7.x, how to turn them on, record your own with Bugsee.addBreadcrumb, and rewrite or drop them with setBreadcrumbFilter."
+sidebar_position: 9
+slug: "/sdk/react_native/breadcrumbs"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+Breadcrumbs are small entries that record the steps leading up to an issue: a screen opened, a checkout started, a setting changed. They are placed on the report timeline next to the video, logs and network events.
+
+## Turning breadcrumbs on
+
+Breadcrumb capture is **off by default**, on both platforms. Turn it on with the `captureBreadcrumbs` launch option:
+
+```ts
+import Bugsee, { createDefaultLaunchOptions } from '@bugsee/react-native';
+
+const options = createDefaultLaunchOptions();
+options.captureBreadcrumbs = true;
+
+Bugsee.launch('<your app token>', options);
+```
+
+| Option | Key | Default | Description |
+| --- | --- | --- | --- |
+| `captureBreadcrumbs` | `com.bugsee.option.capture.breadcrumbs` | `false` | Record breadcrumbs. While off, `Bugsee.addBreadcrumb` records nothing, and the filter is not offered any breadcrumb. |
+| (no accessor) | `com.bugsee.option.capture.breadcrumbs.extras` | `false` | Attach raw system data to the automatic breadcrumbs of system events. Android: the `Intent` extras of system broadcasts. iOS: the notification `userInfo` of device events. |
+
+See [Configuration](/sdk/react_native/configuration) for every option.
+
+## Where breadcrumbs come from
+
+- **Your own breadcrumbs**, recorded with [`Bugsee.addBreadcrumb`](#recording-breadcrumbs).
+- **Automatic breadcrumbs**, recorded in native code on both platforms. Your [filter](#filtering-breadcrumbs) sees these too.
+  - **Android**: app lifecycle, device orientation, keyboard events and system broadcasts, among others.
+  - **iOS**: app lifecycle (foreground and background), device orientation and memory warnings; screen changes of native view controllers; keyboard and text-field focus; connectivity changes; HTTP requests, with the built-in query-parameter redaction applied; taps and other gestures, while touch capture runs; blackouts; and device events such as protected-data availability, locale, time zone and clock changes, battery state and level, Low Power Mode and thermal state.
+
+The React Native package records no breadcrumbs from JavaScript on its own: there are no automatic navigation or touch breadcrumbs for React components. Add the ones you need with `addBreadcrumb`, for example from your navigation library's state-change listener.
+
+## Recording breadcrumbs
+
+`Bugsee.addBreadcrumb(crumb)` records one breadcrumb:
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+Bugsee.addBreadcrumb({
+  category: 'navigation',
+  level: 'info',
+  message: 'Opened checkout',
+  type: 'default',
+  data: { cartSize: 3 },
+});
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `category` | `string` | Yes | A group for the breadcrumb, such as `navigation` or `ui`. |
+| `level` | `BreadcrumbLevel` | Yes | `debug`, `info`, `warning`, `error` or `fatal`. See [Levels](#levels). |
+| `message` | `string` | Yes | What happened. |
+| `type` | `string` | Yes | The kind of breadcrumb, such as `default` or `user`. |
+| `data` | plain object or `null` | No | Extra values. Leave it out, or pass `null`, for a breadcrumb without data. |
+
+The strings may be empty. The native SDK stamps the time when it records the breadcrumb; there is no timestamp field to pass.
+
+`data` accepts the same values as [event parameters](/sdk/react_native/events-and-traces#accepted-parameter-values): strings, finite numbers, booleans, `null`, and arrays and plain objects of those, nested up to 16 levels. It is checked and copied when you call `addBreadcrumb`, so changing your object afterward does not change the breadcrumb.
+
+`addBreadcrumb` returns nothing. Every breadcrumb goes through your [breadcrumb filter](#filtering-breadcrumbs) before it is recorded.
+
+On iOS the breadcrumb is recorded on the main thread, shortly after the call returns.
+
+### Invalid input
+
+`addBreadcrumb` throws synchronously, and records nothing, when:
+
+| Input | Thrown |
+| --- | --- |
+| `crumb` that is not a plain object (including `null`, an array or a class instance) | `TypeError` |
+| `category`, `message` or `type` that is not a string | `TypeError` |
+| `level` that is not one of the five names | `TypeError` |
+| `data` that is not a plain object or `null` | `TypeError` |
+| A value in `data` that is not accepted (a `Date`, a function, a cycle, and so on) | `TypeError` |
+| A non-finite number in `data`, a number of 2<sup>63</sup> or more in magnitude, or nesting deeper than 16 levels | `RangeError` |
+
+### When nothing is recorded
+
+`addBreadcrumb` does not throw when the SDK records nothing for reasons outside your input. It logs one of these lines (to logcat on Android, to the device log on iOS) and drops the breadcrumb:
+
+| Line | Cause |
+| --- | --- |
+| `addBreadcrumb dropped: capture is off or the SDK made no crumb` | `captureBreadcrumbs` is off, or the SDK could not create a breadcrumb, for example before `launch`. |
+| `addBreadcrumb dropped: its data is not a JSON object` | `data` could not be read as a JSON object. |
+
+## Levels
+
+The level is passed as a name, and each native SDK stores it on its own scale:
+
+| Name | Android | iOS |
+| --- | --- | --- |
+| `debug` | Debug | Debug |
+| `info` | Info | Info |
+| `warning` | Warning | Warning |
+| `error` | Error | Error |
+| `fatal` | Fatal | **Error**: the iOS scale has no fatal level. |
+
+On iOS, a `fatal` breadcrumb is therefore recorded, and read back by the filter, as `error`. An automatic breadcrumb recorded at the verbose level reaches the filter as `debug`.
+
+## Filtering breadcrumbs
+
+`Bugsee.setBreadcrumbFilter(callback)` installs a filter that sees each breadcrumb before it is recorded, yours and the native SDK's. Return the breadcrumb (changed or not) to keep it, or `null` to drop it:
+
+```ts
+import Bugsee, { type BreadcrumbSnapshot } from '@bugsee/react-native';
+
+Bugsee.setBreadcrumbFilter((crumb: BreadcrumbSnapshot) => {
+  // Drop UI breadcrumbs entirely
+  if (crumb.category === 'ui') {
+    return null;
+  }
+  // Remove e-mail addresses from the message
+  if (crumb.message !== undefined) {
+    return { ...crumb, message: crumb.message.replace(/\S+@\S+/g, '<email>') };
+  }
+  return crumb;
+});
+```
+
+Install the filter **before** `Bugsee.launch`, at the top of your startup code. A breadcrumb filter set before `launch` stays in effect after it, on both platforms, and breadcrumbs recorded before the filter is installed are not filtered.
+
+There is one filter at a time. A later call replaces it, and `setBreadcrumbFilter()` or `setBreadcrumbFilter(null)` removes it, so breadcrumbs are recorded without one. A value that is not a function, `null` or `undefined` throws `TypeError` and leaves the previous filter in place.
+
+The callback is chosen when a breadcrumb arrives, with one exception for your own breadcrumbs: a breadcrumb you passed to `addBreadcrumb` while a filter was installed is answered by that filter, even if you clear or replace the filter on the same turn. A breadcrumb you meant to redact is not recorded unredacted because the filter changed right after you added it.
+
+### The breadcrumb the filter receives
+
+The callback gets a `BreadcrumbSnapshot`. A field the breadcrumb does not have is absent, which is why every field is optional:
+
+| Field | Type | Writable |
+| --- | --- | --- |
+| `category` | `string` | Yes |
+| `level` | `BreadcrumbLevel` | Yes |
+| `message` | `string` | Yes |
+| `type` | `string` | Yes |
+| `data` | object or `null` | Yes |
+| `timestamp` | `number` | No |
+
+### What a filter returns
+
+| Result | Effect |
+| --- | --- |
+| An object with the writable fields | Kept, with those fields set to what you returned. |
+| `null` or `undefined` | Dropped. |
+| A `Promise` | Waited on; its value is treated the same way. |
+| A non-object, an array or a function | Dropped. |
+| An object that leaves out a writable field the snapshot had | Dropped. |
+| The callback throws, or the promise rejects | Dropped. |
+
+A kept result must carry every writable field present in the snapshot (`category`, `level`, `message`, `type`, and `data` when the breadcrumb had data), as an own property and not `undefined`. Leaving one out drops the breadcrumb rather than keeping that field unredacted, so start from a spread of the snapshot, as in the example.
+
+The values must also be valid: the strings must be strings, `level` must be one of the five names, and `data` must be `null` (which clears the data) or a plain object of [accepted values](/sdk/react_native/events-and-traces#accepted-parameter-values). An invalid value drops the breadcrumb.
+
+This check also runs on `data` you return unchanged. A breadcrumb the native SDK recorded with data outside the accepted values (a number of 2<sup>63</sup> or more, for example) is dropped while a filter is installed, even if your filter returns it as it came.
+
+A field the snapshot did not have cannot be added back: it is ignored. `timestamp` is never written back, so you do not need to return it.
+
+### Async filters
+
+Your callback runs asynchronously, and it may return a promise. Capture does not wait for the answer.
+
+Neither platform sets a deadline for breadcrumbs, and the original breadcrumb is never recorded in place of an answer. A callback that never settles means the breadcrumb is not recorded; an answer that arrives late is still applied, and the breadcrumb is recorded then. Make sure your filter always settles: on Android, each unanswered breadcrumb also keeps holding memory for the rest of the session.
+
+### Reloads
+
+A filter is a function in the JavaScript runtime. When the runtime reloads (a development reload, for example), breadcrumbs still waiting for an answer are dropped.
+
+After the reload, **the filter stays on, but nothing in the new runtime answers it**, and neither platform has a deadline. Until your code calls `setBreadcrumbFilter` again, no breadcrumb is recorded, yours or the automatic ones. Call `setBreadcrumbFilter` early in your startup code, or `setBreadcrumbFilter(null)` if the new bundle has no filter.
+
+See [Privacy: Breadcrumbs](/sdk/react_native/privacy/breadcrumbs) for redaction guidance.
+
+## Related pages
+
+- [Privacy: Breadcrumbs](/sdk/react_native/privacy/breadcrumbs): redacting and dropping breadcrumbs.
+- [Custom events & traces](/sdk/react_native/events-and-traces): other signals on the same timeline.
+- [Configuration](/sdk/react_native/configuration): every launch option.
