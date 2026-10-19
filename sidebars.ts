@@ -627,6 +627,11 @@ const sidebars: SidebarsConfig = {
             },
             {
               type: "doc",
+              id: "sdk/react_native/breadcrumbs",
+              label: "Breadcrumbs",
+            },
+            {
+              type: "doc",
               id: "sdk/react_native/events-and-traces",
               label: "Custom events & traces",
             },
