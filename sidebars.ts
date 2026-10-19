@@ -612,6 +612,18 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "category",
+          label: "Data capture",
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              id: "sdk/react_native/user-session-data",
+              label: "User & session data",
+            },
+          ],
+        },
+        {
+          type: "category",
           label: "Previous versions",
           collapsed: true,
           items: [
