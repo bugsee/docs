@@ -643,6 +643,11 @@ const sidebars: SidebarsConfig = {
           ],
         },
         {
+          type: "doc",
+          id: "sdk/react_native/performance",
+          label: "Performance monitoring",
+        },
+        {
           type: "category",
           label: "Previous versions",
           collapsed: true,
