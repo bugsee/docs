@@ -239,6 +239,8 @@
         "avplayer",
         "ABRT",
         "SEGV",
-        "oslog"
+        "oslog",
+        "swipeable",
+        "collapsable"
     ]
 }
