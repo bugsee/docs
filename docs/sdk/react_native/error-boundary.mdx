@@ -1,0 +1,146 @@
+---
+title: "Error boundary"
+description: "Catch render errors in a React component tree with the ErrorBoundary component of Bugsee React Native SDK 7.x, report them to Bugsee, and render a fallback."
+sidebar_position: 5
+slug: "/sdk/react_native/error-boundary"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+`<ErrorBoundary>` is a React [error boundary](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary) that reports what it catches to Bugsee. When a component below it throws while rendering, it reports the error as a handled **error** report, with the React component stack, and renders a fallback in place of the broken tree.
+
+Use it around parts of your app that can fail on their own (a screen, a widget, a list item) so the rest of the app keeps working. Errors that no boundary catches are still reported, as crashes, when your root component is wrapped in `Bugsee.wrap`; see [Render errors](/sdk/react_native/manual/crash-error-reporting#render-errors).
+
+```tsx
+import { Text } from 'react-native';
+import { ErrorBoundary } from '@bugsee/react-native';
+
+export function CartScreen() {
+  return (
+    <ErrorBoundary fallback={<Text>The cart could not be shown.</Text>}>
+      <Cart />
+    </ErrorBoundary>
+  );
+}
+```
+
+`ErrorBoundary` is a named export of `@bugsee/react-native`. It is not a property of the default `Bugsee` export, as it was in 6.x.
+
+## Props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `children` | `ReactNode` | The tree to guard. |
+| `fallback` | `ReactElement` or `(props: ErrorBoundaryFallbackProps) => ReactNode` | What to render after an error. Without it, the boundary renders nothing. |
+| `onError` | `(error: unknown, componentStack: string \| undefined) => void` | Called after each caught error. |
+| `onReset` | `(error: unknown, componentStack: string \| undefined) => void` | Called when `resetError()` runs, before the children render again. |
+| `options` | `ExceptionOptions` | Options for the report, as for [`Bugsee.logException`](/sdk/react_native/manual/crash-error-reporting#options): `{ domain }`. |
+
+The prop types are exported as `ErrorBoundaryProps` and `ErrorBoundaryFallbackProps`.
+
+## Fallback
+
+`fallback` takes two forms.
+
+**An element**, rendered as is:
+
+```tsx
+<ErrorBoundary fallback={<Text>Something went wrong.</Text>}>
+  <Profile />
+</ErrorBoundary>
+```
+
+**A function**, called with an `ErrorBoundaryFallbackProps` object, so the fallback can show the error and offer a retry:
+
+```tsx
+import { Button, Text, View } from 'react-native';
+import { ErrorBoundary, type ErrorBoundaryFallbackProps } from '@bugsee/react-native';
+
+function ProfileFallback({ error, resetError }: ErrorBoundaryFallbackProps) {
+  return (
+    <View>
+      <Text>Profile failed to load: {String(error)}</Text>
+      <Button title="Try again" onPress={resetError} />
+    </View>
+  );
+}
+
+export function ProfileScreen() {
+  return (
+    <ErrorBoundary fallback={(props) => <ProfileFallback {...props} />}>
+      <Profile />
+    </ErrorBoundary>
+  );
+}
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `error` | `unknown` | The value that was thrown. It is not always an `Error`. |
+| `componentStack` | `string \| undefined` | The React component stack of the error. |
+| `resetError` | `() => void` | Clears the error and renders the children again. |
+
+`componentStack` arrives just after the error: the fallback's first render gets `undefined`, and it renders again once React has supplied the stack.
+
+## Resetting
+
+`resetError()` calls `onReset` with the error and component stack, then clears the boundary's state, so `children` render again from scratch. Reset whatever state caused the error first (in `onReset`, or before calling `resetError`); otherwise the children throw again and the fallback comes back.
+
+```tsx
+<ErrorBoundary
+  onReset={() => cartStore.reload()}
+  fallback={({ resetError }) => <Button title="Reload cart" onPress={resetError} />}
+>
+  <Cart />
+</ErrorBoundary>
+```
+
+A new error after a reset is caught and reported again. The same error object is not reported twice; see below.
+
+## What is reported
+
+For each caught error, the boundary:
+
+1. Reports it as a handled **error** report, like [`Bugsee.logException`](/sdk/react_native/manual/crash-error-reporting#reporting-handled-errors). The component stack is attached as the innermost cause of the exception (named `ErrorBoundary Error`). The thrown value itself is not changed: its `cause` is left alone.
+2. Calls `onError(error, componentStack)`.
+
+Details:
+
+- **Once per error.** The boundary shares the SDK's record of reported errors. An error object that was already reported (for example with `logException`) is not reported again, but `onError` is still called.
+- **Bad options do not stop the report.** If `options` fails validation, the boundary logs a `console.warn` (`[Bugsee] ErrorBoundary options rejected; reporting without options`) and reports the error without options, rather than throwing during error handling.
+- **`detect.crash` does not apply.** The boundary reports even when `detectAndReportCrash` (`com.bugsee.option.detect.crash`) is `false`, as `logException` does. That option turns off only the automatic handlers.
+- **Before launch** the report is dropped, as a `logException` call is; the fallback still renders.
+- The report's severity is the error default, `High`, unless you change it; see [Report severity](/sdk/react_native/manual/crash-error-reporting#report-severity).
+
+## What it does not catch
+
+An error boundary catches errors thrown while React renders the components below it, in their lifecycle methods and in their constructors. Like every React error boundary, it does not catch errors thrown:
+
+- in event handlers, such as an `onPress` callback;
+- in asynchronous code: promises, `setTimeout`, `await`ed calls;
+- by the boundary itself, including its `fallback`;
+- outside React rendering.
+
+Those reach Bugsee through the global handlers instead, as crashes or errors; see [What is captured automatically](/sdk/react_native/manual/crash-error-reporting#what-is-captured-automatically). An error thrown by the fallback goes to the next boundary up or, with none, to the `Bugsee.wrap` root reporter, which reports it as a crash.
+
+## Differences from 6.x
+
+| | 6.x (`react-native-bugsee`) | 7.x (`@bugsee/react-native`) |
+| --- | --- | --- |
+| Import | `Bugsee.ErrorBoundary` | `import { ErrorBoundary } from '@bugsee/react-native'` |
+| Children | A node, or a function returning the nodes | A `ReactNode` only. Function-as-children is not supported. |
+| Reset helper passed to a `fallback` function | `resetErrorBoundary` | `resetError` |
+| Component stack | Set as the caught error's `cause` | Attached to the report only; the error is not changed |
+| Report options | none | `options: { domain }` |
+
+`fallback`, `onError` and `onReset` keep their roles. If you passed a function as the boundary's children in 6.x, render its result as an element instead (`<Content />` rather than `{() => <Content />}`), and rename `resetErrorBoundary` to `resetError` in your fallback.
+
+The [6.x page](/sdk/react_native/v6/errorboundary) shows `resetError` in its example, but the 6.x code passes `resetErrorBoundary`; a 6.x fallback that worked used `resetErrorBoundary`.
+
+## Related pages
+
+- [Crash & error reporting](/sdk/react_native/manual/crash-error-reporting): what is reported automatically, and `logException`.
+- [Report handler](/sdk/react_native/report-handler): add labels or attachments to the reports a boundary sends.
+- [Error boundary (6.x)](/sdk/react_native/v6/errorboundary): the previous version of this page.
