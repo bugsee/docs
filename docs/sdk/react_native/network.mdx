@@ -1,0 +1,279 @@
+---
+title: "Network events"
+description: "How Bugsee React Native SDK 7.x records network traffic on iOS and Android, how to add events from other stacks with addNetworkEvent, and how to filter events with setNetworkFilter."
+sidebar_position: 7
+slug: "/sdk/react_native/network"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+Bugsee records the HTTP requests your app makes, with their headers, bodies and response codes, and shows them on the report timeline next to the video and logs. The recording happens in native code, so `fetch` and `XMLHttpRequest` are not patched in JavaScript.
+
+## Automatic capture
+
+React Native sends `fetch` and `XMLHttpRequest` requests through the platform's networking stack (`NSURLSession` on iOS, OkHttp on Android), where the SDK records them.
+
+| Platform | Setup |
+| --- | --- |
+| iOS | None beyond [installation](/sdk/react_native/installation#ios). |
+| Android | The **Bugsee Gradle plugin** must be applied; see [Installation: Android](/sdk/react_native/installation#android). |
+
+:::warning[Android needs the Gradle plugin]
+Without the Bugsee Gradle plugin, `fetch` and `XMLHttpRequest` requests are **not recorded on Android**: the plugin is what lets the SDK record OkHttp traffic. The [Expo config plugin](/sdk/react_native/expo) applies the Gradle plugin for you.
+:::
+
+Requests that native code makes through the same stacks (`NSURLSession` on iOS, OkHttp on Android) are recorded the same way. Traffic from any other stack is not recorded; add it yourself with [`addNetworkEvent`](#recording-custom-network-events).
+
+Network events keep recording during a [blackout](/sdk/react_native/lifecycle#blackout).
+
+### WebSocket traffic
+
+The package has no JavaScript patch for `WebSocket`. Whether a React Native `WebSocket` is recorded:
+
+- **iOS**: yes, as WebSocket events (the connection, its messages and its failures), which your [network filter](#filtering-network-events) sees with `type: 'websocket'`, while `com.bugsee.option.capture.network` and the iOS-only `com.bugsee.option.capture.websocket` are on. Both are on by default; set `com.bugsee.option.capture.websocket` to `false` to leave WebSocket traffic out. This has not been verified on a device in this beta.
+- **Android**: not verified in this beta. There is no `capture.websocket` option on Android.
+
+## Capture options
+
+These launch options control network capture. Set them on the options object or in a plain map; see [Configuration](/sdk/react_native/configuration#other-shared-keys) for the full tables.
+
+| Option | Key | Default | Description |
+| --- | --- | --- | --- |
+| `captureNetwork` | `com.bugsee.option.capture.network` | `true` | Record network requests and responses. |
+| (no accessor) | `com.bugsee.option.capture.network.body-size-limit` | `20480` | Largest request or response body captured, in bytes. |
+| (no accessor) | `com.bugsee.option.capture.network.body-without-type` | `false` | Also keep bodies that declare no content type. |
+| (no accessor) | `com.bugsee.option.capture.network.on-launch` | `false` | Start network capture during `launch` instead of when capture starts, so startup requests are not missed. |
+| (no accessor) | `com.bugsee.option.capture.network.default-sanitizer` | `true` | Redact known sensitive keys in URLs, headers and JSON bodies. How it combines with a filter differs per platform; see [Filters and the built-in redaction](#filters-and-the-built-in-redaction). |
+| (no accessor) | `com.bugsee.option.detect.http-errors` | `false` | Turn HTTP 5xx responses into error reports. |
+
+Both native SDKs register these defaults. Read the values in effect with [`Bugsee.getLaunchOptions()`](/sdk/react_native/configuration#reading-the-effective-options).
+
+```ts
+import Bugsee, { createDefaultLaunchOptions } from '@bugsee/react-native';
+
+const options = createDefaultLaunchOptions();
+options.captureNetwork = true;
+options.setCustomOption('com.bugsee.option.capture.network.body-size-limit', 10240);
+options.setCustomOption('com.bugsee.option.capture.network.on-launch', true);
+
+Bugsee.launch('<your app token>', options);
+```
+
+## Filtering network events
+
+`Bugsee.setNetworkFilter(callback)` installs a filter that sees each network event before it is recorded. Return the event (changed or not) to keep it, or `null` to drop it:
+
+```ts
+import Bugsee, { type NetworkFilterEvent } from '@bugsee/react-native';
+
+function redactAuthorization(headers: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [name, value] of Object.entries(headers)) {
+    out[name] = name.toLowerCase() === 'authorization' ? '***' : value;
+  }
+  return out;
+}
+
+Bugsee.setNetworkFilter((event: NetworkFilterEvent) => {
+  // Drop health checks entirely
+  if (event.url?.includes('/status/')) {
+    return null;
+  }
+  // Keep everything else, with the Authorization header masked
+  return {
+    ...event,
+    headers: event.headers ? redactAuthorization(event.headers) : event.headers,
+  };
+});
+```
+
+The filter applies to every network event the native SDK records: the automatically captured traffic and the events you add with `addNetworkEvent`.
+
+Install the filter **before** `Bugsee.launch`, at the top of your startup code, so the first requests are filtered too. A network filter set before `launch` stays in effect after it, on both platforms. Traffic recorded before the filter is installed is not filtered.
+
+There is one filter at a time. A later call replaces it, and `setNetworkFilter()` or `setNetworkFilter(null)` removes it, so events are recorded without one. A value that is not a function, `null` or `undefined` throws `TypeError` and leaves the previous filter in place. The callback is chosen when an event arrives, so replacing it while an event is being filtered changes the next event, not that one.
+
+:::tip
+Start from a spread of the event you received (`{ ...event, url: ... }`), as in the example. A result that leaves out a field you were sent drops the event; see [What a filter returns](#what-a-filter-returns).
+:::
+
+### The event the filter receives
+
+The callback gets a `NetworkFilterEvent`, a snapshot of the native event:
+
+| Field | Type | Writable | Notes |
+| --- | --- | --- | --- |
+| `id` | `string \| null` | No | The request's id. The events of one request share it. |
+| `url` | `string \| null` | Yes | |
+| `method` | `string \| null` | No | |
+| `headers` | `Record<string, string> \| null` | Yes | |
+| `body` | `string \| null` | Yes | The body as text. On iOS, a non-empty body that is not valid UTF-8 is left out of the snapshot (the key is missing). |
+| `mechanism` | `string \| null` | No | What recorded the event. Events from `addNetworkEvent` say `react-native`. |
+| `type` | `string \| null` | No | The stage, as the native SDK names it. Android: `before`, `complete`, `redirect`, `error`, `abort`, `timing` or `websocket`. iOS: `websocket`, `udpsocket`, or the HTTP event type (`before`, `complete`, `cancel`, `error`). |
+| `websocketEvent` | `string \| null` | No | The WebSocket event kind, for a WebSocket event; otherwise `null`. |
+| `responseCode` | `number` | No | |
+| `errorDescription` | `string \| null` | Yes | Android only. |
+| `errorShortMessage` | `string \| null` | Yes | Android only. |
+| `statusText` | `string \| null` | Yes | Android only. |
+| `override` | `boolean` | No | Android only; see below. |
+| `redirectedFromURL` | `string \| null` | Yes | iOS only. |
+| `error` | `object \| null` | Yes | iOS only. |
+
+Changes to a field marked "No" are ignored: the native SDK writes back only the writable fields. The rest of the event, including its timestamp and stage, stays as it was.
+
+On Android, one request can reach the filter as more than one event with the same `id` and `type`: a later event that adds a part known only afterward, typically the request body, has `override: true`. Filter it like any other event.
+
+### What a filter returns
+
+| Result | Effect |
+| --- | --- |
+| The event object (changed or not) | Kept, with the writable fields set to what you returned. |
+| `null` or `undefined` | Dropped. |
+| A `Promise` | Waited on; its value is treated the same way. |
+| A string, an array, a function, or any other non-object | Dropped. |
+| An object that leaves out a writable field the snapshot had | Dropped. |
+| A writable field with the wrong type (a `url` or `body` that is not a string or `null`, a header value that is not a string, an iOS `error` that is not an object or `null`) | Dropped. |
+| The callback throws, or the promise rejects | Dropped. |
+
+A kept result must carry `url`, and every other writable field that was present in the snapshot, **including fields whose value was `null`**. Leaving one out, or setting it to `undefined`, drops the event rather than keeping it with that field unredacted. To clear a field, set it to `null`.
+
+A field the snapshot did not have stays absent. Setting it to `null` does not clear anything: `{ ...event, body: event.body ?? null }` leaves an event whose snapshot had no body unchanged.
+
+### Async filters and deadlines
+
+Your callback runs asynchronously, and it may return a promise, for example to read a setting first. Capture does not wait for the answer:
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+// Your own lookup, for example from storage
+async function blockedHosts(): Promise<string[]> {
+  return ['tracker.example.com'];
+}
+
+Bugsee.setNetworkFilter(async (event) => {
+  const hosts = await blockedHosts();
+  return hosts.some((host) => event.url?.includes(host)) ? null : event;
+});
+```
+
+The SDK never records the original event in place of an answer. When a filter is slow or never answers:
+
+- **Android**: an event the filter has not answered within about **10 seconds** is dropped. A later answer has no effect.
+- **iOS**: there is no deadline. An answer that arrives late is still applied, and the event is recorded then.
+
+An event that has no URL is dropped before your filter sees it on Android, and reaches your filter with `url: null` on iOS. On both platforms, every event is dropped while no JavaScript runtime is there to answer the filter.
+
+Keep the filter fast: on Android, every event that takes longer than the deadline is lost from the report. On iOS there is no deadline: a slow filter delays the event, and an event the filter never answers is never recorded.
+
+### Reloads
+
+A filter is a function in the JavaScript runtime. When the runtime reloads (a development reload, for example), events still waiting for an answer are dropped.
+
+After the reload, **the filter stays on, but nothing in the new runtime answers it.** Until your code calls `setNetworkFilter` again, every network event is lost: Android drops it after the deadline, and iOS never records it. Call `setNetworkFilter` early in your startup code, or `setNetworkFilter(null)` if the new bundle has no filter.
+
+### Filters and the built-in redaction
+
+With `com.bugsee.option.capture.network.default-sanitizer` on (the default), the native SDKs redact known sensitive values, such as credentials in headers, URL parameters and JSON bodies. Installing a filter changes that differently on each platform:
+
+| Platform | With a filter installed |
+| --- | --- |
+| Android | The built-in redaction runs **before** your filter, so the event you receive is already redacted. Turn the option off to receive the raw event. |
+| iOS | Your filter **replaces** the built-in redaction. The event you receive is not redacted, and your filter must remove what you do not want sent. |
+
+See [Privacy: Network](/sdk/react_native/privacy/network) for redaction guidance.
+
+## Recording custom network events
+
+`Bugsee.addNetworkEvent(event)` records a network exchange the SDK could not see, such as traffic from a native library with its own HTTP stack. The event appears in the report next to the captured traffic.
+
+A request usually produces two events with the same `id`: one when it starts and one when it completes.
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+const id = `orders-${Date.now()}`;
+
+Bugsee.addNetworkEvent({
+  id,
+  stage: 'started',
+  url: 'https://api.example.com/orders',
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: '{"sku":"A-100"}',
+});
+
+// ... later, when the response arrives
+Bugsee.addNetworkEvent({
+  id,
+  stage: 'completed',
+  url: 'https://api.example.com/orders',
+  method: 'POST',
+  responseCode: 201,
+  body: '{"order":"1042"}',
+});
+```
+
+The event is timestamped when you call `addNetworkEvent`, so call it when the stage actually happens. There is no timestamp field.
+
+Every added event goes through your [network filter](#filtering-network-events), so an installed filter redacts it the same way as captured traffic. `addNetworkEvent` itself does not call the filter.
+
+### Event fields
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `url` | `string` | Yes | |
+| `method` | `string` | Yes | The HTTP method, such as `GET`. |
+| `stage` | `string` | No | See [Stages](#stages). Defaults to `completed`. |
+| `id` | `string` | No | Ties the events of one request together. On iOS, an empty or missing id gets a generated one. |
+| `headers` | `Record<string, string> \| null` | No | Every value must be a string. |
+| `body` | `string \| null` | No | |
+| `responseCode` | `number` | No | A finite number; pass an integer. It is stored as an integer, dropping any fraction. |
+| `statusText` | `string \| null` | No | Stored on Android. iOS ignores it. |
+| `errorDescription` | `string \| null` | No | Stored on Android. iOS ignores it. |
+| `errorShortMessage` | `string \| null` | No | Stored on Android. iOS ignores it. |
+| `redirectedFromURL` | `string \| null` | No | Stored on iOS. Android ignores it. |
+| `error` | `object \| null` | No | Stored on iOS. Android ignores it. |
+
+A field the platform ignores does not stop the event from being recorded.
+
+### Stages
+
+| `stage` | Native stage | Also accepted |
+| --- | --- | --- |
+| `started` | Request started | `before` |
+| `completed` | Request completed (the default) | `complete` |
+| `redirect` | Redirect | |
+| `error` | Request failed | |
+| `aborted` | Request aborted | `abort`, `cancel` |
+| `timings` | Timings received | `timing` |
+| `websocket` | WebSocket | |
+
+On iOS, a `redirect` or `timings` event is recorded as a completed request, and a `websocket` event as a WebSocket message.
+
+### Invalid input
+
+`addNetworkEvent` checks its argument before anything is recorded, and throws `TypeError` (recording nothing) for:
+
+- an argument that is not a plain object (including `null` and arrays),
+- a `url` or `method` that is not a string,
+- a `stage` that is not one of the names above,
+- an `id`, `body`, `statusText`, `errorDescription`, `errorShortMessage` or `redirectedFromURL` that is not a string or `null`,
+- a `responseCode` that is not a finite number,
+- `headers` that is not an object or `null`, or a header value that is not a string,
+- an `error` that is not an object or `null`.
+
+### When nothing is recorded
+
+`addNetworkEvent` returns nothing and does not report whether the event was recorded. When no event can be made from your input, it is dropped and `addNetworkEvent dropped: the SDK made no event` is logged: to logcat on Android, to the device log on iOS. An event added before `launch` is ignored on both platforms. On iOS, so is one added while the status is still `Launching`, right after `launch` resolves; see [A resolved launch is not live capture](/sdk/react_native/lifecycle#a-resolved-launch-is-not-live-capture).
+
+Record custom events after `launch`, and on iOS once the status is `Launched`.
+
+## Related pages
+
+- [Privacy: Network](/sdk/react_native/privacy/network): redacting headers, URLs and bodies.
+- [Configuration](/sdk/react_native/configuration): every launch option.
+- [Console logs](/sdk/react_native/logs): the matching log filter.
+- [Installation: Android](/sdk/react_native/installation#android): the Bugsee Gradle plugin.
