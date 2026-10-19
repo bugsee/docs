@@ -558,6 +558,18 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "category",
+          label: "Installation & Invocation",
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              id: "sdk/react_native/installation",
+              label: "Installation",
+            },
+          ],
+        },
+        {
+          type: "category",
           label: "Previous versions",
           collapsed: true,
           items: [
