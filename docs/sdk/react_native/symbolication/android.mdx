@@ -1,0 +1,219 @@
+---
+title: "Symbolication: Android"
+description: "Setting up a bare React Native 7.x Android app to upload JavaScript source maps, the R8 mapping and native symbols for each Release build, and fixing what goes wrong."
+sidebar_position: 2
+slug: "/sdk/react_native/symbolication/android"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+An Android Release build needs three uploads for readable reports: the JavaScript source map, the R8/ProGuard mapping, and the native symbols. Autolinking cannot set any of them up, because they are build edits, not dependencies. [Symbolication overview](/sdk/react_native/symbolication/overview) explains what each one is for.
+
+This page is for a bare app, where you own `android/`. With Expo prebuild, the [config plugin](/sdk/react_native/expo) writes the same edits on each prebuild; see [Expo prebuild](#expo-prebuild).
+
+| What | Edit | Needs the Bugsee Gradle plugin |
+| --- | --- | --- |
+| JavaScript source map | `react.hermesCommand` and `apply from: …/bugsee-sourcemaps.gradle` in `android/app/build.gradle` | No |
+| R8/ProGuard mapping | Apply `com.bugsee.android.gradle` | Yes |
+| Native symbols | The plugin, `plugin.ndk.enabled=true`, and the NDK module | Yes |
+
+All three read the app token from `android/bugsee.properties`.
+
+## 1. JavaScript source maps
+
+Release builds give the Hermes bundle a debug ID and upload its composed source map, so JavaScript frames resolve. This needs two edits in `android/app/build.gradle` and no Gradle plugin.
+
+Add these lines below the `apply plugin:` lines at the top of the file (the `react { }` block needs `com.facebook.react` applied first, and section 2 uses `bugseeDir` too). Resolve the package through node, as React Native's own template resolves `react-native`, so a hoisted or nested install works too:
+
+```groovy title="android/app/build.gradle"
+def bugseeDir = new File(["node", "--print", "require.resolve('@bugsee/react-native/package.json')"]
+    .execute(null, rootDir).text.trim()).getParentFile()
+
+react {
+    // Keeps the JS aside before hermesc compiles it, so the debug ID can reach the bytecode.
+    // Keep it on one line: tools that apply this snippet read it as one.
+    hermesCommand = new File(new File(bugseeDir, "scripts"), System.getProperty("os.name").startsWith("Windows") ? "hermesc-preserve-js.cmd" : "hermesc-preserve-js.sh").absolutePath
+}
+
+// At the end of the file. Applying it twice is harmless.
+apply from: new File(new File(bugseeDir, "scripts"), "bugsee-sourcemaps.gradle")
+```
+
+What the two edits do:
+
+- **`hermesCommand`** runs `hermesc` through the package's wrapper, which keeps a copy of the JavaScript before `hermesc` compiles it. React Native runs this command through `cmd` on Windows, which cannot run a shell script, so Windows gets the `.cmd` launcher and macOS and Linux the `.sh`. The operating system is checked when Gradle configures the build, so one `build.gradle` works on all three. Both launchers run `node`, which must be on the `PATH`, as React Native's own bundling already requires.
+- **`bugsee-sourcemaps.gradle`** hooks every `createBundle<Variant>JsAndAssets` task. After the bundle is built, it injects the debug ID into the composed map and the kept JavaScript, compiles that JavaScript to bytecode again so the ID is in what ships, and uploads the map with `@bugsee/cli`.
+
+If Hermes compiles a bundle without going through the wrapper, the bundle task fails instead of shipping a Release without a debug ID. See [Troubleshooting](#troubleshooting).
+
+:::caution[7.0.0-beta1 and 7.0.0-beta2: scripts without the executable bit]
+In 7.0.0-beta1 and 7.0.0-beta2 the package's shell scripts are published without the executable bit (mode 644). React Native runs `hermesCommand` directly, so on macOS and Linux the Release bundle task fails with "Permission denied" on `hermesc-preserve-js.sh`. Windows, which uses the `.cmd` launcher, is not affected. Expo apps are affected too, since the config plugin writes the same `hermesCommand`. Make the scripts executable after every install, for example from a `postinstall` script in your app's `package.json`:
+
+```json title="package.json"
+{
+  "scripts": {
+    "postinstall": "chmod +x node_modules/@bugsee/react-native/scripts/*.sh"
+  }
+}
+```
+
+Adjust the path if the package is installed elsewhere, for example hoisted to a monorepo root. A CI job that installs with `--ignore-scripts` needs the same `chmod` as its own step.
+:::
+
+### Upload settings
+
+- **Token.** `app_token` in `android/bugsee.properties` (next to `android/build.gradle`), then the `BUGSEE_APP_TOKEN` environment variable, then `BUGSEE_TOKEN_ANDROID`. Without a real token the upload is skipped with one line in the build log.
+- **Version and build number.** The variant's own `versionName` and `versionCode`, flavors included. Without them the upload is skipped.
+- **Endpoint.** `plugin.endpoint` in `android/bugsee.properties`, then `BUGSEE_ENDPOINT`. Unset, the map goes to Bugsee's production API.
+- **Turning it off.** Pass `-PbugseeUploadSourcemaps=false`, set `bugseeUploadSourcemaps=false` in `android/gradle.properties`, or export `BUGSEE_UPLOAD_SOURCEMAPS=false`. The debug ID is still injected; only the upload is skipped.
+- **Failures.** A failed upload prints a warning and the build continues.
+
+React Native's default `hermesFlags` include `-output-source-map`. If you set your own flags, keep it: without it React Native composes no source map, and the hook injects no debug ID and uploads nothing.
+
+:::note
+The hook has not yet been verified with Gradle's configuration cache.
+:::
+
+## 2. The Bugsee Gradle plugin
+
+The Bugsee Gradle plugin (`com.bugsee.android.gradle`) uploads the R8/ProGuard mapping, the native symbols and the build info of each Release build. It is a Gradle plugin, so autolinking cannot add it.
+
+It is also what records `fetch` and `XMLHttpRequest` on Android: React Native sends them through OkHttp, and the plugin is what lets the SDK record OkHttp traffic. Without the plugin, those requests are not recorded on Android; see [Network events](/sdk/react_native/network).
+
+Use the plugin version the package is built against: `android.gradlePlugin` in `node_modules/@bugsee/react-native/native-versions.json`, which is **4.0.8** for `7.0.0-beta2`. Its requirements (Android Gradle Plugin and Gradle versions) are on [Gradle plugin requirements](/sdk/android/gradle-plugin/requirements).
+
+**`android/settings.gradle`**: the plugin is published to Maven Central, which Gradle does not search for plugins unless told to:
+
+```groovy title="android/settings.gradle"
+pluginManagement {
+    includeBuild("../node_modules/@react-native/gradle-plugin")
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+    }
+}
+```
+
+**`android/build.gradle`**: declare the plugin, above `apply plugin: "com.facebook.react.rootproject"`. Declare it here with `apply false` and apply it in the app module: applied to the root project, it fails the configuration, because it hangs its tasks off an Android variant.
+
+```groovy title="android/build.gradle"
+plugins {
+    id 'com.bugsee.android.gradle' version '4.0.8' apply false
+}
+```
+
+**`android/app/build.gradle`**: apply it, and add the NDK module at the SDK version the package pins:
+
+```groovy title="android/app/build.gradle"
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+apply plugin: "com.bugsee.android.gradle"
+
+// bugseeDir as in "JavaScript source maps" above.
+def bugseeVersions = new groovy.json.JsonSlurper().parse(new File(bugseeDir, "native-versions.json"))
+
+dependencies {
+    implementation "com.bugsee:bugsee-android-ndk:${bugseeVersions.android.sdk}"
+}
+```
+
+The package already depends on `bugsee-android-ndk`, but not as a direct dependency of your `:app` module. With `plugin.ndk.enabled=true`, the Gradle plugin adds the NDK module itself, on its own version range. Declaring it at the package's pin keeps it at the SDK version the package was built against.
+
+**`android/bugsee.properties`**, next to `android/build.gradle` (the root project, not `android/app/`):
+
+```properties title="android/bugsee.properties"
+app_token=<your Android app token>
+plugin.ndk.enabled=true
+```
+
+The token key is the unprefixed `app_token`, not `plugin.appToken`. Keep this file out of version control if the token is private, and write it from your CI secrets. Every other plugin setting, and its DSL form, is on [Gradle plugin configuration](/sdk/android/gradle-plugin/configuration).
+
+There is a mapping to upload only when R8 minifies the build (`minifyEnabled true`). React Native's app template ships with it off (`enableProguardInReleaseBuilds = false`); then your Java and Kotlin frames are not renamed and need no mapping, while JavaScript and native frames still need their uploads.
+
+The plugin's upload tasks, `uploadBugsee<Variant>Mapping`, `uploadBugsee<Variant>Native` and the build-info tasks, finalize `assemble<Variant>` and `bundle<Variant>`. [Gradle plugin builds & uploads](/sdk/android/gradle-plugin/builds-upload) lists them, with what build info sends.
+
+## 3. Native symbols
+
+With `plugin.ndk.enabled=true`, each Release build's `uploadBugsee<Variant>Native` task uploads native symbols. Gradle plugin 4.0.8 reads them from the **unstripped** libraries that the Android Gradle Plugin leaves in `build/intermediates/merged_native_libs/<variant>`, keyed by GNU build ID. That makes them independent of `ndk.debugSymbolLevel`:
+
+- Every library that still has its debug info is uploaded with it, so crash frames get function names and `file:line`. That covers your own native code, and React Native's `libreactnative.so`, which the Maven `react-android` artifact ships with full debug info.
+- Libraries that ship stripped (Hermes's `libhermesvm.so` from Maven, the Bugsee SDK's own) get their symbol table: function names only.
+- An unchanged prebuilt library, such as `libreactnative.so` or `libc++_shared.so`, has the same build ID in every release, and the server keeps one copy.
+- The symbols are a build artifact: nothing is added to the APK or AAB.
+
+So `ndk { debugSymbolLevel … }` is your own choice, for what Google Play receives. Bugsee does not need it.
+
+The plugin uses its own copy of the Bugsee CLI. If you pin that CLI yourself (`plugin.cliPath` or `plugin.cliVersion`), use 0.8.1 or later: older CLIs do not read `merged_native_libs`, and the plugin then falls back to the Android Gradle Plugin's `native-debug-symbols.zip`, which depends on `debugSymbolLevel`.
+
+Native crash **reporting** is a separate matter from symbol upload: the NDK module detects the crash, the upload makes it readable. The package brings in the NDK module either way.
+
+## Release build checklist
+
+Before you ship, check each of these in `android/`:
+
+- [ ] `android/app/build.gradle` sets `react.hermesCommand` to the package's `hermesc-preserve-js` launcher, on one line.
+- [ ] `android/app/build.gradle` ends with `apply from: …/bugsee-sourcemaps.gradle`.
+- [ ] `android/settings.gradle` lists `mavenCentral()` in `pluginManagement.repositories`.
+- [ ] `android/build.gradle` declares `com.bugsee.android.gradle` at the version in `native-versions.json`, with `apply false`.
+- [ ] `android/app/build.gradle` applies `com.bugsee.android.gradle` and declares `bugsee-android-ndk` at `android.sdk` from `native-versions.json`.
+- [ ] `android/bugsee.properties` has your Android app token in `app_token` and `plugin.ndk.enabled=true`, or your CI writes it.
+- [ ] The variant has a `versionName` and a `versionCode`.
+- [ ] A Release build logs `bugsee: uploaded source map <debug id>`, and runs `uploadBugseeReleaseNative` (and `uploadBugseeReleaseMapping` when R8 is on).
+
+Then trigger a test crash in the Release build and check the report's frames; see [Check that the uploads happened](/sdk/react_native/symbolication/overview#check-that-the-uploads-happened).
+
+## Turning uploads off
+
+- **Source maps**: `-PbugseeUploadSourcemaps=false`, `bugseeUploadSourcemaps=false` in `android/gradle.properties`, or `BUGSEE_UPLOAD_SOURCEMAPS=false`.
+- **Mapping, native symbols and build info**: native symbols follow `plugin.ndk.enabled`, but the Gradle plugin 4.0.8 has no switch for its mapping upload. The Expo config plugin's `uploadSymbols: false` turns all of the plugin's upload tasks off with this line in `android/app/build.gradle`, which a bare app can use too:
+
+  ```groovy title="android/app/build.gradle"
+  tasks.matching { it.name.startsWith('uploadBugsee') }.configureEach { enabled = false }
+  ```
+
+## Expo prebuild
+
+With the [config plugin](/sdk/react_native/expo), `expo prebuild` writes everything on this page: `mavenCentral()` in `settings.gradle`, the plugin declaration and its application, the `hermesCommand`, the `bugsee-sourcemaps.gradle` line, the NDK dependency, and `android/bugsee.properties` with your token and `plugin.ndk.enabled=true`. Its `uploadSourcemaps`, `uploadSymbols`, `nativeCrashReporting` and `gradlePluginVersion` options control them; see [Plugin options](/sdk/react_native/expo#plugin-options).
+
+The config plugin edits Groovy files only. While any Kotlin DSL file it would edit (`settings.gradle.kts`, `build.gradle.kts` or the app `build.gradle.kts`) exists, it refuses every prebuild, even after you have made its edits by hand. With Kotlin DSL files, remove `@bugsee/react-native` from `plugins` in `app.json` and make every edit by hand: the ones on this page, in Kotlin syntax, and the iOS ones on [Symbolication: iOS](/sdk/react_native/symbolication/ios), since removing the plugin drops those too. See [Limits](/sdk/react_native/expo#limits).
+
+A `hermesCommand` that an earlier prebuild wrote (the `.sh` launcher on every operating system) is recognized and replaced by the per-OS one. A `hermesCommand` of your own that already names `hermesc-preserve-js` is left as it is.
+
+## Troubleshooting
+
+**The bundle task fails with "compiled the bundle with Hermes, but hermesc did not run through the preserve wrapper".** `bugsee-sourcemaps.gradle` is applied, but `react.hermesCommand` does not point at the package's launcher, so the bundle would ship without a debug ID. Set `hermesCommand` as in [JavaScript source maps](#1-javascript-source-maps).
+
+**On macOS or Linux, the bundle task fails with "Permission denied" on `hermesc-preserve-js.sh`.** The scripts of 7.0.0-beta1 and 7.0.0-beta2 are published without the executable bit. Run `chmod +x node_modules/@bugsee/react-native/scripts/*.sh`, ideally from a `postinstall` script; see the caution in [JavaScript source maps](#1-javascript-source-maps).
+
+**On Windows, the bundle task fails with "would run hermesc through … a shell script".** Your `hermesCommand` names `hermesc-preserve-js.sh`, which earlier instructions gave for every OS. `cmd` cannot run it. Use the per-OS line above, which picks `hermesc-preserve-js.cmd` on Windows.
+
+**On Windows, with a project path that contains spaces or parentheses.** React Native runs `hermesCommand` through `cmd /c`, which cuts a path like `C:\Program Files (x86)\…`. On Windows the hook then gives the launcher to React Native relative to the project root, as React Native gives its own paths. A long project path can still pass Windows' 260-character limit in React Native's own native build, which is unrelated to Bugsee.
+
+**`bugsee: source map upload skipped: no app token is configured`** (or `the app token is the placeholder`). Put your Android app token in `app_token` in `android/bugsee.properties`, or export `BUGSEE_APP_TOKEN` for the build.
+
+**`bugsee: source map upload skipped: the app version or build number is unknown`.** The variant has no `versionName` or `versionCode`. Set both in `defaultConfig` or the flavor.
+
+**`bugsee: hermesFlags has no -output-source-map …`.** Your `react { hermesFlags }` leaves out `-output-source-map`. Add it back.
+
+**`bugsee: source map upload failed (@bugsee/cli is not installed)`.** The package's `@bugsee/cli` dependency, or its platform binary, is missing from `node_modules`. Its binary comes from an optional dependency; installs that skip optional dependencies, or a registry mirror that lacks `@bugsee/cli-<platform>`, leave it out. Under pnpm, see [pnpm](/sdk/react_native/installation#pnpm).
+
+**Gradle cannot find the plugin `com.bugsee.android.gradle`.** `pluginManagement.repositories` in `android/settings.gradle` lacks `mavenCentral()`.
+
+**Configuration fails with "Must apply 'com.android.application' or 'com.android.library' first!".** The plugin is applied to the root project. Declare it in `android/build.gradle` with `apply false`, and apply it in `android/app/build.gradle`.
+
+**Native frames show function names but no file and line.** The library was shipped stripped, such as `libhermesvm.so` from Maven; only its symbol table can be uploaded. Your own libraries keep their debug info in `merged_native_libs` and get file and line.
+
+**JavaScript frames stay minified though the upload succeeded.** Check that the report came from the same build: the debug ID in the build log identifies the bundle. A report from a debug build points at Metro's bundle, which is never uploaded.
+
+**Android reports have no `fetch` or XHR network events.** The Bugsee Gradle plugin is not applied to `android/app`. See [The Bugsee Gradle plugin](#2-the-bugsee-gradle-plugin).
+
+## Related pages
+
+- [Symbolication overview](/sdk/react_native/symbolication/overview): what each upload is for, tokens and verification.
+- [Symbolication: iOS](/sdk/react_native/symbolication/ios): the iOS side.
+- [Expo](/sdk/react_native/expo): the config plugin that writes these edits.
+- [Gradle plugin overview](/sdk/android/gradle-plugin): the Bugsee Gradle plugin in depth.

@@ -714,6 +714,11 @@ const sidebars: SidebarsConfig = {
               id: "sdk/react_native/symbolication/overview",
               label: "Overview",
             },
+            {
+              type: "doc",
+              id: "sdk/react_native/symbolication/android",
+              label: "Android",
+            },
           ],
         },
         {
