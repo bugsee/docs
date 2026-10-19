@@ -241,6 +241,9 @@
         "SEGV",
         "oslog",
         "swipeable",
-        "collapsable"
+        "collapsable",
+        "RGBA",
+        "RRGGBB",
+        "RRGGBBAA"
     ]
 }

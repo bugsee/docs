@@ -686,6 +686,11 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "sdk/react_native/feedback",
+          label: "Feedback",
+        },
+        {
+          type: "doc",
           id: "sdk/react_native/performance",
           label: "Performance monitoring",
         },
