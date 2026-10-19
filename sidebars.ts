@@ -706,6 +706,18 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "category",
+          label: "Symbolication",
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              id: "sdk/react_native/symbolication/overview",
+              label: "Overview",
+            },
+          ],
+        },
+        {
+          type: "category",
           label: "Previous versions",
           collapsed: true,
           items: [
