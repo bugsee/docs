@@ -2,12 +2,16 @@
 title: "Privacy and Network traffic"
 description: "Disable or filter captured network requests and responses in React Native to strip sensitive data before it is recorded by Bugsee."
 sidebar_position: 2
-slug: "/sdk/react_native/privacy/network"
+slug: "/sdk/react_native/v6/privacy/network"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee React Native SDK **6.x** (`react-native-bugsee`), the current stable release. The new **7.x** SDK (`@bugsee/react-native`) is in beta: see [Migrating from 6.x to 7.x](/sdk/react_native/migration) to evaluate it, or the [7.x overview](/sdk/react_native/overview) to start a new integration.
+:::
 
 ## Disabling network traffic collection
 
-Network traffic collection can be disabled completely by providing corresponding launch flags. Refer to [configuration](/sdk/react_native/configuration/) and look for **monitorNetwork** launch option for more info.
+Network traffic collection can be disabled completely by providing corresponding launch flags. Refer to [configuration](/sdk/react_native/v6/configuration/) and look for **monitorNetwork** launch option for more info.
 
 
 ## Sanitizing data

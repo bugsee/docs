@@ -2,12 +2,16 @@
 title: "Privacy and console logs"
 description: "Disable or sanitize console log collection in React Native to prevent personally identifiable data from being included in Bugsee reports."
 sidebar_position: 3
-slug: "/sdk/react_native/privacy/logs"
+slug: "/sdk/react_native/v6/privacy/logs"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee React Native SDK **6.x** (`react-native-bugsee`), the current stable release. The new **7.x** SDK (`@bugsee/react-native`) is in beta: see [Migrating from 6.x to 7.x](/sdk/react_native/migration) to evaluate it, or the [7.x overview](/sdk/react_native/overview) to start a new integration.
+:::
 
 ## Disabling log collection
 
-Console log collection can be disabled completely by providing corresponding launch flags. Refer to [configuration](/sdk/react_native/configuration/) and look for **captureLogs** launch option for more info.
+Console log collection can be disabled completely by providing corresponding launch flags. Refer to [configuration](/sdk/react_native/v6/configuration/) and look for **captureLogs** launch option for more info.
 
 ## Sanitizing console logs
 

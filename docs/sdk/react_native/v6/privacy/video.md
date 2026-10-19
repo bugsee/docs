@@ -2,8 +2,12 @@
 title: "Privacy and video"
 description: "Pause screen recording, mark UI components as protected, and define secure rectangles to hide sensitive content from Bugsee video in React Native."
 sidebar_position: 1
-slug: "/sdk/react_native/privacy/video"
+slug: "/sdk/react_native/v6/privacy/video"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee React Native SDK **6.x** (`react-native-bugsee`), the current stable release. The new **7.x** SDK (`@bugsee/react-native`) is in beta: see [Migrating from 6.x to 7.x](/sdk/react_native/migration) to evaluate it, or the [7.x overview](/sdk/react_native/overview) to start a new integration.
+:::
 
 # Going dark
 

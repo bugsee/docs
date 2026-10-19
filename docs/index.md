@@ -12,7 +12,7 @@ Using Bugsee on mobile devices requires installation of Bugsee lightweight SDK:
 * [Installing iOS SDK](/sdk/ios/installation/)
 * [Installing Android SDK](/sdk/android/installation/)
 * [Installing Cordova SDK](/sdk/cordova/installation/)
-* [Installing React Native SDK](/sdk/react_native/installation/)
+* [Installing React Native SDK](/sdk/react_native/v6/installation/)
 * [Installing Flutter SDK](/sdk/flutter/installation/)
 * [Installing Unity SDK](/sdk/unity/installation/)
 * [Installing KMP SDK (Beta)](/sdk/kmp/installation/)
@@ -111,7 +111,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
   		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   		<td><a href="/sdk/android/network/">View</a></td>
   		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
-  		<td><a href="/sdk/react_native/network/">View</a></td>
+  		<td><a href="/sdk/react_native/v6/network/">View</a></td>
 		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   		<td><a href="/sdk/dotnet/network/">View</a></td>
@@ -133,7 +133,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
   		<td><a href="/sdk/ios/privacy/video/">View</a></td>
   		<td><a href="/sdk/android/privacy/video/">View</a></td>
   		<td><a href="/sdk/cordova/privacy/video/">View</a></td>
-  		<td><a href="/sdk/react_native/privacy/video/">View</a></td>
+  		<td><a href="/sdk/react_native/v6/privacy/video/">View</a></td>
 		<td><a href="/sdk/flutter/privacy/video/">View</a></td>
   		<td><a href="/sdk/unity/privacy/video/">View</a></td>
 		<td><a href="/sdk/dotnet/privacy/video/">View</a></td>
@@ -144,7 +144,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
   		<td><a href="/sdk/ios/symbolication/">View</a></td>
   		<td><a href="/sdk/android/issue-detection/crashes/">View</a></td>
   		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
-  		<td><a href="/sdk/react_native/crashes/">View</a></td>
+  		<td><a href="/sdk/react_native/v6/crashes/">View</a></td>
 		<td><a href="/sdk/flutter/symbolication/">View</a></td>
 		<td><a href="/sdk/unity/crashes/">View</a></td>
 		<td><a href="/sdk/dotnet/symbolication/">View</a></td>
@@ -155,7 +155,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<td><a href="/sdk/ios/logs/">View</a></td>
 		<td><a href="/sdk/android/logs/">View</a></td>
 		<td><a href="/sdk/cordova/logs/">View</a></td>
-		<td><a href="/sdk/react_native/logs/">View</a></td>
+		<td><a href="/sdk/react_native/v6/logs/">View</a></td>
 		<td><a href="/sdk/flutter/logs/">View</a></td>
 		<td><a href="/sdk/unity/logs/">View</a></td>
 		<td><a href="/sdk/dotnet/logs/">View</a></td>
@@ -166,7 +166,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<td><a href="/sdk/ios/custom/">View</a></td>
 		<td><a href="/sdk/android/events-and-traces#custom-events">View</a></td>
 		<td><a href="/sdk/cordova/custom/">View</a></td>
-		<td><a href="/sdk/react_native/custom/#custom-events">View</a></td>
+		<td><a href="/sdk/react_native/v6/custom/#custom-events">View</a></td>
 		<td><a href="/sdk/flutter/custom/#custom-events">View</a></td>
 		<td><a href="/sdk/unity/custom/#custom-events">View</a></td>
 		<td><a href="/sdk/dotnet/custom/#custom-events">View</a></td>
@@ -177,7 +177,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<td><a href="/sdk/ios/custom/">View</a></td>
 		<td><a href="/sdk/android/events-and-traces#custom-traces">View</a></td>
 		<td><a href="/sdk/cordova/custom/">View</a></td>
-		<td><a href="/sdk/react_native/custom/#custom-traces">View</a></td>
+		<td><a href="/sdk/react_native/v6/custom/#custom-traces">View</a></td>
 		<td><a href="/sdk/flutter/custom/#custom-traces">View</a></td>
 		<td><a href="/sdk/unity/custom/#custom-traces">View</a></td>
 		<td><a href="/sdk/dotnet/custom/#custom-traces">View</a></td>
@@ -188,7 +188,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<td><a href="/sdk/ios/custom/">View</a></td>
 		<td><a href="/sdk/android/user-session-data#user-and-session-attributes">View</a></td>
 		<td><a href="/sdk/cordova/custom/#usersession-attributes">View</a></td>
-		<td><a href="/sdk/react_native/custom/#usersession-attributes">View</a></td>
+		<td><a href="/sdk/react_native/v6/custom/#usersession-attributes">View</a></td>
 		<td><a href="/sdk/flutter/custom/#usersession-attributes">View</a></td>
 		<td><a href="/sdk/unity/custom/#usersession-attributes">View</a></td>
 		<td><a href="/sdk/dotnet/custom/#usersession-attributes">View</a></td>
@@ -199,7 +199,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
 		<td><a href="/sdk/ios/custom/">View</a></td>
 		<td><a href="/sdk/android/report-handler#attachments">View</a></td>
 		<td><a href="/sdk/cordova/custom/">View</a></td>
-		<td><a href="/sdk/react_native/custom/#file-attachments">View</a></td>
+		<td><a href="/sdk/react_native/v6/custom/#file-attachments">View</a></td>
 		<td><a href="/sdk/flutter/custom/#file-attachments">View</a></td>
 		<td><a href="/sdk/unity/custom/#file-attachments">View</a></td>
 		<td><a href="/sdk/dotnet/custom/">View</a></td>
