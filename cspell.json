@@ -231,6 +231,7 @@
         "sandboxing",
         "libil",
         "unbreak",
-        "Podspec"
+        "Podspec",
+        "javascriptcore"
     ]
 }
