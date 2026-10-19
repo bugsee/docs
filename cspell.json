@@ -232,6 +232,8 @@
         "libil",
         "unbreak",
         "Podspec",
-        "javascriptcore"
+        "javascriptcore",
+        "reactnative",
+        "slashy"
     ]
 }
