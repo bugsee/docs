@@ -1,0 +1,208 @@
+---
+title: "Lifecycle & status"
+description: "Launching, stopping, relaunching and attaching to Bugsee React Native SDK 7.x, reading its status, and subscribing to its lifecycle events."
+sidebar_position: 4
+slug: "/sdk/react_native/lifecycle"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+The SDK can be launched, stopped and relaunched at runtime. You can ask for its current status at any time, and subscribe to its lifecycle events: status transitions, report assembly and upload, blackouts and crash relaunches.
+
+## Launch, stop, and relaunch
+
+Each call returns a promise that settles once the native SDK has answered.
+
+```ts
+import Bugsee, { createDefaultLaunchOptions } from '@bugsee/react-native';
+
+async function start(): Promise<boolean> {
+  return Bugsee.launch('<your app token>', createDefaultLaunchOptions());
+}
+
+async function shutDown(): Promise<void> {
+  await Bugsee.stop();
+}
+
+// Relaunch with a new set of options (no token: the session's own is kept)
+async function restartWithoutVideo(): Promise<boolean> {
+  const options = createDefaultLaunchOptions();
+  options.captureVideo = false;
+  return Bugsee.relaunch(options);
+}
+```
+
+| Method | Resolves to | Notes |
+| --- | --- | --- |
+| `launch(token, options?)` | `boolean` | `true` when the SDK started, and also when it was already running or launching: that second launch does not apply its options (see [Launching again](#launching-again)). `false` when it declined, for example because the backend rejected the token. A missing or blank token rejects with `code` `E_TOKEN`. |
+| `relaunch(options?)` | `boolean` | Restarts an already-launched session with a new set of options. `true` when the SDK restarted, on both platforms. |
+| `stop()` | `boolean` | Resolves `true` once the native SDK has stopped; it never resolves `false`. |
+| `attach()` | `void` | Wires up the JavaScript layer when the native SDK was launched without JavaScript. See [Attach to a running SDK](#attach-to-a-running-sdk). |
+
+`launch` and `relaunch` take the options object or a plain `com.bugsee.option.*` map; see [Configuration](/sdk/react_native/configuration). Declining is a normal outcome rather than an error, so `launch` does not reject when the SDK declines.
+
+### What `launch` sets up
+
+Besides starting the native SDK, `launch` (and `relaunch`) prepare the JavaScript side:
+
+1. Identifies the app to the SDK as a React Native app before launching, so a report produced during startup says it came from React Native.
+2. Installs the global JavaScript exception handlers, for uncaught errors (`ErrorUtils`) and unhandled promise rejections. `detectAndReportCrash: false` (`com.bugsee.option.detect.crash`) turns their reporting off.
+3. Launches the native SDK.
+4. Once the native call resolves, patches `console.*` so each line still prints and is also forwarded to Bugsee. A rejected launch does not install the patch. A later call does not wrap the functions again, but re-reads `com.bugsee.option.capture.logs`, so a relaunch can turn console forwarding off or on.
+
+Both settings follow the options passed to each call, not the options in effect. A `relaunch(options)` whose options leave out `com.bugsee.option.capture.logs` turns console forwarding back on, and one that leaves out `com.bugsee.option.detect.crash` turns JavaScript exception reporting back on, even if an earlier call set them to `false`.
+
+:::caution[Hermes promise rejection tracker]
+On Hermes, the last caller of `enablePromiseRejectionTracker` wins, and Hermes has no way to read the current tracker. Another library that installs a tracker after `Bugsee.launch` replaces Bugsee's, and unhandled promise rejections are then no longer reported.
+:::
+
+### Launching again
+
+A `launch` while the SDK is already running or launching starts nothing and resolves `true`, on both platforms. The options it carries are **not applied**: the session keeps the options it started with, and on Android, a call that carried options logs a warning to logcat. The JavaScript side still follows the new options, though (see [What `launch` sets up](#what-launch-sets-up)), so the two can disagree. To change options, call `relaunch(options)` instead.
+
+A `launch` made while the SDK is still stopping differs per platform. Android: it resolves `false` and does not launch. iOS: it resolves `true`, but does not launch either. Launch again once `stop()` has resolved.
+
+### A resolved launch is not live capture
+
+When `launch` resolves `true`, the SDK has started, but how far it has got differs per platform:
+
+- **Android**: `launch` resolves once capture is up. The status is already `Launched`. The exception is a `launch` that joins one already in progress, which resolves at once.
+- **iOS**: `launch` resolves while the status is still `Launching`, and recording may not have begun yet. A `launch` made while the app is in the background resolves `true` too, and the SDK starts when the app becomes active.
+
+Check [the status](#querying-status) or wait for the `Launched` event rather than assuming.
+
+On iOS, a report-creating call made while the status is still `Launching` would be dropped. The SDK works around this: `Bugsee.logException`, `Bugsee.upload`, `Bugsee.createReport` and `Bugsee.showReportDialog` calls made while the status is `Launching` are held, then replayed in order once it is `Launched`. They are dropped instead if the SDK reports `Stopping` or `Stopped`, if 30 seconds pass without `Launched`, or if 64 calls are already held. A call made while nothing is held runs at once.
+
+## Before launch
+
+Most calls need a launched SDK. Before `launch`:
+
+- `Bugsee.upload` and `Bugsee.showReportDialog` do nothing, and `Bugsee.createReport` resolves `null`.
+- `Bugsee.log` lines, `Bugsee.logException` errors and `Bugsee.notify` items are dropped.
+- `Bugsee.startBlackout()` is honored on both platforms: call it before `launch` to keep the first seconds of a session hidden from the video. See [Privacy: Video](/sdk/react_native/privacy/video).
+
+:::tip[Install the report handler first]
+Call `Bugsee.setReportHandler` **before** `Bugsee.launch`. During launch the SDK recovers reports from the previous run, such as a crash, and a handler installed afterward misses them. See [Report handler](/sdk/react_native/report-handler).
+:::
+
+## Attach to a running SDK
+
+The native SDK can be launched before any JavaScript runs:
+
+- **Android**: the native SDK can launch itself at process start from the `com.bugsee.app-token` manifest meta-data. The [Expo config plugin](/sdk/react_native/expo#auto-launch-on-android) writes it with `autoLaunch: true`.
+- **iOS**: there is no auto-launch, but your app can launch the SDK from its own native code, for example in its `AppDelegate`.
+
+In that case, call `Bugsee.attach()` instead of `launch`. It makes no launch call, and only sets up the JavaScript side:
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+Bugsee.attach();
+```
+
+A `launch` would not start a second session either, but it would not apply its options, while the JavaScript side applied them; see [Launching again](#launching-again). `attach` instead reads the options the SDK is running with, and applies `com.bugsee.option.detect.crash` from them before it installs the exception handlers. Exception capture is held off while it reads, so an error raised in that gap is not reported, rather than being reported when the option turns out to be `false`. It then installs the console patch from the same options. If reading the options fails, the promise rejects, and neither the handlers nor the console patch are installed.
+
+`attach` works the same on both platforms. On iOS, attaching to an SDK your native code launched has not been verified on a device in this beta.
+
+A report the SDK produces before JavaScript runs (such as a crash recovered from the previous run) is attributed to React Native on Android, where the package identifies itself at process start. On iOS the package does that when React Native loads it, so a report produced before then may not be.
+
+Reports carry the React Native SDK type and version but not the JavaScript details (React Native version, JavaScript engine, development build): `attach()` does not register them. Only `launch` and `relaunch` do, so a `relaunch` after `attach()` adds them for the rest of the session. A `relaunch(options)` is also the way to apply launch options from JavaScript, since the SDK started with the options of the manifest (Android) or of your native code (iOS).
+
+## Querying status
+
+`Bugsee.getStatus()` resolves to the SDK's current status, a `Status` value:
+
+| `Status` | Value | Meaning |
+| --- | --- | --- |
+| `Stopped` | `0` | Not running. Also reported when the SDK was never launched. |
+| `Launching` | `1` | Starting up. |
+| `Launched` | `2` | Running. |
+| `Stopping` | `3` | Shutting down. |
+
+```ts
+import Bugsee, { Status } from '@bugsee/react-native';
+
+async function isRunning(): Promise<boolean> {
+  return (await Bugsee.getStatus()) === Status.Launched;
+}
+```
+
+A status value this version of the SDK does not recognize, from a newer native SDK, is reported as `Stopped` rather than passed through.
+
+### Status changes
+
+`Bugsee.onStatusChange(listener)` calls `listener` with the new `Status` on each transition, and returns a subscription with `remove()`:
+
+```ts
+import Bugsee, { Status } from '@bugsee/react-native';
+
+const subscription = Bugsee.onStatusChange((status) => {
+  if (status === Status.Launched) {
+    // Capture is up.
+  }
+});
+
+// Later
+subscription.remove();
+```
+
+Status changes are derived from the lifecycle events: the `Launching`, `Launched`, `Stopping` and `Stopped` events each produce one call, and no other event does.
+
+## Lifecycle events
+
+`Bugsee.onLifecycleEvent(listener)` subscribes to every lifecycle event the SDK dispatches, and returns a subscription with `remove()`. Each event is a `LifecycleEvent`:
+
+```ts
+interface LifecycleEvent {
+  name: string;      // for example 'RelaunchedAfterCrash'
+  reportId?: string; // only on the events that carry one
+}
+```
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+const subscription = Bugsee.onLifecycleEvent((event) => {
+  if (event.name === 'RelaunchedAfterCrash') {
+    // The previous session ended with a crash.
+  }
+  if (event.name === 'AfterReportUploaded') {
+    console.log('uploaded report', event.reportId);
+  }
+});
+
+// Unsubscribe
+subscription.remove();
+```
+
+Both platforms dispatch these events, by the same names:
+
+| Event | `reportId` | Description |
+| --- | --- | --- |
+| `Launching` / `Launched` | no | The SDK is starting / has started. |
+| `Stopping` / `Stopped` | no | The SDK is stopping / has stopped. |
+| `BlackoutStarted` / `BlackoutEnded` | no | Visual capture paused / resumed by `startBlackout()` / `endBlackout()`. |
+| `RelaunchedAfterCrash` | no | The SDK launched and found a crash from the previous session. |
+| `BeforeReportShown` / `AfterReportShown` | no | The report UI is about to be / has been shown. No report exists yet at this point. |
+| `BeforeReportAssembled` / `AfterReportAssembled` / `ReportAssemblyFailed` | yes | Report assembly stages. |
+| `BeforeReportUploaded` / `AfterReportUploaded` | yes | Report upload start / success. |
+| `ReportUploadFailedWithFutureRetry` / `ReportUploadFailed` | yes | Upload failed, to be retried / permanently. |
+
+How events are delivered:
+
+- They arrive off the main thread on both platforms and reach JavaScript as they come.
+- Nothing is queued while there is no subscriber, so a subscription made after launch does not replay what it missed. Ask `getStatus()` for the current state rather than rebuilding it from events.
+- An event this version of the SDK does not know is delivered unchanged rather than dropped, so a newer native SDK can reach your listener. Compare `name` against the names you handle and ignore the rest.
+
+## Blackout
+
+`Bugsee.startBlackout()` and `Bugsee.endBlackout()` bracket a window in which everything that describes the screen is suppressed (the video, the report screenshot, touches and the view hierarchy), while logs, network events, custom events and traces keep recording. `Bugsee.isBlackout()` resolves to the current state. Use a blackout to hide a sensitive flow without stopping the SDK; see [Privacy: Video](/sdk/react_native/privacy/video). To shut the SDK down, use `stop()`.
+
+## Related pages
+
+- [Installation](/sdk/react_native/installation): the first launch.
+- [Configuration](/sdk/react_native/configuration): the options `launch` and `relaunch` take.
+- [Expo](/sdk/react_native/expo): Android auto-launch with the config plugin.
+- [Report handler](/sdk/react_native/report-handler): changing reports before they are sent.
