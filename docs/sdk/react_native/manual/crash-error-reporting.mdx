@@ -1,0 +1,197 @@
+---
+title: "Crash & error reporting"
+description: "What Bugsee React Native SDK 7.x reports automatically (JavaScript errors, unhandled promise rejections, render errors, native crashes), and how to report handled and unhandled errors yourself."
+sidebar_position: 2
+slug: "/sdk/react_native/manual/crash-error-reporting"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+Most crashes and errors are reported **automatically** once `Bugsee.launch` has run: you do not need to call anything. This page lists what is captured and how each kind is reported, then covers the cases where you report something yourself: handled errors, errors your app treats as crashes, and checking that the pipeline works.
+
+Bugsee files two kinds of report here:
+
+- a **crash** report, for something that ended (or is about to end) the app, with the default severity `Blocker`;
+- an **error** report, for a handled, non-terminal error, with the default severity `High`.
+
+Release builds need source maps and native symbols uploaded for their stack traces to resolve to your source; see [Symbolication](/sdk/react_native/symbolication/overview).
+
+## What is captured automatically
+
+| Source | Reported as | Needs |
+| --- | --- | --- |
+| Uncaught JavaScript error that React Native reports as fatal | crash | `launch` |
+| JavaScript error reported to the global handler as non-fatal | error | `launch` |
+| Unhandled promise rejection | **error** | `launch` |
+| Uncaught render error (no error boundary catches it) | crash | [`Bugsee.wrap`](/sdk/react_native/installation#4-launch-bugsee) around your root component |
+| Render error caught by Bugsee's `<ErrorBoundary>` | error | [`<ErrorBoundary>`](/sdk/react_native/error-boundary) |
+| Native crash | crash | `launch` |
+
+### JavaScript errors
+
+`Bugsee.launch` (and `relaunch`, and `attach`) installs a global error handler through React Native's `ErrorUtils`. The handler keeps the one that was installed before it and always calls it afterward, so React Native's own handling (the red error screen in a development build) still runs.
+
+- A **fatal** error is reported as a crash. The handler waits until the native SDK has taken the report, at most 1.5 seconds on iOS and 5 seconds on Android, and only then passes the error on, so the report is stored before the app goes down.
+- A **non-fatal** error is reported as an error, and passed on at once.
+
+### Unhandled promise rejections
+
+`launch` also installs a promise rejection tracker. An unhandled rejection is reported as an **error** report, not a crash, because it does not stop the app. In a development build, React Native's own warning for the rejection still appears.
+
+:::caution
+On Hermes, the last library to install a promise rejection tracker wins. Another library that installs one after `Bugsee.launch` replaces Bugsee's, and unhandled rejections are then no longer reported; see [Lifecycle & status](/sdk/react_native/lifecycle#what-launch-sets-up).
+:::
+
+### Render errors
+
+In React Native 0.81 and later (the minimum this SDK supports), an error thrown while rendering a component never passes through `ErrorUtils`: React hands it to React Native directly. The global handler above therefore does not see it.
+
+- **Uncaught render errors** are reported by `Bugsee.wrap`. It renders your root component inside a reporter that reports the error as a crash, renders nothing while the report is stored, then throws the same error again so React Native's fatal path still runs. Without `Bugsee.wrap`, an uncaught render error is not reported.
+- **Render errors you catch** with an error boundary are reported only by Bugsee's own [`<ErrorBoundary>`](/sdk/react_native/error-boundary), as errors. An error boundary from React or another library catches the error before Bugsee sees it; call [`Bugsee.logException`](#reporting-handled-errors) from its `componentDidCatch` if you keep it.
+
+### Native crashes
+
+Crashes in native code are captured too:
+
+- **Android**: uncaught exceptions in Java and Kotlin code, and crashes in native (NDK) code.
+- **iOS**: uncaught Objective-C exceptions (`NSException`), and fatal signals (`SIGABRT`, `SIGSEGV`, `SIGBUS`, `SIGILL`, `SIGFPE` and `SIGTRAP`, which includes Swift runtime traps), whether raised by a hardware fault or by software (with the default `crashHandlerType`).
+
+On iOS, `crashHandlerType` and `crashSignals` choose how crashes are intercepted; see [iOS accessors](/sdk/react_native/configuration#ios-accessors). Other detectors (hangs, low-memory exits, HTTP errors) are launch options too; see [Detection](/sdk/react_native/configuration#detection).
+
+:::caution[iOS Simulator]
+In this beta, the iOS Simulator produces no crash reports: neither native crashes nor JavaScript crashes. Test crash reporting on a physical iPhone.
+:::
+
+:::caution[iOS: Xcode debugger and TestFlight]
+- **Debugger.** When the SDK launches while the Xcode debugger is attached, it does not intercept crashes for that session, and the debugger handles them instead. To test crash reporting, start the app from the device's home screen, not from Xcode.
+- **TestFlight.** In builds installed through TestFlight, the system can intercept crashes before Bugsee does. On test devices, turn off **Share With App Developers** in *Settings > Privacy & Security > Analytics & Improvements*. See the iOS [TestFlight builds](/sdk/ios/v7/installation#testflight-builds) notes.
+:::
+
+### Turning automatic reporting off
+
+`detectAndReportCrash: false` (`com.bugsee.option.detect.crash`) turns off native crash reporting, and also the reporting of uncaught JavaScript errors, unhandled promise rejections and uncaught render errors. The handlers stay installed and keep passing errors on; they just report nothing.
+
+It does not turn off what you report on purpose: `Bugsee.logException` and `<ErrorBoundary>` still report, and so does `Bugsee.logUnhandledException` (verified on Android; on iOS, where the crash is recovered at the next launch, this is not verified in this beta).
+
+The setting follows the options of each `launch` or `relaunch` call; see [What launch sets up](/sdk/react_native/lifecycle#what-launch-sets-up).
+
+## Reporting handled errors
+
+`Bugsee.logException(error, options?)` records a caught error as an **error** report, without crashing the app:
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+async function loadProfile(): Promise<void> {
+  try {
+    await fetchProfile();
+  } catch (error) {
+    Bugsee.logException(error);
+    showOfflineBanner();
+  }
+}
+```
+
+`error` can be any value. An `Error` (or a subclass) gives the best report: its name, message, stack and `cause` chain. For any other value, see [What a report carries](#what-a-report-carries).
+
+`logException` returns `void`. Before `launch` the native SDKs drop the error; on iOS, one logged while the SDK is still starting is held until it has launched (see [Lifecycle & status](/sdk/react_native/lifecycle#a-resolved-launch-is-not-live-capture)).
+
+### Options
+
+`options` is an `ExceptionOptions` object with one key:
+
+| Key | Type | Description |
+| --- | --- | --- |
+| `domain` | `string` | The exception domain. Android groups issues by it; iOS records it with the report. Non-empty, at most 256 characters. |
+
+```ts
+Bugsee.logException(error, { domain: 'checkout' });
+```
+
+The options are checked before anything is sent, and a bad option throws synchronously: a `TypeError` for an options value that is not a plain object, an unknown key or a non-string `domain`, and a `RangeError` for an empty `domain` or one over 256 characters.
+
+:::note[No per-call labels or `includeVideo`]
+In 7.x, `logException` takes `{ domain }` only, as the 7.x native SDKs do. `labels` and `includeVideo` throw `TypeError: ExceptionOptions has unknown key "labels"` (or `"includeVideo"`).
+
+Set labels from a [report handler](/sdk/react_native/report-handler) instead. A handler has no per-call context, so the labels it sets apply to every report it handles; check `report.type` to limit them to error reports. `includeVideo` has no replacement: neither SDK can leave the video out of one report. (`Bugsee.upload` and `Bugsee.showReportDialog` still take `labels`.)
+:::
+
+:::warning
+Do not call `Bugsee.upload` from automated error paths. Use `logException`, so the report carries the stack trace and is grouped with the other occurrences of the same error.
+:::
+
+## Reporting unhandled errors
+
+`Bugsee.logUnhandledException(error)` reports `error` as a **crash**. Use it for an error your app treats as fatal but that Bugsee's handlers did not see, for example because another error handler takes it first:
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+async function onFatalError(error: unknown): Promise<void> {
+  await Bugsee.logUnhandledException(error);
+  // Now end the session your own way.
+}
+```
+
+It returns a promise that resolves once the native SDK has the report, after at most 1.5 seconds on iOS and 5 seconds on Android. It never rejects. Await it before the app goes down, so the report is stored first.
+
+On iOS, the crash report is stored and sent at the next launch, as for any crash.
+
+For a handled, non-terminal error, use [`logException`](#reporting-handled-errors) instead. Automatic capture does not need either call.
+
+## Each error is reported once
+
+Bugsee remembers every error **object** it has reported, and does not report the same object again, whichever route sees it second: `logException`, `logUnhandledException`, the global handler, the rejection tracker, `<ErrorBoundary>` or `Bugsee.wrap`. An error that more than one route sees produces one report from the JavaScript layer.
+
+Two consequences:
+
+- If you log an error and then rethrow it, the rethrown error is not reported again, not even as a crash. If the error is going to end the app, report it with `logUnhandledException` instead of `logException`, not after it: whichever call sees the error object first claims it, and later calls for the same object do nothing.
+- An error object is claimed even when its report is dropped. `logException` before `launch` claims the object although the native SDK drops the report, so no later route reports that same object.
+- A primitive (a thrown string or number) cannot be remembered, so the same string logged twice produces two reports.
+
+### `AggregateError`
+
+A handled `AggregateError` is split: each of its first 10 inner errors becomes its own error report, and the aggregate itself is not reported. Inner errors already reported are skipped. An unhandled `AggregateError` (from `logUnhandledException` or a fatal error) stays one crash report.
+
+## What a report carries
+
+The exception is built from the JavaScript error, the same way on both platforms:
+
+- **Name and message.** For an `Error`, its `name` and `message`. A thrown string becomes the message, with the name `Error`. An object with a string `message` gives that message (and its `name`, when that is a string). Anything else is reported as `Non-Error thrown: <type>`.
+- **Stack trace.** The error's own stack, up to 256 frames. A value that is not an `Error` has no stack of its own, so `logException` and `logUnhandledException` record the stack at the point you called them.
+- **Causes.** The `cause` chain, up to 10 levels deep.
+- **Component stack.** For a render error, the React component stack, as the innermost cause.
+
+The message is cut at 8192 characters and the name at 256; a cut value ends in `…`.
+
+## Testing crash reporting
+
+Two helpers check that reporting is wired up. Use them only in development and QA builds.
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+// Throws an Error('Bugsee test JS crash') at the call site.
+Bugsee.testJsCrash();
+
+// Raises a native test crash, which ends the app.
+Bugsee.testNativeCrash();
+```
+
+- `testJsCrash()` throws a JavaScript `Error` where you call it. Call it from a button handler, where nothing catches it, so it reaches the global handler. In a development build, React Native also shows its error screen.
+- `testNativeCrash()` raises a native test crash: a Java `RuntimeException` on Android, an `NSException` on iOS. The report is sent at the next launch.
+
+On iOS, run both on a physical device; see [iOS Simulator](#native-crashes).
+
+## Report severity
+
+Crash reports get `IssueSeverity.Blocker` and error reports `IssueSeverity.High` by default, on both platforms. Change the defaults with `com.bugsee.option.reporting.defaults.crash-priority` and `com.bugsee.option.reporting.defaults.error-priority` (see [Default severities](/sdk/react_native/manual/bug-reporting#default-severities)), or set a severity on individual reports from a [report handler](/sdk/react_native/report-handler). `logException` has no severity option.
+
+## Related pages
+
+- [Error boundary](/sdk/react_native/error-boundary): report render errors and show a fallback.
+- [Report handler](/sdk/react_native/report-handler): add labels and attachments to crash and error reports.
+- [Symbolication](/sdk/react_native/symbolication/overview): readable stack traces in release builds.
+- [Configuration](/sdk/react_native/configuration#detection): the detection options.

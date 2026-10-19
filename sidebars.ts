@@ -593,6 +593,11 @@ const sidebars: SidebarsConfig = {
               id: "sdk/react_native/manual/bug-reporting",
               label: "Bug reporting",
             },
+            {
+              type: "doc",
+              id: "sdk/react_native/manual/crash-error-reporting",
+              label: "Crash & error reporting",
+            },
           ],
         },
         {
