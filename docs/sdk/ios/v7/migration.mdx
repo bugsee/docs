@@ -79,8 +79,10 @@ Bugsee no longer recognizes them and uses its defaults instead.
 | _(not available)_ | `BugseeOptionDetectCrashSwiftAsyncStackTraces` |
 | _(not available)_ | `BugseeOptionDetectFrustration` |
 
-`BugseeKillDetectionKey` is removed. Out-of-memory kills are reported through
-`BugseeOptionDetectAndReportExit`, which is on by default (see [§3](#3-defaults-that-changed)).
+`BugseeKillDetectionKey` and the `BugseeOptions.killDetection` property are removed, and so
+is `BugseeOptionDetectAndReportKill` from the earlier 7.x betas. Out-of-memory kills are
+reported through `BugseeOptionDetectAndReportExit`, which is on by default (see
+[§3](#3-defaults-that-changed)).
 
 ### 2.2 Capture
 
@@ -181,8 +183,11 @@ Bugsee.launch(token: "<your_app_token>", options: options)
   </TabItem>
 </Tabs>
 
-- A bad memory access arrives as either `SIGSEGV` or `SIGBUS`, depending on the fault. It is
-  intercepted if either of the two is selected. Leave both out to ignore bad memory accesses.
+- A bad memory access arrives as either `SIGSEGV` or `SIGBUS`, depending on the fault. With
+  `BugseeCrashHandlerTypeMach` or `BugseeCrashHandlerTypeMachAndBSD`, it is intercepted if
+  either of the two is selected. With `BugseeCrashHandlerTypeBSD`, and always on tvOS, only
+  the selected signal is intercepted, so select both to catch every bad memory access. Leave
+  both out to ignore bad memory accesses.
 - Leaving out `SIGABRT` also stops uncaught Objective-C exceptions from being reported,
   because they end in `abort()`.
 - With `BugseeCrashHandlerTypeMach`, `SIGABRT` is the only signal raised by software that
