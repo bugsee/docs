@@ -552,6 +552,11 @@ const sidebars: SidebarsConfig = {
           href: "/sdk/react_native/v6/installation",
         },
         {
+          type: "doc",
+          id: "sdk/react_native/overview",
+          label: "Overview",
+        },
+        {
           type: "category",
           label: "Previous versions",
           collapsed: true,

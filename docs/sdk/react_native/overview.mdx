@@ -1,0 +1,80 @@
+---
+title: "Overview"
+description: "What the Bugsee React Native SDK 7.x records and detects, how it wraps the native iOS and Android SDKs, and what your app needs to run it."
+sidebar_position: 0
+slug: "/sdk/react_native/overview"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+The Bugsee React Native SDK (`@bugsee/react-native`) captures what happened before a bug: a video of the screen, network traffic, console logs and the steps that led to it. It attaches that timeline to crash, error and bug reports you can replay in the Bugsee dashboard.
+
+The package is built on the native Bugsee SDKs for Android and iOS, and gives both platforms one JavaScript API: a report from a React Native app is the same report a native app produces, with the JavaScript layer added.
+
+## What Bugsee records
+
+Every report carries a synchronized timeline of the session that led up to it:
+
+- **Video**: a rolling recording of the screen. Wrap anything that must never be recorded in `<BugseeSecure>`; see [Privacy: Video](/sdk/react_native/privacy/video).
+- **Network**: requests your app makes through `fetch` and `XMLHttpRequest` travel through the platform's networking stack, where the SDK records them (on Android, only with the Bugsee Gradle plugin applied; see [Installation](/sdk/react_native/installation#android)). You can add events from other stacks yourself and filter what is recorded; see [Network events](/sdk/react_native/network).
+- **Console logs**: `console.error`, `warn`, `log`, `info` and `debug` are forwarded to Bugsee and still print as before; see [Console logs](/sdk/react_native/logs).
+- **Breadcrumbs**: system events recorded automatically (such as app lifecycle changes), plus breadcrumbs you add. The package records no automatic touch or navigation breadcrumbs for React components. Off until you turn them on; see [Breadcrumbs](/sdk/react_native/breadcrumbs).
+- **Custom events, traces and attributes**: see [Custom events & traces](/sdk/react_native/events-and-traces) and [User & session data](/sdk/react_native/user-session-data).
+- **Performance (APM)**: [transactions and spans](/sdk/react_native/performance) you start from JavaScript.
+
+## What Bugsee detects
+
+The SDK turns problems into reports automatically:
+
+- **JavaScript exceptions**: `Bugsee.launch()` installs global handlers for uncaught errors and unhandled promise rejections. An [error boundary](/sdk/react_native/error-boundary) reports render errors.
+- **Native crashes**: on Android, uncaught Java and Kotlin exceptions and native (NDK) crashes; on iOS, uncaught Objective-C exceptions and fatal signals, including Swift runtime traps. See [Native crashes](/sdk/react_native/manual/crash-error-reporting#native-crashes).
+- **Handled errors** you report yourself; see [Crash & error reporting](/sdk/react_native/manual/crash-error-reporting).
+- **Manual reports**: let users shake the device to report, or open the report dialog or upload a report from code; see [Bug reporting](/sdk/react_native/manual/bug-reporting).
+
+## How it works
+
+- **One package.** `@bugsee/react-native` brings the native SDKs with it: autolinking adds the Android module, and the iOS SDK comes through the package's `Package.swift` when your app uses React Native's Swift Package Manager integration (0.87 and later), or through the package's podspec with CocoaPods. You don't add the native SDKs yourself: no Podfile pod, no Maven dependency.
+- **Launch from JavaScript.** One call, `Bugsee.launch(token, options)`, starts the SDK; see [Installation](/sdk/react_native/installation) and [Lifecycle & status](/sdk/react_native/lifecycle).
+- **One option namespace.** The same `com.bugsee.option.*` keys work on both platforms, so one options object configures both; see [Configuration](/sdk/react_native/configuration).
+- **Privacy on the device.** Mask views with `<BugseeSecure>`, and filter or drop network, log and breadcrumb data before it is recorded; see [Privacy](/sdk/react_native/privacy/overview).
+- **Readable release reports.** Release builds can upload JavaScript source maps, Android mapping and native symbols, and iOS dSYMs, so crash frames resolve to your source. An Expo app gets this from the [config plugin](/sdk/react_native/expo); a bare app adds a few build steps; see [Symbolication](/sdk/react_native/symbolication/overview).
+- **Automatic upload.** Reports upload to the dashboard in the background.
+
+The in-app feedback chat ships separately, as `@bugsee/react-native-feedback`, so apps that never show it do not depend on it; see [Feedback](/sdk/react_native/feedback).
+
+## Requirements
+
+| | |
+| --- | --- |
+| React Native | 0.81 or later, with the New Architecture enabled |
+| JavaScript engine | Hermes (React Native's default) |
+| iOS | 15.0 or later |
+| Android | API 21 or later |
+
+The New Architecture is the default from React Native 0.76. On 0.81 it can still be turned off; this package requires it on.
+
+Hermes is required. JavaScriptCore (Hermes off) is not supported: React Native removed JSC from core in 0.81, and the community package that replaces it, `@react-native-community/javascriptcore`, does not work with current React Native.
+
+## Versions
+
+This beta, `7.0.0-beta2`, is built on these native SDKs:
+
+| Platform | Native SDK | Notes |
+| --- | --- | --- |
+| Android | `com.bugsee:bugsee-android` 7.4.2 | Bugsee Gradle plugin 4.0.8 for release uploads and Android network capture |
+| iOS | Bugsee iOS SDK 7.0.0-beta7 | The iOS SDK is itself a beta |
+
+`@bugsee/react-native` 7.x replaces `react-native-bugsee` 6.x. They are different packages with different APIs, not an upgrade in place: remove the old package and follow [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+
+## Get started
+
+Head to [Installation](/sdk/react_native/installation) for a React Native CLI app, or [Expo](/sdk/react_native/expo) if you use Expo prebuild. From there, [Configuration](/sdk/react_native/configuration) covers the launch options, and [Privacy](/sdk/react_native/privacy/overview) covers redaction.
+
+## Related pages
+
+- [Installation](/sdk/react_native/installation): add the package and launch the SDK.
+- [Expo](/sdk/react_native/expo): the config plugin for Expo prebuild.
+- [Configuration](/sdk/react_native/configuration): launch options for both platforms.
+- [Lifecycle & status](/sdk/react_native/lifecycle): launch, stop, relaunch and querying status.
