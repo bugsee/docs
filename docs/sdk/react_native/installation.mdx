@@ -1,0 +1,201 @@
+---
+title: "Installation"
+description: "Installing Bugsee React Native SDK 7.x in a React Native CLI (bare) app, launching it from JavaScript, and checking that reports arrive."
+sidebar_position: 1
+slug: "/sdk/react_native/installation"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+This page covers a React Native CLI (bare) app, where you own the `ios/` and `android/` projects. If your app uses Expo prebuild, add the package as shown here, then follow [Expo](/sdk/react_native/expo) for the native setup.
+
+:::caution[Replacing 6.x]
+`@bugsee/react-native` replaces `react-native-bugsee` (6.x). They are different packages with different APIs, not an upgrade in place. Remove `react-native-bugsee` first; [Migrating from 6.x to 7.x](/sdk/react_native/migration) lists the API changes.
+:::
+
+## Requirements
+
+| | |
+| --- | --- |
+| React Native | 0.81 or later, with the New Architecture enabled |
+| JavaScript engine | Hermes (React Native's default) |
+| iOS | 15.0 or later (see the note below) |
+| Android | API 21 or later |
+
+The New Architecture is the default from React Native 0.76. On 0.81 it can still be turned off; this package requires it on. Hermes is required: JavaScriptCore is not supported.
+
+The Bugsee iOS SDK itself supports iOS 15.0. With CocoaPods, the podspec takes React Native's own minimum, which is 15.1, so that is the effective floor there.
+
+## 1. Add the package
+
+<Tabs groupId="package-manager">
+  <TabItem value="yarn" label="yarn">
+
+```sh
+yarn add @bugsee/react-native@beta
+```
+
+  </TabItem>
+  <TabItem value="npm" label="npm">
+
+```sh
+npm install @bugsee/react-native@beta
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```sh
+pnpm add @bugsee/react-native@beta
+```
+
+  </TabItem>
+</Tabs>
+
+For now the npm `latest` and `beta` tags both point at this beta, so a plain `yarn add @bugsee/react-native` installs it too. The `@beta` form keeps following betas once a stable 7.x release exists.
+
+### pnpm
+
+React Native needs `nodeLinker: hoisted` under pnpm.
+
+pnpm 10 and later run no dependency's install script unless the project decides, and pnpm 11 fails the install until it does (`ERR_PNPM_IGNORED_BUILDS`). The package depends on `@bugsee/cli`, which uploads symbols and source maps and has a `postinstall` script. Its binary comes from a platform-specific optional dependency, so the script is only a download fallback for registry mirrors that lack those packages. Decide in `pnpm-workspace.yaml`:
+
+```yaml title="pnpm-workspace.yaml"
+allowBuilds:
+  '@bugsee/cli': false   # true only if your registry lacks @bugsee/cli-<platform>
+```
+
+## 2. Native setup
+
+### iOS
+
+If your app uses React Native's Swift Package Manager integration (React Native 0.87 and later), the package's own `Package.swift` provides the SDK. React Native's autolinking references that package directly; there is no Bugsee-specific step to run.
+
+Otherwise (CocoaPods, on any React Native version) the package's podspec downloads the same XCFramework from `download.bugsee.com` during `pod install` and vendors it, so install pods as usual:
+
+```sh
+cd ios && pod install
+```
+
+Nothing is published to CocoaPods trunk, so you don't need `pod repo update`.
+
+For readable iOS crash reports in Release, a bare app also needs two build edits: point the **Bundle React Native code and images** build phase at the package's `bugsee-xcode.sh` (which uploads the JavaScript source map, with a token from `BUGSEE_APP_TOKEN` in, for example, `ios/.xcode.env.local`), and add the dSYM upload post-action to the scheme's Archive action. Both are described in [Symbolication: iOS](/sdk/react_native/symbolication/ios). Without them the app still builds and runs, but JavaScript and native frames in Release reports stay unsymbolicated.
+
+### Android
+
+Autolinking picks up the module. The app builds and launches with no Gradle changes.
+
+The package brings in the Android SDK together with its NDK crash reporting and OkHttp modules. Three things still need edits that autolinking cannot make:
+
+- **JavaScript source maps**: two edits in `android/app/build.gradle`, pointing `react.hermesCommand` at the package's Hermes wrapper and applying the package's `scripts/bugsee-sourcemaps.gradle`, which gives the bundle a debug id and uploads its map with `@bugsee/cli`. These do not need the Gradle plugin.
+- **R8/ProGuard mapping and native symbols**: uploaded by the **Bugsee Gradle plugin** (`com.bugsee.android.gradle`).
+- **Network capture of `fetch` and `XMLHttpRequest`**: React Native sends these through OkHttp, and the Bugsee Gradle plugin is what lets the SDK record OkHttp traffic. **Without the plugin, these requests are not recorded on Android.**
+
+All of these edits are listed in [Symbolication: Android](/sdk/react_native/symbolication/android). Without them the app still builds and runs, but Android reports carry no `fetch`/XHR network events, and JavaScript and native frames in Release reports stay unsymbolicated.
+
+## 3. Get your app tokens
+
+Bugsee app tokens are per platform: your iOS app and your Android app each have their own token in the Bugsee dashboard. Pick the right one at runtime from `Platform.OS`, as in the next step.
+
+## 4. Launch Bugsee
+
+Call `Bugsee.launch` once, as early as you can. The top of `index.js` is a good place: `<BugseeSecure>` follows native animation events only from the moment `@bugsee/react-native` is first evaluated, so importing it there masks correctly from the start.
+
+```ts title="index.js"
+import { AppRegistry, Platform } from 'react-native';
+import Bugsee, { createDefaultLaunchOptions } from '@bugsee/react-native';
+import App from './App';
+import { name as appName } from './app.json';
+
+const token =
+  Platform.OS === 'ios' ? '<your iOS app token>' : '<your Android app token>';
+
+const options = createDefaultLaunchOptions();
+options.captureLogs = true;
+
+Bugsee.launch(token, options);
+
+// Bugsee.wrap captures the view hierarchy and reports uncaught render errors.
+AppRegistry.registerComponent(appName, () => Bugsee.wrap(App));
+```
+
+What this does:
+
+- **`createDefaultLaunchOptions()`** returns an empty options object for the running platform. It is not pre-filled: every option you leave unset keeps the native SDK's own default. See [Configuration](/sdk/react_native/configuration) for every option.
+- **`Bugsee.launch(token, options)`** takes the options object as is; there is no serialize step to call. It also accepts a plain map of `com.bugsee.option.*` keys, for options you build or merge yourself:
+
+  ```ts
+  Bugsee.launch(token, {
+    'com.bugsee.option.capture.logs': true,
+    'com.bugsee.option.config.duration': 60,
+  });
+  ```
+
+- **`Bugsee.wrap(App)`** renders your root component unchanged, next to an invisible anchor the SDK uses to find the view tree, inside a reporter for uncaught render errors. Without it, reports carry no view hierarchy, and an uncaught render error is not reported (render errors do not reach the global error handler); see [Render errors](/sdk/react_native/manual/crash-error-reporting#render-errors).
+
+`launch` also installs the JavaScript exception handlers (uncaught errors and unhandled promise rejections) and, once the native SDK has answered, forwards `console.*` output to Bugsee.
+
+### What `launch` resolves to
+
+`launch` resolves to `true` when the SDK started, and `false` when it declined, for example because the backend rejected the token. Declining is not an error, so `launch` does not reject for it. A `launch` while the SDK is already running also resolves `true`, but its options are not applied; see [Launching again](/sdk/react_native/lifecycle#launching-again).
+
+A missing, empty or blank token is rejected before the SDK is launched, with an error whose `code` is `E_TOKEN`.
+
+Capture comes up asynchronously on both platforms, so a resolved `launch` does not mean recording has begun. Poll `Bugsee.getStatus()` or subscribe with `Bugsee.onStatusChange` when you need to know; see [Lifecycle & status](/sdk/react_native/lifecycle).
+
+:::tip[Register handlers before launch]
+If you use a [report handler](/sdk/react_native/report-handler), call `Bugsee.setReportHandler` **before** `Bugsee.launch`. A handler installed afterward misses the reports that launch recovers, such as a crash from the previous run.
+:::
+
+## 5. Verify
+
+Build and run the app, then send a test report:
+
+1. Check that the SDK is running (capture comes up shortly after `launch` resolves, so check a moment later, or use `Bugsee.onStatusChange`):
+
+   ```ts
+   import Bugsee, { Status } from '@bugsee/react-native';
+
+   async function checkBugsee() {
+     const status = await Bugsee.getStatus();
+     console.log(status === Status.Launched ? 'Bugsee is running' : `Bugsee status: ${status}`);
+   }
+   ```
+
+2. Open the report dialog with `Bugsee.showReportDialog()`, fill it in and send it. To check crash reporting instead, call `Bugsee.testJsCrash()`, which throws a JavaScript error at the call site (in a development build, React Native also shows its error screen), or `Bugsee.testNativeCrash()`, which raises the native SDK's own test crash (a Java `RuntimeException` on Android, an `NSException` on iOS).
+3. Open your app in the Bugsee dashboard and find the report, with its video, logs and network events. On Android, `fetch`/XHR network events appear only with the Bugsee Gradle plugin applied; see [Android](#android).
+
+:::note
+`showReportDialog` and `upload` do nothing before `launch()`. If no report arrives, check that `launch` resolved `true` and that you used the token of the platform you are running.
+:::
+
+## Troubleshooting
+
+### iOS build fails in `fmt`
+
+{/* cspell:ignore consteval fmtlib */}
+
+On React Native 0.81 and 0.82 with Xcode 26.4 or later, the iOS build can fail in the `fmt` pod with "call to consteval function … is not a constant expression". This is not caused by Bugsee: those React Native versions build `fmt` 11.0.2 from source, which newer Apple clang rejects as C++20 ([fmtlib/fmt#4740](https://github.com/fmtlib/fmt/issues/4740)). React Native 0.83 and later ship `fmt` 12 and are not affected.
+
+Build that one pod as C++17 from the `post_install` block of `ios/Podfile`, after `react_native_post_install(...)`, then run `pod install` again:
+
+```ruby title="ios/Podfile"
+    installer.pods_project.targets.each do |target|
+      next unless target.name == 'fmt'
+      target.build_configurations.each do |config|
+        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+      end
+    end
+```
+
+## Next steps
+
+- [Configuration](/sdk/react_native/configuration): launch options for both platforms.
+- [Lifecycle & status](/sdk/react_native/lifecycle): stop, relaunch and the lifecycle events.
+- [Symbolication](/sdk/react_native/symbolication/overview): readable stack traces in Release builds.
+- [Privacy](/sdk/react_native/privacy/overview): mask views and filter captured data.
