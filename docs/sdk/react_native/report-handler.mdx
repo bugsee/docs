@@ -1,0 +1,268 @@
+---
+title: "Report handler"
+description: "Inspect, enrich or redact every report before Bugsee React Native SDK 7.x sends it: setReportHandler, its two callbacks, the report object, deadlines, and attachments."
+sidebar_position: 6
+slug: "/sdk/react_native/report-handler"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+A **report handler** is the one place to inspect or change a report before Bugsee sends it. It sees every kind of report that reaches JavaScript: bug reports from the dialog or from `upload`, error reports, and crash reports when the SDK hands them to JavaScript (see [Async callbacks and deadlines](#async-callbacks-and-deadlines)). That makes it the hook for anything that must apply to all of them: labels, attributes, a severity rule, a config snapshot as an attachment, or redacting text.
+
+```ts
+import Bugsee, { createDefaultLaunchOptions } from '@bugsee/react-native';
+
+Bugsee.setReportHandler({
+  onAfterReportCreated: async (report) => {
+    await report.setLabels(['beta-build']);
+  },
+});
+
+Bugsee.launch('<your app token>', createDefaultLaunchOptions());
+```
+
+## Install it before launch
+
+Call `Bugsee.setReportHandler(handler)` **before** `Bugsee.launch`. During launch the SDK recovers reports from the previous run, such as a crash, and a handler installed afterward misses them.
+
+Under Android auto-launch, where you call [`Bugsee.attach()`](/sdk/react_native/lifecycle#attach-to-a-running-sdk) instead of `launch`, the SDK recovers those reports before any JavaScript runs, so the handler cannot see them.
+
+The handler lives in the JavaScript runtime. When the runtime reloads (a development reload, for example), every callback still outstanding is completed at once, and the reports go on without it; install the handler again in the new runtime.
+
+There is one handler at a time. A later call replaces it, and `setReportHandler(null)` stops delivery; a later call can turn it back on. A replacement takes effect from the next callback: a callback already running keeps the handler it started with.
+
+The handler is any object with one or both callbacks. A class instance works too: each callback is called with the handler as `this`.
+
+## The two callbacks
+
+| Callback | When it runs | Delivered |
+| --- | --- | --- |
+| `onBeforeReportCreated(report)` | Before the report is built. | **At most once** per report, and may be skipped: a crash recovered at launch, for one, can go straight to `onAfterReportCreated`. |
+| `onAfterReportCreated(report)` | After the report is built, before it is sent. | **At least once**: it can run more than once for the same report. |
+
+Both are optional, and a phase you leave out is not delivered to JavaScript at all.
+
+Because `onAfterReportCreated` can run more than once, make it **idempotent**: running it twice must leave the report as running it once would. Set values rather than append them (`setLabels`, `setAttribute`), and check `getAttachmentNames()` before you add an attachment an earlier run may already have added.
+
+### Reports from your own calls
+
+| Call | `onBeforeReportCreated` | `onAfterReportCreated` |
+| --- | --- | --- |
+| `showReportDialog` | Before the dialog opens, so it does not see what the user types. | After the report is built from what the user sent. |
+| `upload`, `logException`, automatic error capture | Before the report is built. | After it is built. |
+| Crashes | May be skipped. | Depends on the platform and the kind of crash; see [Async callbacks and deadlines](#async-callbacks-and-deadlines). |
+| `createReport` on Android | Inside `createReport()`. | At the created report's `upload()`. |
+| `createReport` on iOS | At `upload()`. | At `upload()`. Both run after the created report's fields are copied, so a handler `setLabels` replaces the labels you set. |
+
+To act on what a user typed into the dialog, such as redacting it, use `onAfterReportCreated`.
+
+## Async callbacks and deadlines
+
+A callback can be `async`, or return a promise. The SDK waits for it to settle before it moves on with the report, up to a **deadline** the SDK sets:
+
+| Report | Android | iOS |
+| --- | --- | --- |
+| A live report, raised by the running app | 25 seconds | 25 seconds |
+| A report recovered at launch (a crash from the previous run) | Java crash, with the SDK launched from JavaScript: 25 seconds. Native (NDK) crash, and the SDK's early recovery at startup: the handler is **not called**. | 2.5 seconds, best-effort: changes land only until the SDK has assembled the report. |
+| A report raised while the process is terminating | Not called. | Not called.\* |
+
+\* No report is raised on a terminating process on iOS today; if one ever is, it goes on without calling the handler.
+
+On Android, a lower `com.bugsee.option.config.report-handler-callback-timeout` (seconds) lowers the live deadline to one second under that value; it never raises it above 25 seconds. If that leaves less than a second, the handler is not called. The option is Android only (see [Platform-only keys](/sdk/react_native/configuration#platform-only-keys)): on iOS the deadlines in the table are fixed, and no option changes them.
+
+Every report method is asynchronous and must finish **before** the callback settles. Await each call, or return the promise:
+
+```ts
+Bugsee.setReportHandler({
+  onAfterReportCreated: async (report) => {
+    await report.setAttribute('screen', currentScreenName());
+    // Not awaited: nothing guarantees it lands before the handle dies,
+    // and a rejection would go unhandled.
+    // report.setSeverity(IssueSeverity.Critical);
+  },
+});
+```
+
+Once the callback has settled, or its deadline has passed, the report handle is dead: every further call on it rejects with `E_REPORT_HANDLE_DEAD`, and nothing more reaches the report. The deadline is the SDK's own; you cannot extend it.
+
+Keep work that runs for recovered reports short: async I/O in `onAfterReportCreated` that completes in time on an Android Java crash can miss the iOS recovery window, and an Android native crash never reaches the handler at all.
+
+### If your callback throws
+
+A callback that throws or rejects does not lose the report. The SDK logs `[Bugsee] report handler threw` with the error's name to the console, and the report goes on. Changes that already reached the report before the throw are kept.
+
+There is no way to drop a report from the handler. To keep data out of one, redact it: clear the text and attributes you do not want sent.
+
+## The report object
+
+Each callback receives a `BugseeReport`, a live handle on the report:
+
+| Member | Type | Description |
+| --- | --- | --- |
+| `id` | `string` | The report's ID. |
+| `type` | `ReportType` | `'bug'`, `'crash'` or `'error'`. Treat it as an open set: a newer native SDK can add kinds. |
+
+The other members return promises:
+
+| Area | Methods |
+| --- | --- |
+| Read everything | `read()` |
+| Text | `getSummary()`, `setSummary(value)`, `getDescription()`, `setDescription(value)` |
+| Severity | `getSeverity()`, `setSeverity(value)` |
+| Labels | `getLabels()`, `setLabels(labels)` |
+| Attributes | `getAttributes()`, `setAttribute(name, value)`, `clearAttributes()` |
+| Screenshots | `getScreenshotDisplayIds()` |
+| Attachments | `getAttachmentNames()`, `addFileAttachment(path, options)`, `addDataAttachment(base64, options)` |
+| Several changes at once | `update(patch)` |
+
+Two deliveries of the same report get two separate handles, each with its own deadline.
+
+### Reading a report
+
+`read()` returns a `BugseeReportSnapshot` in one call; each getter is a shortcut for one of its fields:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `summary` | `string \| undefined` | |
+| `description` | `string \| undefined` | |
+| `severity` | `IssueSeverity \| undefined` | `undefined` when the report has no severity set (iOS reports `0` for that), or the value is outside 1 to 5. |
+| `labels` | `string[]` | |
+| `attributes` | `Record<string, string \| number \| boolean>` | This report's attributes. |
+| `screenshotDisplayIds` | `number[]` | The displays the report has a screenshot of, in ascending order. |
+| `attachmentNames` | `string[]` | |
+
+### Changing a report
+
+The setters each change one field. `update(patch)` changes several in one call:
+
+```ts
+import Bugsee, { IssueSeverity } from '@bugsee/react-native';
+
+Bugsee.setReportHandler({
+  onAfterReportCreated: async (report) => {
+    await report.update({
+      summary: 'Checkout frozen',
+      description: null,                // clears the description
+      severity: IssueSeverity.Critical,
+      labels: ['checkout', 'payments'], // replaces the whole list
+      clearAttributes: true,            // applied before `attributes`
+      attributes: { cartSize: 3, coupon: null }, // null removes that attribute
+    });
+  },
+});
+```
+
+A `ReportPatch` has these keys, all optional:
+
+| Key | Type | Effect |
+| --- | --- | --- |
+| `summary` | `string \| null` | Sets the summary; `null` clears it. |
+| `description` | `string \| null` | Sets the description; `null` clears it. |
+| `severity` | `IssueSeverity` | An integer from 1 to 5. |
+| `labels` | `readonly string[]` | **Replaces** the report's labels. There is no append. |
+| `clearAttributes` | `true` | Removes every attribute of the report, before `attributes` is applied. |
+| `attributes` | `Record<string, string \| number \| boolean \| null>` | Sets each attribute; `null` removes that one. Names must be non-empty; numbers must be finite. |
+
+A patch is **all or nothing**. It is checked in full first, and if any key is unknown or any value is invalid, nothing is applied and the call rejects with `E_REPORT_BAD_ARGUMENT`. A misspelled key fails the patch rather than being ignored. The single-field setters follow the same rules.
+
+Attributes set here apply to this report only. For attributes that go with every report, use [`Bugsee.setAttribute`](/sdk/react_native/user-session-data).
+
+## Attachments
+
+```ts
+report.addFileAttachment(path, { name, mimeType?, move? });
+report.addDataAttachment(base64, { name, mimeType? });
+```
+
+- **`addFileAttachment`** attaches a file. `path` is a `file://` URL (the prefix is removed and the rest percent-decoded) or a plain file path, used as is. The file is captured when it is added. With `move: true` the SDK takes the file instead of copying it, so it is no longer at `path` afterward.
+- **`addDataAttachment`** attaches bytes, given as a base64 string: its length a multiple of 4, using `A-Z`, `a-z`, `0-9`, `+`, `/` and `=` padding only.
+- `name` is required and must be non-empty. `mimeType` is optional.
+- A report from the handler takes up to **1000** attachments, on both platforms. When an attachment is declined, the call rejects with `E_REPORT_ATTACHMENT_REJECTED`.
+
+Keep attachments small: they travel with the report on the user's connection. Reports you build with `createReport` have their own, lower limit on iOS; see [Bug reporting](/sdk/react_native/manual/bug-reporting#platform-differences).
+
+## Errors
+
+Report methods reject with a `BugseeReportError` for the codes below; match on its `code`. Any other failure, such as an unexpected internal fault, rejects with an ordinary error, so rethrow what you do not match.
+
+| `ReportErrorCode` | `code` | Meaning |
+| --- | --- | --- |
+| `HandleDead` | `E_REPORT_HANDLE_DEAD` | The callback already settled, or its deadline passed. |
+| `AttachmentRejected` | `E_REPORT_ATTACHMENT_REJECTED` | The attachment was declined. |
+| `BadArgument` | `E_REPORT_BAD_ARGUMENT` | An argument or patch failed validation; nothing was applied. |
+
+## Examples
+
+### Labels and an attachment on every report
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+// React Native's default TypeScript config has no DOM types, so declare the
+// global btoa the runtime provides (or use a base64 library).
+declare function btoa(data: string): string;
+
+const CONFIG_ATTACHMENT = 'config.json';
+
+Bugsee.setReportHandler({
+  onAfterReportCreated: async (report) => {
+    // setLabels replaces the list, so a second run gives the same result.
+    const labels = await report.getLabels();
+    await report.setLabels([...new Set([...labels, 'beta-build'])]);
+
+    // Add the attachment only if an earlier run has not.
+    const names = await report.getAttachmentNames();
+    if (!names.includes(CONFIG_ATTACHMENT)) {
+      await report.addDataAttachment(btoa(JSON.stringify(currentConfig())), {
+        name: CONFIG_ATTACHMENT,
+        mimeType: 'application/json',
+      });
+    }
+  },
+});
+```
+
+`btoa` encodes only Latin-1 text; encode other text to bytes first, or use a base64 library.
+
+### Raise the severity of crashes in one area
+
+```ts
+import Bugsee, { IssueSeverity } from '@bugsee/react-native';
+
+Bugsee.setReportHandler({
+  onAfterReportCreated: async (report) => {
+    if (report.type === 'crash' && (await report.getLabels()).includes('payments')) {
+      await report.setSeverity(IssueSeverity.Blocker);
+    }
+  },
+});
+```
+
+### Redact card numbers from user text
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+const CARD_NUMBER = /\b\d{16}\b/g;
+
+Bugsee.setReportHandler({
+  onAfterReportCreated: async (report) => {
+    const { summary, description } = await report.read();
+    await report.update({
+      summary: summary?.replace(CARD_NUMBER, '[CARD]') ?? null,
+      description: description?.replace(CARD_NUMBER, '[CARD]') ?? null,
+    });
+  },
+});
+```
+
+The redaction runs in `onAfterReportCreated` because that is where a dialog report carries what the user typed.
+
+## Related pages
+
+- [Bug reporting](/sdk/react_native/manual/bug-reporting): the report dialog, `upload` and `createReport`.
+- [Crash & error reporting](/sdk/react_native/manual/crash-error-reporting): which errors become reports.
+- [User & session data](/sdk/react_native/user-session-data): attributes for every report.
+- [Privacy: Report](/sdk/react_native/privacy/report): what a report sends, and how to limit it.

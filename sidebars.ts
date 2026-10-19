@@ -606,6 +606,11 @@ const sidebars: SidebarsConfig = {
           ],
         },
         {
+          type: "doc",
+          id: "sdk/react_native/report-handler",
+          label: "Report handler",
+        },
+        {
           type: "category",
           label: "Previous versions",
           collapsed: true,
