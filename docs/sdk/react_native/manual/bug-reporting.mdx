@@ -1,0 +1,237 @@
+---
+title: "Bug reporting"
+description: "Let users and your code file bug reports with Bugsee React Native SDK 7.x: the built-in triggers, the report dialog, silent upload, and building a report with createReport."
+sidebar_position: 1
+slug: "/sdk/react_native/manual/bug-reporting"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+Bug reports cover something that is wrong but did not crash the app. Your users can raise one with a gesture, or you can open the report dialog, or submit a report silently, from your own code. Crashes and handled errors are covered separately, in [Crash & error reporting](/sdk/react_native/manual/crash-error-reporting).
+
+All three calls on this page need a launched SDK; see [Before launch](#before-launch).
+
+## Built-in report triggers
+
+The native SDKs can open the report dialog on their own, without any call from your code. These triggers are launch options:
+
+| Key | Accessor | Platforms | Default | Opens the report dialog when |
+| --- | --- | --- | --- | --- |
+| `com.bugsee.option.reporting.triggers.shake` | none | both | `true` | The user shakes the device. |
+| `com.bugsee.option.reporting.triggers.screenshot` | none | both | `false` | The user takes a screenshot. |
+| `com.bugsee.option.reporting.triggers.notification-bar` | `triggerByNotification` | Android | `true` | The user taps the Bugsee entry in the notification bar. |
+| `com.bugsee.option.reporting.triggers.broadcast` | none | Android | `false` | An Android broadcast intent asks for a report. |
+
+Turn the shake trigger off, and the screenshot trigger on, at launch:
+
+```ts
+import Bugsee, { AndroidLaunchOptions, createDefaultLaunchOptions } from '@bugsee/react-native';
+
+const options = createDefaultLaunchOptions();
+options.setCustomOption('com.bugsee.option.reporting.triggers.shake', false);
+options.setCustomOption('com.bugsee.option.reporting.triggers.screenshot', true);
+if (options instanceof AndroidLaunchOptions) {
+  options.triggerByNotification = false;
+}
+
+Bugsee.launch('<your app token>', options);
+```
+
+The Android-only keys are not recognized on iOS, so set them only on an Android options object. The options that shape the dialog itself (required fields, the labels field, the priority selector) are listed under [Configuration: Reporting](/sdk/react_native/configuration#reporting).
+
+## Show the report dialog
+
+`Bugsee.showReportDialog(summary?, description?, severity?, labels?)` opens the standard reporting UI. Every argument is optional and only pre-fills the form: the user can still edit the values before sending.
+
+```ts
+import Bugsee, { IssueSeverity } from '@bugsee/react-native';
+
+// An empty form
+Bugsee.showReportDialog();
+
+// Pre-fill the summary and description
+Bugsee.showReportDialog('Checkout is frozen', 'The spinner never stops.');
+
+// Pre-fill everything, including severity and labels
+Bugsee.showReportDialog(
+  'Checkout is frozen',
+  'The spinner never stops.',
+  IssueSeverity.High,
+  ['checkout'],
+);
+
+// Severity only: leave the text fields out with undefined
+Bugsee.showReportDialog(undefined, undefined, IssueSeverity.Critical);
+```
+
+| Argument | Type | When omitted |
+| --- | --- | --- |
+| `summary` | `string` | The field is left empty. |
+| `description` | `string` | The field is left empty. |
+| `severity` | `IssueSeverity` | The SDK's default bug severity. |
+| `labels` | `readonly string[]` | No labels are pre-filled. |
+
+The call returns nothing (`void`) and does not tell you whether the user sent the report or dismissed the dialog. Subscribe to the `BeforeReportShown`, `AfterReportShown` and upload [lifecycle events](/sdk/react_native/lifecycle#lifecycle-events) to follow it.
+
+The dialog runs your report handler's `onBeforeReportCreated` before it opens; see [Report handler](/sdk/react_native/report-handler).
+
+## Silent upload
+
+`Bugsee.upload(summary, description, severity?, labels?)` creates a bug report and uploads it at once, without any UI. Use it when you have already collected the details in your own UI.
+
+```ts
+import Bugsee, { IssueSeverity } from '@bugsee/react-native';
+
+Bugsee.upload('Checkout frozen', 'Spinner never stops');
+
+Bugsee.upload('Checkout frozen', 'Spinner never stops', IssueSeverity.High, ['checkout']);
+```
+
+`summary` and `description` are required, and both must be strings; an empty string is accepted. An omitted `severity` gets the default bug severity, `com.bugsee.option.reporting.defaults.bug-priority` (`High` unless you set it), on both platforms. An omitted `labels` sends no labels.
+
+Like `showReportDialog`, `upload` returns `void`. Follow the upload with the `BeforeReportUploaded`, `AfterReportUploaded` and `ReportUploadFailed*` [lifecycle events](/sdk/react_native/lifecycle#lifecycle-events).
+
+:::warning
+Do not call `upload` from automated error paths. To report an error from code, use [`Bugsee.logException`](/sdk/react_native/manual/crash-error-reporting#reporting-handled-errors): an error report carries the stack trace and is grouped with the other occurrences of the same error.
+:::
+
+### Argument checks
+
+`upload` and `showReportDialog` check their arguments in JavaScript and throw synchronously, before anything reaches the native SDK:
+
+| Argument | Rule | Thrown |
+| --- | --- | --- |
+| `summary`, `description` | A string (required for `upload`, optional for `showReportDialog`). | `TypeError` |
+| `severity` | Omitted, or an integer from `1` to `5` (an `IssueSeverity` value). | `TypeError` for a non-number, `RangeError` for any other number |
+| `labels` | Omitted, or an array of strings. The array is copied. | `TypeError` |
+| a fifth argument | `upload` takes at most four arguments. 7.x has no `includeVideo`. | `TypeError` |
+
+`labels` is still an argument of both calls; only `Bugsee.logException` lost its per-call labels in 7.x (see [Crash & error reporting](/sdk/react_native/manual/crash-error-reporting#reporting-handled-errors)).
+
+## Build a report yourself
+
+When you need to fill a report over time, attach files to it, or decide when it is sent, use `Bugsee.createReport()`. It resolves to a `BugseeCreatedReport` that you fill and then send with its own `upload()`:
+
+```ts
+import Bugsee, { IssueSeverity } from '@bugsee/react-native';
+
+// React Native's default TypeScript config has no DOM types, so declare the
+// global btoa the runtime provides (or use a base64 library).
+declare function btoa(data: string): string;
+
+async function reportCheckoutProblem(logText: string): Promise<void> {
+  const report = await Bugsee.createReport();
+  if (report === null) {
+    return; // The SDK made no report: it is not launched.
+  }
+  await report.update({
+    summary: 'Checkout frozen',
+    description: 'The spinner never stops.',
+    severity: IssueSeverity.High,
+    labels: ['checkout'],
+    attributes: { cartSize: 3 },
+  });
+  await report.addDataAttachment(btoa(logText), {
+    name: 'checkout.log',
+    mimeType: 'text/plain',
+  });
+  const uploaded = await report.upload();
+  console.log('report handed off:', uploaded);
+}
+```
+
+`btoa` encodes only Latin-1 text; encode other text to bytes first, or use a base64 library.
+
+`createReport()` resolves `null` when the SDK made no report, for example before `launch`. The created report has these methods, each returning a promise:
+
+| Method | Resolves to | Description |
+| --- | --- | --- |
+| `read()` | `BugseeReportSnapshot` | The report's current fields; see [The snapshot](/sdk/react_native/report-handler#reading-a-report). |
+| `update(patch)` | `void` | Changes summary, description, severity, labels and attributes in one call; see [Changing a report](/sdk/react_native/report-handler#changing-a-report). |
+| `addFileAttachment(path, { name, mimeType? })` | `void` | Attaches a file. The file is copied when it is added; there is no `move` option on a created report. |
+| `addDataAttachment(base64, { name, mimeType? })` | `void` | Attaches bytes, given as a base64 string. |
+| `upload()` | `boolean` | Hands the report to the SDK for upload. |
+
+The patch, the snapshot and the attachment arguments are the same as on a [report handler](/sdk/react_native/report-handler)'s report, which has the details. A created report has no `id`, no `type` and no deadline: it stays open until you upload it.
+
+### One created report at a time
+
+Only one created report can be outstanding. A second `createReport()` before the first is uploaded rejects with a `BugseeReportError` whose `code` is `E_REPORT_CREATE_BUSY`. There is no call that discards a created report, so always finish one with `upload()`; the slot is otherwise freed only when the JavaScript runtime reloads. On iOS the slot stays taken until that upload has completed, so a `createReport()` made while the previous upload is still in progress also rejects.
+
+`upload()` ends the report. Every later call on it, including a second `upload()`, rejects with `E_REPORT_HANDLE_DEAD`, whatever the upload's result was. Call `createReport()` again for another report.
+
+What `upload()` resolves to differs by platform:
+
+- **Android**: the result the SDK reports for the upload.
+- **iOS**: always `true`, once the report is handed off, even when the SDK is not launched. It does not tell you whether the upload succeeded.
+
+### Platform differences
+
+| | Android | iOS |
+| --- | --- | --- |
+| Attachments on a created report | Up to 1000. | At most 3, each non-empty and at most 3 MiB. A further or larger one rejects with `E_REPORT_ATTACHMENT_REJECTED`. `mimeType` is ignored. |
+| When the report handler runs | `onBeforeReportCreated` runs inside `createReport()`, `onAfterReportCreated` at `upload()`. | Both callbacks run at `upload()`, after the created report's fields are copied, so a handler's `setLabels` replaces the labels you set. |
+
+## Before launch
+
+Before `launch`, `upload` and `showReportDialog` do nothing, and `createReport()` resolves `null`. Nothing is queued for later.
+
+On iOS, a call made while the SDK is still starting (status `Launching`) is held and replayed once it is `Launched`; see [A resolved launch is not live capture](/sdk/react_native/lifecycle#a-resolved-launch-is-not-live-capture).
+
+## Errors
+
+Created-report operations reject with a `BugseeReportError` for the codes below; match on its `code`, a `ReportErrorCode` value. Any other failure, such as an unexpected native fault, rejects with an ordinary error, so rethrow what you do not match.
+
+| `ReportErrorCode` | `code` | Meaning |
+| --- | --- | --- |
+| `CreateBusy` | `E_REPORT_CREATE_BUSY` | Another created report is still outstanding. |
+| `HandleDead` | `E_REPORT_HANDLE_DEAD` | The report was already uploaded. |
+| `AttachmentRejected` | `E_REPORT_ATTACHMENT_REJECTED` | The attachment was declined. |
+| `BadArgument` | `E_REPORT_BAD_ARGUMENT` | An argument failed validation; nothing was sent. |
+
+```ts
+import Bugsee, { BugseeReportError, ReportErrorCode } from '@bugsee/react-native';
+
+async function openReport() {
+  try {
+    return await Bugsee.createReport();
+  } catch (error) {
+    if (error instanceof BugseeReportError && error.code === ReportErrorCode.CreateBusy) {
+      return null; // Finish the outstanding report first.
+    }
+    throw error;
+  }
+}
+```
+
+## Default severities
+
+A report gets a default severity unless one is passed or set from a report handler. Change the defaults with these launch options:
+
+| Key | Default | Applies to |
+| --- | --- | --- |
+| `com.bugsee.option.reporting.defaults.crash-priority` | `IssueSeverity.Blocker` | Crash reports |
+| `com.bugsee.option.reporting.defaults.error-priority` | `IssueSeverity.High` | Error reports |
+| `com.bugsee.option.reporting.defaults.bug-priority` | `IssueSeverity.High` | Bug reports |
+
+```ts
+import Bugsee, { IssueSeverity, createDefaultLaunchOptions } from '@bugsee/react-native';
+
+const options = createDefaultLaunchOptions();
+options.setCustomOption('com.bugsee.option.reporting.defaults.bug-priority', IssueSeverity.Medium);
+
+Bugsee.launch('<your app token>', options);
+```
+
+## Severity values
+
+`IssueSeverity` values: `VeryLow` (1), `Medium` (2), `High` (3), `Critical` (4), `Blocker` (5). Pass the constants rather than numbers; see the [enum reference](/sdk/react_native/configuration#enum-reference).
+
+## Related pages
+
+- [Crash & error reporting](/sdk/react_native/manual/crash-error-reporting): handled errors and crashes.
+- [Report handler](/sdk/react_native/report-handler): change every report before it is sent.
+- [Lifecycle & status](/sdk/react_native/lifecycle): the report events.
+- [Feedback](/sdk/react_native/feedback): the in-app feedback chat.

@@ -585,6 +585,18 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "category",
+          label: "Manual reporting",
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              id: "sdk/react_native/manual/bug-reporting",
+              label: "Bug reporting",
+            },
+          ],
+        },
+        {
+          type: "category",
           label: "Previous versions",
           collapsed: true,
           items: [
