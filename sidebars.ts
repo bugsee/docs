@@ -643,6 +643,18 @@ const sidebars: SidebarsConfig = {
           ],
         },
         {
+          type: "category",
+          label: "Privacy",
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              id: "sdk/react_native/privacy/overview",
+              label: "Overview",
+            },
+          ],
+        },
+        {
           type: "doc",
           id: "sdk/react_native/performance",
           label: "Performance monitoring",
