@@ -622,6 +622,11 @@ const sidebars: SidebarsConfig = {
             },
             {
               type: "doc",
+              id: "sdk/react_native/logs",
+              label: "Console logs",
+            },
+            {
+              type: "doc",
               id: "sdk/react_native/events-and-traces",
               label: "Custom events & traces",
             },

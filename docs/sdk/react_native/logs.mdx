@@ -1,0 +1,179 @@
+---
+title: "Console logs"
+description: "How Bugsee React Native SDK 7.x captures console output and native logs, how to write your own lines with Bugsee.log, and how to rewrite or drop lines with setLogFilter."
+sidebar_position: 8
+slug: "/sdk/react_native/logs"
+---
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+Bugsee attaches the log lines your app wrote before a report to that report, on the same timeline as the video and network events. In React Native, those lines come from three places: your JavaScript `console.*` calls, the native logs of the app (including React Native itself and native modules), and lines you send with `Bugsee.log`.
+
+## Automatic console capture
+
+After `Bugsee.launch` resolves, the package patches these `console` methods. Each call still prints as before, and the line is then forwarded to the native SDK:
+
+| Method | Level |
+| --- | --- |
+| `console.error` | `Error` |
+| `console.warn` | `Warning` |
+| `console.log` | `Info` |
+| `console.info` | `Info` |
+| `console.debug` | `Debug` |
+
+`console.trace` and the other `console` methods are not patched and are not forwarded.
+
+The arguments of one call become one line, converted with `String()` and joined with a space, the way a console prints them. Objects are **not** serialized to JSON: `console.log('user', { id: 7 })` is recorded as `user [object Object]`. This keeps fields you did not mean to log (a token inside an object, say) out of the report. Log the values you need explicitly, for example with `JSON.stringify`.
+
+The patch is installed once `launch` (or `relaunch`, or [`attach`](/sdk/react_native/lifecycle#attach-to-a-running-sdk)) resolves, whether it resolves `true` or `false`, so `console` calls made before that are not forwarded. Only a rejection skips it. It is installed only once, and works the same in development and release builds.
+
+### Native logs
+
+The native SDKs also capture the app's native log output:
+
+- **Android**: the app's logcat output, which includes lines from React Native itself and from native modules.
+- **iOS**: standard output and standard error (`print`, `NSLog`), and the log lines of React Native itself and of native modules, at these levels: trace as `Debug`, info as `Info`, warning as `Warning`, error and fatal as `Error`. Lines written only to the unified log (`os_log`) are not captured.
+
+### Each line once
+
+One `console.*` call can also reach the native log (as a `ReactNativeJS` logcat line on Android, as a React Native log line or on standard output on iOS), mainly in development builds. The SDK recognizes that copy and drops it, in development and release builds alike, so each console line is recorded, and reaches your [log filter](#filtering-log-lines), once.
+
+A later `console.*` call or `Bugsee.log` with the same text is a separate line and is kept. On iOS, though, one standard output or standard error line with the same text as a console call, arriving within 2 seconds of it, is treated as that call's copy and dropped.
+
+## Capture options
+
+| Option | Key | Default | Description |
+| --- | --- | --- | --- |
+| `captureLogs` | `com.bugsee.option.capture.logs` | `true` | Capture logs automatically: `console.*` output, the native logs above. `false` stops all of it; lines you send with `Bugsee.log` are still recorded. |
+| `captureLogsLevel` | `com.bugsee.option.capture.logs.level` | `LogLevel.Verbose` | The most verbose level captured; less severe lines are dropped. See [Which lines the level applies to](#which-lines-the-level-applies-to). |
+| `logsUseAllSources` (Android) | `com.bugsee.option.capture.logs.allsources` | `false` | Read all logcat buffers instead of the default sources. |
+
+The console patch reads `com.bugsee.option.capture.logs` at each `launch`, `relaunch` and `attach`, so a `relaunch` with the option changed turns forwarding off or back on.
+
+```ts
+import Bugsee, { LogLevel, createDefaultLaunchOptions } from '@bugsee/react-native';
+
+const options = createDefaultLaunchOptions();
+// Keep Error, Warning and Info. On Android this applies to logcat lines only; on iOS, to every line.
+options.captureLogsLevel = LogLevel.Info;
+
+Bugsee.launch('<your app token>', options);
+```
+
+### Which lines the level applies to
+
+| Platform | `captureLogsLevel` applies to |
+| --- | --- |
+| Android | Only the lines the SDK reads from logcat (React Native core and native modules). It does **not** apply to `console.*` lines forwarded by the package or to `Bugsee.log` lines: with `LogLevel.Info`, a `console.debug` line is still recorded. |
+| iOS | Every line the SDK records, including `console.*` lines and `Bugsee.log` lines. |
+
+See [Configuration](/sdk/react_native/configuration) for every option.
+
+## Writing your own lines
+
+`Bugsee.log(message, level?, requiresFiltering?)` records one line in the Bugsee log:
+
+```ts
+import Bugsee, { LogLevel } from '@bugsee/react-native';
+
+// Default level (Info)
+Bugsee.log('User tapped Checkout');
+
+// Explicit level
+Bugsee.log('Payment succeeded', LogLevel.Info);
+Bugsee.log('Retrying request', LogLevel.Warning);
+Bugsee.log('Upload failed', LogLevel.Error);
+
+// Run the log filter on this line
+function onSignIn(email: string): void {
+  Bugsee.log(`Signed in as ${email}`, LogLevel.Info, true);
+}
+```
+
+| Argument | Type | Default | Description |
+| --- | --- | --- | --- |
+| `message` | `string` | | The line. |
+| `level` | `LogLevel` | `LogLevel.Info` | `Error`, `Warning`, `Info`, `Debug` or `Verbose`. |
+| `requiresFiltering` | `boolean` | `false` | Whether your [log filter](#filtering-log-lines) runs on this line. |
+
+`Bugsee.log` goes straight to the native `Bugsee.log`; it does not go through the `console` patch. Lines are recorded even with `com.bugsee.option.capture.logs` set to `false`, which turns off only what is captured automatically. Lines sent before `launch` are dropped.
+
+`Bugsee.log` throws synchronously, and records nothing, when:
+
+| Input | Thrown |
+| --- | --- |
+| `message` that is not a string | `TypeError` |
+| `level` that is not a `LogLevel` value (`1` to `5`) | `RangeError` |
+| `requiresFiltering` that is not a boolean | `TypeError` |
+
+### `requiresFiltering`
+
+By default, the log filter **skips** lines you send with `Bugsee.log`. Pass `true` for a line that may carry data your filter should handle, such as a value that came from the user. The filter then runs on it once, the same way it runs on captured lines.
+
+## Filtering log lines
+
+`Bugsee.setLogFilter(callback)` installs a filter that sees each log line before it is recorded. Return the line (or a changed copy) to keep it, or `null` to drop it:
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+Bugsee.setLogFilter((line) => {
+  // Drop noisy lines entirely
+  if (line.startsWith('[heartbeat]')) {
+    return null;
+  }
+  // Redact tokens
+  return line.replace(/token=[^&\s]+/g, 'token=<redacted>');
+});
+```
+
+The filter sees `console.*` lines, the native log lines, and `Bugsee.log` lines sent with `requiresFiltering: true`.
+
+Install the filter **before** `Bugsee.launch`, at the top of your startup code. Lines recorded before `setLogFilter` runs are recorded unfiltered. A filter set before `launch` stays in effect after it, and after `relaunch`.
+
+The callback receives the line's text, a string. It can change only the text: the level and timestamp of the line stay as they were.
+
+| Result | Effect |
+| --- | --- |
+| A string | Replaces the line. Return the line unchanged to keep it as is. |
+| `null` or `undefined` | Drops the line. |
+| A `Promise` | Waited on; its value is treated the same way. |
+| Any other value (a number, an object) | Drops the line. |
+| The callback throws, or the promise rejects | Drops the line. |
+
+There is one filter at a time. A later call replaces it, and `setLogFilter()` or `setLogFilter(null)` removes it, so lines are recorded without one. A value that is not a function, `null` or `undefined` throws `TypeError` and leaves the previous filter in place. The callback is chosen when a line arrives, so replacing it while a line is being filtered changes the next line, not that one.
+
+:::note
+The SDK sets a log filter of its own on the native side, on both platforms, to drop the duplicate console copies described in [Each line once](#each-line-once). A log filter you set from native code with `setLogEventFilter` is replaced by it. Filter logs with `Bugsee.setLogFilter` instead.
+:::
+
+### Async filters and deadlines
+
+Your callback runs asynchronously, and it may return a promise. Capture does not wait for the answer.
+
+A line is never recorded unfiltered because the filter was late:
+
+- **Android**: a line the filter has not answered within about **10 seconds** is dropped. A later answer has no effect.
+- **iOS**: there is no deadline. A late answer is still applied, and the line is recorded then, with the timestamp it was captured at. A line the filter never answers is never recorded.
+
+Every captured line in the session (all but `Bugsee.log` lines sent without `requiresFiltering`) goes through the filter, so keep it fast and synchronous where you can. A filter that awaits slow work for each line can make lines arrive late or be dropped.
+
+### Reloads
+
+A filter is a function in the JavaScript runtime. When the runtime reloads (a development reload, for example), lines still waiting for an answer are dropped. After the reload, until the new runtime calls `setLogFilter`, the platforms differ:
+
+- **Android**: lines are recorded **unfiltered**.
+- **iOS**: lines are **dropped**, because nothing in the new runtime answers the filter.
+
+Neither is what you want, so call `setLogFilter` first thing in your startup code, before anything logs.
+
+See [Privacy: Console logs](/sdk/react_native/privacy/logs) for redaction guidance.
+
+## Related pages
+
+- [Privacy: Console logs](/sdk/react_native/privacy/logs): redacting log lines.
+- [Network events](/sdk/react_native/network): the matching network filter.
+- [Configuration](/sdk/react_native/configuration): every launch option.
+- [Lifecycle & status](/sdk/react_native/lifecycle): what works before launch.
