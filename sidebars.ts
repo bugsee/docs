@@ -598,6 +598,11 @@ const sidebars: SidebarsConfig = {
               id: "sdk/react_native/manual/crash-error-reporting",
               label: "Crash & error reporting",
             },
+            {
+              type: "doc",
+              id: "sdk/react_native/error-boundary",
+              label: "Error boundary",
+            },
           ],
         },
         {
