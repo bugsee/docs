@@ -86,9 +86,9 @@ Bugsee.log('Payment succeeded', LogLevel.Info);
 Bugsee.log('Retrying request', LogLevel.Warning);
 Bugsee.log('Upload failed', LogLevel.Error);
 
-// Run the log filter on this line
-function onSignIn(email: string): void {
-  Bugsee.log(`Signed in as ${email}`, LogLevel.Info, true);
+// Run the log filter on this line (the filter below redacts token=...)
+function onSessionRefreshed(sessionToken: string): void {
+  Bugsee.log(`Session refreshed: token=${sessionToken}`, LogLevel.Info, true);
 }
 ```
 
