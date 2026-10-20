@@ -116,7 +116,7 @@ Call `finish` on these objects too: it releases the resources they hold.
 | `finished` | `boolean` | Whether the span has finished. |
 | `attributes` | object | The attributes. |
 | `name` | `string` | Transaction only: the transaction name. |
-| `sampled` | `boolean` | Transaction only: whether the transaction won the sample-rate draw when it started (see [Sampling](#sampling)), which this beta uses for no upload. Read once at start and never updated: a transaction that adaptive sampling promotes when it finishes still reads `false`. |
+| `sampled` | `boolean` | Transaction only: whether the transaction won the sample-rate draw when it started (see [Sampling](#sampling)). In this beta the value has no effect, because the standalone upload is not active. It is read once at start and never updated: a transaction that adaptive sampling promotes when it finishes still reads `false`. |
 
 The properties are read when the object is created and then follow the changes you make through it. They are not read again.
 
