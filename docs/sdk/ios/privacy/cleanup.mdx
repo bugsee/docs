@@ -43,7 +43,7 @@ Note that this API does not delete the session-related data, such as [attributes
 // Bugsee must be stopped before deleting the data
 Bugsee.stop {
     // Clean up all the data stored on the disk
-    Bugsee.deleteCollectedDataOnDevice { success in
+    Bugsee.deleteCollectedData { success in
         let message = success ? "Data deleted successfully" : "Failed to delete data"
         print("CollectedDataDeletion: \(message)")
     }
