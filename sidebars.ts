@@ -733,6 +733,11 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "sdk/react_native/faq",
+          label: "FAQ",
+        },
+        {
+          type: "doc",
           id: "sdk/react_native/migration",
           label: "Migrating from 6.x",
         },
