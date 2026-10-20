@@ -137,7 +137,7 @@ Those reach Bugsee through the global handlers instead, as crashes or errors; se
 
 `fallback`, `onError` and `onReset` keep their roles. If you passed a function as the boundary's children in 6.x, render its result as an element instead (`<Content />` rather than `{() => <Content />}`), and rename `resetErrorBoundary` to `resetError` in your fallback.
 
-The [6.x page](/sdk/react_native/v6/errorboundary) shows `resetError` in its example, but the 6.x code passes `resetErrorBoundary`; a 6.x fallback that worked used `resetErrorBoundary`.
+The reset helper has a different name in each version: 6.x passes `resetErrorBoundary` to a `fallback` function, 7.x passes `resetError`. See the [6.x page](/sdk/react_native/v6/errorboundary) for the 6.x API.
 
 ## Related pages
 
