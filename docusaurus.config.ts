@@ -112,6 +112,8 @@ const config: Config = {
           { from: '/sdk/react-native/crashes', to: '/sdk/react_native/v6/crashes/' },
           { from: '/sdk/react-native/errorboundary', to: '/sdk/react_native/v6/errorboundary/' },
           { from: '/sdk/react-native/manual', to: '/sdk/react_native/v6/manual/' },
+          { from: '/sdk/react-native/v6', to: '/sdk/react_native/v6/installation/' },
+          { from: '/sdk/react-native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
           { from: '/sdk/react_native/v6', to: '/sdk/react_native/v6/installation/' },
           { from: '/sdk/react_native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
         ],
