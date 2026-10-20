@@ -49,7 +49,7 @@ What the two edits do:
 If Hermes compiles a bundle without going through the wrapper, the bundle task fails instead of shipping a Release without a debug ID. See [Troubleshooting](#troubleshooting).
 
 :::caution[7.0.0-beta1 and 7.0.0-beta2: scripts without the executable bit]
-In 7.0.0-beta1 and 7.0.0-beta2 the package's shell scripts are published without the executable bit (mode 644). React Native runs `hermesCommand` directly, so on macOS and Linux the Release bundle task fails with "Permission denied" on `hermesc-preserve-js.sh`. Windows, which uses the `.cmd` launcher, is not affected. Expo apps are affected too, since the config plugin writes the same `hermesCommand`. Make the scripts executable after every install, for example from a `postinstall` script in your app's `package.json`:
+In 7.0.0-beta1 and 7.0.0-beta2 (fixed in 7.0.0-beta3) the package's shell scripts are published without the executable bit (mode 644). React Native runs `hermesCommand` directly, so on macOS and Linux the Release bundle task fails with "Permission denied" on `hermesc-preserve-js.sh`. Windows, which uses the `.cmd` launcher, is not affected. Expo apps are affected too, since the config plugin writes the same `hermesCommand`. Make the scripts executable after every install, for example from a `postinstall` script in your app's `package.json`:
 
 ```json title="package.json"
 {
@@ -82,7 +82,7 @@ The Bugsee Gradle plugin (`com.bugsee.android.gradle`) uploads the R8/ProGuard m
 
 It is also what records `fetch` and `XMLHttpRequest` on Android: React Native sends them through OkHttp, and the plugin is what lets the SDK record OkHttp traffic. Without the plugin, those requests are not recorded on Android; see [Network events](/sdk/react_native/network).
 
-Use the plugin version the package is built against: `android.gradlePlugin` in `node_modules/@bugsee/react-native/native-versions.json`, which is **4.0.8** for `7.0.0-beta2`. Its requirements (Android Gradle Plugin and Gradle versions) are on [Gradle plugin requirements](/sdk/android/gradle-plugin/requirements).
+Use the plugin version the package is built against: `android.gradlePlugin` in `node_modules/@bugsee/react-native/native-versions.json`, which is **4.0.8** for `7.0.0-beta3`. Its requirements (Android Gradle Plugin and Gradle versions) are on [Gradle plugin requirements](/sdk/android/gradle-plugin/requirements).
 
 **`android/settings.gradle`**: the plugin is published to Maven Central, which Gradle does not search for plugins unless told to:
 
@@ -187,7 +187,7 @@ A `hermesCommand` that an earlier prebuild wrote (the `.sh` launcher on every op
 
 **The bundle task fails with "compiled the bundle with Hermes, but hermesc did not run through the preserve wrapper".** `bugsee-sourcemaps.gradle` is applied, but `react.hermesCommand` does not point at the package's launcher, so the bundle would ship without a debug ID. Set `hermesCommand` as in [JavaScript source maps](#1-javascript-source-maps).
 
-**On macOS or Linux, the bundle task fails with "Permission denied" on `hermesc-preserve-js.sh`.** The scripts of 7.0.0-beta1 and 7.0.0-beta2 are published without the executable bit. Run `chmod +x node_modules/@bugsee/react-native/scripts/*.sh`, ideally from a `postinstall` script; see the caution in [JavaScript source maps](#1-javascript-source-maps).
+**On macOS or Linux, the bundle task fails with "Permission denied" on `hermesc-preserve-js.sh`.** The scripts of 7.0.0-beta1 and 7.0.0-beta2 (fixed in 7.0.0-beta3) are published without the executable bit. Run `chmod +x node_modules/@bugsee/react-native/scripts/*.sh`, ideally from a `postinstall` script; see the caution in [JavaScript source maps](#1-javascript-source-maps).
 
 **On Windows, the bundle task fails with "would run hermesc through … a shell script".** Your `hermesCommand` names `hermesc-preserve-js.sh`, which earlier instructions gave for every OS. `cmd` cannot run it. Use the per-OS line above, which picks `hermesc-preserve-js.cmd` on Windows.
 

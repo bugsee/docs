@@ -56,7 +56,7 @@ Run it again whenever you change the plugin's options. The plugin's edits are it
 Release builds then upload their source maps, and Archives upload their dSYMs, whenever a real token is set.
 
 :::caution[7.0.0-beta1 and 7.0.0-beta2: Android Release builds need `chmod`]
-In 7.0.0-beta1 and 7.0.0-beta2 the package's shell scripts are published without the executable bit. The `hermesCommand` the plugin writes runs `hermesc-preserve-js.sh` directly, so an Android Release build on macOS or Linux fails with "Permission denied". Run `chmod +x node_modules/@bugsee/react-native/scripts/*.sh` after each install, for example from a `postinstall` script; see [Symbolication: Android](/sdk/react_native/symbolication/android#1-javascript-source-maps). The iOS bundle phase the plugin writes runs its script through `/bin/bash` and is not affected.
+In 7.0.0-beta1 and 7.0.0-beta2 (fixed in 7.0.0-beta3) the package's shell scripts are published without the executable bit. The `hermesCommand` the plugin writes runs `hermesc-preserve-js.sh` directly, so an Android Release build on macOS or Linux fails with "Permission denied". Run `chmod +x node_modules/@bugsee/react-native/scripts/*.sh` after each install, for example from a `postinstall` script; see [Symbolication: Android](/sdk/react_native/symbolication/android#1-javascript-source-maps). The iOS bundle phase the plugin writes runs its script through `/bin/bash` and is not affected.
 :::
 
 ## 4. Launch the SDK
@@ -86,7 +86,7 @@ See [Installation](/sdk/react_native/installation#4-launch-bugsee) for what `lau
 | `symbolicateReactNativeFrameworks` | boolean | `false` | Make `pod install` download React Native's own dSYMs, so React frames in iOS crashes symbolicate. See [React Native's dSYMs](#react-native-dsyms-on-ios). |
 | `autoLaunch` | boolean | `false` | Android only. Writes the `com.bugsee.app-token` manifest meta-data, so the native SDK launches at process start. See [Auto-launch on Android](#auto-launch-on-android). |
 | `endpoint` | string | none (production) | A self-hosted, staging or regional Bugsee API base. See [Custom endpoint](#custom-endpoint). |
-| `gradlePluginVersion` | string | the version the package is built against (4.0.8 in `7.0.0-beta2`) | The `com.bugsee.android.gradle` version to declare. |
+| `gradlePluginVersion` | string | the version the package is built against (4.0.8 in `7.0.0-beta3`) | The `com.bugsee.android.gradle` version to declare. |
 
 ## What the plugin changes
 
