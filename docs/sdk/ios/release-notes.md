@@ -627,7 +627,7 @@ It is controlled by sanitizeNetworkData/BugseeSanitizeNetworkDataKey option (def
 - Feature: Refactor logging capturing system to produce cleaner logs
 - Feature: Better handling of multi-window hierarchies, lower cpu load.
 - Feature: Auto-hide CC text fields in common payment libraries (Stripe, Braintree, card.io)
-- Feature: Add React native custom logger [read more](/sdk/react_native/logs/)
+- Feature: Add React native custom logger [read more](/sdk/react_native/v6/logs/)
 - Bug fix: Incorrect addresses in C++ exceptions in some cases
 
 
