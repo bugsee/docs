@@ -13,7 +13,7 @@ Bugsee includes an in-app chat that lets your users talk to your support team an
 
 ## Installation
 
-Add the feedback package next to `@bugsee/react-native`. The two must be the **same release**: install both at the same version, or both with the `@beta` tag. Nothing enforces it: the package's peer dependency accepts any `@bugsee/react-native` from `7.0.0-beta2` on.
+Add the feedback package next to `@bugsee/react-native`. The two must be the **same release**: install both at the same version, or both with the `@beta` tag. Nothing enforces it: the package's peer dependency accepts any `@bugsee/react-native` from `7.0.0-beta3` on.
 
 ```sh
 yarn add @bugsee/react-native@beta @bugsee/react-native-feedback@beta

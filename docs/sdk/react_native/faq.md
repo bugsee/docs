@@ -117,7 +117,7 @@ This is not caused by Bugsee: it affects React Native 0.81 and 0.82 with Xcode 2
 
 **18. A Release build fails with "Permission denied" on `hermesc-preserve-js.sh` or `bugsee-xcode.sh`.**
 
-In 7.0.0-beta1 and 7.0.0-beta2 the package's shell scripts are published without the executable bit. On Android (bare and Expo, on macOS or Linux) and in a bare app's iOS bundle phase, they are run directly and fail. Run `chmod +x node_modules/@bugsee/react-native/scripts/*.sh` after every install, for example from a `postinstall` script, or on iOS run the script through `/bin/bash`. See [Symbolication: Android](/sdk/react_native/symbolication/android#1-javascript-source-maps) and [Symbolication: iOS](/sdk/react_native/symbolication/ios#1-the-bundle-phase-javascript-source-maps).
+In 7.0.0-beta1 and 7.0.0-beta2 (fixed in 7.0.0-beta3) the package's shell scripts are published without the executable bit. On Android (bare and Expo, on macOS or Linux) and in a bare app's iOS bundle phase, they are run directly and fail. Run `chmod +x node_modules/@bugsee/react-native/scripts/*.sh` after every install, for example from a `postinstall` script, or on iOS run the script through `/bin/bash`. See [Symbolication: Android](/sdk/react_native/symbolication/android#1-javascript-source-maps) and [Symbolication: iOS](/sdk/react_native/symbolication/ios#1-the-bundle-phase-javascript-source-maps).
 
 <br />
 

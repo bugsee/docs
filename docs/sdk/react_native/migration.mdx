@@ -13,7 +13,7 @@ This page documents Bugsee React Native SDK **7.x**, which is in beta and can ch
 :::
 
 :::note
-This guide compares `react-native-bugsee` 6.0.x with `@bugsee/react-native` `7.0.0-beta2`. If you are setting up a new project, start from [Installation](/sdk/react_native/installation) instead.
+This guide compares `react-native-bugsee` 6.0.x with `@bugsee/react-native` `7.0.0-beta3`. If you are setting up a new project, start from [Installation](/sdk/react_native/installation) instead.
 :::
 
 This guide walks through every public-API change between the 6.x package (`react-native-bugsee`) and the 7.x package (`@bugsee/react-native`, plus `@bugsee/react-native-feedback` for the feedback chat).
@@ -641,7 +641,7 @@ These are documented on the pages linked:
 - One created report at a time, with no call to discard it. See [One created report at a time](/sdk/react_native/manual/bug-reporting#one-created-report-at-a-time).
 - `deleteCollectedDataOnDevice` keeps finished reports waiting for upload. See [Cleanup](/sdk/react_native/privacy/cleanup).
 - On iOS, most feedback chat colors have no effect. See [Feedback](/sdk/react_native/feedback#appearance).
-- In 7.0.0-beta1 and 7.0.0-beta2 the package's shell scripts are published without the executable bit, so the Android Release bundle task (bare and Expo) and the bare iOS bundle phase fail with "Permission denied" until you `chmod +x node_modules/@bugsee/react-native/scripts/*.sh` or run the iOS script through `/bin/bash`. See [Symbolication: Android](/sdk/react_native/symbolication/android#1-javascript-source-maps) and [Symbolication: iOS](/sdk/react_native/symbolication/ios#1-the-bundle-phase-javascript-source-maps).
+- In 7.0.0-beta1 and 7.0.0-beta2 (fixed in 7.0.0-beta3) the package's shell scripts are published without the executable bit, so the Android Release bundle task (bare and Expo) and the bare iOS bundle phase fail with "Permission denied" until you `chmod +x node_modules/@bugsee/react-native/scripts/*.sh` or run the iOS script through `/bin/bash`. See [Symbolication: Android](/sdk/react_native/symbolication/android#1-javascript-source-maps) and [Symbolication: iOS](/sdk/react_native/symbolication/ios#1-the-bundle-phase-javascript-source-maps).
 
 ---
 

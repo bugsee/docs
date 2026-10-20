@@ -34,7 +34,7 @@ REACT_NATIVE_XCODE="${SRCROOT}/../node_modules/@bugsee/react-native/scripts/bugs
 ```
 
 :::caution[7.0.0-beta1 and 7.0.0-beta2: scripts without the executable bit]
-In 7.0.0-beta1 and 7.0.0-beta2 the package's shell scripts are published without the executable bit (mode 644). `with-environment.sh` runs the script it is given directly, so the phase above fails with "Permission denied". Use one of these:
+In 7.0.0-beta1 and 7.0.0-beta2 (fixed in 7.0.0-beta3) the package's shell scripts are published without the executable bit (mode 644). `with-environment.sh` runs the script it is given directly, so the phase above fails with "Permission denied". Use one of these:
 
 - **Run the script through `/bin/bash`**, as the Expo config plugin's phase does. This phase reads `.xcode.env` and `.xcode.env.local` the same way, then runs `bugsee-xcode.sh` with `bash`, so it works with or without the executable bit:
 
@@ -249,7 +249,7 @@ With the [config plugin](/sdk/react_native/expo), `expo prebuild` makes all of t
 
 ## Troubleshooting
 
-**The bundle phase fails with "Permission denied" on `bugsee-xcode.sh`.** The scripts of 7.0.0-beta1 and 7.0.0-beta2 are published without the executable bit. Run the script through `/bin/bash`, or `chmod +x` the package's scripts after each install; see the caution in [The bundle phase](#1-the-bundle-phase-javascript-source-maps).
+**The bundle phase fails with "Permission denied" on `bugsee-xcode.sh`.** The scripts of 7.0.0-beta1 and 7.0.0-beta2 (fixed in 7.0.0-beta3) are published without the executable bit. Run the script through `/bin/bash`, or `chmod +x` the package's scripts after each install; see the caution in [The bundle phase](#1-the-bundle-phase-javascript-source-maps).
 
 **`bugsee: source map upload skipped: no app token is configured`** (or `the app token is the placeholder`). The bundle phase has no real token. Export `BUGSEE_APP_TOKEN` in `ios/.xcode.env.local`; a plain assignment without `export` does not reach the script.
 

@@ -13,6 +13,21 @@ Release history for Bugsee React Native SDK 7.x: `@bugsee/react-native` and `@bu
 
 Each release lists the native SDKs it is built on. Their own changes are in the native SDK release notes: [Android](/sdk/android/release-notes) and [iOS 7.x](/sdk/ios/v7/release-notes).
 
+## 7.0.0-beta3 (October 20 2026)
+
+Fixes the package's shell scripts, which 7.0.0-beta1 and 7.0.0-beta2 published without the executable bit.
+
+**Fixes**
+
+- **Release builds work without a `chmod`.** `scripts/bugsee-xcode.sh` and `scripts/hermesc-preserve-js.sh` (and the two Node scripts next to them) are now published as executable. Android Release builds on macOS and Linux, and the bundle phase of a bare iOS app, no longer fail with "Permission denied". If you added the `chmod +x` workaround for 7.0.0-beta1 or 7.0.0-beta2, you can remove it after upgrading. The release process now packs with `npm pack` and fails if a file that is executable in the repository is not executable in the package.
+- `@bugsee/react-native-feedback` requires `@bugsee/react-native` `^7.0.0-beta3`.
+
+**Compatibility**
+
+- Android: Bugsee Android SDK 7.4.2, Bugsee Gradle plugin 4.0.8.
+- iOS: Bugsee iOS SDK 7.0.0-beta7.
+- `@bugsee/cli` 0.7.12.
+
 ## 7.0.0-beta2 (October 19 2026)
 
 `launch` and `relaunch` take the options object as is.
@@ -36,7 +51,7 @@ Each release lists the native SDKs it is built on. Their own changes are in the 
 
 **Known issues**
 
-- The package's shell scripts (`scripts/bugsee-xcode.sh`, `scripts/hermesc-preserve-js.sh`) are published without the executable bit. Android Release builds on macOS and Linux, and the bundle phase of a bare iOS app, fail with "Permission denied" until you run `chmod +x node_modules/@bugsee/react-native/scripts/*.sh`. See [Symbolication: Android](/sdk/react_native/symbolication/android#1-javascript-source-maps) and [Symbolication: iOS](/sdk/react_native/symbolication/ios#1-the-bundle-phase-javascript-source-maps).
+- The package's shell scripts (`scripts/bugsee-xcode.sh`, `scripts/hermesc-preserve-js.sh`) are published without the executable bit. Android Release builds on macOS and Linux, and the bundle phase of a bare iOS app, fail with "Permission denied" until you run `chmod +x node_modules/@bugsee/react-native/scripts/*.sh`. Fixed in 7.0.0-beta3. See [Symbolication: Android](/sdk/react_native/symbolication/android#1-javascript-source-maps) and [Symbolication: iOS](/sdk/react_native/symbolication/ios#1-the-bundle-phase-javascript-source-maps).
 
 **Compatibility**
 
@@ -67,7 +82,7 @@ The first public beta of the rewritten React Native SDK. `@bugsee/react-native` 
 
 **Known issues**
 
-- The package's shell scripts (`scripts/bugsee-xcode.sh`, `scripts/hermesc-preserve-js.sh`) are published without the executable bit. Android Release builds on macOS and Linux, and the bundle phase of a bare iOS app, fail with "Permission denied" until you run `chmod +x node_modules/@bugsee/react-native/scripts/*.sh`. See [Symbolication: Android](/sdk/react_native/symbolication/android#1-javascript-source-maps) and [Symbolication: iOS](/sdk/react_native/symbolication/ios#1-the-bundle-phase-javascript-source-maps).
+- The package's shell scripts (`scripts/bugsee-xcode.sh`, `scripts/hermesc-preserve-js.sh`) are published without the executable bit. Android Release builds on macOS and Linux, and the bundle phase of a bare iOS app, fail with "Permission denied" until you run `chmod +x node_modules/@bugsee/react-native/scripts/*.sh`. Fixed in 7.0.0-beta3. See [Symbolication: Android](/sdk/react_native/symbolication/android#1-javascript-source-maps) and [Symbolication: iOS](/sdk/react_native/symbolication/ios#1-the-bundle-phase-javascript-source-maps).
 
 **Compatibility**
 
