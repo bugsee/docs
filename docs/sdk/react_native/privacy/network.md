@@ -65,22 +65,35 @@ Write one filter that redacts everything you need on both platforms, as in the e
 
 `Bugsee.setNetworkFilter(callback)` sees each network event before it is recorded, the captured traffic and the events you add with `addNetworkEvent`. Return the event with its fields redacted to keep it, or `null` to drop it.
 
+The example below is a starting point, not an exhaustive policy: review it against your data. Its lists repeat the iOS built-in header names and keys, because on iOS the filter replaces the built-in redaction, and add a few names for your own API. All names are matched case-insensitively.
+
 ```ts
 import Bugsee, { type NetworkFilterEvent } from '@bugsee/react-native';
 
+// Header names (lowercase). The first nine are the iOS built-in list.
 const SECRET_HEADERS = new Set([
-  'authorization',
-  'proxy-authorization',
-  'cookie',
-  'set-cookie',
-  'x-api-key',
-  'x-session-id',
+  'authorization', 'proxy-authorization', 'cookie', 'set-cookie', 'x-api-key',
+  'x-auth-token', 'x-csrf-token', 'x-forwarded-for', 'x-real-ip',
+  'x-session-id', // your own API
 ]);
-const SECRET_PARAMS = /([?&](?:token|access_token|code|session)=)[^&#]*/gi;
-const SECRET_JSON_KEYS = new Set(['password', 'otp', 'token', 'refresh_token', 'cardNumber']);
+
+// URL query parameter and JSON key names (lowercase). All but the last line are the iOS built-in list.
+const SECRET_KEYS = new Set([
+  'password', 'passwd', 'pass', 'secret', 'client_secret',
+  'token', 'access_token', 'refresh_token', 'id_token', 'auth_token',
+  'api_key', 'apikey', 'authorization',
+  'credit_card', 'creditcard', 'card_number', 'cardnumber', 'cvv', 'cvc', 'cvv2',
+  'ssn', 'social_security', 'pin', 'private_key', 'privatekey',
+  'otp', 'code', 'session', // your own API
+]);
 
 function redactUrl(url: string | null): string | null {
-  return url === null ? null : url.replace(SECRET_PARAMS, '$1<redacted>');
+  if (url === null) {
+    return null;
+  }
+  return url.replace(/([?&])([^=&#]+)=[^&#]*/g, (match: string, sep: string, name: string) =>
+    SECRET_KEYS.has(name.toLowerCase()) ? `${sep}${name}=<redacted>` : match,
+  );
 }
 
 function redactHeaders(headers: Record<string, string>): Record<string, string> {
@@ -95,7 +108,7 @@ function redactBody(body: string): string | null {
   try {
     const parsed: unknown = JSON.parse(body);
     return JSON.stringify(parsed, (key, value: unknown) =>
-      SECRET_JSON_KEYS.has(key) ? '<redacted>' : value,
+      SECRET_KEYS.has(key.toLowerCase()) ? '<redacted>' : value,
     );
   } catch {
     return null; // not JSON: drop the body rather than guess
