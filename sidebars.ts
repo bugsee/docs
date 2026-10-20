@@ -728,6 +728,11 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "sdk/react_native/release-notes",
+          label: "Release notes",
+        },
+        {
+          type: "doc",
           id: "sdk/react_native/migration",
           label: "Migrating from 6.x",
         },
