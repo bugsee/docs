@@ -15,7 +15,7 @@ The config plugin covers the **build**. Your app still starts the SDK from JavaS
 
 ## Requirements
 
-The same as for any `@bugsee/react-native` app: React Native 0.81 or later with the New Architecture, Hermes, iOS 15.0 or later and Android API 21 or later. Any Expo SDK whose React Native is 0.81 or later meets this; the package's own Expo example uses Expo SDK 57 with React Native 0.86. The plugin edits Groovy Gradle files only; see [Limits](#limits).
+The same as for any `@bugsee/react-native` app: React Native 0.81 or later with the New Architecture, Hermes, iOS 15.0 or later (15.1 with CocoaPods; see [Installation](/sdk/react_native/installation#requirements)) and Android API 21 or later. Any Expo SDK whose React Native is 0.81 or later meets this; the package's own Expo example uses Expo SDK 57 with React Native 0.86. The plugin edits Groovy Gradle files only; see [Limits](#limits).
 
 :::caution[No Expo Go]
 The package contains native code, so it does not run in Expo Go: the native module is looked up when the package loads, and is missing there. Use a [development build](https://docs.expo.dev/develop/development-builds/introduction/) instead.
