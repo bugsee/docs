@@ -27,8 +27,11 @@ async function logCurrentUser() {
   console.log('Bugsee user:', id ?? 'none');
 }
 
-// On sign-out
-Bugsee.clearUserIdentifier();
+// On sign-out: attributes persist across launches, so clear them too
+async function onSignOut(): Promise<void> {
+  Bugsee.clearUserIdentifier();
+  await Bugsee.clearAllAttributes();
+}
 ```
 
 | Method | Returns | Notes |
