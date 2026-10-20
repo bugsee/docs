@@ -145,7 +145,7 @@ For a handled, non-terminal error, use [`logException`](#reporting-handled-error
 
 Bugsee remembers every error **object** it has reported, and does not report the same object again, whichever route sees it second: `logException`, `logUnhandledException`, the global handler, the rejection tracker, `<ErrorBoundary>` or `Bugsee.wrap`. An error that more than one route sees produces one report from the JavaScript layer.
 
-Two consequences:
+Three consequences:
 
 - If you log an error and then rethrow it, the rethrown error is not reported again, not even as a crash. If the error is going to end the app, report it with `logUnhandledException` instead of `logException`, not after it: whichever call sees the error object first claims it, and later calls for the same object do nothing.
 - An error object is claimed even when its report is dropped. `logException` before `launch` claims the object although the native SDK drops the report, so no later route reports that same object.
