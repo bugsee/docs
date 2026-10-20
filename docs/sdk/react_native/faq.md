@@ -17,9 +17,11 @@ React Native 0.81 or later, with the New Architecture enabled, on iOS 15.0 or la
 
 <br />
 
-**2. Can I use JavaScriptCore instead of Hermes?**
+**2. Can I use JavaScriptCore instead of Hermes? What happens if I turn Hermes off?**
 
-No. Hermes is required. React Native removed JavaScriptCore from core in 0.81, and the community package that replaces it, `@react-native-community/javascriptcore`, does not work with current React Native. See [Overview](/sdk/react_native/overview#requirements).
+Hermes is required, and JavaScriptCore is not supported. React Native removed JavaScriptCore from core in 0.81, so turning Hermes off means plugging in a third-party engine. The only one the ecosystem offers, `@react-native-community/javascriptcore`, did not work with current React Native when we tried it. On Android its JavaScriptCore cannot parse React Native's own bundle, and on iOS it fails to link on 0.87 and to `pod install` on 0.86. An app that turns Hermes off therefore usually cannot be built, before the Bugsee SDK is involved.
+
+Nothing in the SDK blocks or warns about it, and some code adapts to it. Reports carry `js-engine: jsc` (for any engine that is not Hermes), stack traces are parsed in both engines' formats, unhandled promise rejections use the standard promise library's tracker, and the source-map build hooks have a plain-bundle path. None of this has been tested, because no test app could be built, so treat it as unsupported. If you try it anyway, report what you find together with your engine and React Native versions. See [Overview](/sdk/react_native/overview#requirements).
 
 <br />
 
