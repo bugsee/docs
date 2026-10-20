@@ -57,16 +57,16 @@ class App extends React.Component {
   render() {
     return (
       <Bugsee.ErrorBoundary
-        fallback={({ error, componentStack, resetError }) => (
+        fallback={({ error, componentStack, resetErrorBoundary }) => (
           <React.Fragment>
             <div>Error encountered</div>
             <div>{error.toString()}</div>
             <div>{componentStack}</div>
             <button onClick={() => {
                 this.setState({ message: DEFAULT_MESSAGE });
-                {/* When resetError() is called, Fallback component will be removed */}
+                {/* When resetErrorBoundary() is called, Fallback component will be removed */}
                 {/* and Bugsee ErrorBoundary's children will be rendered in their initial state */}
-                resetError();
+                resetErrorBoundary();
             }}>Reset</button>
           </React.Fragment>
         )}
