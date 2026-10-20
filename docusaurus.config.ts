@@ -107,6 +107,11 @@ const config: Config = {
           { from: '/sdk/react_native/crashes', to: '/sdk/react_native/v6/crashes/' },
           { from: '/sdk/react_native/errorboundary', to: '/sdk/react_native/v6/errorboundary/' },
           { from: '/sdk/react_native/manual', to: '/sdk/react_native/v6/manual/' },
+          // The hyphenated spelling is generated only for pages that exist, so the retired routes need it explicitly.
+          { from: '/sdk/react-native/custom', to: '/sdk/react_native/v6/custom/' },
+          { from: '/sdk/react-native/crashes', to: '/sdk/react_native/v6/crashes/' },
+          { from: '/sdk/react-native/errorboundary', to: '/sdk/react_native/v6/errorboundary/' },
+          { from: '/sdk/react-native/manual', to: '/sdk/react_native/v6/manual/' },
           { from: '/sdk/react_native/v6', to: '/sdk/react_native/v6/installation/' },
           { from: '/sdk/react_native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
         ],
