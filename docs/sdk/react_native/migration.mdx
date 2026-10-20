@@ -1,0 +1,666 @@
+---
+title: "Migrating from 6.x to 7.x"
+description: "Step-by-step guide for moving a React Native app from react-native-bugsee 6.x to @bugsee/react-native 7.x: packages, requirements, launch options, renamed and removed APIs, build changes and a checklist."
+sidebar_position: 25
+slug: "/sdk/react_native/migration"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents Bugsee React Native SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/react_native/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/react_native/migration).
+:::
+
+:::note
+This guide compares `react-native-bugsee` 6.0.x with `@bugsee/react-native` `7.0.0-beta2`. If you are setting up a new project, start from [Installation](/sdk/react_native/installation) instead.
+:::
+
+This guide walks through every public-API change between the 6.x package (`react-native-bugsee`) and the 7.x package (`@bugsee/react-native`, plus `@bugsee/react-native-feedback` for the feedback chat).
+
+:::note[TL;DR]
+7.x is a new package, not an upgrade in place. It requires React Native 0.81 or later with the New Architecture and Hermes. The default export is still a `Bugsee` singleton and many method names carry over, but the options, the enums, the filters, the lifecycle events, the error boundary and the build integration all change, and the feedback chat moves to its own package. Expect code changes in every file that touches Bugsee.
+:::
+
+---
+
+## 1. Packages and requirements
+
+### 1.1 Replace the package
+
+Remove the 6.x package and add the 7.x one. Add the feedback package only if you show the feedback chat.
+
+```sh
+yarn remove react-native-bugsee
+yarn add @bugsee/react-native@beta
+yarn add @bugsee/react-native-feedback@beta   # only if you use the feedback chat
+```
+
+| 6.x | 7.x |
+| --- | --- |
+| `react-native-bugsee` | `@bugsee/react-native` |
+| Feedback chat inside the main package | `@bugsee/react-native-feedback`, at the same version as `@bugsee/react-native` |
+| `bugsee-sourcemaps` (a dev dependency you installed for source-map uploads) | `@bugsee/cli`, a dependency of `@bugsee/react-native`, installed with it |
+| `import Bugsee from 'react-native-bugsee'` | `import Bugsee from '@bugsee/react-native'` |
+
+Then update every import. Types, enums, components and helpers that 6.x hung off the default export are **named exports** in 7.x:
+
+```ts
+import Bugsee, {
+  AndroidLaunchOptions,
+  BugseeSecure,
+  ErrorBoundary,
+  IOSLaunchOptions,
+  IssueSeverity,
+  LogLevel,
+  createDefaultLaunchOptions,
+} from '@bugsee/react-native';
+```
+
+### 1.2 Requirements
+
+| | 6.x | 7.x |
+| --- | --- | --- |
+| React Native | Not stated by the package | 0.81 or later, **New Architecture enabled** |
+| JavaScript engine | Not stated by the package | **Hermes**. JavaScriptCore is not supported. |
+| iOS | 12.0 or later | 15.0 or later (15.1 with CocoaPods, React Native's own floor) |
+| Android | API 21; AGP 8.6.0 or later, `compileSdkVersion` 35 | API 21 or later |
+| Expo | Prebuild, with your own native edits | Prebuild, with the package's [config plugin](/sdk/react_native/expo). Expo Go is not supported. |
+
+On the legacy architecture the 7.x package fails when it is imported. See [Overview](/sdk/react_native/overview#requirements).
+
+### 1.3 Native setup
+
+| | 6.x | 7.x |
+| --- | --- | --- |
+| iOS SDK | The `Bugsee` pod from CocoaPods trunk, or `Bugsee.xcframework` copied in by hand | Brought by the package: its `Package.swift` with React Native's Swift Package Manager integration (0.87 and later), or its podspec, which downloads and vendors the XCFramework during `pod install`. Remove a hand-copied `Bugsee.xcframework`. |
+| Android SDK | `com.bugsee:bugsee-android:+` (any version) | `com.bugsee:bugsee-android` 7.4.2, plus its NDK and OkHttp modules, pinned by the package |
+| Android Gradle plugin | Not needed | The Bugsee Gradle plugin (`com.bugsee.android.gradle`), for `fetch`/XHR network capture on Android and for the R8 mapping and native-symbol uploads. See [Symbolication: Android](/sdk/react_native/symbolication/android). |
+
+Without the Bugsee Gradle plugin, a 7.x Android app builds and runs, but records no `fetch` or `XMLHttpRequest` traffic. See [Installation](/sdk/react_native/installation#android).
+
+---
+
+## 2. Launching the SDK
+
+### 2.1 `launch`, `relaunch` and `stop` resolve to a result
+
+| 6.x | 7.x |
+| --- | --- |
+| `launch(appToken, options?): Promise<void>` | `launch(token, options?): Promise<boolean>`: `true` when the SDK started (or was already running; the options are then not applied), `false` when it declined (for example, a rejected token) |
+| `relaunch(options?): Promise<void>` | `relaunch(options?): Promise<boolean>` |
+| `stop(): Promise<void>` | `stop(): Promise<boolean>` |
+| `initialize()`: wire up JavaScript when native code launched the SDK | `attach()`: the same, for an SDK launched before JavaScript runs (from Android manifest meta-data, or by your native code) |
+| No token check | A missing, empty or blank token rejects with the code `E_TOKEN` |
+
+`launch` resolving does not mean capture has started: poll `getStatus()` or subscribe with `onStatusChange`. See [Lifecycle & status](/sdk/react_native/lifecycle).
+
+### 2.2 Wrap your root component
+
+7.x adds `Bugsee.wrap(App)`. Without it, reports carry no view hierarchy, and an uncaught render error is not reported at all, because on React Native 0.81 and later render errors do not reach the global error handler. See [Render errors](/sdk/react_native/manual/crash-error-reporting#render-errors).
+
+```ts title="index.js"
+AppRegistry.registerComponent(appName, () => Bugsee.wrap(App));
+```
+
+### 2.3 Launch options
+
+In 6.x you created `new Bugsee.IOSLaunchOptions()` or `new Bugsee.AndroidLaunchOptions()`. Each came **pre-filled with the 6.x package's own defaults**, and its properties wrote 6.x option names (`MaxRecordingTime`, `ShakeToReport`, …).
+
+In 7.x, `createDefaultLaunchOptions()` returns an `IOSLaunchOptions` or an `AndroidLaunchOptions` for the running platform. It is **empty**: an option you leave unset is not sent, and the native SDK applies its own default. Its accessors write the shared `com.bugsee.option.*` keys, and `setCustomOption` takes those keys too. Pass the object to `launch` as is, or pass a plain map of `com.bugsee.option.*` keys instead.
+
+<Tabs groupId="sdk-version">
+  <TabItem value="v6" label="6.x">
+
+```ts
+import { Platform } from 'react-native';
+import Bugsee from 'react-native-bugsee';
+
+const options =
+  Platform.OS === 'ios' ? new Bugsee.IOSLaunchOptions() : new Bugsee.AndroidLaunchOptions();
+options.maxRecordingTime = 120;
+options.shakeToReport = true;
+options.defaultBugPriority = Bugsee.Severity.High;
+
+Bugsee.launch(token, options);
+```
+
+  </TabItem>
+  <TabItem value="v7" label="7.x">
+
+```ts
+import Bugsee, { IssueSeverity, createDefaultLaunchOptions } from '@bugsee/react-native';
+
+const options = createDefaultLaunchOptions();
+options.duration = 120;
+options.setCustomOption('com.bugsee.option.reporting.triggers.shake', true);
+options.setCustomOption('com.bugsee.option.reporting.defaults.bug-priority', IssueSeverity.High);
+
+Bugsee.launch(token, options);
+```
+
+  </TabItem>
+</Tabs>
+
+:::caution[Defaults change with the empty options object]
+Because 7.x sends only what you set, the native defaults apply where 6.x sent its own. These change without any code of yours changing:
+
+| Behavior | 6.x default (set by the 6.x package) | 7.x default (native) |
+| --- | --- | --- |
+| Shake to report (`com.bugsee.option.reporting.triggers.shake`) | Off | On |
+| Default bug severity (`com.bugsee.option.reporting.defaults.bug-priority`) | `Low` | `High` |
+| Screenshot to report on iOS (`com.bugsee.option.reporting.triggers.screenshot`) | On | Off |
+| Disk space for pending reports on Android (`maxDataSize`) | 50 MB | 150 MB |
+| Android video mode (`videoMode`) | `V3` | `V2` |
+| Exit detection, including ANRs on Android (`com.bugsee.option.detect.exit`) | Off (`handleAnr`, iOS `killDetection`) | On |
+| Android native (NDK) crash reporting | Off (`ndkCrashReport`) | Always included |
+| Early-crash detection on iOS (`com.bugsee.option.detect.early-crash`) | Off | On |
+| Adaptive video capture on iOS (`com.bugsee.option.capture.video.adaptive`) | Off | On: frames are skipped while nothing on screen changes |
+| iOS crash handler (`com.bugsee.option.capture.crash-handler-type`) | BSD signal handlers | `MachAndBSD`: a Mach exception handler as well as the BSD signal handlers |
+
+Check the defaults on [Configuration](/sdk/react_native/configuration) for every option you relied on, and set the ones you need explicitly.
+:::
+
+In `7.0.0-beta1`, `launch` and `relaunch` took only the plain map, so you passed `BugseeLaunchOptions.serialize(options)`. From `7.0.0-beta2` they take the options object as is; `serialize` still returns the same map if you need it.
+
+---
+
+## 3. Option mapping
+
+In the tables below, a 7.x accessor is a property of the options object; a key without an accessor is set with `options.setCustomOption(key, value)` or in a plain map. [Configuration](/sdk/react_native/configuration) has every key with its type and default.
+
+### 3.1 Options on both platforms
+
+| 6.x property (6.x option name) | 7.x accessor or key |
+| --- | --- |
+| `maxRecordingTime` (`MaxRecordingTime`) | `duration` (`com.bugsee.option.config.duration`) |
+| `videoEnabled` (`VideoEnabled`) | `captureVideo` (`com.bugsee.option.capture.video`) |
+| `screenshotEnabled` (`ScreenshotEnabled`) | `com.bugsee.option.capture.screenshot` |
+| `captureLogs` (`CaptureLogs`) | `captureLogs` (`com.bugsee.option.capture.logs`) |
+| `monitorNetwork` (`MonitorNetwork`) | `captureNetwork` (`com.bugsee.option.capture.network`) |
+| `maxNetworkBodySize` | `com.bugsee.option.capture.network.body-size-limit` |
+| `crashReport` (`CrashReport`) | `detectAndReportCrash` (`com.bugsee.option.detect.crash`) |
+| `handleRejections` (JavaScript only, off unless set) | No option. Unhandled promise rejections are always reported after `launch`, as errors; `detectAndReportCrash: false` turns that off with the other automatic reporting. See [Unhandled promise rejections](/sdk/react_native/manual/crash-error-reporting#unhandled-promise-rejections). |
+| `wifiOnlyUpload` (`WifiOnlyUpload`) | `wifiOnlyUpload` (`com.bugsee.option.config.wifi-only-upload`) |
+| `maxDataSize` (`MaxDataSize`) | `maxDataSize` (`com.bugsee.option.config.max-data-size`) |
+| `shakeToReport` (`ShakeToReport`) | `com.bugsee.option.reporting.triggers.shake` |
+| `screenshotToReport` (Android `ScreenshotToTrigger`, iOS `ScreenshotToReport`) | `com.bugsee.option.reporting.triggers.screenshot` |
+| `reportPrioritySelector` (`BugseeReportPrioritySelector`) | `com.bugsee.option.reporting.ui.priority-selector-enabled` |
+| `reportSummaryRequired` (`ReportSummaryRequired`) | `com.bugsee.option.reporting.ui.summary-required` |
+| `reportDescriptionRequired` (`ReportDescriptionRequired`) | `com.bugsee.option.reporting.ui.description-required` |
+| `reportEmailRequired` (`ReportEmailRequired`) | `com.bugsee.option.reporting.ui.email-required` |
+| `defaultCrashPriority` (`BugseeDefaultCrashPriority`) | `com.bugsee.option.reporting.defaults.crash-priority` |
+| `defaultBugPriority` (`BugseeDefaultBugPriority`) | `com.bugsee.option.reporting.defaults.bug-priority` |
+| _(no 6.x option)_ | `com.bugsee.option.reporting.defaults.error-priority` |
+| `frameRate` (`FrameRate`) | `com.bugsee.option.capture.video.frame-rate` |
+| `minFrameRate`, `maxFrameRate` (`MinFrameRate`, `MaxFrameRate`; sent on both platforms) | iOS only: `com.bugsee.option.capture.video.min-frame-rate`, `com.bugsee.option.capture.video.max-frame-rate` |
+| `captureDeviceAndNetworkNames` (`CaptureDeviceAndNetworkNames`; sent on both platforms) | iOS only: `com.bugsee.option.capture.device-network-names` |
+| `setCustomOption(key, value)` with a 6.x option name | `setCustomOption(key, value)` with a `com.bugsee.option.*` key |
+
+### 3.2 Android options
+
+| 6.x property (6.x option name) | 7.x accessor or key |
+| --- | --- |
+| `notificationBarTrigger` (`NotificationBarTrigger`) | `triggerByNotification` (`com.bugsee.option.reporting.triggers.notification-bar`) |
+| `videoMode` (`VideoMode`: `None`, `V1`, `V2`, `V3`) | `videoMode` (`com.bugsee.option.capture.video.mode`: `None`, `V1`, `V2`, `Fullscreen`, `DirectBuffers`). `V3` no longer exists. |
+| `videoQuality` (`VideoQuality`) | `com.bugsee.option.capture.video.quality` |
+| `fallbackVideoMode` (`FallbackVideoMode`) | No 7.x option. |
+| `serviceMode` (`ServiceMode`) | No 7.x option. |
+| `ndkCrashReport` (`NdkCrashReport`) | No option: the package includes NDK crash reporting (`bugsee-android-ndk`). With Expo, the config plugin's `nativeCrashReporting: false` leaves it out. A bare app can do what that option writes: exclude the module in `android/app/build.gradle` with `configurations.configureEach { exclude group: 'com.bugsee', module: 'bugsee-android-ndk' }`, and declare no `bugsee-android-ndk` dependency of its own. |
+| `handleAnr` (`HandleAnr`) | No option by that name. ANR exits are reported through exit detection: `com.bugsee.option.detect.exit`, and on Android `com.bugsee.option.detect.exit.not_responding` (and `com.bugsee.option.detect.exit.not_responding.as_crash` to report them as crashes); see [Platform-only keys](/sdk/react_native/configuration#platform-only-keys). |
+
+### 3.3 iOS options
+
+| 6.x property (6.x option name) | 7.x accessor or key |
+| --- | --- |
+| `monitorDiskSpace` (`MonitorDiskSpace`) | `captureDiskSpace` (`com.bugsee.option.capture.disk-space`) |
+| `captureAVPlayer` (`CaptureAVPlayer`) | `captureAVPlayer` (`com.bugsee.option.capture.avplayer`) |
+| `videoScale` (`VideoScale`) | `com.bugsee.option.capture.video.scale` (both platforms in 7.x) |
+| `monitorBluetoothStatus` (`MonitorBluetoothStatus`) | `com.bugsee.option.capture.bluetooth-status` |
+| `killDetection` (`BugseeKillDetectionKey`) | No option by that name. Exit detection is `com.bugsee.option.detect.exit`. |
+
+### 3.4 New in 7.x
+
+Options with no 6.x counterpart include `captureLogsLevel`, `captureBreadcrumbs`, `detectAndReportHang`, `endpoint`, Android's `logsUseAllSources`, `detectAndReportExitLowMemory`, `maxPendingReports` and `maxPendingReportAge`, iOS's `crashHandlerType` and `crashSignals`, and keys such as `com.bugsee.option.detect.http-errors`, `com.bugsee.option.capture.network.default-sanitizer` and `com.bugsee.option.performance.enabled`. See [Configuration](/sdk/react_native/configuration).
+
+---
+
+## 4. Enums
+
+6.x exposed its enums as properties of the default export (`Bugsee.LogLevel`, `Bugsee.Severity`, …). 7.x exports them by name.
+
+| 6.x | 7.x | Changes |
+| --- | --- | --- |
+| `Bugsee.Severity` (`Low` 1 … `Blocker` 5) | `IssueSeverity` | `Low` is now `VeryLow`; the values 1 to 5 are unchanged. |
+| `Bugsee.LogLevel` (`None` 0, `Error` 1 … `Verbose` 5) | `LogLevel` | `None` is gone; `Error` 1 to `Verbose` 5 are unchanged. |
+| `Bugsee.VideoMode` (`None`, `V1`, `V2`, `V3`) | `VideoMode` | `V3` is gone; `Fullscreen` (20) and `DirectBuffers` (21) are new. Android only. |
+| `Bugsee.VideoQuality` | `VideoQuality` | Unchanged values. |
+| `FrameRate` (types only) | `FrameRate` | Exported as a value. |
+| `Bugsee.LifecycleEventsTypes` (numbers) | Event names (strings); see [§8](#8-lifecycle-events) | |
+| _(none)_ | `CrashHandlerType`, `Status`, `SpanStatus`, and the error-code enums `ReportErrorCode`, `AttributeErrorCode` and `SpanErrorCode` | New. |
+
+---
+
+## 5. Method changes
+
+### 5.1 Reporting
+
+| 6.x | 7.x |
+| --- | --- |
+| `showReportDialog(summary?, description?, severity?)` | `showReportDialog(summary?, description?, severity?, labels?)` |
+| `upload(summary, description?, severity?, labels?, includeVideo = true)` | `upload(summary, description, severity?, labels?)`. `description` is required (an empty string is fine). There is no `includeVideo`: a fifth argument throws `TypeError`. |
+| `logException(exception, { domain, labels, includeVideo, mergingRules })` | `logException(error, { domain })`. Any other key throws `TypeError`; see [§6.1](#61-logexception-takes-only-a-domain). |
+| `testNativeCrash()`, `testJsCrash()` | Unchanged. |
+| _(none)_ | `createReport()`, `setReportHandler(handler)`, `logUnhandledException(error)`, `notify(…)` |
+
+See [Bug reporting](/sdk/react_native/manual/bug-reporting) and [Crash & error reporting](/sdk/react_native/manual/crash-error-reporting).
+
+### 5.2 Data capture
+
+| 6.x | 7.x |
+| --- | --- |
+| `log(text, level?)` | `log(message, level = LogLevel.Info, requiresFiltering = false)`. Dropped before `launch`. See [Writing your own lines](/sdk/react_native/logs#writing-your-own-lines). |
+| `event(name, params?)` | `event(name, params?)`. Names and parameters are validated, and invalid input throws; see [Custom events & traces](/sdk/react_native/events-and-traces). |
+| `trace(name, value)` | `trace(name, value)`, validated the same way. |
+| `setAttribute(name, value): void` | `setAttribute(name, value): Promise<void>`, which rejects with a `BugseeAttributeError` for invalid input |
+| `getAttribute(name)`, `clearAttribute(name)`, `clearAllAttributes()` | The same names, all returning promises. `getAllAttributes()` is new. See [User & session data](/sdk/react_native/user-session-data). |
+| `setEmail(email)`, `getEmail()`, `clearEmail()` | Removed. Use `setUserIdentifier(id)`, `getUserIdentifier()`, `clearUserIdentifier()` to tie reports to a user; the feedback chat takes an identifier that contains `@` as the user's address. See [User identity](/sdk/react_native/user-session-data#user-identity). |
+| `setAppVersion(version, build)`, `getAppVersion()`, `getAppBuild()` | Removed. 6.x needed the version to match uploaded source maps; 7.x matches them by debug ID. See [§11](#11-build-and-symbolication). |
+| `captureViewHierarchy()` | Unchanged; the view hierarchy also needs `Bugsee.wrap(App)`. |
+| _(none)_ | `addBreadcrumb`, `setBreadcrumbFilter`, `addNetworkEvent`, `startTransaction`, `startSpan`, `getActiveSpan` |
+
+### 5.3 Filters and handlers
+
+| 6.x | 7.x |
+| --- | --- |
+| `setLogFilter(async (event: LogEvent) => LogEvent)` | `setLogFilter((line: string) => string \| null)`; see [§7](#7-filters) |
+| `setNetworkFilter(async (event: NetEvent) => NetEvent)` | `setNetworkFilter((event: NetworkFilterEvent) => NetworkFilterEvent \| null)`; see [§7](#7-filters) |
+| `setLifecycleEventHandler(callback)` | `onLifecycleEvent(listener)`, which returns a subscription; see [§8](#8-lifecycle-events) |
+| `setAttachmentsHandler(handler)` | `setReportHandler({ onAfterReportCreated })`; see [§9](#9-attachments-and-the-report-handler) |
+| `setNewFeedbackMessageCallback(callback)` | `setListener({ onNewMessagesReceived })` from `@bugsee/react-native-feedback`; see [§10](#10-feedback) |
+
+### 5.4 Privacy and lifecycle
+
+| 6.x | 7.x |
+| --- | --- |
+| `toggleProtected(component, isProtected)` | `<BugseeSecure>`; see [§5.5](#55-hiding-views) |
+| `addSecureRect(x, y, width, height)`, `removeSecureRect(…)`, `removeAllSecureRects()` | `setSecureRectangles(rectangles, display?)`, which replaces the whole list; `[]` clears it |
+| `getAllSecureRects()` | Removed. |
+| `pause()`, `resume()` | `startBlackout()`, `endBlackout()`, `isBlackout()`. A blackout suppresses the video, the screenshot, touches and the view hierarchy; logs and network events keep recording. See [Blackout](/sdk/react_native/privacy/video#blackout). |
+| `setKeyboardVisibility(isVisible)` | Removed. |
+| `deleteCollectedDataOnDevice()` | `deleteCollectedDataOnDevice(includingIntermediate)`; the SDK must be stopped first. See [Cleanup](/sdk/react_native/privacy/cleanup). |
+| `initialize()` | `attach()` |
+| _(none)_ | `getStatus()`, `onStatusChange(listener)`, `getLaunchOptions()`, `wrap(App)` |
+
+### 5.5 Hiding views
+
+6.x masked a component by its node handle. 7.x masks what you wrap, and unmasks when the wrapper unmounts.
+
+<Tabs groupId="sdk-version">
+  <TabItem value="v6" label="6.x">
+
+```tsx
+import { useEffect, useRef } from 'react';
+import { Text } from 'react-native';
+import Bugsee from 'react-native-bugsee';
+
+function AccountNumber({ value }: { value: string }) {
+  const ref = useRef<Text>(null);
+  useEffect(() => {
+    Bugsee.toggleProtected(ref.current, true);
+    return () => Bugsee.toggleProtected(ref.current, false);
+  }, []);
+  return <Text ref={ref}>{value}</Text>;
+}
+```
+
+  </TabItem>
+  <TabItem value="v7" label="7.x">
+
+```tsx
+import { Text } from 'react-native';
+import { BugseeSecure } from '@bugsee/react-native';
+
+function AccountNumber({ value }: { value: string }) {
+  return (
+    <BugseeSecure>
+      <Text>{value}</Text>
+    </BugseeSecure>
+  );
+}
+```
+
+  </TabItem>
+</Tabs>
+
+See [Privacy: Video](/sdk/react_native/privacy/video).
+
+---
+
+## 6. Exceptions and the error boundary
+
+### 6.1 `logException` takes only a domain
+
+The 6.x options `labels`, `includeVideo` and `mergingRules.skipFrames` are gone. 7.x accepts only `domain`: the 7.x native SDKs take no per-call labels or video switch, and `skipFrames` is not exposed in this beta. Passing any other key throws `TypeError: ExceptionOptions has unknown key "…"` before anything is sent.
+
+- **Labels**: set them from a [report handler](/sdk/react_native/report-handler). It has no per-call context, so the labels land on every report it handles.
+- **`includeVideo`**: no replacement. Neither SDK can leave the video out of one report.
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+Bugsee.setReportHandler({
+  onAfterReportCreated: (report) => report.setLabels(['checkout']),
+});
+
+try {
+  submitOrder();
+} catch (error) {
+  Bugsee.logException(error, { domain: 'checkout' });
+}
+```
+
+### 6.2 Automatic reporting
+
+- **Unhandled promise rejections** were reported in 6.x only with `handleRejections` set. 7.x reports them after every `launch`, as errors.
+- **Uncaught render errors** need `Bugsee.wrap(App)` in 7.x; see [§2.2](#22-wrap-your-root-component).
+- `detectAndReportCrash: false` turns off the automatic reporting; `logException` and `<ErrorBoundary>` still report.
+
+See [Crash & error reporting](/sdk/react_native/manual/crash-error-reporting).
+
+### 6.3 `<ErrorBoundary>`
+
+| 6.x | 7.x |
+| --- | --- |
+| `Bugsee.ErrorBoundary` | `ErrorBoundary`, a named export |
+| `children` can be a function that returns the tree | `children` is a `ReactNode`. The function form is gone: render the tree directly. |
+| Fallback function receives `{ error, componentStack, resetErrorBoundary }` | Fallback function receives `{ error, componentStack, resetError }`, with `error` typed `unknown` |
+| `onError(error: Error, componentStack)` | `onError(error: unknown, componentStack)`: the thrown value need not be an `Error` |
+| `onReset(error, componentStack)` | `onReset(error: unknown, componentStack)`, otherwise unchanged |
+| _(none)_ | `options` prop: `{ domain }` for the report |
+
+<Tabs groupId="sdk-version">
+  <TabItem value="v6" label="6.x">
+
+```tsx
+import { Button } from 'react-native';
+import Bugsee from 'react-native-bugsee';
+
+<Bugsee.ErrorBoundary
+  fallback={({ resetErrorBoundary }) => <Button title="Retry" onPress={resetErrorBoundary} />}
+>
+  {() => <Cart />}
+</Bugsee.ErrorBoundary>
+```
+
+  </TabItem>
+  <TabItem value="v7" label="7.x">
+
+```tsx
+import { Button } from 'react-native';
+import { ErrorBoundary } from '@bugsee/react-native';
+
+<ErrorBoundary fallback={({ resetError }) => <Button title="Retry" onPress={resetError} />}>
+  <Cart />
+</ErrorBoundary>
+```
+
+  </TabItem>
+</Tabs>
+
+See [Error boundary](/sdk/react_native/error-boundary).
+
+---
+
+## 7. Filters
+
+In 6.x a filter was an async callback that received an event object and returned it. In 7.x the native SDK calls the filter for each item it records and waits for the answer, so the shapes and rules change.
+
+| | 6.x | 7.x |
+| --- | --- | --- |
+| Log filter receives | `LogEvent`: `{ text, level, timestamp? }` | The line's text, a string. Only the text can change. |
+| Log filter returns | The event, or nothing to drop the line | A string to keep or replace the line, `null` to drop it |
+| Network filter receives | `NetEvent`: `{ type, method, url, redirected_from?, body?, headers?, error? }` | `NetworkFilterEvent`, with per-platform writable fields |
+| Network filter returns | The event | The event (start from a spread of the one you received), or `null` to drop it. Leaving out a writable field drops the event. |
+
+In 7.x, a callback that throws, or a promise that rejects, drops the item. `setLogFilter()` or `setNetworkFilter()` with no argument, or with `null`, removes the filter.
+
+<Tabs groupId="sdk-version">
+  <TabItem value="v6" label="6.x">
+
+```ts
+import Bugsee from 'react-native-bugsee';
+
+Bugsee.setLogFilter(async (event) => ({
+  ...event,
+  text: event.text.replace(/token=\S+/g, 'token=<redacted>'),
+}));
+```
+
+  </TabItem>
+  <TabItem value="v7" label="7.x">
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+Bugsee.setLogFilter((line) => line.replace(/token=\S+/g, 'token=<redacted>'));
+```
+
+  </TabItem>
+</Tabs>
+
+Install filters **before** `Bugsee.launch`. Details, deadlines and reload behavior: [Console logs](/sdk/react_native/logs#filtering-log-lines), [Network events](/sdk/react_native/network#filtering-network-events) and the [Privacy](/sdk/react_native/privacy/overview) pages.
+
+6.x also recorded `WebSocket` traffic through a JavaScript patch. 7.x has no such patch.
+
+---
+
+## 8. Lifecycle events
+
+`setLifecycleEventHandler(callback)` called you with a number. `onLifecycleEvent(listener)` calls you with an object, `{ name, reportId? }`, and returns a subscription with `remove()`.
+
+| 6.x `LifecycleEventsTypes` | 7.x `event.name` |
+| --- | --- |
+| `Launched` (0) | `'Launched'` (`'Launching'` is new) |
+| `Started` (1) | No equivalent |
+| `Stopped` (2) | `'Stopped'` (`'Stopping'` is new) |
+| `Resumed` (3), `Paused` (4) | No equivalent. `'BlackoutStarted'` and `'BlackoutEnded'` report `startBlackout` and `endBlackout`. |
+| `RelaunchedAfterCrash` (5) | `'RelaunchedAfterCrash'` |
+| `BeforeReportShown` (6), `AfterReportShown` (7) | `'BeforeReportShown'`, `'AfterReportShown'` |
+| `BeforeReportUploaded` (8), `AfterReportUploaded` (9) | `'BeforeReportUploaded'`, `'AfterReportUploaded'`, with `reportId` |
+| `BeforeFeedbackShown` (10), `AfterFeedbackShown` (11) | No equivalent |
+| `BeforeReportAssembled` (12), `AfterReportAssembled` (13): in the 6.x TypeScript enum only, not in `Bugsee.LifecycleEventsTypes` | `'BeforeReportAssembled'`, `'AfterReportAssembled'`, with `reportId` |
+| _(none)_ | `'ReportAssemblyFailed'`, `'ReportUploadFailedWithFutureRetry'`, `'ReportUploadFailed'` |
+
+<Tabs groupId="sdk-version">
+  <TabItem value="v6" label="6.x">
+
+```ts
+import Bugsee from 'react-native-bugsee';
+
+Bugsee.setLifecycleEventHandler(async (eventType) => {
+  if (eventType === Bugsee.LifecycleEventsTypes.RelaunchedAfterCrash) {
+    showCrashApology();
+  }
+});
+```
+
+  </TabItem>
+  <TabItem value="v7" label="7.x">
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+const subscription = Bugsee.onLifecycleEvent((event) => {
+  if (event.name === 'RelaunchedAfterCrash') {
+    showCrashApology();
+  }
+});
+// subscription.remove() to stop listening
+```
+
+  </TabItem>
+</Tabs>
+
+For the SDK's state, use `getStatus()` and `onStatusChange(listener)` instead of tracking events. See [Lifecycle & status](/sdk/react_native/lifecycle).
+
+---
+
+## 9. Attachments and the report handler
+
+6.x asked an attachments handler for a list of attachments while it bundled a report. 7.x hands the report itself to a report handler, which can read and change it and add attachments.
+
+<Tabs groupId="sdk-version">
+  <TabItem value="v6" label="6.x">
+
+```ts
+import Bugsee from 'react-native-bugsee';
+
+Bugsee.setAttachmentsHandler(async (report) => {
+  if (report.type !== 'crash') {
+    return [];
+  }
+  return [{ name: 'state', filename: 'state.json', data: JSON.stringify(appState()) }];
+});
+```
+
+  </TabItem>
+  <TabItem value="v7" label="7.x">
+
+```ts
+import Bugsee from '@bugsee/react-native';
+
+// React Native's default TypeScript config has no DOM types.
+declare function btoa(data: string): string;
+
+Bugsee.setReportHandler({
+  onAfterReportCreated: async (report) => {
+    if (report.type !== 'crash') {
+      return;
+    }
+    const names = await report.getAttachmentNames();
+    if (!names.includes('state.json')) {
+      await report.addDataAttachment(btoa(JSON.stringify(appState())), {
+        name: 'state.json',
+        mimeType: 'application/json',
+      });
+    }
+  },
+});
+```
+
+  </TabItem>
+</Tabs>
+
+`btoa` encodes only Latin-1 text and throws on anything else, such as JSON with emoji or non-Latin text; encode such text to bytes first, or use a base64 library. `onAfterReportCreated` can run more than once for a report, so the example checks for the attachment before adding it. Call `setReportHandler` **before** `launch`, or it misses the reports launch recovers. See [Report handler](/sdk/react_native/report-handler).
+
+---
+
+## 10. Feedback
+
+The feedback chat moved to `@bugsee/react-native-feedback`, as plain functions. Call them after `Bugsee.launch` has resolved.
+
+| 6.x (`react-native-bugsee`) | 7.x (`@bugsee/react-native-feedback`) |
+| --- | --- |
+| `Bugsee.showFeedbackUI()` | `showFeedbackUI()` |
+| `Bugsee.setDefaultFeedbackGreeting(message)` | `setGreeting(greeting)`; `null` clears it |
+| `Bugsee.setNewFeedbackMessageCallback(async ({ messages }) => …)` | `setListener({ onNewMessagesReceived(messages) { … }, onNewMessageSent(message) { … } })`; `null` removes it |
+| `Bugsee.appearance.AndroidFeedbackAppearance`, `Bugsee.appearance.IOSFeedbackAppearance` | `appearance` from `@bugsee/react-native-feedback` |
+
+```ts
+import { setGreeting, setListener, showFeedbackUI } from '@bugsee/react-native-feedback';
+
+setGreeting('How can we help?');
+setListener({
+  onNewMessagesReceived(messages) {
+    showBadge(messages.length);
+  },
+});
+showFeedbackUI();
+```
+
+See [Feedback](/sdk/react_native/feedback).
+
+### Report UI appearance
+
+6.x split the report colors by platform: `Bugsee.appearance.AndroidReportAppearance` and `Bugsee.appearance.IOSReportAppearance`. 7.x has one cross-platform surface, `Bugsee.appearance`. Setting a color that exists on one platform only throws on the other. See [Appearance](/sdk/react_native/appearance).
+
+---
+
+## 11. Build and symbolication
+
+7.x replaces the 6.x source-map tooling and matches JavaScript frames by **debug ID**, an ID derived from the bundle's content and written into the bundle and its map at build time. The version and build number you uploaded with no longer have to match a value you set at runtime, which is why `setAppVersion` is gone.
+
+| | 6.x | 7.x |
+| --- | --- | --- |
+| Upload tool | `bugsee-sourcemaps`, installed by you | `@bugsee/cli`, installed with the package |
+| Android source maps | `apply from: "../../node_modules/react-native-bugsee/bugsee.gradle"` | `react.hermesCommand` pointed at the package's `hermesc-preserve-js` launcher, and `apply from: …/scripts/bugsee-sourcemaps.gradle` |
+| Android token for uploads | `app.token` in `android/bugsee.properties` (or `bugseeConfig.appToken`, or `BUGSEE_APP_TOKEN`) | `app_token` in `android/bugsee.properties` (or `BUGSEE_APP_TOKEN`) |
+| Per-flavor tokens | `project.ext.bugseeConfig = [flavorAware: true]` with `android/bugsee-<flavor>.properties` | No equivalent: the hook reads only the root `android/bugsee.properties` and the environment. Export a different `BUGSEE_APP_TOKEN` per build job instead. |
+| Android R8 mapping and native symbols | Not handled by the package | The Bugsee Gradle plugin, with `plugin.ndk.enabled=true` for native symbols |
+| iOS source maps | The bundle phase runs `react-native-bugsee/scripts/build-wrap.sh` around React Native's script, with `BUGSEE_PROPERTIES` | The bundle phase runs `@bugsee/react-native/scripts/bugsee-xcode.sh`, with `BUGSEE_APP_TOKEN` exported in `ios/.xcode.env.local` |
+| iOS dSYMs | The native SDK's `BugseeAgent` post-action | An Archive post-action that runs `bugsee-cli xcode post-action` |
+| Expo | No config plugin | The [config plugin](/sdk/react_native/expo) writes all of the above |
+
+Remove the 6.x lines (`bugsee.gradle`, `project.ext.bugseeConfig`, per-flavor `bugsee-<flavor>.properties` files, `build-wrap.sh`, `BUGSEE_PROPERTIES`, the `bugsee-sourcemaps` dependency, a `BugseeAgent` post-action) and follow [Symbolication](/sdk/react_native/symbolication/overview).
+
+---
+
+## 12. New in 7.x
+
+| Feature | Page |
+| --- | --- |
+| `Bugsee.wrap(App)`: view hierarchy and uncaught render errors | [Installation](/sdk/react_native/installation#4-launch-bugsee) |
+| Status: `getStatus()`, `onStatusChange()` | [Lifecycle & status](/sdk/react_native/lifecycle) |
+| Breadcrumbs: `addBreadcrumb()`, `setBreadcrumbFilter()` | [Breadcrumbs](/sdk/react_native/breadcrumbs) |
+| Custom network events: `addNetworkEvent()` | [Network events](/sdk/react_native/network) |
+| Report handler and created reports: `setReportHandler()`, `createReport()` | [Report handler](/sdk/react_native/report-handler), [Bug reporting](/sdk/react_native/manual/bug-reporting) |
+| `logUnhandledException()` | [Crash & error reporting](/sdk/react_native/manual/crash-error-reporting) |
+| Performance monitoring: transactions and spans | [Performance monitoring](/sdk/react_native/performance) |
+| Notification relay: `notify()` | [Notification relay](/sdk/react_native/notification-relay) |
+| User identity and `getAllAttributes()` | [User & session data](/sdk/react_native/user-session-data) |
+| `<BugseeSecure>`, `setSecureRectangles()`, blackout | [Privacy: Video](/sdk/react_native/privacy/video) |
+| Breadcrumb filter and network redaction | [Privacy](/sdk/react_native/privacy/overview) |
+| One camelCase report appearance surface | [Appearance](/sdk/react_native/appearance) |
+| Expo config plugin | [Expo](/sdk/react_native/expo) |
+| Source maps with debug IDs, Android mapping and native symbols, iOS dSYMs | [Symbolication](/sdk/react_native/symbolication/overview) |
+
+---
+
+## 13. Known beta limitations
+
+These are documented on the pages linked:
+
+- The iOS Simulator produces no crash reports; test crash reporting on a device. See [Crash & error reporting](/sdk/react_native/manual/crash-error-reporting#native-crashes).
+- On Android, `fetch` and `XMLHttpRequest` are recorded only with the Bugsee Gradle plugin applied. See [Installation](/sdk/react_native/installation#android).
+- Under Android auto-launch with `attach()`, reports lack the JavaScript details until a `relaunch`, and launch options from JavaScript are not applied. See [Attach to a running SDK](/sdk/react_native/lifecycle#attach-to-a-running-sdk).
+- After a JavaScript reload, filters stay on while nothing in the new runtime answers them: install your filters first thing in your startup code. See the "Reloads" sections of [Console logs](/sdk/react_native/logs#reloads), [Network events](/sdk/react_native/network#reloads) and [Breadcrumbs](/sdk/react_native/breadcrumbs#reloads).
+- On Android, `captureLogsLevel` applies only to lines read from logcat, not to `console.*` lines or `Bugsee.log`. See [Which lines the level applies to](/sdk/react_native/logs#which-lines-the-level-applies-to).
+- `com.bugsee.option.capture.logs.oslog` is accepted and ignored by the iOS SDK in this beta. See [Platform-only keys](/sdk/react_native/configuration#platform-only-keys).
+- Performance data travels with reports; the standalone performance upload is not active. See [Performance monitoring](/sdk/react_native/performance).
+- One created report at a time, with no call to discard it. See [One created report at a time](/sdk/react_native/manual/bug-reporting#one-created-report-at-a-time).
+- `deleteCollectedDataOnDevice` keeps finished reports waiting for upload. See [Cleanup](/sdk/react_native/privacy/cleanup).
+- On iOS, most feedback chat colors have no effect. See [Feedback](/sdk/react_native/feedback#appearance).
+- In 7.0.0-beta1 and 7.0.0-beta2 the package's shell scripts are published without the executable bit, so the Android Release bundle task (bare and Expo) and the bare iOS bundle phase fail with "Permission denied" until you `chmod +x node_modules/@bugsee/react-native/scripts/*.sh` or run the iOS script through `/bin/bash`. See [Symbolication: Android](/sdk/react_native/symbolication/android#1-javascript-source-maps) and [Symbolication: iOS](/sdk/react_native/symbolication/ios#1-the-bundle-phase-javascript-source-maps).
+
+---
+
+## 14. Migration checklist
+
+1. **Swap the packages.** Remove `react-native-bugsee` and `bugsee-sourcemaps`; add `@bugsee/react-native@beta` (and `@bugsee/react-native-feedback@beta` if you use the chat). Check React Native 0.81+, the New Architecture and Hermes.
+2. **Clean the native projects.** Remove a hand-copied `Bugsee.xcframework` and the 6.x build lines; run `pod install`.
+3. **Fix the imports.** Default export from `@bugsee/react-native`; enums, `ErrorBoundary`, `BugseeSecure` and the options classes as named exports.
+4. **Rewrite the launch.** `createDefaultLaunchOptions()`, the [option mapping](#3-option-mapping), explicit values for every default you relied on, and `Bugsee.wrap(App)` at registration. Replace `initialize()` with `attach()`.
+5. **Install handlers before `launch`**: filters, the report handler, and your lifecycle subscription.
+6. **Port each API** with the [method tables](#5-method-changes): `logException` options, `upload` arguments, attributes as promises, `setEmail`, secure views, `pause`/`resume`, `deleteCollectedDataOnDevice`.
+7. **Port the error boundary, filters, lifecycle handler and attachments handler** ([§6](#6-exceptions-and-the-error-boundary) to [§9](#9-attachments-and-the-report-handler)).
+8. **Move the feedback calls** to `@bugsee/react-native-feedback`.
+9. **Set up symbolication**: the Expo config plugin, or the Android and iOS build edits in [Symbolication](/sdk/react_native/symbolication/overview), including the Bugsee Gradle plugin for Android network capture.
+10. **Verify** on a device, in a Release build: a bug report, a test crash with readable frames, network events on both platforms. See [Installation](/sdk/react_native/installation#5-verify).
+
+## Related pages
+
+- [Overview](/sdk/react_native/overview): what 7.x records and its requirements.
+- [Installation](/sdk/react_native/installation): a fresh 7.x setup.
+- [Release notes](/sdk/react_native/release-notes): what each 7.x beta changed.
+- [6.x documentation](/sdk/react_native/v6/installation): the stable release.
