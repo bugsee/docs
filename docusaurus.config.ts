@@ -102,6 +102,13 @@ const config: Config = {
           { from: '/sdk/android/v7/detection', to: '/sdk/android/issue-detection/' },
           { from: '/sdk/android/v7/extensions', to: '/sdk/android/extensibility/bugsee-extensions/' },
           { from: '/sdk/android/v7/manual', to: '/sdk/android/manual/bug-reporting/' },
+          // React Native 6.x pages moved under /sdk/react_native/v6/; old routes with no 7.x page keep their 6.x content.
+          { from: '/sdk/react_native/custom', to: '/sdk/react_native/v6/custom/' },
+          { from: '/sdk/react_native/crashes', to: '/sdk/react_native/v6/crashes/' },
+          { from: '/sdk/react_native/errorboundary', to: '/sdk/react_native/v6/errorboundary/' },
+          { from: '/sdk/react_native/manual', to: '/sdk/react_native/v6/manual/' },
+          { from: '/sdk/react_native/v6', to: '/sdk/react_native/v6/installation/' },
+          { from: '/sdk/react_native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
         ],
         // Android 7.x lived under /sdk/android/v7/ until it became the default;
         // every current Android page keeps answering at its old v7 address.
