@@ -45,7 +45,7 @@ function ContactSupportButton() {
 
 Call the feedback functions after `Bugsee.launch` has resolved. On Android, `showFeedbackUI()` does nothing before launch. On iOS the chat opens before launch, but nothing is sent until the SDK has launched. If the native module is not linked (for example, the app was not rebuilt after installing the package), importing `@bugsee/react-native-feedback` throws.
 
-Before the conversation starts, the chat shows an e-mail screen, until the user continues or skips it, where the user can leave an address for replies. When the [user identifier](/sdk/react_native/user-session-data#user-identity) contains an `@`, the chat takes it as the user's address and does not ask. Android checks the identifier once per launch, at the first feedback call, so set the identifier before your first feedback call. On iOS, the chat's messages carry the user identifier when the user gave no address.
+Before the conversation starts, the chat shows an e-mail screen. On this screen the user can leave an address for replies. The screen stays until the user continues or skips it. When the [user identifier](/sdk/react_native/user-session-data#user-identity) contains an `@`, the chat takes it as the user's address and does not ask. Android checks the identifier once per launch, at the first feedback call, so set the identifier before your first feedback call. On iOS, the chat's messages carry the user identifier when the user gave no address.
 
 ## Greeting
 
