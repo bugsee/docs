@@ -193,7 +193,7 @@ You can disable "Share With App Developers" system option on test devices in *Se
     // ...other initialization code
 
     if ([[[[NSBundle mainBundle] appStoreReceiptURL] lastPathComponent] isEqualToString:@"sandboxReceipt"]) {
-        // We are in TestFlight, enable Bugsee!
+        // TestFlight or a device build from Xcode, enable Bugsee!
         [Bugsee launchWithToken:@"<your_app_token>"];
     }
 
@@ -205,9 +205,10 @@ You can disable "Share With App Developers" system option on test devices in *Se
   <TabItem value="swift" label="Swift">
 
 ```swift
-func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
+func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
     // ...other initialization code
 
+    // TestFlight or a device build from Xcode
     let isRunningTestFlightBeta = Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
     if isRunningTestFlightBeta {
         Bugsee.launch(token:"<your_app_token>")
