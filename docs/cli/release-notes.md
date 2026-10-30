@@ -14,6 +14,24 @@ date for you.
 
 ## 0.8.x
 
+### 0.8.2 (October 30 2026)
+
+A security maintenance release. Commands, options, exit codes and what gets
+uploaded are unchanged, so it is a drop-in upgrade.
+
+- **Updated third-party components to address publicly reported security
+  advisories.** The components behind networking, TLS, compression and archive
+  handling are now current. Upgrading is recommended for everyone.
+- **Log output is plain text unless stderr is a terminal.** Xcode and Gradle build
+  logs, CI logs and the background upload log no longer contain colour escape
+  codes. Setting a non-empty `NO_COLOR` turns colour off in a terminal too.
+- **Building from source needs Rust 1.89 or later.** Prebuilt binaries and the
+  installers are not affected. See [Installation](/cli/installation/).
+- **The older `@bugsee/bugsee-cli` npm package is retired.** It receives no new
+  releases. Use `@bugsee/cli` in JavaScript projects (see
+  [Installation](/cli/installation/)); the install script, Homebrew and the
+  [self-update command](/cli/update/) are unchanged.
+
 ### 0.8.1 (October 8 2026)
 
 A native library that was first uploaded as a symbol table now upgrades to full
