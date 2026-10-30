@@ -26,7 +26,7 @@ uploaded are unchanged, so it is a drop-in upgrade.
   logs, CI logs and the background upload log no longer contain colour escape
   codes. Setting a non-empty `NO_COLOR` turns colour off in a terminal too.
 - **Building from source needs Rust 1.89 or later.** Prebuilt binaries and the
-  installers are not affected. See [Installation](/cli/installation/).
+  installers are not affected.
 - **The older `@bugsee/bugsee-cli` npm package is retired.** It receives no new
   releases. Use `@bugsee/cli` in JavaScript projects (see
   [Installation](/cli/installation/)); the install script, Homebrew and the
