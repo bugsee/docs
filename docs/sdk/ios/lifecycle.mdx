@@ -191,7 +191,7 @@ Lifecycle events and status changes are delivered separately and are not ordered
 | --- | --- |
 | `BugseeLifecycleEventLaunched` | Bugsee was launched. |
 | `BugseeLifecycleEventStopped` | Bugsee was stopped. |
-| `BugseeLifecycleEventRelaunchedAfterCrash` | Bugsee was launched and found a pending crash report, which usually means the app was relaunched after a crash. |
+| `BugseeLifecycleEventRelaunchedAfterCrash` | Bugsee was launched and found a crash left by its crash handler in an earlier run. Dispatched at most once per process. [Exit reports](/sdk/ios/issue-detection/exits), including the watchdog and memory-limit reports of the [Crash Report Extension](/sdk/ios/issue-detection/crash-report-extension), do not dispatch it. |
 | `BugseeLifecycleEventBeforeReportShown` | Before the report dialog is shown. |
 | `BugseeLifecycleEventAfterReportShown` | After the report dialog is shown. |
 | `BugseeLifecycleEventBeforeReportAssembled` | Before a bug, crash or error report starts being assembled. |

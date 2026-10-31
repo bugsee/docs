@@ -212,7 +212,7 @@ Bugsee.testCrash()
   </TabItem>
 </Tabs>
 
-- **Run on a device, without the debugger.** The simulator and Mac Catalyst have no crash reporter. While a debugger is attached, Bugsee does not install its crash handlers at all, because the debugger takes the signals first. Launch the app from the Home Screen, not from Xcode.
+- **Run on a device, without the debugger.** The simulator and Mac Catalyst have no crash reporter. While a debugger is attached, Bugsee does not install its crash handlers at all, because the debugger takes the signals first. Launch the app from the Home Screen or with `xcrun devicectl device process launch`, not with **Run** in Xcode.
 - **Relaunch the app.** The crash is reported on the next launch.
 - **TestFlight builds.** The system can intercept crashes of a build installed from TestFlight before Bugsee sees them. On test devices, turn off **Share With App Developers** in *Settings > Privacy & Security > Analytics & Improvements*.
 

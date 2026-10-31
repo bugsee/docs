@@ -19,15 +19,19 @@ The extension works next to Bugsee's own [crash handler](/sdk/ios/issue-detectio
 
 | Termination | Report |
 | --- | --- |
-| Launch watchdog (`0x8badf00d`) | **Main thread locked**, a crash. When the system ran the watchdog while the app was not visible, a non-fatal error instead |
+| Watchdog (`0x8badf00d`), such as a launch that blocks the main thread for about 20 seconds | **Main thread locked**, a crash. When the system ran the watchdog while the app was not visible, a non-fatal error instead |
 | Memory limit (jetsam) in the foreground | **Foreground Out of memory**, a crash |
 | Memory limit (jetsam) in the background | **Background Out of memory**, a non-fatal error |
 
 Other kinds of termination the extension sees are not reported.
 
+The names above are the crash names. Like every [exit report](/sdk/ios/issue-detection/exits#the-report), the report's summary is `Application process exited`, and its description adds what the system recorded, for example `Main thread locked (watchdog=scene-create, visibility=Foreground)`.
+
 The report carries the threads of the dead process with their stacks, and the list of loaded binaries. When the process was a running Bugsee session, the report is the [exit report](/sdk/ios/issue-detection/exits) of that session, with its video, logs and network events; the extension makes it more precise (a jetsam it reads overrides the guess of exit detection) and adds the stacks. When the process died after calling `Bugsee.launch` but before the session began — the launch watchdog fires inside `application:didFinishLaunchingWithOptions:` — the report is filed on its own, without a recording.
 
 Nothing is filed for a process in which the app did not call `Bugsee.launch`, stopped Bugsee, ran with a debugger attached, or turned exit detection off. When the same process also left a crash report from Bugsee's crash handler, that crash report is filed and the extension's document is dropped, so one death normally gives one report.
+
+These reports do not dispatch the `BugseeLifecycleEventRelaunchedAfterCrash` [lifecycle event](/sdk/ios/lifecycle#available-lifecycle-events): it is sent only for a crash left by Bugsee's crash handler.
 
 ## Setup
 
@@ -84,8 +88,10 @@ Leave `BugseeOptionDetectAndReportCrash` and `BugseeOptionDetectAndReportExit` a
 ## Testing
 
 - Use a device on iOS 27. The simulator never runs the extension.
-- Launch the app from the Home Screen, not from Xcode. A crash caught by the debugger reaches the extension only after you detach, and stopping the app from Xcode ends it in a way no extension sees.
+- Run the app without the debugger: launch it from the Home Screen or with `xcrun devicectl device process launch --device <device id> <bundle id>`, not with **Run** in Xcode. A crash caught by the debugger reaches the extension only after you detach, and stopping the app from Xcode ends it in a way no extension sees.
+- To cause a launch watchdog, block the main thread in `application:didFinishLaunchingWithOptions:` for longer than the system allows, about 20 seconds: for example, `Thread.sleep(forTimeInterval: 40)` after `Bugsee.launch`. To cause a memory-limit termination, allocate memory in a loop and write to it, so the pages are really used.
 - The report is sent on the app's next launch.
+- To see whether the extension ran, look in the App Group container. Each run leaves `Library/Bugsee/corpses/corpse-<start>-<pid>.json` there until the SDK's next launch reads and deletes it, and in Debug builds one line per step in `Library/Bugsee/crash-extension.log`. On a connected device, `xcrun devicectl device info files --device <device id> --domain-type appGroupDataContainer --domain-identifier <group id> --subdirectory Library/Bugsee` lists them. The extension also runs for ordinary crashes, so a document after a crash is expected: Bugsee files the crash handler's report and deletes the document.
 - The extension logs to the Console app under the subsystem `com.bugsee.crashext`.
 - Upload the app's dSYMs as usual to symbolicate the app's frames: see [Crash symbolication](/sdk/ios/symbolication). The extension's dSYM is never needed.
 

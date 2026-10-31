@@ -598,6 +598,10 @@ are removed: 7.x has no pause and resume, and nothing dispatched them. Three eve
 `BugseeLifecycleEventBeforeFeedbackShown` and `BugseeLifecycleEventAfterFeedbackShown` remain
 declared but are not dispatched: the feedback UI moved to its own package.
 
+`BugseeLifecycleEventRelaunchedAfterCrash` is dispatched only for a crash left by the crash
+handler, at most once per process. Exit reports (out of memory, and the watchdog and
+memory-limit reports of the Crash Report Extension) do not dispatch it.
+
 Removing three values renumbered the ones after them. Code that switches on the names is
 fine. Code that stores or forwards the raw numbers (a bridge to another runtime, for example)
 must be rebuilt against the 7.x header. See [Lifecycle & status](/sdk/ios/lifecycle) for the

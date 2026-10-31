@@ -68,7 +68,9 @@ While a debugger is attached, the run is not tracked, because stopping the app f
 
 A background termination is filed as a non-fatal error because background deaths include ordinary system housekeeping, and counting them all as crashes would inflate the crash rate.
 
-The report carries the video, logs and network events of the run that ended, and the crash and error priorities of that run, not those of the launch that files it. It is filed by the next launch, so a [report handler](/sdk/ios/report-handler) set before `launchWithToken:` sees it.
+The title is the crash name. Every exit report has the summary `Application process exited`, and its description repeats the title with the evidence behind it, for example `Foreground Out of memory (signal=uikit_memory_warning, state_at_latch=foreground)`. The `exit_signal` attribute holds the signal that set the verdict (`uikit_memory_warning` or `memory_pressure_critical`), and on an out-of-memory report whose app state is known, `exit_foreground` says whether the app was in the foreground.
+
+The report carries the video, logs and network events of the run that ended, and the crash and error priorities of that run, not those of the launch that files it. It is filed by the next launch, so a [report handler](/sdk/ios/report-handler) set before `launchWithToken:` sees it. Exit reports do not dispatch the `BugseeLifecycleEventRelaunchedAfterCrash` [lifecycle event](/sdk/ios/lifecycle#available-lifecycle-events), which is sent only for a crash left by the crash handler.
 
 :::note[A known false positive]
 A verdict from critical memory pressure is cleared only by the pressure returning to normal while the app runs. If the app is suspended with the verdict set and then closed from the app switcher without running again, the next launch reports a background out-of-memory error that did not happen.
@@ -81,7 +83,7 @@ On the simulator and Mac Catalyst, exit reports are not filed.
 On iOS 27 and later, the [Crash Report Extension](/sdk/ios/issue-detection/crash-report-extension) reads the real exit reason from the dead process and adds the stack of every thread to the exit report. With it:
 
 - A memory-limit termination is reported even when no memory warning came first, as a foreground or background out-of-memory report according to the state the system recorded.
-- A launch watchdog termination (`0x8badf00d`) is reported as `Main thread locked`, a crash, or a non-fatal error when the system ran the watchdog while the app was not visible.
+- A watchdog termination (`0x8badf00d`), such as a launch that takes too long, is reported as `Main thread locked`, a crash, or a non-fatal error when the system ran the watchdog while the app was not visible. The description adds the watchdog's own lines, for example `Main thread locked (watchdog=scene-create, visibility=Foreground)`.
 - A termination before the session began, such as the launch watchdog inside `application:didFinishLaunchingWithOptions:`, is reported on its own, without a recording.
 
 The extension's documents are read by exit detection, so keep `BugseeOptionDetectAndReportExit` on when you use it.
