@@ -1,67 +1,109 @@
 ---
 title: "Appearance"
-description: "How to customize the colors and placeholder texts of the Bugsee Report Controller and Feedback Controller UI on iOS."
-sidebar_position: 8
+description: "How to customize the colors, placeholder texts and style of the Bugsee iOS SDK 7.x report dialog and feedback screen."
+sidebar_position: 18
 slug: "/sdk/ios/appearance"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-You can always change colors of the **Report Controller** and **Feedback Controller** UI.
-
+`+[Bugsee getAppearance]` returns the shared `BugseeTheme`. Set its properties to change the colors and placeholder texts of the report dialog and of the [feedback](/sdk/ios/feedback/) screen. A property you leave unset keeps its default, which depends on the [style](#style).
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-// For example
-[[Bugsee appearance] setReportBackgroundColor:[UIColor darkGrayColor]];
-[[Bugsee appearance] setFeedbackBarsColor:[UIColor magentaColor]];
+BugseeTheme *theme = [Bugsee getAppearance];
+theme.reportBackgroundColor = [UIColor darkGrayColor];
+theme.reportNavigationBarColor = [UIColor blackColor];
+theme.reportTextColor = [UIColor whiteColor];
 
-//... Other colors you can find at BugseeTheme class header
+theme.reportSummaryPlaceholder = @"What happened? Briefly";
+theme.reportDescriptionPlaceholder = @"Describe what you did and what went wrong";
 ```
 
   </TabItem>
   <TabItem value="swift" label="Swift">
 
 ```swift
-// For example
-Bugsee.appearance().feedbackBackgroundColor = UIColor.black;
-Bugsee.appearance().reportNavigationBarColor = UIColor.magenta;
+let theme = Bugsee.getAppearance()
+theme.reportBackgroundColor = .darkGray
+theme.reportNavigationBarColor = .black
+theme.reportTextColor = .white
 
-//... Other colors you can find at BugseeTheme class header
+theme.reportSummaryPlaceholder = "What happened? Briefly"
+theme.reportDescriptionPlaceholder = "Describe what you did and what went wrong"
 ```
 
   </TabItem>
 </Tabs>
 
-|Property|Description|
-|---|---|
-| reportCellBackgroundColor | UITableView cells background color |
-| reportVersionColor | UILabel with version number text color |
-| reportTextColor | UILabels text color |
-| reportSendButtonColor | Not applied: the report screen has used the system Done button since 6.0. Deprecated in 7.0. |
-| reportPlaceholderColor | UIInputFields placeholder color |
-| reportNavigationBarColor | UINavigation bar background color |
-| reportBackgroundColor | Background color of Report Controller |
-| reportCloseButtonColor | Not applied: the report screen has used the system Cancel button since 6.0. Deprecated in 7.0. |
-| feedbackBarsColor | Navigation bar and bottom bar colors |
-| feedbackBackgroundColor | Background color of feedback controller |
-| feedbackIncomingBubbleColor | Incoming message bubble background color |
-| feedbackOutgoingBubbleColor | Outgoing message bubble background color |
-| feedbackIncomingTextColor | Incoming message text color |
-| feedbackOutgoingTextColor | Outgoing message text color |
-| feedbackTitleTextColor | UINavigationBar title color |
-| feedbackEmailSkipColor | Ask for email popup skip button text color |
-| feedbackEmailBackgroundColor | Ask for email popup background color |
-| feedbackEmailContinueNotActiveColor | Ask for email continue not active button background color |
-| feedbackEmailContinueActiveColor | Ask for email continue button background color |
-| feedbackInputTextColor | Input message text color |
-| feedbackInputBackgroundColor | Background color for message input |
-| feedbackCloseButtonColor | Close UIButton cross color |
-| feedbackNavigationBarColor | UINavigationBar color |
-| reportSummaryPlaceholder | Placeholder which is displayed in Summary field in built-in bug reporting UI |
-| reportDescriptionPlaceholder | Placeholder which is displayed in Description field in built-in bug reporting UI |
-| reportEmailPlaceholder | Placeholder which is displayed in Email field in built-in bug reporting UI |
-| reportLabelsPlaceholder | Placeholder which is displayed in Labels field in built-in bug reporting UI |
+## Report dialog
+
+| Property | What it sets |
+| --- | --- |
+| `reportBackgroundColor` | Background of the report dialog. |
+| `reportNavigationBarColor` | Background of the navigation bar. |
+| `reportCellBackgroundColor` | Background of the table cells. |
+| `reportTextColor` | Text color of the labels. |
+| `reportPlaceholderColor` | Placeholder color of the input fields. |
+| `reportVersionColor` | Text color of the version label. |
+| `reportSummaryPlaceholder` | Placeholder of the Summary field. |
+| `reportDescriptionPlaceholder` | Placeholder of the Description field. |
+| `reportEmailPlaceholder` | Placeholder of the Email field. |
+| `reportLabelsPlaceholder` | Placeholder of the Labels field. |
+| `reportCloseButtonColor` | Deprecated and not applied: the report dialog uses the system Cancel button. |
+| `reportSendButtonColor` | Deprecated and not applied: the report dialog uses the system Done button. |
+
+Which fields the dialog shows and requires is set with launch options, such as `BugseeOptionReportingUILabelsEnabled` and `BugseeOptionReportingUIEmailRequired`; see [Configuration](/sdk/ios/configuration/#reporting).
+
+## Feedback screen
+
+The feedback screen ships in the separate `BugseeFeedback` package. It is drawn in system colors and reads these theme properties:
+
+| Property | What it sets |
+| --- | --- |
+| `feedbackBackgroundColor` | Background of the chat. Defaults to the system background. A fixed (not dynamic) color also picks the light or dark interface style of the chat, so its system-colored text stays readable. |
+| `feedbackEmailBackgroundColor` | Background of the screen that asks for the user's email before the chat. |
+| `feedbackEmailContinueActiveColor` | Background of the Continue button once the email is valid. |
+| `feedbackEmailContinueNotActiveColor` | Background of the Continue button while the email is not valid. |
+| `feedbackEmailSkipColor` | Text color of the Skip button. |
+
+The other `feedback*` properties of `BugseeTheme` — `feedbackBarsColor`, `feedbackNavigationBarColor`, `feedbackTitleTextColor`, `feedbackCloseButtonColor`, `feedbackIncomingBubbleColor`, `feedbackOutgoingBubbleColor`, `feedbackIncomingTextColor`, `feedbackOutgoingTextColor`, `feedbackInputBackgroundColor` and `feedbackInputTextColor` — still compile, but the 7.x feedback screen does not apply them.
+
+## Style
+
+The style picks the default colors of the report dialog. Set it with the `BugseeOptionReportingUIStyle` launch option, or the `bugseeStyle` property of `BugseeOptions`:
+
+| Value | Default colors |
+| --- | --- |
+| `BugseeStyleSystem` | System colors, which follow the device's light or dark mode. The default. |
+| `BugseeStyleLight` | A fixed light palette. |
+| `BugseeStyleDusk` | A fixed dark palette. |
+| `BugseeStyleBasedOnStatusBar` | Dusk when the status bar shows light content, Light otherwise. |
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.bugseeStyle = BugseeStyleDusk;
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.bugseeStyle = BugseeStyleDusk
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+Bugsee applies the option to the theme each time the report dialog opens, so set the style through the option rather than through the theme's `style` property. Colors you set on the theme take precedence over the style's defaults.

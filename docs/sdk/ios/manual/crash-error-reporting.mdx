@@ -1,0 +1,247 @@
+---
+title: "Crash & error reporting"
+description: "Report handled errors and exceptions from code with the Bugsee iOS SDK 7.x — logError, logException with domain and skipFrames, forwarding unhandled exceptions, and testing crash capture."
+sidebar_position: 2
+slug: "/sdk/ios/manual/crash-error-reporting"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Crashes are captured automatically — see [Crashes](/sdk/ios/issue-detection/crashes). This page
+covers what you report from code: errors and exceptions your app catches and recovers from. Such
+reports are grouped into issues like crashes, so you get statistics and a breakdown by device and
+iOS version.
+
+## Report a handled error
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+NSError *error = [NSError errorWithDomain:@"com.example.errors.ServerIsDown"
+                                     code:10234
+                                 userInfo:@{@"key1": @"value1",
+                                            @"key2": @"value2"}];
+[Bugsee logError:error];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let error = NSError(domain: "com.example.errors.ServerIsDown",
+                    code: 10234,
+                    userInfo: ["key1": "value1", "key2": "value2"])
+Bugsee.logError(error: error)
+```
+
+  </TabItem>
+</Tabs>
+
+:::note
+Errors are grouped by code, domain and the location of the call. Keep the domain and code
+stable — an arbitrary value in the domain splits one problem into many issues. Put variable data
+into `userInfo` instead.
+:::
+
+## Report a handled exception
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+@try {
+    [self applyCoupon:code];
+} @catch (NSException *exception) {
+    [Bugsee logException:exception completion:nil];
+}
+
+// Or describe the exception by name and reason
+[Bugsee logException:@"CouponError"
+              reason:@"Coupon service returned an empty response"
+          completion:nil];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// From an NSException your code caught, for example in an Objective-C library
+Bugsee.logException(exception: exception, completion: nil)
+
+// Or describe the exception by name and reason
+Bugsee.logException(name: "CouponError",
+                    reason: "Coupon service returned an empty response",
+                    completion: nil)
+```
+
+  </TabItem>
+</Tabs>
+
+### Domain and frames to skip
+
+Two more overloads take an exception domain and the number of frames to skip:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee logException:exception domain:@"Payments" skipFrames:1 completion:nil];
+
+[Bugsee logException:@"CouponError"
+              reason:@"Coupon service returned an empty response"
+              domain:@"Payments"
+          skipFrames:1
+          completion:nil];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.logException(exception: exception, domain: "Payments", skipFrames: 1, completion: nil)
+
+Bugsee.logException(name: "CouponError",
+                    reason: "Coupon service returned an empty response",
+                    domain: "Payments",
+                    skipFrames: 1,
+                    completion: nil)
+```
+
+  </TabItem>
+</Tabs>
+
+- `domain` is recorded with the report. It may be `nil`.
+- `skipFrames` is how many top frames of the stack recorded for the report are left out of its
+  signature, which groups reports into issues. Use it when every report comes through the same
+  helper of yours, so the helper's frames do not make all of them one issue. A negative value
+  counts as `0`.
+
+### Completion
+
+The `completion` block runs once the report has been handed over for filing, and also when
+nothing is filed (on the simulator, on Mac Catalyst, or while the SDK is stopped), so code that
+waits for it is never left hanging. It can be `nil`.
+
+## Labels on these reports
+
+`logError:` and `logException` take no labels. Add them to the report in a
+[report handler](/sdk/ios/report-handler), or in `bugseeAttachmentsForReport:` of your
+`BugseeDelegate`. Both see every report, so check `report.type`: handled errors and exceptions are
+`BugseeReportTypeError`.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+- (NSArray<BugseeAttachment *> *)bugseeAttachmentsForReport:(BugseeReport *)report {
+    if ([report.type isEqualToString:BugseeReportTypeError] &&
+        ![report.labels containsObject:@"checkout"]) {
+        report.labels = [report.labels arrayByAddingObject:@"checkout"];
+    }
+    return @[];
+}
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+func bugsee(attachmentsFor report: BugseeReport) -> [BugseeAttachment] {
+    if report.type == BugseeReportTypeError && !report.labels.contains("checkout") {
+        report.labels = report.labels + ["checkout"]
+    }
+    return []
+}
+```
+
+  </TabItem>
+</Tabs>
+
+`type` tells an error report from a bug or a crash report, but not a `logException` report from a
+`logError` report, or from an error report Bugsee files on its own (a hang, an HTTP error), so a
+label added this way goes on all of them.
+
+## When reports are filed
+
+- A call made while the SDK is `Launching` is filed. If recording has not started yet, the report
+  goes out without video and logs.
+- A call made while the SDK is stopped files nothing, and Bugsee logs that to the console. That
+  includes a launch that still [waits for the app to become active](/sdk/ios/lifecycle/#when-the-launch-waits-for-the-app-to-become-active), as after a launch from
+  `application:didFinishLaunchingWithOptions:` in a scene-based app.
+- On simulators and Mac Catalyst `logError:` and `logException` file nothing; Bugsee logs a line
+  that says so, and `logException` still calls its completion. Use a real device.
+- The severity of these reports is `BugseeOptionReportingDefaultErrorPriority` (default
+  `BugseeSeverityHigh`). A report handler can change it per report.
+
+## Forward unhandled exceptions
+
+If your app installs its own uncaught-exception handler, forward the exception to Bugsee from it so
+it is reported as a crash:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee logUnhandledException:exception completion:^{
+    // Continue with your own handling
+}];
+
+// Or by name and reason
+[Bugsee logUnhandledException:@"FatalStateError"
+                       reason:@"Store is corrupted"
+                   completion:nil];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.logUnhandledException(exception: exception) {
+    // Continue with your own handling
+}
+
+// Or by name and reason
+Bugsee.logUnhandledException(name: "FatalStateError",
+                             reason: "Store is corrupted",
+                             completion: nil)
+```
+
+  </TabItem>
+</Tabs>
+
+On simulators and Mac Catalyst nothing is filed; the completion is still called.
+
+## Test crash reporting
+
+`testCrash` throws an uncaught Objective-C exception, so you can check that crashes reach your
+dashboard:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee testCrash];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.testCrash()
+```
+
+  </TabItem>
+</Tabs>
+
+Run it on a device, with the app started from the Home Screen rather than from Xcode: a debugger
+catches the crash before Bugsee does. The crash report is sent on the next launch. In 6.x this was
+`testExceptionCrash` / `testSignalCrash`.
+
+## Related pages
+
+- [Crashes](/sdk/ios/issue-detection/crashes)
+- [Bug reporting](/sdk/ios/manual/bug-reporting)
+- [Report handler](/sdk/ios/report-handler)
+- [Crash symbolication](/sdk/ios/symbolication)

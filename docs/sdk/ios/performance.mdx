@@ -1,0 +1,138 @@
+---
+title: "Performance monitoring"
+description: "Application performance monitoring (APM) in Bugsee iOS SDK 7.x: automatic transactions for app start, screens, network and file I/O, and the manual transaction and span API."
+sidebar_position: 20
+slug: "/sdk/ios/performance"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Application performance monitoring (APM) records how long your app's work takes, as a tree of transactions and spans. Bugsee attaches the transactions to every report, next to the video and logs.
+
+APM is on by default. `BugseeOptionPerformanceMonitoring` (the `performanceMonitoring` property of `BugseeOptions`) is its master switch: with `NO`, nothing is instrumented, and the manual API returns a shared no-op object that is safe to call.
+
+## Concepts
+
+- A **transaction** is the root of a trace. It has a name, such as `"Checkout"`, an operation, such as `"user.flow"`, attributes and a status.
+- A **span** is a unit of work inside a transaction. Spans form a tree: each span can have child spans. Each carries its own operation, description, attributes and status.
+
+A started transaction becomes the active span on the calling thread, so spans started on that thread afterwards become its children.
+
+## Automatic instrumentation
+
+While APM is on, Bugsee creates these transactions and spans without any code:
+
+| What | Operation | Details |
+| --- | --- | --- |
+| App start | `app.start.cold`, `app.start.warm` | One transaction per process, from process start to the first frame drawn after the app becomes active, with child spans for the launch phases. Prewarmed launches are tagged with the `prewarmed` attribute. Nothing is recorded when the app goes to the background before its first frame. |
+| Screens | `ui.load` | One transaction each time a view controller appears, named after its class, from its first lifecycle method to `viewDidAppear:`, with a child span for each of `loadView`, `viewDidLoad`, `viewWillAppear` and `viewDidAppear`. Container controllers (navigation, tab bar, split view, page view) and system controllers are skipped. SwiftUI views are not instrumented. |
+| Network | `http.client` | One transaction per `URLSession` request, while network capture (`BugseeOptionCaptureNetwork`) is on. A 4xx or 5xx response, or an error, gives it the error status; a cancelled request, the cancelled status. |
+| File I/O | `file.read`, `file.write` | A child span for each `NSData` read or write through `dataWithContentsOfFile:`, `dataWithContentsOfURL:`, `writeToFile:` or `writeToURL:` (and their `options:error:` forms). |
+| File manager | `file.create`, `file.delete`, `file.copy`, `file.move`, `file.mkdir` | A child span for each matching `FileManager` call. |
+
+File spans are added only to a transaction or span you started with `startTransaction` or `startSpan` that is active on the same thread. The automatic app start, screen and network transactions do not collect them, so an app that starts no transactions of its own records no file spans. File I/O on a background queue does not pick up a transaction started on the main thread.
+
+## Transactions and spans
+
+Wrap a flow in a transaction to measure it end to end, and break it into spans for detail. Finish every span and transaction you start.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+id<BGSTransaction> transaction = [Bugsee startTransactionWithName:@"Checkout"
+                                                        operation:@"user.flow"];
+
+id<BGSSpan> load = [Bugsee startSpanWithOperation:@"db.query" description:@"Load cart"];
+// ... load the cart ...
+[load finish];
+
+id<BGSSpan> charge = [Bugsee startSpanWithOperation:@"http.client" description:@"POST /charge"];
+// ... call the payment endpoint ...
+[charge finishWithStatus:BGSSpanStatusError];
+
+[transaction finish];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let transaction = Bugsee.startTransaction(name: "Checkout", operation: "user.flow")
+
+let load = Bugsee.startSpan(operation: "db.query", description: "Load cart")
+// ... load the cart ...
+load.finish()
+
+let charge = Bugsee.startSpan(operation: "http.client", description: "POST /charge")
+// ... call the payment endpoint ...
+charge.finish(status: .error)
+
+transaction.finish()
+```
+
+  </TabItem>
+</Tabs>
+
+To seed a transaction with attributes, use `startTransactionWithName:operation:attributes:` (Swift `startTransaction(name:operation:attributes:)`).
+
+`startSpanWithOperation:description:` creates a child of the span active on the calling thread, and the new span becomes the active one until it finishes, so a span started before it finishes becomes its child. With no active transaction, or with APM off, it returns a no-op span. `getActiveSpan` returns the active span on the calling thread, or `nil`.
+
+### Spans across threads
+
+The active span is kept per thread, and it does not follow `dispatch_async` or a Swift `Task`. To create a span inside a block that runs elsewhere, capture the parent and start the child from it:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+id<BGSTransaction> transaction = [Bugsee startTransactionWithName:@"Sync" operation:@"background.task"];
+
+dispatch_async(queue, ^{
+    id<BGSSpan> upload = [transaction startChildSpanWithOperation:@"http.client"
+                                                      description:@"Upload changes"];
+    // ...
+    [upload finish];
+    [transaction finish];
+});
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let transaction = Bugsee.startTransaction(name: "Sync", operation: "background.task")
+
+queue.async {
+    let upload = transaction.startChildSpan(operation: "http.client", description: "Upload changes")
+    // ...
+    upload.finish()
+    transaction.finish()
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## The span API
+
+Spans and transactions are the `BGSSpan` and `BGSTransaction` protocols, imported into Swift as `Span` and `Transaction`.
+
+| Member | Description |
+| --- | --- |
+| `setName:` | Sets the operation. A transaction keeps the `name` it was started with. Returns the span, so setters can be chained. |
+| `setSpanDescription:` (Swift `setDescription(_:)`) | Sets the description. |
+| `setAttribute:value:` (Swift `setAttribute(_:value:)`) | Sets an attribute. |
+| `setStatus:` | Sets the status without finishing the span. |
+| `startChildSpanWithOperation:` / `startChildSpanWithOperation:description:` | Starts a child span. |
+| `finish` | Finishes the span with the OK status, replacing a status set with `setStatus:`. |
+| `finishWithStatus:` (Swift `finish(status:)`) | Finishes the span with the given status. |
+| `spanId`, `traceId`, `operation`, `spanDescription`, `attributes`, `status`, `finished` (Swift `isFinished`) | Read-only state. |
+| `name`, `sampled` (Swift `isSampled`) | Read-only, on a transaction. |
+
+A span's status is a `BGSSpanStatus` (Swift `SpanStatus`): `OK`, `Error`, `Timeout`, `Cancelled`, `DeadlineExceeded` or `Unknown`. Children still running when their parent finishes are finished with the cancelled status.
+
+## Sampling
+
+`BugseeOptionPerformanceSampleRate` (default `0.01`) and `BugseeOptionPerformanceAdaptiveSampling` (default `YES`) are reserved for a standalone performance upload that is not active yet. They do not affect reports: every transaction, sampled or not, goes into every report. See [Configuration](/sdk/ios/configuration/#performance).

@@ -10,7 +10,7 @@ Bugsee Build Size Analysis turns app size into a first-class CI signal alongside
 The whole flow runs inside the same `BugseeAgent` post-action that already uploads dSYMs. You don't need a second build phase; you just turn the right environment variables on.
 
 :::info[Requires Bugsee iOS SDK 6.1.5 or newer]
-Build info, size analysis, the in-build size check, and chunked upload all ship together in **6.1.5** ([release notes](/sdk/ios/release-notes#615-may-13-2026)). Earlier versions only ship the dSYM upload half of the post-action and silently ignore the size-related env vars.
+Build info, size analysis, the in-build size check, and chunked upload all ship together in **6.1.5** ([release notes](/sdk/ios/v6/release-notes#615-may-13-2026)). Earlier versions only ship the dSYM upload half of the post-action and silently ignore the size-related env vars.
 :::
 
 ## Two layers

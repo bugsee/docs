@@ -62,7 +62,7 @@ python3 "${SCRIPT_SRC}" <your_app_token> >> /tmp/BugseeAgent.txt
 Starting with Bugsee iOS SDK 2.1.0 it is required to use Python 3 to run BugseeAgent.
 :::
 
-The scripts above find the **BugseeAgent** helper utility. Location may vary: within your project folder for Non-SPM installation, or within Derived Data for SPM installation.
+The scripts above find the **BugseeAgent** helper utility. Location may vary: within your project folder for a non-SPM installation, or within Derived Data for an SPM installation. With the iOS SDK's [direct download](/sdk/ios/installation#direct-download), `BugseeAgent` is in the archive's `Tools/` folder: keep that folder inside the folder that contains your `.xcodeproj`, and use the "Non-SPM installation" script.
 For optimization purposes you can modify the script with the direct link to **BugseeAgent** in your particular folder structure.
 
 :::info
@@ -75,7 +75,7 @@ You must also make sure that dSYM files are being created in debug configuration
 
 ![dSYM generation](dsym-generation.png)
 
-In case you are using CocoaPods frameworks with **use_frameworks!** attribute enabled, you might want to add the following post install hook to the end of your Podfile to make sure dSYM for all
+If your app gets Bugsee through CocoaPods (as some cross-platform SDKs do) with the **use_frameworks!** attribute enabled, you might want to add the following post install hook to the end of your Podfile to make sure dSYM for all
 the frameworks are being generated as well:
 
 ```ruby
@@ -92,7 +92,7 @@ end
 ## Build info & Size analysis
 
 :::info[Requires Bugsee iOS SDK 6.1.5 or newer]
-The full build-publish flow (build info, size analysis, in-build size check, chunked upload) ships in **6.1.5** ([release notes](/sdk/ios/release-notes#615-may-13-2026)). On older SDKs the post-action only handles dSYM upload and silently ignores the `BUGSEE_BUILD_INFO_*` / `BUGSEE_SIZE_*` env vars described below.
+The full build-publish flow (build info, size analysis, in-build size check, chunked upload) ships in **6.1.5** ([release notes](/sdk/ios/v6/release-notes#615-may-13-2026)). On older SDKs the post-action only handles dSYM upload and silently ignores the `BUGSEE_BUILD_INFO_*` / `BUGSEE_SIZE_*` env vars described below.
 :::
 
 The same `BugseeAgent` script that uploads dSYMs also runs a build-publish flow. Three optional layers, each controlled by environment variables you set in the scheme's "Run Script" post-action (or export in a CI step before invoking `xcodebuild`).

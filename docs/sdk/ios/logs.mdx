@@ -1,41 +1,139 @@
 ---
-title: "Logging"
-description: "How Bugsee captures iOS console logs automatically and how to send custom log messages with specific levels using the Bugsee logging API or CocoaLumberjack."
-sidebar_position: 5
+title: "Console logs"
+description: "How the Bugsee iOS SDK 7.x captures console output, CocoaLumberjack and WKWebView console logs, the options that control it, and sending your own log lines with levels."
+sidebar_position: 2
 slug: "/sdk/ios/logs"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Out of the box Bugsee automatically captures all standard application console logs (print, NSLog) both from Swift and Objective-C, on iOS 10 and later.
-If that behavior is not desired, it can be disabled through Bugsee launch options, see BugseeCaptureLogsKey option in [configuration](/sdk/ios/configuration/).
+Bugsee records the app's log output and attaches it to every report, so you can read what the app
+was saying before something went wrong.
 
-### OSLog
-:::warning
-Experimental feature.
+## Automatic capture
+
+With `BugseeOptionCaptureLogs` on (the default), Bugsee records:
+
+- standard output and standard error — `print`, `NSLog`, `printf` and anything else written there,
+  from Swift and Objective-C alike;
+- [CocoaLumberjack](https://github.com/CocoaLumberjack/CocoaLumberjack) messages, when the app
+  uses `DDLog`;
+- `console` output of pages in `WKWebView`, recorded at the `Debug` level, while
+  `BugseeOptionCaptureWebViewAdvanced` is on (the default);
+- console output that the React Native, Flutter and Unity SDKs forward.
+
+Lines you send with [`+[Bugsee log:]`](#send-your-own-log-lines) are recorded whatever this option
+says.
+
+:::note[OSLog and Logger]
+`os_log` and `Logger` statements are not captured. `BugseeOptionCaptureOSLogs`
+(`captureOSLogs`) is still accepted so existing code keeps building, but it has no effect.
 :::
-Starting iOS 15 Bugsee can capture OSLog and Logger print statements. Bugsee uses [OSLogStore](https://developer.apple.com/documentation/oslog/oslogstore) to achieve this.
-To capture these logs you need to enable a separate BugseeCaptureOSLogsKey (turned off, by default). See BugseeCaptureOSLogsKey option in [configuration](/sdk/ios/configuration/).
-<br/>
 
-**Note.** This feature requires OSLog.framework to be linked.
+## Options
 
+| Option | `BugseeOptions` property | Default | Effect |
+| --- | --- | --- | --- |
+| `BugseeOptionCaptureLogs` | `captureLogs` | `YES` | Automatic capture of the sources above |
+| `BugseeOptionCaptureLogsLevel` | — | `BugseeLogLevelVerbose` | Lines more verbose than this level are dropped |
+| `BugseeOptionCaptureOSLogs` | `captureOSLogs` | `NO` | Accepted and ignored |
 
-## Loggers
-
-Alternatively, we provide other methods to log messages directly into Bugsee reports. These methods maintain log levels for each message and later allow filtering
-in Bugsee report viewer.
-
-### CocoaLumberjack logger
-
-If you are using [CocoaLumberjack](https://github.com/CocoaLumberjack/CocoaLumberjack), Bugsee includes a logger that can be hooked to Lumberjack.
-
+`BugseeOptionCaptureLogsLevel` applies to every line, including those sent with `+[Bugsee log:]`.
+Console output (`print`, `NSLog`, `printf`, stdout and stderr) is recorded at the `Debug` level,
+whatever it says, so any level stricter than `BugseeLogLevelDebug` drops all console output —
+error messages included — and keeps only lines that carry their own level, such as those sent with
+`+[Bugsee log:level:]`. A line with no level (`BugseeLogLevelInvalid`) is always kept.
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
+NSDictionary *options = @{
+    BugseeOptionCaptureLogsLevel : @(BugseeLogLevelWarning),
+};
+
+[Bugsee launchWithToken:@"<your_app_token>" andOptions:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options: [String: Any] = [
+    BugseeOptionCaptureLogsLevel: BugseeLogLevelWarning.rawValue,
+]
+
+Bugsee.launch(token: "<your_app_token>", dictionaryOptions: options)
+```
+
+  </TabItem>
+</Tabs>
+
+## Send your own log lines
+
+`+[Bugsee log:]` writes a line straight into the recording, with a level you can filter by in the
+report viewer.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// Default level: info
+[Bugsee log:@"Cart restored from disk"];
+
+// Explicit level
+[Bugsee log:@"Coupon service is slow" level:BugseeLogLevelWarning];
+
+// Also run the line through your log filter
+[Bugsee log:@"User entered card details" level:BugseeLogLevelInfo requiresFiltering:YES];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// Default level: info
+Bugsee.log("Cart restored from disk")
+
+// Explicit level
+Bugsee.log("Coupon service is slow", level: BugseeLogLevelWarning)
+
+// Also run the line through your log filter
+Bugsee.log("User entered card details", level: BugseeLogLevelInfo, requiresFiltering: true)
+```
+
+  </TabItem>
+</Tabs>
+
+- Lines sent with `log:` bypass your log filter by default; pass `requiresFiltering:YES` to run
+  them through it. Every other source always goes through the filter.
+- Lines are recorded once the SDK status is `Launched`. A line sent earlier — while the SDK is
+  stopped, while a launch [waits for the app to become active](/sdk/ios/lifecycle/#when-the-launch-waits-for-the-app-to-become-active), or while it is still `Launching` — may be lost.
+
+### `BugseeLogLevel` values
+
+| Value | Meaning |
+| --- | --- |
+| `BugseeLogLevelError` | Errors |
+| `BugseeLogLevelWarning` | Warnings |
+| `BugseeLogLevelInfo` | Informational messages (the default of `log:`) |
+| `BugseeLogLevelDebug` | Debug output |
+| `BugseeLogLevelVerbose` | Everything |
+| `BugseeLogLevelInvalid` | No level |
+
+## CocoaLumberjack without automatic capture
+
+CocoaLumberjack is captured automatically while `BugseeOptionCaptureLogs` is on. If you turn
+automatic capture off but still want CocoaLumberjack messages, add Bugsee's logger to `DDLog`:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[DDLog addLogger:BugseeLumberjackLogger];
+
+// or
 [BugseeLogger install];
 ```
 
@@ -43,42 +141,25 @@ If you are using [CocoaLumberjack](https://github.com/CocoaLumberjack/CocoaLumbe
   <TabItem value="swift" label="Swift">
 
 ```swift
-BugseeLogger.install() 
+BugseeLogger.install()
 ```
 
   </TabItem>
 </Tabs>
 
-### Logging API
+Do not add it while automatic capture is on: every message would be recorded twice, and Bugsee logs
+a warning saying so. To change how the messages this logger forwards are formatted, set `logFormatter` on
+`BugseeLogger.sharedInstance()` to a CocoaLumberjack log formatter. It does not affect automatic
+capture.
 
-You can use the Bugsee logging interface directly, we provide two API functions for sending a message to a log:
+## Filtering log lines
 
+To redact or drop lines before they are recorded, install a log filter with
+`setLogEventFilter:` or the `bugseeFilterLog:completionHandler:` delegate method. See
+[Privacy: console logs](/sdk/ios/privacy/logs).
 
-<Tabs groupId="lang-ios">
-  <TabItem value="objective-c" label="Objective-C">
+## Related pages
 
-```objectivec
-// With default log level (info)
-[Bugsee log:@"Some log message"];
-
-// Set the log level explicitly
-// Levels are BugseeLogLevelLow, BugseeLogLevelError, BugseeLogLevelWarning,
-// BugseeLogLevelInfo, BugseeLogLevelDebug and BugseeLogLevelVerbose
-[Bugsee log:@"Some log message" level:BugseeLogLevelInfo];
-```
-
-  </TabItem>
-  <TabItem value="swift" label="Swift">
-
-```swift
-// With default log level (info)
-Bugsee.log("Some log message")
-
-// Set the log level explicitly
-// Levels are BugseeLogLevelLow, BugseeLogLevelError, BugseeLogLevelWarning,
-// BugseeLogLevelInfo, BugseeLogLevelDebug and BugseeLogLevelVerbose
-Bugsee.log("Some log message", level:BugseeLogLevelInfo)
-```
-
-  </TabItem>
-</Tabs>
+- [Privacy: console logs](/sdk/ios/privacy/logs)
+- [Breadcrumbs](/sdk/ios/breadcrumbs)
+- [Configuration](/sdk/ios/configuration)

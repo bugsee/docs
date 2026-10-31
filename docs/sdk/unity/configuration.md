@@ -69,7 +69,7 @@ Bugsee.Relaunch(options);
 |CrashReport|true|Catch and report application crashes (\*)|
 |DefaultBugPriority|High|Default priority for bugs|
 |DefaultCrashPriority|Blocker|Default priority for crashes|
-|KillDetection|false|Detect abnormal termination (experimental, [read more](/sdk/ios/app-kills/))|
+|KillDetection|false|Detect abnormal termination (experimental, [read more](/sdk/ios/v6/app-kills/))|
 |MaxRecordingTime|60|Maximum recording duration|
 |MonitorNetwork|true|Capture network traffic|
 |ReportPrioritySelector|false|Allow user to modify priority when reporting manually|

@@ -87,7 +87,7 @@ Bugsee.launch("<your_app_token>", iosOptions)
 |Key|Default|Notes|
 |---|---|---|
 |monitorDiskSpace|false|Monitor available disk space|
-|killDetection|false|Detect abnormal termination ([read more](/sdk/ios/app-kills/))|
+|killDetection|false|Detect abnormal termination ([read more](/sdk/ios/v6/app-kills/))|
 |videoScale|1.0|Custom video scale factor|
 |monitorBluetoothStatus|false|Monitor Bluetooth connection status|
 |captureAVPlayer|false|Capture AVPlayer video content|

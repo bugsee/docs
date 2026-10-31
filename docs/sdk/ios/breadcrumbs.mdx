@@ -1,0 +1,179 @@
+---
+title: "Breadcrumbs"
+description: "Turn on automatic breadcrumbs in the Bugsee iOS SDK 7.x — app, screen, gesture, network and system events — and record your own through the exchange factory."
+sidebar_position: 3
+slug: "/sdk/ios/breadcrumbs"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Breadcrumbs are a compact trail of what happened before a report: the app went to the background,
+the user opened a screen and tapped a button, a request failed, the device ran low on memory. Bugsee
+collects them automatically once you turn them on, and you can add your own. Breadcrumbs are new in
+7.x.
+
+## Turn them on
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `BugseeOptionCaptureBreadcrumbs` | `NO` | Automatic breadcrumbs, listed below |
+| `BugseeOptionCaptureBreadcrumbsExtras` | `NO` | Attach the system notification's `userInfo`, as strings, under `extras` to the device-event breadcrumbs that come from a notification (locale, time zone, clock, significant time change, protected data) |
+
+Neither has a `BugseeOptions` property; set them by key.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+[options updateLaunchOptions:@{
+    BugseeOptionCaptureBreadcrumbs : @YES,
+}];
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.updateLaunch([
+    BugseeOptionCaptureBreadcrumbs: true,
+])
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+## Automatic breadcrumbs
+
+| Category | Type | Recorded when |
+| --- | --- | --- |
+| `app.lifecycle` | `lifecycle` | The app moves to the foreground or the background |
+| `app.blackout` | `system` | A [blackout](/sdk/ios/privacy/video) starts or ends |
+| `device.orientation` | `system` | The interface rotates (iOS) |
+| `device.event` | `system` | Memory pressure (warning or critical), protected data becomes available or unavailable, the locale, time zone or clock changes, a significant time change, battery state or level changes, Low Power Mode or the thermal state changes |
+| `ui.screen` | `navigation` | A new screen comes to the top, with the screen it replaced |
+| `ui.lifecycle` | `lifecycle` | The phases of the top screen's view controller |
+| `ui.keyboard` | `user` | The keyboard is shown or hidden (iOS) |
+| `focus.set`, `focus.lost` | `user` | A text field or text view starts or ends editing (iOS) |
+| `ui.tap`, `ui.swipe`, `ui.scroll` | `user` | The user taps, swipes or scrolls, with the view's class and identifier |
+| `network.event` | `system` | Connectivity changes: Wi-Fi, cellular or none |
+| `http` | `http` | A request completes or fails, with its URL, method, the stack that made it and the body size |
+
+- Gesture breadcrumbs are recorded only while Bugsee is already recording touches; turning on
+  breadcrumbs does not turn touch recording on by itself. No gesture breadcrumb is recorded during
+  a blackout, and none names a secure view or a text input.
+- Keyboard and focus breadcrumbs are suppressed during a blackout.
+- The URL in an `http` breadcrumb goes through the built-in query-parameter redaction while
+  `BugseeOptionCaptureNetworkUseDefaultSanitizer` is on. Your network filter does not apply to
+  breadcrumbs — see [Privacy: breadcrumbs](/sdk/ios/privacy/breadcrumbs).
+
+## Record your own breadcrumbs
+
+Build a breadcrumb with the SDK's exchange factory, then record it with `addBreadcrumb:`.
+
+:::note
+Your own breadcrumbs need `BugseeOptionCaptureBreadcrumbs` too. With it off, `addBreadcrumb:` does
+nothing.
+:::
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+id<BGSBreadcrumb> crumb = [[Bugsee getExchangeFactory] createBreadcrumb];
+crumb.category = @"checkout";
+crumb.message  = @"Coupon applied";
+crumb.type     = @"user";
+crumb.level    = BugseeLogLevelInfo;
+[crumb setDataValue:@"SUMMER25" forKey:@"code"];
+
+[Bugsee addBreadcrumb:crumb];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let crumb = Bugsee.getExchangeFactory().createBreadcrumb()
+crumb.category = "checkout"
+crumb.message  = "Coupon applied"
+crumb.type     = "user"
+crumb.level    = Int(BugseeLogLevelInfo.rawValue)
+crumb.setDataValue("SUMMER25", forKey: "code")
+
+Bugsee.addBreadcrumb(crumb)
+```
+
+  </TabItem>
+</Tabs>
+
+`createBreadcrumb` stamps the breadcrumb with the current time. To set every field at once, use
+`createBreadcrumbWithTimestamp:category:level:message:type:data:`. The timestamp is in milliseconds
+since 1970 and must be current: a breadcrumb stamped earlier than the recording segment in progress
+is dropped, so do not back-date breadcrumbs.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+NSTimeInterval nowMs = [[NSDate date] timeIntervalSince1970] * 1000;
+
+id<BGSBreadcrumb> crumb =
+    [[Bugsee getExchangeFactory] createBreadcrumbWithTimestamp:nowMs
+                                                      category:@"checkout"
+                                                         level:BugseeLogLevelInfo
+                                                       message:@"Coupon applied"
+                                                          type:@"user"
+                                                          data:@{@"code": @"SUMMER25"}];
+[Bugsee addBreadcrumb:crumb];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let crumb = Bugsee.getExchangeFactory().createBreadcrumb(
+    withTimestamp: Date().timeIntervalSince1970 * 1000,
+    category: "checkout",
+    level: Int(BugseeLogLevelInfo.rawValue),
+    message: "Coupon applied",
+    type: "user",
+    data: ["code": "SUMMER25"])
+
+Bugsee.addBreadcrumb(crumb)
+```
+
+  </TabItem>
+</Tabs>
+
+### `BGSBreadcrumb` fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `timestamp` | `NSTimeInterval` | Read-only. Milliseconds since 1970, set by the factory |
+| `category` | `NSString` | What the breadcrumb is about, for example `checkout` |
+| `message` | `NSString` | Human-readable text |
+| `type` | `NSString` | The kind of breadcrumb. The automatic ones use `system`, `lifecycle`, `navigation`, `user` and `http` |
+| `level` | `NSInteger` | A `BugseeLogLevel` value |
+| `data` | `NSDictionary` | Extra key–value pairs; `setDataValue:forKey:` sets or, with `nil`, removes one |
+
+### Filtering
+
+A breadcrumb added with `addBreadcrumb:` goes through your breadcrumb filter, like the automatic
+ones. `addBreadcrumb:requiresFiltering:` with `NO` records it as is — pass `NO` only when you have
+already applied that filter yourself, for example in a cross-platform wrapper whose filter runs in
+its own runtime. See [Privacy: breadcrumbs](/sdk/ios/privacy/breadcrumbs) for the filter.
+
+`addBreadcrumb:` does nothing while the SDK is not launched or breadcrumbs are off.
+
+## Related pages
+
+- [Privacy: breadcrumbs](/sdk/ios/privacy/breadcrumbs)
+- [Custom events & traces](/sdk/ios/events-and-traces)
+- [Console logs](/sdk/ios/logs)

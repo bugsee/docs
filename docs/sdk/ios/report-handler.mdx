@@ -1,0 +1,332 @@
+---
+title: "Report handler"
+description: "Inspect and change every Bugsee report before it is sent on iOS 7.x — setReportHandler and BugseeReportHandler, the live BugseeReport handle, and attachments from BugseeDelegate."
+sidebar_position: 6
+slug: "/sdk/ios/report-handler"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+A report handler sees every report before it is sent — bug reports from the dialog or from code,
+handled errors and exceptions, crashes recovered on the next launch — and can change it: summary,
+description, email, severity, labels, attributes and attachments. Use it to add context the SDK
+cannot know (an account id, a feature flag), to scrub text users typed, or to attach a file.
+
+## Set it before launch
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+@interface MyReportHandler : NSObject <BugseeReportHandler>
+@end
+
+@implementation MyReportHandler
+
+- (void)onBeforeReportCreated:(BugseeReport *)report
+                isTerminating:(BOOL)isTerminating
+                   completion:(BugseeEmptyBlock)completion {
+    [report setAttribute:@"plan" withValue:@"pro"];
+    completion();
+}
+
+- (void)onAfterReportCreated:(BugseeReport *)report
+               isTerminating:(BOOL)isTerminating
+                  completion:(BugseeEmptyBlock)completion {
+    if (![report.labels containsObject:@"beta"]) {
+        report.labels = [report.labels arrayByAddingObject:@"beta"];
+    }
+    completion();
+}
+
+@end
+
+// In application:didFinishLaunchingWithOptions:
+[Bugsee setReportHandler:[MyReportHandler new]];
+[Bugsee launchWithToken:@"<your_app_token>"];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+final class MyReportHandler: NSObject, BugseeReportHandler {
+    func onBeforeReportCreated(_ report: BugseeReport,
+                               isTerminating: Bool,
+                               completion: @escaping BugseeEmptyBlock) {
+        report.setAttribute("plan", value: "pro")
+        completion()
+    }
+
+    func onAfterReportCreated(_ report: BugseeReport,
+                              isTerminating: Bool,
+                              completion: @escaping BugseeEmptyBlock) {
+        if !report.labels.contains("beta") {
+            report.labels = report.labels + ["beta"]
+        }
+        completion()
+    }
+}
+
+// In application(_:didFinishLaunchingWithOptions:)
+Bugsee.setReportHandler(MyReportHandler())
+Bugsee.launch(token: "<your_app_token>")
+```
+
+  </TabItem>
+</Tabs>
+
+- Bugsee keeps a strong reference to the handler until you set another one, or `nil` to remove it.
+- Set it **before** `launchWithToken:`. Crashes and abnormal exits are reported on the next launch,
+  during the launch itself; a handler set later never sees them.
+- Both methods are optional. Implement only the one you need.
+
+## The two callbacks
+
+| Callback | When it runs |
+| --- | --- |
+| `onBeforeReportCreated` | First. For a report from the dialog, before the dialog opens — the dialog waits for its `completion` |
+| `onAfterReportCreated` | For a dialog report, after the user sends it. For every other report (`logException`, `logError`, `upload…`, `uploadReport:`, a recovered crash), right after `onBeforeReportCreated` |
+
+Both receive the report itself, as a [`BugseeReport`](#the-report-object): what you change on it
+is what gets uploaded.
+
+### Order with the `BugseeDelegate` callbacks
+
+For a report from the dialog:
+
+1. `onBeforeReportCreated`
+2. `bugseeAddFieldsBeforeReportCreated` (Swift `bugseePrepareReportFields()`), if implemented. It
+   replaces the summary, description and labels outright — what the handler set and what
+   `showReportDialogWithSummary:…` seeded — and the severity when it returns one from 1 to 5.
+3. The dialog, where the user can change them again.
+4. `onAfterReportCreated`
+5. `bugseeCheckFieldsAfterReportCreated:` (Swift `bugsee(finalizeReportFields:)`), if implemented.
+6. `bugseeAttachmentsForReport:` (Swift `bugsee(attachmentsFor:)`), if implemented — the last
+   moment the report can change.
+
+For every other report: `onBeforeReportCreated`, `onAfterReportCreated`, then
+`bugseeAttachmentsForReport:`.
+
+A cross-platform wrapper (React Native, Flutter, Unity, .NET) can install a handler of its own. It
+runs before yours, so yours has the last word.
+
+## Completion and time limits
+
+**Always call `completion`, exactly once,** when you are done. Changes made after it are ignored.
+You may call it from any thread, so a callback can finish its work on a queue of its own.
+
+| Report | Thread | How long Bugsee waits |
+| --- | --- | --- |
+| Raised by the running app (dialog, `logError:`, `logException`, `upload…`) | Main thread | Up to 30 seconds for `completion`, per callback. Past that the report goes on without the handler, and later changes are ignored. A callback the main thread could not start within that time (a hang) is skipped, not called late; so is one still waiting when Bugsee is stopped. |
+| Recovered on the next launch (a crash, an abnormal exit) | Off the main thread | About 3 seconds for the method to return. `completion` is not waited for: a change made after the method returns is included only if `completion` arrives before the report is bundled. |
+
+All callbacks for one report, a cross-platform wrapper's included, share a budget of 60 seconds.
+Do not assume you are on the main thread, and do not take your time.
+
+### `isTerminating`
+
+`YES` means the process ends soon after the method returns: do the work before returning, because
+`completion` is not waited for. iOS builds crash and abnormal-exit reports on the next launch, in a
+healthy process, so it currently always passes `NO`, recovered crashes included. Handle `YES`
+anyway, so the handler stays correct if a later SDK version reports from a dying process.
+
+### Swift `async` handlers
+
+In Swift either method can be an `async` function without the `completion` parameter. Swift calls
+`completion` when it returns:
+
+```swift
+final class MyReportHandler: NSObject, BugseeReportHandler {
+    func onBeforeReportCreated(_ report: BugseeReport, isTerminating: Bool) async {
+        report.email = await accountStore.currentEmail()
+    }
+}
+```
+
+An `async` implementation does all of its work after the Objective-C call has returned, so it
+cannot finish before returning when `isTerminating` is `YES`.
+
+## Not exactly once
+
+Bugsee does not record which callbacks have already run, so they are not guaranteed to run exactly
+once when the app is killed while they run:
+
+- A report raised by the running app is sent on the next launch without the changes the callbacks
+  made, and they are not called for it again.
+- A report recovered after a crash can be recovered again on the next launch, and the callbacks
+  called again, for a new report.
+
+So do not do work from a callback that must happen once per report — show UI, count, send an
+analytics event — and make a second run harmless: assign `labels` rather than calling `addLabel:`,
+set attributes with `setAttribute:withValue:`, and look for an attachment in `attachments` before
+adding it.
+
+## The report object
+
+`BugseeReport` is the report about to be uploaded, and your handle for changing it. It is live:
+whatever you set is what gets uploaded, with no separate "apply" step. It is safe to use from any
+thread (`Sendable` in Swift).
+
+Bugsee creates it; there is no public initializer. Do not keep it past the callback: it holds the
+whole report, attachments included. A handler's handle closes when the handler calls `completion`
+or, for a report raised by the running app, when Bugsee stops waiting. Changes through a closed
+handle are ignored, not half-applied.
+
+| Member | Swift | Notes |
+| --- | --- | --- |
+| `reportId` | `reportId` | Read-only. The id the dashboard shows once the report is uploaded |
+| `type` | `type` | Read-only. `BugseeReportTypeBug`, `BugseeReportTypeCrash` or `BugseeReportTypeError`; the trigger decides it |
+| `summary` | `summary` | For a dialog report, what the user typed |
+| `reportDescription` | `reportDescription` | For a dialog report, what the user typed |
+| `email` | `email` | The reporter's email, when one is known |
+| `severity` | `severity` | Reads `0` while the report has none. A value outside `BugseeSeverityLow`…`BugseeSeverityBlocker` (1–5) is ignored and noted in Bugsee's internal log, and the current severity is kept |
+| `attributes` | `attributes` | A snapshot; change attributes through the methods below |
+| `getAttribute:` | `getAttribute(_:)` | |
+| `setAttribute:withValue:` | `setAttribute(_:value:)` | A `nil` value removes the attribute |
+| `removeAttribute:` | `removeAttribute(_:)` | |
+| `clearAllAttributes` | `clearAllAttributes()` | |
+| `labels` | `labels` | A snapshot; assigning replaces the whole set. Elements that are not strings are dropped |
+| `addLabel:` | `addLabel(_:)` | |
+| `addLabels:` | `addLabels(_:)` | |
+| `clearLabels` | `clearLabels()` | |
+| `attachments` | `attachments` | A snapshot of the attachments on the report so far; compare them by name, not identity |
+| `addAttachment:` | `addAttachment(_:)` | See [Attachments](#attachments) |
+| `clearAttachments` | `clearAttachments()` | Removes every attachment on the report, including those set on a `BugseeExtendedReport` |
+
+Attributes set on the report belong to that report only. To set an attribute on every report, use
+[`+[Bugsee setAttribute:withValue:]`](/sdk/ios/user-session-data).
+
+## Attachments
+
+Files attached to a report can be downloaded from the issue in the dashboard. Attachments are
+counted per source: each report handler callback, the delegate call below (its return value plus
+`addAttachment:` during it) and a `BugseeExtendedReport` can each add up to three attachments of at
+most 3 MB each. An attachment with no data, over the size limit, or past the third of its source is
+dropped and noted in Bugsee's internal log, which ships with the report.
+
+From a report handler, add them with `addAttachment:`.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+- (void)onAfterReportCreated:(BugseeReport *)report
+               isTerminating:(BOOL)isTerminating
+                  completion:(BugseeEmptyBlock)completion {
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        NSData *data = [self deviceStateJSON];
+        BugseeAttachment *attachment = [BugseeAttachment attachmentWithName:@"device state"
+                                                                   filename:@"device-state.json"
+                                                                       data:data];
+        BOOL alreadyAttached = NO;
+        for (BugseeAttachment *existing in report.attachments) {
+            if ([existing.name isEqualToString:@"device state"]) {
+                alreadyAttached = YES;
+            }
+        }
+        if (attachment && !alreadyAttached) {
+            [report addAttachment:attachment];
+        }
+        completion();
+    });
+}
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+func onAfterReportCreated(_ report: BugseeReport,
+                          isTerminating: Bool,
+                          completion: @escaping BugseeEmptyBlock) {
+    DispatchQueue.global(qos: .utility).async {
+        let data = self.deviceStateJSON()
+        let alreadyAttached = report.attachments.contains { $0.name == "device state" }
+        if !alreadyAttached,
+           let attachment = BugseeAttachment(name: "device state",
+                                             filename: "device-state.json",
+                                             data: data) {
+            report.addAttachment(attachment)
+        }
+        completion()
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Attachments from `BugseeDelegate`
+
+`BugseeDelegate` has two more ways to attach files, called once the recording has been exported,
+immediately before the bundle is assembled. The report they receive is the same live
+`BugseeReport`, so they can change the rest of it too. Attachments they return and attachments they
+add with `-[BugseeReport addAttachment:]` during the call share one budget of three attachments of at
+most 3 MB each.
+
+Set the delegate before launch. In Swift, derive the class from `NSObject`.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+- (NSArray<BugseeAttachment *> *)bugseeAttachmentsForReport:(BugseeReport *)report {
+    // Only on blockers and crashes
+    if (report.severity == BugseeSeverityBlocker ||
+        [report.type isEqualToString:BugseeReportTypeCrash]) {
+        BugseeAttachment *attachment =
+            [BugseeAttachment attachmentWithName:@"internal app db"
+                                        filename:@"custom.db"
+                                            data:[NSData dataWithContentsOfFile:pathToMyFile]];
+        if (attachment) {
+            return @[attachment];
+        }
+    }
+    return @[];
+}
+
+// ...somewhere before launch
+[Bugsee sharedInstance].delegate = self;
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+final class BugseeDelegateHandler: NSObject, BugseeDelegate {
+    func bugsee(attachmentsFor report: BugseeReport) -> [BugseeAttachment] {
+        // Only on blockers and crashes
+        guard report.severity == BugseeSeverityBlocker || report.type == BugseeReportTypeCrash,
+              let data = FileManager.default.contents(atPath: pathToMyFile),
+              let attachment = BugseeAttachment(name: "internal app db",
+                                                filename: "custom.db",
+                                                data: data) else {
+            return []
+        }
+        return [attachment]
+    }
+}
+
+// ...somewhere before launch, keeping a strong reference to the handler
+Bugsee.sharedInstance()?.delegate = delegateHandler
+```
+
+  </TabItem>
+</Tabs>
+
+| Form | Swift | Thread | Notes |
+| --- | --- | --- | --- |
+| `bugseeAttachmentsForReport:` | `bugsee(attachmentsFor:)` | A background queue | Bugsee waits for it to return, so a slow implementation holds up every report queued behind this one |
+| `bugseeAttachmentsForReport:completionHandler:` | `bugsee(attachmentsFor:completionHandler:)` | Main thread | Bugsee waits up to 10 seconds for the decision block, then bundles without your attachments; later changes to the report are ignored. The block accepts `nil`. Not called while Bugsee is racing to get a crash report out at launch, when the main thread is blocked — implement the synchronous form if your attachments must survive that case |
+
+If both forms are implemented, the synchronous one is used. `delegate` is a weak reference: keep the
+object alive yourself.
+
+## Related pages
+
+- [Bug reporting](/sdk/ios/manual/bug-reporting)
+- [Crash & error reporting](/sdk/ios/manual/crash-error-reporting)
+- [Privacy: report](/sdk/ios/privacy/report)
+- [User & session data](/sdk/ios/user-session-data)

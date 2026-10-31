@@ -1,0 +1,221 @@
+---
+title: "Crashes"
+description: "How the Bugsee iOS SDK 7.x captures crashes: the crash handler type, the fatal signals it intercepts, early-crash protection, stack options and testing."
+sidebar_position: 2
+slug: "/sdk/ios/issue-detection/crashes"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Bugsee captures fatal signals, Mach exceptions, and uncaught Objective-C and C++ exceptions. A crash ends the process before anything can be uploaded, so the crash is written to disk and **reported on the next launch**, together with the video, logs and network events recorded before it.
+
+Crash detection is on by default.
+
+| | |
+| --- | --- |
+| Option key | `BugseeOptionDetectAndReportCrash` |
+| `BugseeOptions` property | `crashReport` |
+| Default | `YES` |
+
+:::warning[One crash reporter at a time]
+iOS lets only one crash reporter handle a crash. If your app uses another crash reporting SDK, the two interfere with each other. To keep the other one, turn Bugsee's crash detection off with `BugseeOptionDetectAndReportCrash` set to `NO`. Bugsee logs a warning to the console when it finds that its uncaught exception handler or one of its signal handlers was replaced.
+:::
+
+## Crash handler type
+
+`BugseeOptionCaptureCrashHandlerType` (`BugseeOptions.crashHandlerType`) chooses how Bugsee intercepts crashes. It takes a `BugseeCrashHandlerType`:
+
+| Value | Swift | What Bugsee installs |
+| --- | --- | --- |
+| `BugseeCrashHandlerTypeBSD` | `.bsd` | BSD signal handlers for the signals selected by `crashSignals` |
+| `BugseeCrashHandlerTypeMach` | `.mach` | A Mach exception handler, plus a BSD signal handler for `SIGABRT` when `crashSignals` selects it. Any other signal raised by software (`raise()`, `kill()`, `pthread_kill()`) is not reported |
+| `BugseeCrashHandlerTypeMachAndBSD` | `.machAndBSD` | Both, so hardware faults and signals raised by software are reported. **Default** |
+
+tvOS has no Mach exceptions: there every value works as `BugseeCrashHandlerTypeBSD`. A value that is not a `BugseeCrashHandlerType` is ignored, and Bugsee logs a warning to the console.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.crashHandlerType = BugseeCrashHandlerTypeBSD;
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.crashHandlerType = .bsd
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+## Crash signals
+
+`BugseeOptionCaptureCrashSignals` (`BugseeOptions.crashSignals`) chooses which fatal signals Bugsee intercepts, on iOS, tvOS and visionOS. Combine `BugseeCrashSignals` values:
+
+| Value | Swift | Signal |
+| --- | --- | --- |
+| `BugseeCrashSignalABRT` | `.abrt` | `SIGABRT`: `abort()`, failed assertions, uncaught exceptions |
+| `BugseeCrashSignalSEGV` | `.segv` | `SIGSEGV`: invalid memory access |
+| `BugseeCrashSignalBUS` | `.bus` | `SIGBUS`: misaligned or otherwise invalid memory access |
+| `BugseeCrashSignalILL` | `.ill` | `SIGILL`: illegal instruction |
+| `BugseeCrashSignalFPE` | `.fpe` | `SIGFPE`: arithmetic exception |
+| `BugseeCrashSignalTRAP` | `.trap` | `SIGTRAP`: breakpoint or trap instruction, including Swift runtime traps |
+| `BugseeCrashSignalsAll` | `.all` | Every signal above |
+| `BugseeCrashSignalsDefault` | `.default` | Bugsee chooses. **Default** |
+
+With the default, Bugsee intercepts every signal, except that the Xamarin and .NET SDKs leave out `SIGSEGV` and `SIGBUS`: the .NET runtime turns them into `NullReferenceException`. Any other value is used as given, so list every signal you want. `BugseeCrashSignalsDefault` works only on its own, not combined with other values.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.crashSignals = BugseeCrashSignalABRT | BugseeCrashSignalILL | BugseeCrashSignalTRAP;
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.crashSignals = [.abrt, .ill, .trap]
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+- A bad memory access arrives as either `SIGSEGV` or `SIGBUS`, depending on the fault. With `BugseeCrashHandlerTypeMach` or `BugseeCrashHandlerTypeMachAndBSD`, it is intercepted if either of the two is selected. With `BugseeCrashHandlerTypeBSD`, and always on tvOS, only the selected signal is intercepted, so select both to catch every bad memory access. Leave both out to ignore bad memory accesses.
+- Leaving out `SIGABRT` also stops uncaught Objective-C exceptions from being reported, because they end in `abort()`.
+- With `BugseeCrashHandlerTypeMach`, `SIGABRT` is the only signal raised by software that Bugsee reports. The other selected signals are reported only as hardware faults.
+- With no signals selected (`BugseeCrashSignalsNone`), Bugsee reports no crashes and no uncaught exceptions, and logs a warning to the console.
+
+## Early crashes
+
+A crash during startup can repeat on every launch, so the reports waiting to be sent might never get out. Early-crash protection handles that case.
+
+| | |
+| --- | --- |
+| Option key | `BugseeOptionDetectAndReportEarlyCrash` |
+| `BugseeOptions` property | `appLaunchCrashDetection` |
+| Default | `YES` |
+
+Bugsee marks every cold launch, and clears the mark once the app becomes active or Bugsee is stopped. When a launch finds the mark of the previous one still set — that launch ended before the app became active, whether by a crash, a force-quit, a kill by the system or a debugger stop, and also when it was a background launch that never became active — Bugsee sends the reports already waiting on the launch thread, before `launchWithToken:` returns. That blocks the main thread for as long as it takes, on that one launch only. The crash recovered on this launch is not among them: it goes out on the following launch. A launch made while the app is already active (Bugsee started late) is not marked.
+
+Set the option to `NO` to turn the protection off: the mark is then neither written nor read, and pending reports are always handled in the background.
+
+## Stack traces
+
+Two options change how the stack of a crash is recorded:
+
+| Option key | Default | Effect |
+| --- | --- | --- |
+| `BugseeOptionDetectCrashSwiftAsyncStackTraces` | `YES` | For a C++ exception thrown from Swift `async` code, records the asynchronous callers of the throwing task as well. Set to `NO` to record the plain thread stack |
+| `BugseeOptionDetectCrashFillEmptyExceptionStacks` | `NO` | For an uncaught `NSException` that carries no call stack, records the stack of the thread that raised it instead of none. This can change how such crashes are grouped into issues |
+
+Both are set by key:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+[options updateLaunchOptions:@{
+    BugseeOptionDetectCrashFillEmptyExceptionStacks : @YES,
+}];
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.updateLaunch([
+    BugseeOptionDetectCrashFillEmptyExceptionStacks: true,
+])
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+`BugseeOptionCaptureOnDeviceSymbolication` (`BugseeOptions.enableOnDeviceSymbolication`, default `NO`) resolves the names of system frames on the device when the crash report is built. Frames of your own code are symbolicated from the dSYM files you upload: see [Crash symbolication](/sdk/ios/symbolication).
+
+## Severity and the report handler
+
+A crash is filed with the crash priority (`BugseeOptionReportingDefaultCrashPriority`, Blocker by default) of the run that crashed, not that of the launch that reports it.
+
+A recovered crash goes through your [report handler](/sdk/ios/report-handler) and the report delegate like any other report, but only if the handler is set before `launchWithToken:`: the crash is recovered during launch. When Bugsee finds a crash left by the previous run, it also sends the `BugseeLifecycleEventRelaunchedAfterCrash` [lifecycle event](/sdk/ios/lifecycle).
+
+A crash is reported only by the same app version and SDK version that recorded it. A crash recorded before the app or the SDK was updated is dropped.
+
+## Apps with their own exception handler
+
+If your app installs its own uncaught exception handler, forward the exception to Bugsee from it with `logUnhandledException`, so it is reported as a crash:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee logUnhandledException:exception completion:^{
+    // Bugsee has written the report
+}];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.logUnhandledException(exception: exception) {
+    // Bugsee has written the report
+}
+```
+
+  </TabItem>
+</Tabs>
+
+For errors and exceptions your app handles and keeps running, use `logError` and `logException` instead: see [Crash & error reporting](/sdk/ios/manual/crash-error-reporting).
+
+## Testing
+
+Call `testCrash` to crash the app on purpose and check that crashes reach your dashboard:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee testCrash];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.testCrash()
+```
+
+  </TabItem>
+</Tabs>
+
+- **Run on a device, without the debugger.** The simulator and Mac Catalyst have no crash reporter. While a debugger is attached, Bugsee does not install its crash handlers at all, because the debugger takes the signals first. Launch the app from the Home Screen, not from Xcode.
+- **Relaunch the app.** The crash is reported on the next launch.
+- **TestFlight builds.** The system can intercept crashes of a build installed from TestFlight before Bugsee sees them. On test devices, turn off **Share With App Developers** in *Settings > Privacy & Security > Analytics & Improvements*.
+
+## Terminations a crash handler cannot see
+
+Some terminations end the app with no chance for any in-process handler to run: the system killing the app for exceeding its memory limit, or the watchdog killing an app that takes too long to launch. Bugsee reports out-of-memory terminations through [exit detection](/sdk/ios/issue-detection/exits). On iOS 27 and later, the [Crash Report Extension](/sdk/ios/issue-detection/crash-report-extension) adds watchdog terminations and the stack of every thread at the moment of death.

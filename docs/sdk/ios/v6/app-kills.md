@@ -2,8 +2,12 @@
 title: "Application kill detection"
 description: "How to enable heuristic detection of abnormal iOS app terminations caused by OOM conditions or an unresponsive main thread."
 sidebar_position: 11
-slug: "/sdk/ios/app-kills"
+slug: "/sdk/ios/v6/app-kills"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee iOS SDK **6.x**, the previous major version. The current line is **7.x** — see [Migrating from 6.x to 7.x](/sdk/ios/migration) to upgrade, or [Installation](/sdk/ios/installation) to start a new integration.
+:::
 
 In some rare cases, iOS may decide to terminate an application due to excessive memory or CPU usage, as well as when it detects the app is not responding. These cases are not
 registered as crashes. Bugsee may try to detect these and handle them as crashes, while collecting valuable statistics and analytics on devices and iOS versions it happens on.

@@ -1,26 +1,81 @@
 ---
-title: "Lifecycle events"
-description: "How to listen for Bugsee iOS SDK internal state changes such as launch, stop, pause, report upload, and feedback controller visibility."
-sidebar_position: 9
+title: "Lifecycle & status"
+description: "How to follow the state of Bugsee iOS SDK 7.x: the launch completion, the status property and its transitions, and the lifecycle events delivered to BugseeDelegate."
+sidebar_position: 4
 slug: "/sdk/ios/lifecycle"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Bugsee SDK silently works within your app, recording everything to assist you in debugging when something unexpected happens. Our SDK is designed as a black box, but there may be cases when you want to be notified about changes/events within Bugsee itself. Lifecycle events are designed exactly for that. Whenever internal state changes or some important event is raised, a lifecycle event is dispatched to the user code.
+Bugsee works in the background of your app. When you need to know what it is doing — whether it is recording yet, or when a report is shown or uploaded — use the SDK status and the lifecycle events described here. Stopping and relaunching are covered in [Configuration](/sdk/ios/configuration/#stopping).
 
-## Implementing callback
+## Setting the delegate
 
-Your class should implement the **BugseeDelegate** protocol and it must set itself as the delegate for Bugsee. You should implement the following callback to be notified about lifecycle changes:
+Status changes and lifecycle events are delivered to your `BugseeDelegate`. Every delegate method is optional: implement the ones you need, and set your object as the delegate. Bugsee holds the delegate weakly, so keep a strong reference to it yourself.
 
+In Swift, derive the delegate from `NSObject`, so you do not have to implement the `NSObjectProtocol` requirements yourself.
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-- (void)bugseeLifecycleEvent:(BugseeLifecycleEventType)eventType {
-    // Handle lifecycle event here...
+@interface MyBugseeDelegate : NSObject <BugseeDelegate>
+@end
+
+// ...
+
+[Bugsee sharedInstance].delegate = self.bugseeDelegate;
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+final class MyBugseeDelegate: NSObject, BugseeDelegate {
+    // ...
+}
+
+// ...
+
+Bugsee.sharedInstance()?.delegate = bugseeDelegate
+```
+
+  </TabItem>
+</Tabs>
+
+You can set the delegate before `launchWithToken:`.
+
+## SDK status
+
+`launchWithToken:` returns before Bugsee is recording. `status` tells you where the SDK is:
+
+| Value | Meaning |
+| --- | --- |
+| `BugseeStatusStopped` | Not launched, a launch that waits for the app to become active, or fully stopped. Calls that submit data are ignored. |
+| `BugseeStatusLaunching` | The SDK is starting capture. Reports can be filed, but logs, events, traces, breadcrumbs and network events may not be recorded yet. |
+| `BugseeStatusLaunched` | Fully running: capture is recording. |
+| `BugseeStatusStopping` | `stop:` is in progress. |
+
+The `launched` property is `YES` only while the status is `Launched`. Prefer `status`, or the status callback below, for launch sequencing.
+
+### When the launch waits for the app to become active
+
+When `launchWithToken:` is called while the app is in the background state, or before `UIApplication` exists, Bugsee installs its crash handler right away and starts everything else when the app becomes active. That is the case for a launch from `application:didFinishLaunchingWithOptions:` in a scene-based app, and for a launch from a SwiftUI `App` initializer. Until the app becomes active:
+
+- the status stays `Stopped`, and the first transition is to `Launching` at that moment;
+- calls that submit data (`log`, `event`, `trace`, `logError:`, `logException`, `upload…`, `notify`) are ignored;
+- `startTransaction` and `startSpan` return objects that record nothing;
+- `BugseeOptionCaptureNetworkOnLaunch` has no effect, so requests started in that window are not captured.
+
+Once the status is `Launched`, all of these work as usual.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+if ([Bugsee sharedInstance].status == BugseeStatusLaunched) {
+    // Bugsee is recording
 }
 ```
 
@@ -28,31 +83,129 @@ Your class should implement the **BugseeDelegate** protocol and it must set itse
   <TabItem value="swift" label="Swift">
 
 ```swift
-func bugseeLifecycleEvent(eventType: BugseeLifecycleEventType) {
-    // Handle lifecycle event here...
+if Bugsee.sharedInstance()?.status == BugseeStatusLaunched {
+    // Bugsee is recording
 }
 ```
 
   </TabItem>
 </Tabs>
 
-## Available lifecycle events
+### Observing status changes
 
-|Name|Description|
-|-|-|
-|BugseeLifecycleEventLaunched|Event is dispatched when Bugsee was successfully launched|
-|BugseeLifecycleEventStarted|Event is dispatched when Bugsee is started after being stopped|
-|BugseeLifecycleEventStopped|Event is dispatched when Bugsee is stopped|
-|BugseeLifecycleEventResumed|Event is dispatched when Bugsee recording is resumed after being paused|
-|BugseeLifecycleEventPaused|Event is dispatched when Bugsee recording is paused|
-|BugseeLifecycleEventRelaunchedAfterCrash|Event is dispatched when Bugsee is launched and pending crash report is discovered. That usually means that app was relaunched after crash.|
-|BugseeLifecycleEventBeforeReportShown|Event is dispatched before the reporting UI is shown|
-|BugseeLifecycleEventAfterReportShown|Event is dispatched when reporting UI is shown|
-|BugseeLifecycleEventBeforeReportUploaded|Event is dispatched when report is about to be uploaded to the server|
-|BugseeLifecycleEventAfterReportUploaded|Event is dispatched when report was successfully uploaded to the server|
-|BugseeLifecycleEventReportUploadFailedWithFutureRetry|Event is dispatched after bug/error/crash report upload failed and will be retried in the future|
-|BugseeLifecycleEventReportUploadFailed|Event is dispatched after multiple bug/error/crash report upload attempts ended with failure. It indicates no more attempts will be taken and the report will not be uploaded|
-|BugseeLifecycleEventBeforeFeedbackShown|Event is dispatched before the Feedback controller is shown|
-|BugseeLifecycleEventAfterFeedbackShown|Event is dispatched after the Feedback controller is shown|
-|BugseeLifecycleEventBeforeReportAssembled|Event is dispatched right before bug/error/crash report is about to be assembled|
-|BugseeLifecycleEventAfterReportAssembled|Event is dispatched right after bug/error/crash report is assembled|
+`bugseeDidChangeStatus:` (Swift `bugsee(didChangeStatus:)`) is called on the main thread on every status transition, including the `Launching` and `Stopping` steps that no lifecycle event covers.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+- (void)bugseeDidChangeStatus:(BugseeStatus)status {
+    if (status == BugseeStatusLaunched) {
+        // Bugsee is recording
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+func bugsee(didChangeStatus status: BugseeStatus) {
+    if status == BugseeStatusLaunched {
+        // Bugsee is recording
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### The launch completion
+
+`launchWithToken:options:started:` (Swift `launch(token:options:started:)`) calls its block once:
+
+- For a launch that starts right away, it is called once capture is up, with `YES`, or with `NO` if the launch failed or a `stop:` cancelled it.
+- For a launch that [waits for the app to become active](#when-the-launch-waits-for-the-app-to-become-active), it is called at once with `YES`: the launch was accepted, but recording has not begun.
+- `NO` also means the launch was refused, for example because the app token is empty or the SDK is stopping.
+- A launch called while Bugsee is already running reports `YES`, and its options are ignored.
+
+To know when recording has begun, observe the status.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee launchWithToken:@"<your_app_token>"
+                options:nil
+                started:^(BOOL success) {
+    NSLog(@"Bugsee launch accepted: %d", success);
+}];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.launch(token: "<your_app_token>", options: nil) { success in
+    print("Bugsee launch accepted: \(success)")
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Lifecycle events
+
+Lifecycle events report discrete moments: a launch, a report shown or uploaded, a blackout started. Implement `bugseeLifecycleEvent:` (Swift `bugsee(lifecycleEvent:)`) to receive them. They are delivered on the main queue.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+- (void)bugseeLifecycleEvent:(BugseeLifecycleEventType)eventType {
+    if (eventType == BugseeLifecycleEventRelaunchedAfterCrash) {
+        // The previous run crashed
+    }
+}
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+func bugsee(lifecycleEvent eventType: BugseeLifecycleEventType) {
+    if eventType == BugseeLifecycleEventRelaunchedAfterCrash {
+        // The previous run crashed
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+Lifecycle events and status changes are delivered separately and are not ordered against each other: with a cross-platform SDK in the app, a lifecycle event can arrive after a later status change.
+
+### Available lifecycle events
+
+| Event | Dispatched when |
+| --- | --- |
+| `BugseeLifecycleEventLaunched` | Bugsee was launched. |
+| `BugseeLifecycleEventStopped` | Bugsee was stopped. |
+| `BugseeLifecycleEventRelaunchedAfterCrash` | Bugsee was launched and found a pending crash report, which usually means the app was relaunched after a crash. |
+| `BugseeLifecycleEventBeforeReportShown` | Before the report dialog is shown. |
+| `BugseeLifecycleEventAfterReportShown` | After the report dialog is shown. |
+| `BugseeLifecycleEventBeforeReportAssembled` | Before a bug, crash or error report starts being assembled. |
+| `BugseeLifecycleEventAfterReportAssembled` | After a report has been assembled. |
+| `BugseeLifecycleEventReportAssemblyFailed` | Assembling a report ran out of attempts in this process. Assembly that is interrupted instead, because the process ends or Bugsee is stopped, resumes on a later launch and does not dispatch this event. |
+| `BugseeLifecycleEventBeforeReportUploaded` | A report is about to be uploaded. |
+| `BugseeLifecycleEventAfterReportUploaded` | A report was uploaded. |
+| `BugseeLifecycleEventReportUploadFailedWithFutureRetry` | A report upload failed and will be retried later. |
+| `BugseeLifecycleEventReportUploadFailed` | Repeated upload attempts failed. No more attempts are made, and the report is not uploaded. |
+| `BugseeLifecycleEventBlackoutStarted` | A [blackout](/sdk/ios/privacy/video/) began (`startBlackout`). A relaunch that keeps a blackout dispatches `BlackoutEnded` and then `BlackoutStarted`. |
+| `BugseeLifecycleEventBlackoutEnded` | A blackout ended (`endBlackout`, or `stop:`). |
+| `BugseeLifecycleEventBeforeFeedbackShown` | Reserved for the feedback screen; not dispatched yet. |
+| `BugseeLifecycleEventAfterFeedbackShown` | Reserved for the feedback screen; not dispatched yet. |
+
+:::note
+7.x has no pause and resume, so the 6.x `BugseeLifecycleEventStarted`, `BugseeLifecycleEventPaused` and `BugseeLifecycleEventResumed` events are gone, and the raw values of the remaining events changed. Compare against the constants, never against numbers. See [Migrating from 6.x to 7.x](/sdk/ios/migration).
+:::

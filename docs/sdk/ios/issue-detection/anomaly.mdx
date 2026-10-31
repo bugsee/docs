@@ -1,0 +1,92 @@
+---
+title: "Anomaly"
+description: "Detect performance anomalies — operations that take far longer than usual — from the performance transactions of an iOS app with the Bugsee SDK 7.x."
+sidebar_position: 8
+slug: "/sdk/ios/issue-detection/anomaly"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The **anomaly detector** learns how long your app's operations usually take and reports the ones that take far longer than usual. It watches the spans of completed [performance transactions](/sdk/ios/performance): the network requests and screens Bugsee instruments automatically, and the transactions and spans you start yourself.
+
+Anomaly detection is off by default.
+
+| | |
+| --- | --- |
+| Option key | `BugseeOptionDetectAndReportAnomaly` |
+| `BugseeOptions` property | — (set by key) |
+| Default | `NO` |
+
+It needs performance monitoring (`BugseeOptionPerformanceMonitoring`, on by default): with it off there are no transactions to learn from.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+[options updateLaunchOptions:@{
+    BugseeOptionDetectAndReportAnomaly : @YES,
+}];
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.updateLaunch([
+    BugseeOptionDetectAndReportAnomaly: true,
+])
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+## How it works
+
+Every span of a completed transaction is put into a **bucket** of comparable operations:
+
+| Span operation | Bucket | Measured |
+| --- | --- | --- |
+| `http.client` | Method, host and port, and the URL path with numeric, UUID and long hexadecimal segments collapsed | Duration |
+| `db.` | The SQL statement with literals and numbers removed | Duration |
+| `ui.` | The operation name: all screens share one baseline | Duration |
+| `file.` | Only spans that carry a `file.bytes` attribute, bucketed by their `file.storage` attribute; the automatic file spans carry neither and are skipped | Duration per KB. Spans under 1 KB are skipped |
+| Anything else | The operation name | Duration |
+
+For each bucket Bugsee keeps a running baseline — an exponentially weighted mean and variance — and measures how far a new span lies above it, as a z-score. A bucket needs at least 8 spans before it can flag anything. A span that finished with any status other than OK updates its baseline but is never flagged. Only spans slower than usual count: a fast span is never an anomaly.
+
+The z-score is turned into a strength between 0 and 1 (z / 6, capped at 1). For each transaction, the strongest finding decides what happens:
+
+| Strength | z-score | Outcome |
+| --- | --- | --- |
+| 0.9 or more | 5.4 or more | An error report, once per bucket and domain per session |
+| 0.5 to 0.9 | 3 to 5.4 | A custom event named `anomaly`, which shows up in the context of later reports |
+| Below 0.5 | Below 3 | Nothing |
+
+A finding strong enough for a report, in a bucket already reported this session, is recorded as an `anomaly` event instead. Past 256 reported buckets in a session, that once-per-session limit is no longer applied.
+
+## Saved baselines
+
+The baselines are saved when Bugsee is stopped (`stop:`, or a relaunch) and loaded on the next launch, so the detector keeps learning across sessions. An app that never stops Bugsee does not save them, and starts cold on every launch. On load, older baselines count for less: their weight decays exponentially with a 7-day time constant (about 37% after 7 days). Bugsee tracks up to 1,024 buckets.
+
+The full `deleteCollectedDataOnDevice:` deletes the learned baselines too; the forms with flags keep them. See [Data cleanup](/sdk/ios/privacy/cleanup).
+
+## The report
+
+| Field | Value |
+| --- | --- |
+| Type | Error (non-fatal), with the error priority (`BugseeOptionReportingDefaultErrorPriority`) |
+| Summary | `Performance anomaly: <operation>` |
+| Description | The z-score and the bucket, for example `Metric z=5.8 over EWMA baseline for bucket '…'` |
+| Domain | `Anomaly::Duration`, or `Anomaly::Throughput` for file operations |
+| Attributes | `operation`, `bucket`, `severity` (the strength) |
+
+The `anomaly` event carries `operation`, `bucket`, `domain` and `severity` as its parameters.
+
+On the simulator and Mac Catalyst, the detector does not run.

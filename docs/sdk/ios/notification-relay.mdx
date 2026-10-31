@@ -1,0 +1,168 @@
+---
+title: "Notification relay"
+description: "Bugsee.notify on iOS 7.x — sending a title, body, severity and custom fields straight to the app's configured messaging integrations and webhooks, without creating a bug report."
+sidebar_position: 9
+slug: "/sdk/ios/notification-relay"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+`notify` sends a title, an optional body, an optional severity and optional key–value fields to the
+app's configured messaging integrations and webhooks — **without** creating a bug report. There is
+no recording, no issue, and nothing attached beyond what you pass. `notify` was added in 6.3; the
+`urgent:` overload and `BugseeOptionConfigNotifyFlushDelay` are new in 7.x.
+
+## When to use it
+
+A full bug report — video, network traffic, logs, view hierarchy, upload — is a lot of machinery
+when all you need is to get a line of text into Slack or a ticket tracker. If your code already
+knows what happened and just needs to tell a person ("payment provider returned 502 for order
+A-1721"), `notify` is one call that delivers it to the destinations your team already set up.
+
+It is not a replacement for bug reports: there is nothing to open in the dashboard and investigate
+afterwards. If you need a session someone can replay, use [bug reporting](/sdk/ios/manual/bug-reporting)
+or [crash & error reporting](/sdk/ios/manual/crash-error-reporting).
+
+## API
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee notifyWithTitle:@"Checkout failed"];
+
+[Bugsee notifyWithTitle:@"Checkout failed"
+                   body:@"Payment provider returned 502"];
+
+[Bugsee notifyWithTitle:@"Checkout failed"
+                   body:@"Payment provider returned 502"
+               severity:BugseeSeverityHigh];
+
+[Bugsee notifyWithTitle:@"Checkout failed"
+                   body:@"Payment provider returned 502"
+               severity:BugseeSeverityHigh
+                 fields:@{@"orderId": @"A-1721", @"provider": @"stripe"}];
+
+[Bugsee notifyWithTitle:@"Checkout failed"
+                   body:@"Payment provider returned 502"
+               severity:BugseeSeverityHigh
+                 fields:@{@"orderId": @"A-1721"}
+                 urgent:YES];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.notify(title: "Checkout failed")
+
+Bugsee.notify(title: "Checkout failed",
+              body: "Payment provider returned 502")
+
+Bugsee.notify(title: "Checkout failed",
+              body: "Payment provider returned 502",
+              severity: BugseeSeverityHigh)
+
+Bugsee.notify(title: "Checkout failed",
+              body: "Payment provider returned 502",
+              severity: BugseeSeverityHigh,
+              fields: ["orderId": "A-1721", "provider": "stripe"])
+
+Bugsee.notify(title: "Checkout failed",
+              body: "Payment provider returned 502",
+              severity: BugseeSeverityHigh,
+              fields: ["orderId": "A-1721"],
+              urgent: true)
+```
+
+  </TabItem>
+</Tabs>
+
+| Parameter | Notes |
+| --- | --- |
+| `title` | Required. A call with an empty title is ignored |
+| `body` | Optional text |
+| `severity` | `BugseeSeverityLow` … `BugseeSeverityBlocker`. The overloads without it send no severity |
+| `fields` | Optional string keys and string values |
+| `urgent` | See [Urgent notifications](#urgent-notifications). The shorter overloads are not urgent |
+
+- There is no option to turn relay on or off in the SDK: it is available once the SDK has launched,
+  including while it is still `Launching`. Calls made before launch, while a launch still
+  [waits for the app to become active](/sdk/ios/lifecycle/#when-the-launch-waits-for-the-app-to-become-active), or after `stop:`, are ignored.
+- `notify` returns nothing and takes no completion, so the app cannot tell whether a notification
+  has reached the server.
+
+### Urgent notifications
+
+With `urgent:YES`, Bugsee posts that one notification right away, ahead of anything already queued
+— if the SDK already has its server session and the network is reachable at that moment, honoring
+`BugseeOptionConfigWifiOnlyUpload`. Otherwise it is queued like any other notification. `urgent`
+never sends the older queued notifications along with it; it only lets this one skip the line.
+Delivery is at least once: an urgent notification can be posted twice, and the server drops the
+duplicate by its id.
+
+## Offline behavior and batching
+
+Every notification is written to an on-device queue before anything is sent, so it survives the app
+being killed, and stays there while the device is offline. The queue is flushed when connectivity
+returns, and failed uploads are retried with an increasing delay, up to a minute apart. A batch
+the server rejects as invalid (a 4xx response other than 408 and 429) is dropped, not retried.
+Notifications are uploaded in batches of up to 50, or 256 KB.
+
+The queue is bounded: at most 500 notifications or 1 MB, the oldest being dropped first, and a
+notification not sent within 72 hours is dropped.
+
+`BugseeOptionConfigNotifyFlushDelay` (`BugseeOptions.notifyFlushDelay`, in milliseconds, default
+`0`) sets how long Bugsee waits before flushing the queue. With `0`, it flushes as soon as a
+notification is on disk. A positive value lets `notify` calls made close together go out in one
+upload. The delay does not apply to urgent notifications.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.notifyFlushDelay = 2000;
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.notifyFlushDelay = 2000
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+## Delivery
+
+Calling `notify` delivers nothing on its own. Notification relay has to be turned on for the
+application, and its destinations chosen, before any notification is sent — until then `notify`
+succeeds on the device and nothing arrives.
+
+A subscribed webhook receives a relayed notification as the `notification.relayed` event — see
+[`notification.relayed`](/webhooks/events#notificationrelayed) for its payload.
+
+## Privacy
+
+A relayed notification carries what you pass to `notify`, plus the
+[user identifier](/sdk/ios/user-session-data#user-identity) if one is set, the global
+[attributes](/sdk/ios/user-session-data#user-and-session-attributes), and a snapshot of the
+environment (app, platform and device information), all taken at the moment of the call. It never
+includes video, logs, network traffic or the view hierarchy.
+
+Nothing scrubs the title, body or fields before they are sent, so do not put anything in them that
+should not leave the device.
+
+## Related pages
+
+- [Bug reporting](/sdk/ios/manual/bug-reporting)
+- [User & session data](/sdk/ios/user-session-data)
+- [Webhook events](/webhooks/events)

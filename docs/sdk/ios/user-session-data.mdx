@@ -1,0 +1,145 @@
+---
+title: "User & session data"
+description: "Attach a user identifier and custom attributes to every Bugsee report on iOS 7.x — setUserIdentifier, setAttribute, getAllAttributes, limits and persistence."
+sidebar_position: 5
+slug: "/sdk/ios/user-session-data"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+When you know who is using the app, or something about the session, attach it to every report.
+Issues in the dashboard can be searched by these values.
+
+## User identity
+
+Set a user identifier — an email address, an account id — and Bugsee adds it to every report from
+then on. If the value is an email address, the server may link the report to an existing user.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee setUserIdentifier:@"name@example.com"];
+
+// nil when none is set
+NSString *identifier = [Bugsee getUserIdentifier];
+
+[Bugsee clearUserIdentifier];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.setUserIdentifier("name@example.com")
+
+// nil when none is set
+let identifier = Bugsee.getUserIdentifier()
+
+Bugsee.clearUserIdentifier()
+```
+
+  </TabItem>
+</Tabs>
+
+- The identifier persists across launches until you clear it. It is kept in the Keychain; if the
+  Keychain refuses the write, in `UserDefaults` until the Keychain accepts it again.
+- `setUserIdentifier:` with `nil` or an empty string clears it, like `clearUserIdentifier`.
+- These calls work before launch too.
+- [Feedback](/sdk/ios/feedback) sends the identifier with the user's messages when they gave no
+  email on its email screen, and skips that screen when the identifier contains `@`.
+
+In 6.x these were `setEmail:`, `getEmail` and `clearEmail`.
+
+## User and session attributes
+
+Attributes are arbitrary key–value pairs — a plan name, a feature flag, a count — attached to every
+report.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee setAttribute:@"name" withValue:@"John Doe"];
+[Bugsee setAttribute:@"age" withValue:@23];
+[Bugsee setAttribute:@"married" withValue:@YES];
+
+id age = [Bugsee getAttribute:@"age"];
+
+// nil when no attribute is set
+NSDictionary<NSString *, id> *all = [Bugsee getAllAttributes];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.setAttribute("name", value: "John Doe")
+Bugsee.setAttribute("age", value: 23)
+Bugsee.setAttribute("married", value: true)
+
+let age = Bugsee.getAttribute("age")
+
+// nil when no attribute is set
+let all = Bugsee.getAllAttributes()
+```
+
+  </TabItem>
+</Tabs>
+
+Values may be strings, numbers or booleans.
+
+Attributes persist across launches, until you clear them or the app is uninstalled:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// One attribute
+[Bugsee clearAttribute:@"name"];
+
+// All of them
+[Bugsee clearAllAttributes];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// One attribute
+Bugsee.clearAttribute("name")
+
+// All of them
+Bugsee.clearAllAttributes()
+```
+
+  </TabItem>
+</Tabs>
+
+:::warning[Size limits]
+Each attribute is limited to about 1 KB and all attributes together to about 25 KB, measured on
+their archived form. An attribute over the limit is ignored, and one that would push the total
+over it is removed, together with any earlier value under that name. `setAttribute:withValue:`
+still returns `YES` in both cases. For larger data, attach a file instead — see
+[Report handler](/sdk/ios/report-handler#attachments).
+:::
+
+`getAllAttributes` is new in 7.x.
+
+### Attributes on a single report
+
+The calls above set attributes on every report. To set one on a single report, use
+`setAttribute:withValue:` on the report itself — in a [report handler](/sdk/ios/report-handler), or
+on a `BugseeExtendedReport` you [build in code](/sdk/ios/manual/bug-reporting#build-a-report-in-code).
+
+## Deleting it
+
+`deleteCollectedDataOnDevice` does not touch the user identifier or the attributes: clear them with
+the calls above. See [Privacy: cleanup](/sdk/ios/privacy/cleanup).
+
+## Related pages
+
+- [Custom events & traces](/sdk/ios/events-and-traces)
+- [Report handler](/sdk/ios/report-handler)
+- [Notification relay](/sdk/ios/notification-relay)

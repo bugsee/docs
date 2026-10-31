@@ -141,7 +141,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
   	</tr>
   	<tr>
   		<th>Crash reporting</th>
-  		<td><a href="/sdk/ios/symbolication/">View</a></td>
+  		<td><a href="/sdk/ios/issue-detection/crashes/">View</a></td>
   		<td><a href="/sdk/android/issue-detection/crashes/">View</a></td>
   		<td><svg width="12" height="12"><path d="M1 4 L5 8 L11 1" fill="none" stroke="currentColor" stroke-width="3" /></svg></td>
   		<td><a href="/sdk/react_native/v6/crashes/">View</a></td>
@@ -163,7 +163,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
   	</tr>
   	<tr>
   		<th>Custom events</th>
-		<td><a href="/sdk/ios/custom/">View</a></td>
+		<td><a href="/sdk/ios/events-and-traces/">View</a></td>
 		<td><a href="/sdk/android/events-and-traces#custom-events">View</a></td>
 		<td><a href="/sdk/cordova/custom/">View</a></td>
 		<td><a href="/sdk/react_native/v6/custom/#custom-events">View</a></td>
@@ -174,7 +174,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
   	</tr>
    	<tr>
 		<th>Custom traces</th>
-		<td><a href="/sdk/ios/custom/">View</a></td>
+		<td><a href="/sdk/ios/events-and-traces/">View</a></td>
 		<td><a href="/sdk/android/events-and-traces#custom-traces">View</a></td>
 		<td><a href="/sdk/cordova/custom/">View</a></td>
 		<td><a href="/sdk/react_native/v6/custom/#custom-traces">View</a></td>
@@ -185,7 +185,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
   	</tr>
     <tr>
 		<th>Custom attributes</th>
-		<td><a href="/sdk/ios/custom/">View</a></td>
+		<td><a href="/sdk/ios/user-session-data/">View</a></td>
 		<td><a href="/sdk/android/user-session-data#user-and-session-attributes">View</a></td>
 		<td><a href="/sdk/cordova/custom/#usersession-attributes">View</a></td>
 		<td><a href="/sdk/react_native/v6/custom/#usersession-attributes">View</a></td>
@@ -196,7 +196,7 @@ Bugsee has a very rich feature set, yet on some platforms we managed to achieve 
     </tr>
    	<tr>
 		<th>File attachments</th>
-		<td><a href="/sdk/ios/custom/">View</a></td>
+		<td><a href="/sdk/ios/report-handler/">View</a></td>
 		<td><a href="/sdk/android/report-handler#attachments">View</a></td>
 		<td><a href="/sdk/cordova/custom/">View</a></td>
 		<td><a href="/sdk/react_native/v6/custom/#file-attachments">View</a></td>
