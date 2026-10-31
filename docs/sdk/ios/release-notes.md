@@ -52,6 +52,7 @@ changed since 7.0.0-beta7.
   to keep it. See [Network privacy](/sdk/ios/privacy/network).
 - Feat: `addBreadcrumb(_:requiresFiltering:)` records a breadcrumb without running it through
   the breadcrumb filter, for a breadcrumb you have already filtered.
+
 **Changes**
 
 - Change: The log, network and breadcrumb filters must call their decision block within
