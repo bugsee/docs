@@ -52,20 +52,16 @@ cannot know (an account id, a feature flag), to scrub text users typed, or to at
 
 ```swift
 final class MyReportHandler: NSObject, BugseeReportHandler {
-    func onBeforeReportCreated(_ report: BugseeReport,
-                               isTerminating: Bool,
-                               completion: @escaping BugseeEmptyBlock) {
-        report.setAttribute("plan", value: "pro")
-        completion()
+    func onBeforeReportCreated(_ report: BugseeReport, isTerminating: Bool) async {
+        // AccountService stands for your own code
+        let plan = await AccountService.shared.plan()
+        report.setAttribute("plan", value: plan)
     }
 
-    func onAfterReportCreated(_ report: BugseeReport,
-                              isTerminating: Bool,
-                              completion: @escaping BugseeEmptyBlock) {
+    func onAfterReportCreated(_ report: BugseeReport, isTerminating: Bool) async {
         if !report.labels.contains("beta") {
             report.labels = report.labels + ["beta"]
         }
-        completion()
     }
 }
 
@@ -81,6 +77,10 @@ Bugsee.launch(token: "<your_app_token>")
 - Set it **before** `launchWithToken:`. Crashes and abnormal exits are reported on the next launch,
   during the launch itself; a handler set later never sees them.
 - Both methods are optional. Implement only the one you need.
+- In Swift, a method can be `async`, as above, or take a `completion` block, as in Objective-C
+  (`onBeforeReportCreated(_:isTerminating:completion:)`). An `async` method is done when it
+  returns: Swift calls `completion` for you. It runs off the main thread, so read main-actor state
+  with `await MainActor.run { … }`.
 
 ## The two callbacks
 
@@ -115,7 +115,8 @@ runs before yours, so yours has the last word.
 ## Completion and time limits
 
 **Always call `completion`, exactly once,** when you are done. Changes made after it are ignored.
-You may call it from any thread, so a callback can finish its work on a queue of its own.
+You may call it from any thread, so a callback can finish its work on a queue of its own. A Swift
+`async` method calls it when it returns, so do not leave work in a `Task` that outlives it.
 
 | Report | Thread | How long Bugsee waits |
 | --- | --- | --- |
@@ -125,28 +126,19 @@ You may call it from any thread, so a callback can finish its work on a queue of
 All callbacks for one report, a cross-platform wrapper's included, share a budget of 60 seconds.
 Do not assume you are on the main thread, and do not take your time.
 
+A Swift `async` method returns to Bugsee at once and does its work afterwards. For a report
+recovered on the next launch, its changes are therefore included only if it finishes before the
+report is bundled. When a change must reach recovered crashes, implement the `completion` form and
+make the change before returning.
+
 ### `isTerminating`
 
 `YES` means the process ends soon after the method returns: do the work before returning, because
 `completion` is not waited for. iOS builds crash and abnormal-exit reports on the next launch, in a
 healthy process, so it currently always passes `NO`, recovered crashes included. Handle `YES`
-anyway, so the handler stays correct if a later SDK version reports from a dying process.
-
-### Swift `async` handlers
-
-In Swift either method can be an `async` function without the `completion` parameter. Swift calls
-`completion` when it returns:
-
-```swift
-final class MyReportHandler: NSObject, BugseeReportHandler {
-    func onBeforeReportCreated(_ report: BugseeReport, isTerminating: Bool) async {
-        report.email = await accountStore.currentEmail()
-    }
-}
-```
-
-An `async` implementation does all of its work after the Objective-C call has returned, so it
-cannot finish before returning when `isTerminating` is `YES`.
+anyway, so the handler stays correct if a later SDK version reports from a dying process. A Swift
+`async` method does all of its work after the Objective-C call has returned, so it cannot finish
+before returning when `isTerminating` is `YES`.
 
 ## Not exactly once
 
@@ -238,19 +230,15 @@ From a report handler, add them with `addAttachment:`.
   <TabItem value="swift" label="Swift">
 
 ```swift
-func onAfterReportCreated(_ report: BugseeReport,
-                          isTerminating: Bool,
-                          completion: @escaping BugseeEmptyBlock) {
-    DispatchQueue.global(qos: .utility).async {
-        let data = self.deviceStateJSON()
-        let alreadyAttached = report.attachments.contains { $0.name == "device state" }
-        if !alreadyAttached,
-           let attachment = BugseeAttachment(name: "device state",
-                                             filename: "device-state.json",
-                                             data: data) {
-            report.addAttachment(attachment)
-        }
-        completion()
+func onAfterReportCreated(_ report: BugseeReport, isTerminating: Bool) async {
+    guard !report.attachments.contains(where: { $0.name == "device state" }) else {
+        return
+    }
+    let data = await deviceStateJSON()
+    if let attachment = BugseeAttachment(name: "device state",
+                                         filename: "device-state.json",
+                                         data: data) {
+        report.addAttachment(attachment)
     }
 }
 ```
