@@ -1,19 +1,20 @@
 ---
-title: "Bugsee iOS SDK 7.x"
-name: bugsee-ios-sdk-7x
-description: Full Bugsee 7.x setup for iOS, the current release line. Use for any new iOS integration and for migrating an existing 6.x integration to 7.x (breadcrumbs, blackout, report handler, notification relay, Crash Report Extension, tvOS/visionOS). Use the 6.x skill only to maintain an app that stays on 6.x.
-sidebar_label: "iOS (7.x)"
+title: Bugsee iOS SDK 7.x
+name: bugsee-ios-sdk
+description: Full Bugsee SDK setup for iOS, tvOS and visionOS (7.x — the current SDK). Use when asked to add Bugsee to iOS, install Bugsee via SPM, migrate a Bugsee 6.x integration to 7.x, or set up bug reporting, crash reporting, video recording, APM, or build size analysis for iOS applications. For legacy 6.x apps, use bugsee-ios-sdk-6x.
+sidebar_label: iOS (7.x)
 sidebar_position: 3
 slug: "/ai/agent-skills/sdk/ios/v7/SKILL"
-license: proprietary
+license: MIT
 category: sdk-setup
+generated_from: bugsee-for-ai/skills/bugsee-ios-sdk/SKILL.md
 ---
 
-# Bugsee iOS SDK 7.x
+# Bugsee iOS SDK
 
 Opinionated wizard that scans an iOS project and either wires up Bugsee 7.x from scratch or migrates an existing 6.x integration — core SDK via Swift Package Manager, the separate Feedback package, breadcrumbs, blackout, and the new option-key family.
 
-7.x is the current release line (7.0.0 and later). 6.x is the previous major version.
+> **7.x is the current iOS SDK** (GA since 7.0.0). Latest release: `7.0.0` on `https://github.com/bugsee/spm` and `https://github.com/bugsee/feedback-spm` (re-verified 2026-10-31 against the SPM tags). If you are maintaining an app that stays on the 6.x line, use the legacy [6.x skill](https://docs.bugsee.com/ai/agent-skills/sdk/ios/SKILL.md) instead; when upgrading from 6.x, follow the [migration guide](https://docs.bugsee.com/sdk/ios/migration/).
 
 ## Invoke This Skill When
 
@@ -26,7 +27,7 @@ Opinionated wizard that scans an iOS project and either wires up Bugsee 7.x from
 - User mentions the `BugseeOption*` key family, `setUserIdentifier`, `showReportDialog`, `addSecureView`, or `addSecureRectangle`.
 - User needs **tvOS** or **visionOS** support (7.x only).
 
-Switch to the 6.x skill only when the user wants to stay on 6.x (for example, an app that must keep supporting iOS 12–14 or keep CocoaPods).
+Switch to the [6.x skill](https://docs.bugsee.com/ai/agent-skills/sdk/ios/SKILL.md) only when the user wants to stay on 6.x (for example, an app that must keep supporting iOS 12–14 or keep CocoaPods).
 
 > **Always verify against** [docs.bugsee.com/sdk/ios/installation/](https://docs.bugsee.com/sdk/ios/installation/) before implementing. 7.x docs live under `/sdk/ios/`; the 6.x docs moved to `/sdk/ios/v6/`.
 
@@ -373,6 +374,41 @@ Bugsee.notify(title: "Checkout failed", body: "Provider returned 502")
 
 > A network filter does **not** reach breadcrumbs. If `setNetworkEventFilter` drops or rewrites a URL, repeat the rule in `setBreadcrumbFilter` or it will still appear in the breadcrumb trail.
 
+### BugseeAgent build info and size analysis
+
+The same `BugseeAgent` post-action that uploads dSYMs also registers a build record (version, configuration, VCS context, timings, Mach-O `LC_UUID`). Size analysis is opt-in.
+
+1. Add a Run Script **Archive** post-action (Product → Scheme → Edit Scheme → Archive → Post-actions). Set **Provide build settings from** to the app target.
+2. Script body for the direct-download XCFramework (locates `BugseeAgent` in the archive's `Tools/` folder, kept inside the project folder):
+
+   ```bash
+   SCRIPT_SRC=$(find "$PROJECT_DIR" -name 'BugseeAgent' | head -1)
+   if [ ! "$SCRIPT_SRC" ]; then
+       echo "Error: BugseeAgent not found"
+       exit 1
+   fi
+   python3 "$SCRIPT_SRC" <APP_TOKEN> >> /tmp/BugseeAgent.txt
+   ```
+
+   For **SPM**, replace the `find` line with:
+
+   ```bash
+   SCRIPT_SRC="$BUILD_DIR/../SourcePackages/checkouts/spm/Tools/BugseeAgent"
+   ```
+
+3. `BUGSEE_BUILD_INFO_ENABLED` is **ON by default** — do not set it. To also upload the IPA for download/install size, per-category breakdown, and per-file diffs, add scheme Environment Variables:
+
+   ```text
+   BUGSEE_SIZE_ANALYSIS_ENABLED=1
+   # optional:
+   # BUGSEE_CHUNKED_UPLOAD=1
+   # BUGSEE_SIZE_CHECK_ENABLED=1
+   # BUGSEE_SIZE_CHECK_WARNING_PCT=5.0
+   # BUGSEE_SIZE_CHECK_FAIL_PCT=10.0
+   ```
+
+Full env-var reference: [build size analysis](https://docs.bugsee.com/sdk/ios/build-size-analysis/) · [symbolication](https://docs.bugsee.com/sdk/ios/symbolication/)
+
 ---
 
 ## Verification
@@ -392,6 +428,19 @@ Bugsee.logError(error: NSError(domain: "smoke", code: 1))
 
 Check the Bugsee dashboard for the incoming report. If breadcrumbs are enabled, navigate a few screens first and confirm the trail appears on the report.
 
+## Debug Symbols
+
+A Release build strips symbols, so crashes arrive as raw addresses until dSYMs are uploaded. Confirm `DEBUG_INFORMATION_FORMAT = dwarf-with-dsym` for the Release configuration first — without it there are no dSYMs to upload at all.
+
+Two shapes, both driven by the [Bugsee CLI](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-cli/SKILL.md):
+
+- **Scheme post-action** — the SDK's `BugseeAgent` script runs `bugsee-cli xcode post-action` from Archive → Post-actions. Uploads dSYMs *and* registers the build (build info, dependencies, timings, optional size analysis). Gated to Release + Archive by default.
+- **Run Script build phase** — `bugsee-cli xcode upload-dsyms` (CLI 0.7.7+) uploads dSYMs alone, with no build registration, so it is safe on every build. A genuine failure fails the build on purpose; `--no-fail --no-background` is the usual CI combination.
+
+> **Xcode 15+:** `ENABLE_USER_SCRIPT_SANDBOXING` defaults to `YES` and blocks a build phase from reading the dSYM folder. Set it to `NO` on the target, or declare the folder in the phase's input file lists.
+
+Full workflow, including manual upload of App Store Connect dSYMs: [`bugsee-upload-symbols`](https://github.com/bugsee/bugsee-for-ai/blob/main/skills/bugsee-upload-symbols/SKILL.md).
+
 ---
 
 ## Documentation Links
@@ -405,3 +454,6 @@ Check the Bugsee dashboard for the incoming report. If breadcrumbs are enabled, 
 - [Crash symbolication](https://docs.bugsee.com/sdk/ios/symbolication/)
 - [Bug reporting](https://docs.bugsee.com/sdk/ios/manual/bug-reporting/)
 - [Crash Report Extension](https://docs.bugsee.com/sdk/ios/issue-detection/crash-report-extension/)
+- [Build size analysis](https://docs.bugsee.com/sdk/ios/build-size-analysis/)
+- [Release notes](https://docs.bugsee.com/sdk/ios/release-notes/)
+- [6.x docs](https://docs.bugsee.com/sdk/ios/v6/installation/) · [6.x skill](https://docs.bugsee.com/ai/agent-skills/sdk/ios/SKILL.md)
