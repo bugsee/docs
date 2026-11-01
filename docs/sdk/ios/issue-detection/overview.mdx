@@ -1,0 +1,105 @@
+---
+title: "Issue detection — Overview"
+description: "The detectors of the Bugsee iOS SDK 7.x — crashes, abnormal exits, hangs, main-thread misuse, HTTP errors, performance anomalies and user frustration — and the option keys that turn each one on."
+sidebar_position: 1
+slug: "/sdk/ios/issue-detection"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Besides the reports your users file and the ones you file from code, Bugsee files reports on its own when it detects a problem in the running app. Each detector is independent: turn any of them on or off without affecting the others or the rest of the SDK.
+
+Crash and exit detection are on by default. The other detectors are off until you enable them.
+
+## Detectors
+
+| Detector | What it observes | Option key | `BugseeOptions` property | Default |
+| --- | --- | --- | --- | --- |
+| [Crashes](/sdk/ios/issue-detection/crashes) | Fatal signals, Mach exceptions, uncaught Objective-C and C++ exceptions. Reported on the next launch | `BugseeOptionDetectAndReportCrash` | `crashReport` | On |
+| [Early crashes](/sdk/ios/issue-detection/crashes#early-crashes) | A launch that ended before the app became active. The next launch sends the waiting reports before `launch` returns | `BugseeOptionDetectAndReportEarlyCrash` | `appLaunchCrashDetection` | On |
+| [Exits](/sdk/ios/issue-detection/exits) | Out-of-memory terminations in the foreground and in the background, inferred across launches | `BugseeOptionDetectAndReportExit` | `detectAppExit` | On |
+| [Crash Report Extension](/sdk/ios/issue-detection/crash-report-extension) | On iOS 27 and later, the launch watchdog (`0x8badf00d`) and memory-limit (jetsam) terminations, with the stack of every thread | None: added as an extension target | — | Not installed |
+| [Hangs](/sdk/ios/issue-detection/hangs) | The main thread not responding for 3, 5 or 10 seconds | `BugseeOptionDetectAndReportHang` | — | Off |
+| [Main-thread misuse](/sdk/ios/issue-detection/main-thread-misuse) | Disk reads and writes, `NSUserDefaults` synchronization and synchronous network requests made on the main thread | `BugseeOptionDetectAndReportMainThreadMisuse` | — | Off |
+| [HTTP errors](/sdk/ios/issue-detection/http-errors) | HTTP responses with a 5xx status | `BugseeOptionDetectAndReportHttpErrors` | — | Off |
+| [Anomaly](/sdk/ios/issue-detection/anomaly) | Spans of completed performance transactions that take far longer than usual | `BugseeOptionDetectAndReportAnomaly` | — | Off |
+| [Frustration](/sdk/ios/issue-detection/frustration) | Rage taps, taps followed by an error, network requests that never complete, a frozen UI during interaction | `BugseeOptionDetectFrustration` | — | Off |
+
+## Enabling a detector
+
+Every detector is controlled by a `BugseeOption*` key, passed at launch. Options that have a `BugseeOptions` property can be set through it; the others are set by key, either in the launch dictionary or with `updateLaunchOptions:` on a `BugseeOptions` object.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.detectAppExit = YES;   // has a property
+
+// Detectors without a property are set by key:
+[options updateLaunchOptions:@{
+    BugseeOptionDetectAndReportHang       : @YES,
+    BugseeOptionDetectAndReportHttpErrors : @YES,
+}];
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.detectAppExit = true   // has a property
+
+// Detectors without a property are set by key:
+options.updateLaunch([
+    BugseeOptionDetectAndReportHang: true,
+    BugseeOptionDetectAndReportHttpErrors: true,
+])
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+The same keys work in the dictionary launch:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee launchWithToken:@"<your_app_token>"
+             andOptions:@{ BugseeOptionDetectAndReportHang : @YES }];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.launch(token: "<your_app_token>",
+              dictionaryOptions: [BugseeOptionDetectAndReportHang: true])
+```
+
+  </TabItem>
+</Tabs>
+
+See [Configuration](/sdk/ios/configuration) for every launch option.
+
+## What the reports look like
+
+Crashes, foreground out-of-memory exits and foreground watchdog terminations are filed as **crash** reports. Everything else a detector finds — hangs, background out-of-memory exits, main-thread misuse, HTTP errors, anomalies, frustration — is filed as an **error** report, a non-fatal issue that does not count against the crash rate.
+
+A report filed by a detector carries the same context as any other report: the video, console logs, network events and traces recorded before it. Crash and exit reports, filed on the next launch, carry the recording of the run that ended.
+
+Severity comes from `BugseeOptionReportingDefaultCrashPriority` and `BugseeOptionReportingDefaultErrorPriority` (HTTP errors are always filed as High). Crashes and exits take the priorities of the run that ended, not those of the launch that files them.
+
+Each live detector reports a given problem once per session — per call site, endpoint or element, as described on its page — so a problem that repeats does not flood the dashboard.
+
+:::note[Simulator and debugger]
+No detector files reports on the simulator or on Mac Catalyst: run on a device. While a debugger is attached, Bugsee installs no crash handler and does not track the run for abnormal exits, since the debugger takes the signals and stopping the app from Xcode looks like a kill.
+:::
+
+Detector reports reach your [report handler](/sdk/ios/report-handler) like any other report. To change what a detector files, inspect `type` and the report's fields there.

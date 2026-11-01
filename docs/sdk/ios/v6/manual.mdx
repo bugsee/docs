@@ -2,11 +2,15 @@
 title: "Manual invocation"
 description: "How to programmatically trigger the Bugsee report UI, upload issues from code, report non-fatal errors, and validate asserts on iOS."
 sidebar_position: 3
-slug: "/sdk/ios/manual"
+slug: "/sdk/ios/v6/manual"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+
+:::caution[Previous version]
+This page documents Bugsee iOS SDK **6.x**, the previous major version. The current line is **7.x** — see [Migrating from 6.x to 7.x](/sdk/ios/migration) to upgrade, or [Installation](/sdk/ios/installation) to start a new integration.
+:::
 
 ## Report view
 
@@ -222,7 +226,7 @@ and you will be provided with statistics and a breakdown by unique devices, IOS 
   <TabItem value="swift" label="Swift">
 
 ```swift
-Bugsee.logError(NSError(domain: "com.example.errors.ServerIsDown",
+Bugsee.logError(error: NSError(domain: "com.example.errors.ServerIsDown",
 						code: 10234,
 						userInfo: ["key1": "value1", "key2": "value2"]))
 ```

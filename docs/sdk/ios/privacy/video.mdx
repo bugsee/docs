@@ -1,6 +1,6 @@
 ---
 title: "Privacy and video"
-description: "How to hide sensitive iOS views, WebView elements, or screen regions from Bugsee video recordings, and how to pause recording entirely."
+description: "How to keep sensitive content out of Bugsee iOS video, screenshots and touch data: automatic masking, secure views, secure rectangles, WebView elements, blackout and lower-detail capture."
 sidebar_position: 1
 slug: "/sdk/ios/privacy/video"
 ---
@@ -8,186 +8,341 @@ slug: "/sdk/ios/privacy/video"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
+:::note
+Looking for the previous SDK? See the [6.x video privacy page](/sdk/ios/v6/privacy/video).
+:::
+
+Bugsee records the screen as video, attaches a screenshot to the report, and records touches
+and gestures. Everything on this page applies to all three: an area hidden from the video is
+also blanked in the report screenshot, and touches inside it are dropped from the report.
+
 ## Disabling video
 
-Video recording can be disabled completely using **BugseeVideoEnabledKey** launch option. See [configuration](/sdk/ios/configuration/) for more info.
-
-## Protecting views
-
-All system text boxes that are marked as secure are hidden from the recorded video automatically. In addition we support a way to mark your custom sensitive views so they will be treated similarly.
-
-
-### Marking view as protected in code
-
-You can protect any view that you want by importing the ```Bugsee.h``` header and implementing the following code:
-
+Set `BugseeOptionCaptureVideo` (`BugseeOptions.videoEnabled`) to `NO` to record no video and no
+touches. The report screenshot is controlled separately: turn it off with
+`BugseeOptionCaptureScreenshot` (`BugseeOptions.screenshotEnabled`). See
+[Configuration](/sdk/ios/configuration).
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-self.myView.bugseeProtectedView = YES;
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.videoEnabled = NO;
+options.screenshotEnabled = NO;
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
 ```
 
   </TabItem>
   <TabItem value="swift" label="Swift">
 
 ```swift
-self.myView.bugseeProtectedView = true
+let options = BugseeOptions.default()
+options.videoEnabled = false
+options.screenshotEnabled = false
+
+Bugsee.launch(token: "<your_app_token>", options: options)
 ```
 
   </TabItem>
 </Tabs>
 
-### Marking view as protected in storyboard
-![Story Board Protect View](protect-view-storyboard.png)
+## What is hidden automatically
 
-- Open storyboard or xib file with interface
-- Select view that you need to protect
-- Choose the Identity inspector tab on right panel(3rd tab)
-- Add a User Defined Runtime Attribute called *bugseeProtectedView* as shown in the picture.
+- **Secure text fields.** A `UITextField` or `UITextView` with `secureTextEntry` set is masked
+  in the video. This includes SwiftUI's `SecureField`.
+- **The keyboard, while a masked field has focus.** While a secure or protected text field or
+  text view is the first responder, the keyboard is left out of the video and no touches are
+  recorded.
+- **Typing.** Touches on a `UITextField` or `UITextView`, and key presses into one, are never
+  recorded.
+- **Payment card fields.** The card number, CVC and expiry fields of Stripe, Braintree and
+  card.io are marked protected when the SDK starts, so they are masked like any protected view.
+- **WebView password and card fields.** See [WebView elements](#webview-elements).
+- **Text in the view hierarchy.** The view hierarchy attached to a report never contains the
+  text of labels or fields.
 
-### Protected web page elements
-You can also prevent any web page element, shown in WebView, from being recorded by adding class="bugsee-hide" to it.
+## Protecting views
+
+Mark any other view as protected, and its area is blacked out in the video and the screenshot.
+Touches that start on it are dropped from the report.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+@import Bugsee;
+
+[Bugsee addSecureView:self.balanceLabel];
+
+// ...and when it no longer needs hiding
+[Bugsee removeSecureView:self.balanceLabel];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+import Bugsee
+
+Bugsee.addSecureView(balanceLabel)
+
+// ...and when it no longer needs hiding
+Bugsee.removeSecureView(balanceLabel)
+```
+
+  </TabItem>
+</Tabs>
+
+The `bugseeProtectedView` property that the SDK adds to `UIView` has the same effect:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+self.balanceLabel.bugseeProtectedView = YES;
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+balanceLabel.bugseeProtectedView = true
+```
+
+  </TabItem>
+</Tabs>
+
+A protected view hides everything inside its bounds, the views it contains included, and in the
+view hierarchy it and the views it contains are flagged as protected.
+
+### In a storyboard or xib
+
+![Storyboard protected view](protect-view-storyboard.png)
+
+1. Open the storyboard or xib file and select the view to protect.
+2. Open the Identity inspector.
+3. Add a User Defined Runtime Attribute named `bugseeProtectedView`, of type Boolean, checked.
+
+### In SwiftUI
+
+The `BugseeSwiftUI` module adds the `bugseeProtect()` and `bugseeProtect(isEnabled:)` view
+modifiers:
+
+```swift
+import BugseeSwiftUI
+
+Text(account.balance)
+    .bugseeProtect()
+```
+
+See [SwiftUI](/sdk/ios/swiftui) for setup and the dynamic form.
+
+### While protected views move
+
+During an animated transition, such as a view controller push, the masks of protected views
+cannot follow every frame. By default those frames are recorded blurred into unreadable blocks.
+Set `BugseeOptionCaptureVideoPrivacyBlur` to `NO` to skip them instead: the video then freezes
+for the length of the transition. Either way the transition is never recorded unprotected in the
+video. The report screenshot is not blurred this way: a screenshot taken during a transition can
+show a protected view before its mask has caught up.
+
+## Secure rectangles
+
+Hide a part of the screen by its coordinates.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// Returns NO if the rectangle is already hidden
+BOOL added = [Bugsee addSecureRectangle:CGRectMake(10, 10, 100, 100)];
+
+// Returns NO if there is no such rectangle
+BOOL removed = [Bugsee removeSecureRectangle:CGRectMake(10, 10, 100, 100)];
+
+[Bugsee removeAllSecureRectangles];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// Returns false if the rectangle is already hidden
+let added = Bugsee.addSecureRectangle(CGRect(x: 10, y: 10, width: 100, height: 100))
+
+// Returns false if there is no such rectangle
+let removed = Bugsee.removeSecureRectangle(CGRect(x: 10, y: 10, width: 100, height: 100))
+
+Bugsee.removeAllSecureRectangles()
+```
+
+  </TabItem>
+</Tabs>
+
+:::warning
+Do not read the values that `getAllSecureRectangles` returns with `CGRectValue` (`cgRectValue`).
+In 7.0.0 they do not hold a `CGRect`, and the call raises an exception. Keep your own list of
+the rectangles you add.
+:::
+
+- Coordinates are in points, in the screen's coordinate space (`UIScreen.coordinateSpace`), with
+  the origin in the top-left corner. They follow the interface orientation: when the interface
+  rotates, the same rectangle covers a different part of your content, so update your
+  rectangles when the layout changes.
+- With several of the app's windows on the screen (iPad Split View or Stage Manager), every
+  window is recorded. Convert a rectangle measured in a window to screen coordinates before you
+  add it:
+
+  ```swift
+  let rect = view.convert(view.bounds, to: view.window!.screen.coordinateSpace)
+  Bugsee.addSecureRectangle(rect)
+  ```
+
+- Touches that start inside a rectangle are dropped from the report.
+
+## WebView elements
+
+In a `WKWebView`, mark a page element with the `bugsee-hide` CSS class to hide it:
 
 ```html
 <input type="text" class="bugsee-hide">
+<div class="bugsee-hide">Account number: 1234 5678</div>
 ```
 
-Elements with type="password" are not recorded by default. If you want such web page element to be recorded, add class="bugsee-show" to it.
+Password inputs (`type="password"`) and inputs whose `autocomplete` attribute names a card field
+(`cc-number`, `cc-csc`, and other `cc-` values) are hidden without the class. To record one of
+them anyway, add the `bugsee-show` class:
 
 ```html
 <input type="password" class="bugsee-show">
 ```
 
-### Protecting by coordinates
-
-Bugsee allows hiding screen area by absolute coordinates as well:
-
-CGRect you make must be in points, with 0,0 coordinates in top left corner.
-
+This works through a script Bugsee adds to the page, which is controlled by
+`BugseeOptionCaptureWebViewAdvanced` (on by default). With the option off, no script is added
+and these elements are not hidden: protect the whole web view instead. Bugsee attaches itself to
+web views automatically; for a `WKWebView` created before `launchWithToken:`, call
+`addSecureWebView:`:
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-[Bugsee addSecureRect:CGRectMake(10, 10, 100, 100)];
+[Bugsee addSecureWebView:self.webView];
 ```
 
   </TabItem>
   <TabItem value="swift" label="Swift">
 
 ```swift
-Bugsee.addSecureRect(CGRect(x: 10, y: 10, width: 100, height: 100))
+Bugsee.addSecureWebView(webView)
 ```
 
   </TabItem>
 </Tabs>
 
-You need to be aware of the orientation that can be changed while the app is running.
-Recreate Rect after orientation change, if 'black box' on video does not cover all secure data that you need.
+`addSecureWebView:` does not hide the web view. To hide all of it, protect it as a view with
+`addSecureView:`.
 
-Other methods of secure rectangles
+## Blackout
 
+Blackout suppresses every capture that describes the screen, for as long as you need:
+
+- the video, which records a black placeholder frame;
+- the report screenshot;
+- touches and gestures;
+- the keyboard and focus breadcrumbs;
+- the view hierarchy.
+
+Console logs, network events, traces and other non-visual data keep being captured.
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-// Remove rect
-[Bugsee removeSecureRect:CGRectMake(10, 10, 100, 100)];
+[Bugsee startBlackout];
+// ... sensitive flow ...
+[Bugsee endBlackout];
 
-// Get all rectangles
-NSArray * rectangles = [Bugsee getAllSecureRects];
-for (NSValue * rectValue in rectangles){
-    CGRect rect = [rectValue CGRectValue];
-}
-
-// Remove all rectangles
-[Bugsee removeAllSecureRects];
+BOOL blackedOut = [Bugsee isBlackout];
 ```
 
   </TabItem>
   <TabItem value="swift" label="Swift">
 
 ```swift
-// Remove rect
-Bugsee.removeSecureRect(CGRect(x: 10, y: 10, width: 100, height: 100))
+Bugsee.startBlackout()
+// ... sensitive flow ...
+Bugsee.endBlackout()
 
-// Get all rectangles
-let rectangles = Bugsee.getAllSecureRects();
-for rectValue in rectangles!{
-    var rect = (rectValue as! NSValue).cgRectValue
-}
-
-// Remove all rectangles
-Bugsee.removeAllSecureRects()
+let blackedOut = Bugsee.isBlackout()
 ```
 
   </TabItem>
 </Tabs>
 
-## Obscuring contents
+- A blackout lasts until `endBlackout` or `stop:`. Stopping ends it, and a later launch starts
+  without one: call `startBlackout` again to black out the new session. A `stop:` made while
+  Bugsee is not running, before the launch that a blackout was started for, leaves that blackout
+  on.
+- A relaunch is the exception: it keeps the blackout, so the new session starts blacked out.
+- `startBlackout` called before launch is honoured: the session starts blacked out.
+- The transitions are reported as the `BugseeLifecycleEventBlackoutStarted` and
+  `BugseeLifecycleEventBlackoutEnded` lifecycle events. See
+  [Lifecycle & status](/sdk/ios/lifecycle).
 
-Sometimes application may contain too many elements with sensitive data. Marking all the views in such app as protected may be quite overwhelming and time consuming. In these cases you can instruct Bugsee to obscure the whole screen by lowering resolution of the captured video. In this case, you won't be able to see the text on the screen, but you will be able to follow user navigation.
+## Recording less detail
 
-To achieve this, try setting BugseeVideoScaleKey to a value between 0.1 and 1.0.
+When too many views hold sensitive data to mark them one by one, record them at a detail too low
+to read. You can still follow the user's navigation.
 
-## Going dark
+| Option | Default | Effect |
+| --- | --- | --- |
+| `BugseeOptionCaptureVideoScale` (`videoScale`) | `1.0` | Reduces the detail of every recorded video frame. A value between 0 and 1 enables it, for example `0.3`; `0` and values of 1 or more leave it off. |
+| `BugseeOptionCaptureScreenshotScale` | `1.0` | The same for the report screenshot. A value below 1 reduces its detail. Unlike the video scale, `0` or less does not turn it off: it gives the strongest reduction. |
 
-In some rare cases you might want to conceal the whole screen and stop recording events completely. The following APIs will come in handy, no data is being gathered between the calls to pause and resume.
+## Video from players and the camera
 
+Some content is not drawn by your views, and Bugsee records it only when you opt in:
+
+| Option | Default | Records |
+| --- | --- | --- |
+| `BugseeOptionCaptureAVPlayer` (`captureAVPlayer`) | `NO` | Video played through `AVPlayerLayer` and `AVPlayerViewController`. |
+| `BugseeOptionCaptureSampleBufferDisplayLayer` (`captureSampleBufferDisplayLayer`) | `NO` | Video the app renders into an `AVSampleBufferDisplayLayer`, as used by video-calling and custom players. |
+| `BugseeOptionCaptureCameraPreview` (`captureCameraPreview`) | `NO` | The live camera image in an `AVCaptureVideoPreviewLayer`. |
+
+:::warning[Camera preview records what the camera sees]
+With `BugseeOptionCaptureCameraPreview` on, bug reports contain whatever the lens is pointed at —
+faces, surroundings, documents — whether or not the user ever took a photo. Do not enable it
+unless your users know and agree. It also makes Bugsee part of your capture session: it reads
+frames from your `AVCaptureVideoDataOutput`, or adds an output of its own, and a camera screen
+then records at the full frame rate. Without the option, a camera preview records as an empty
+rectangle.
+:::
+
+## Checking what is recorded
+
+`showVideoCapturePreview` shows a floating panel with a live preview of the frames Bugsee
+captures, masks included. Use it during development to check that your sensitive views are
+hidden. The panel itself is not recorded.
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-// To stop video recording use
-[Bugsee pause];
-
-// And to continue
-[Bugsee resume];
+[Bugsee showVideoCapturePreview];
+// ...
+[Bugsee hideVideoCapturePreview];
 ```
 
   </TabItem>
   <TabItem value="swift" label="Swift">
 
 ```swift
-// To stop video recording use   
-Bugsee.pause()
-
-// And to continue
-Bugsee.resume()
-```
-
-  </TabItem>
-</Tabs>
-
-## Hiding keyboard
-
-In some cases you might want to prevent the keyboard from being captured on video (as well as touches). You can use the following method to achieve the desired effect.
-
-
-<Tabs groupId="lang-ios">
-  <TabItem value="objective-c" label="Objective-C">
-
-```objectivec
-// To prevent keyboard from being captured
-[Bugsee hideKeyboard:true];
-
-// To let us capture keyboard again
-[Bugsee hideKeyboard:false];
-```
-
-  </TabItem>
-  <TabItem value="swift" label="Swift">
-
-```swift
-// To prevent keyboard from being captured
-Bugsee.hideKeyboard(true)
-
-// To let us capture keyboard again
-Bugsee.hideKeyboard(false)
+Bugsee.showVideoCapturePreview()
+// ...
+Bugsee.hideVideoCapturePreview()
 ```
 
   </TabItem>

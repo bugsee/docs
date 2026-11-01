@@ -1,0 +1,108 @@
+---
+title: "Crash Report Extension"
+description: "Report launch watchdog (0x8badf00d) and memory-limit (jetsam) terminations with full thread stacks on iOS 27 and later, using the Bugsee Crash Report Extension."
+sidebar_position: 3
+slug: "/sdk/ios/issue-detection/crash-report-extension"
+---
+
+:::info[New in 7.0.0]
+The Crash Report Extension requires iOS 27 or later on the device and Xcode 27 to build. Your app keeps its own deployment target: only the extension target needs iOS 27.
+:::
+
+Some terminations end an app before any in-process crash handler can run: the launch watchdog (`0x8badf00d`) and the memory limit (jetsam). Starting with iOS 27, the system hands the dead process to a crash reporter extension embedded in the app (Apple's extension type, which Xcode calls **Crash Reporter Extension**). With Bugsee's extension, these terminations are reported with the stack of every thread at the moment of death.
+
+Nothing changes below iOS 27, without the extension, or when the system evicts a suspended app: the system does not call the extension for that.
+
+The extension works next to Bugsee's own [crash handler](/sdk/ios/issue-detection/crashes), not instead of it. Signal crashes are still reported by the crash handler. The extension adds the terminations that handler cannot see.
+
+## What gets reported
+
+| Termination | Report |
+| --- | --- |
+| Watchdog (`0x8badf00d`), such as a launch that blocks the main thread for about 20 seconds | **Main thread locked**, a crash. When the system ran the watchdog while the app was not visible, a non-fatal error instead |
+| Memory limit (jetsam) in the foreground | **Foreground Out of memory**, a crash |
+| Memory limit (jetsam) in the background | **Background Out of memory**, a non-fatal error |
+
+Other kinds of termination the extension sees are not reported.
+
+The names above are the crash names. Like every [exit report](/sdk/ios/issue-detection/exits#the-report), the report's summary is `Application process exited`, and its description adds what the system recorded, for example `Main thread locked (watchdog=scene-create, visibility=Foreground)`.
+
+The report carries the threads of the dead process with their stacks, and the list of loaded binaries. When the process was a running Bugsee session, the report is the [exit report](/sdk/ios/issue-detection/exits) of that session, with its video, logs and network events; the extension makes it more precise (a jetsam it reads overrides the guess of exit detection) and adds the stacks. When the process died after calling `Bugsee.launch` but before the session began — the launch watchdog fires inside `application:didFinishLaunchingWithOptions:` — the report is filed on its own, without a recording.
+
+Nothing is filed for a process in which the app did not call `Bugsee.launch`, stopped Bugsee, ran with a debugger attached, or turned exit detection off. When the same process also left a crash report from Bugsee's crash handler, that crash report is filed and the extension's document is dropped, so one death normally gives one report. The exception: when a crash happens before the session began and Bugsee's crash handler then hangs until the launch watchdog kills the process, both reports are filed.
+
+These reports do not dispatch the `BugseeLifecycleEventRelaunchedAfterCrash` [lifecycle event](/sdk/ios/lifecycle#available-lifecycle-events): it is sent only for a crash left by Bugsee's crash handler.
+
+## Setup
+
+### 1. Add the extension target
+
+In Xcode, choose **File › New › Target › iOS › Crash Reporter Extension**: that is Apple's name for the template. Xcode embeds it in the app.
+
+:::warning[One extension per app]
+An app can have only one crash-reporter extension. With two, the system runs one of them for each crash, and each misses some crashes. Do not add Bugsee's next to another crash-reporter extension.
+:::
+
+### 2. Link `BugseeCrashExtension`
+
+In the extension target's **General** tab, under **Frameworks and Libraries**, add the `BugseeCrashExtension` product of the Bugsee package (`https://github.com/bugsee/spm`). Add it to the extension target only. The app target keeps `Bugsee`.
+
+If the template added `CrashReportExtension.framework` to the same list, remove it. The iOS Simulator SDK has no such framework, so an explicit link breaks the app's simulator builds. On a device, the framework is linked automatically.
+
+### 3. Replace the template's code
+
+The whole extension is one declaration:
+
+```swift
+import BugseeCrashExtension
+
+@main struct CrashReport: BugseeCrashReporterExtension {}
+```
+
+Do not implement `processCrashReport(process:)`: Bugsee's implementation does the work. The same file builds for the simulator, where the extension does nothing.
+
+### 4. Share an App Group
+
+The extension saves what it finds in an App Group container, and the SDK reads it on the app's next launch. The group goes in three places:
+
+1. The app target: **Signing & Capabilities › + Capability › App Groups**, then add a group, for example `group.com.example.myapp`.
+2. The extension target: the same capability with the same group.
+3. The extension's `Info.plist`: the key `BugseeAppGroup` (String) with the group id.
+
+```xml
+<key>BugseeAppGroup</key>
+<string>group.com.example.myapp</string>
+```
+
+No SDK option or app code is needed: the SDK finds the extension in the app bundle and reads the same key. With manual signing, register the group in the Apple Developer portal and add it to both App IDs.
+
+With exit detection on, the SDK logs a warning to the console at launch when the setup is incomplete:
+
+- The extension's `Info.plist` has no `BugseeAppGroup`: *"The Crash Report Extension … has no BugseeAppGroup key in its Info.plist, so it cannot hand its reports to Bugsee."*
+- The app target lacks the App Group: *"The Crash Report Extension writes to App Group …, but the app is not entitled to it. Add the same App Group to the app target's capabilities."*
+
+### 5. Keep crash and exit detection on
+
+Leave `BugseeOptionDetectAndReportCrash` and `BugseeOptionDetectAndReportExit` at their default (on). The extension's documents are read by exit detection; with it off, nothing the extension writes is reported.
+
+## Testing
+
+- Use a device on iOS 27. The simulator never runs the extension.
+- Run the app without the debugger: launch it from the Home Screen or with `xcrun devicectl device process launch --device <device id> <bundle id>`, not with **Run** in Xcode. A crash caught by the debugger reaches the extension only after you detach, and stopping the app from Xcode ends it in a way no extension sees.
+- To cause a launch watchdog, block the main thread in `application:didFinishLaunchingWithOptions:` for longer than the system allows, about 20 seconds: for example, `Thread.sleep(forTimeInterval: 40)` after `Bugsee.launch`. To cause a memory-limit termination, allocate memory in a loop and write to it, so the pages are really used.
+- The report is sent on the app's next launch.
+- To see whether the extension ran, look in the App Group container. Each run leaves `Library/Bugsee/corpses/corpse-<start>-<pid>.json` there until the SDK's next launch reads and deletes it, and in Debug builds one line per step in `Library/Bugsee/crash-extension.log`. On a connected device, `xcrun devicectl device info files --device <device id> --domain-type appGroupDataContainer --domain-identifier <group id> --subdirectory Library/Bugsee` lists them. The extension also runs for ordinary crashes, so a document after a crash is expected: Bugsee files the crash handler's report and deletes the document.
+- The extension logs to the Console app under the subsystem `com.bugsee.crashext`.
+- Upload the app's dSYMs as usual to symbolicate the app's frames: see [Crash symbolication](/sdk/ios/symbolication). The extension's dSYM is never needed.
+
+## App Store
+
+App Store Connect expects the extension's version and build number (`CFBundleShortVersionString`, `CFBundleVersion`) to match the app's. Set `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` on both targets, and bump both on each release.
+
+## Privacy
+
+The system runs the extension for every termination it handles, also when the app has not called `Bugsee.launch`, for example before the user gave consent. The extension writes a small JSON document into the App Group container: the exit reason, the stack addresses of the threads (up to 128 threads of 64 frames) with system symbol names, and the list of loaded binaries with their paths. It sends nothing anywhere. The document stays on the device, in the App Group, until a later SDK launch with exit detection on reads and deletes it; at most eight wait there, the oldest going first. To delete them yourself, see [Cleanup](/sdk/ios/privacy/cleanup#crash-report-extension-documents). In Debug builds, the extension also keeps a small diagnostic log there, capped at 64 KB.
+
+A document from a process in which the app did not launch Bugsee is deleted by the next launch without being reported.
+
+`Bugsee.stop` takes effect once its work has run on the main thread. A termination before that, such as a launch watchdog in the same `didFinishLaunching` that called `stop`, is still reported.

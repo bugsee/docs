@@ -10,14 +10,14 @@ Bugsee KMP SDK is currently in beta. APIs and options may change before the stab
 :::
 
 ## 0.1.2 (August 18, 2026)
-- Feat: Updated native SDKs to their latest versions (Android: [6.0.4](/sdk/android/v6/release-notes/#604-june-22-2026), iOS: [6.3.1](/sdk/ios/release-notes/#631-july-31-2026))
+- Feat: Updated native SDKs to their latest versions (Android: [6.0.4](/sdk/android/v6/release-notes/#604-june-22-2026), iOS: [6.3.1](/sdk/ios/v6/release-notes/#631-july-31-2026))
 
 ## 0.1.1 (May 3, 2026)
 - Internal improvements.
 
 ## 0.1.0 (April 22, 2026)
 - Initial beta release of the Bugsee KMP SDK
-- Unified Kotlin API wrapping native Bugsee Android SDK [6.0.2](/sdk/android/v6/release-notes/#602-march-11-2026) and iOS SDK [6.1.3](/sdk/ios/release-notes/#613-april-21-2026)
+- Unified Kotlin API wrapping native Bugsee Android SDK [6.0.2](/sdk/android/v6/release-notes/#602-march-11-2026) and iOS SDK [6.1.3](/sdk/ios/v6/release-notes/#613-april-21-2026)
 - Targets: Android, iOS (arm64, x64, simulatorArm64)
 - Published to Maven Central as `com.bugsee:bugsee-kotlin-multiplatform:0.1.0`
 - Full feature set: video capture, crash reporting, network monitoring, console logs, custom data, feedback, appearance customization, lifecycle events, privacy controls

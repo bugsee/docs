@@ -1,6 +1,6 @@
 ---
-title: "Privacy and Network traffic"
-description: "How to disable network capture or sanitize sensitive data from recorded HTTP requests and responses on iOS using a delegate or block filter."
+title: "Privacy and network traffic"
+description: "How the Bugsee iOS SDK redacts captured network traffic, how to keep that redaction in your own network filter, and how to limit or turn off network capture."
 sidebar_position: 3
 slug: "/sdk/ios/privacy/network"
 ---
@@ -8,66 +8,125 @@ slug: "/sdk/ios/privacy/network"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-## Disabling network traffic collection
-
-Network traffic collection can be disabled completely using **BugseeMonitorNetworkKey** launch option. See [configuration](/sdk/ios/configuration/) for more info. 
-
-## Sanitizing data
-
-Bugsee captures network activity from the application and stores headers and in some cases body of the request and response.
-To hide user identifiable and other sensitive data from these network logs, Bugsee sanitizes known sensitive data automatically,
-and also lets you install a custom filter — via a delegate or a block — when you need full control over what gets recorded.
-
-### Automatic sanitization
-
-By default, Bugsee automatically sanitizes sensitive data (PII) from captured network events. The built-in filter redacts values
-for known sensitive keys in:
-
-- URL query parameters
-- HTTP headers
-- JSON request and response bodies
-
-This behavior is controlled by the **BugseeSanitizeNetworkDataKey** launch option (default: **YES**). To disable it, set the option
-to `NO` when launching the SDK. See [configuration](/sdk/ios/configuration/) for more info.
-
-:::info
-Automatic sanitization applies **only when no custom network filter is set**. If you register a filter (via [delegate](#using-delegate)
-or [block](#using-filter-with-block)), the built-in sanitizer is bypassed and your filter becomes fully responsible for scrubbing
-sensitive data.
+:::note
+Looking for the previous SDK? See the [6.x network privacy page](/sdk/ios/v6/privacy/network).
 :::
 
-### Using a custom filter
+Bugsee records the application's network activity: for each request, its URL, method, headers,
+status and, within limits, the request and response bodies. To keep personal data out of these
+records, Bugsee redacts well-known sensitive values on its own, and lets you install a filter
+that sees, changes or drops every event.
 
-When you need full control over which data is captured or redacted, you can install your own filter via a delegate or a block.
-For every event to be recorded, Bugsee will call your filter and provide you with a `BugseeNetworkEvent` object. It is your filter's
-responsibility to clean up all user identifiable data from that structure and call `decisionBlock()` to pass it back to Bugsee.
+## Disabling network capture
 
-### Using delegate
+Set `BugseeOptionCaptureNetwork` (`BugseeOptions.monitorNetwork`) to `NO` to record no network
+traffic, or `BugseeOptionCaptureWebSocket` (`BugseeOptions.monitorWebSocket`) to `NO` to leave
+out WebSocket traffic only. See [Configuration](/sdk/ios/configuration).
 
-Your class should implement the **BugseeDelegate** protocol and it must set itself as the delegate for Bugsee.
+## Built-in redaction
 
+With `BugseeOptionCaptureNetworkUseDefaultSanitizer` (`BugseeOptions.sanitizeNetworkData`) on,
+which is the default, every captured event is redacted before it is recorded. The value of each
+sensitive key below is replaced with `<redacted>`:
+
+- **URL query parameters**, in the URL and in the URL it was redirected from: `password`,
+  `passwd`, `pass`, `secret`, `client_secret`, `token`, `app_token`, `access_token`,
+  `refresh_token`, `id_token`, `auth_token`, `api_key`, `apikey`, `authorization`,
+  `credit_card`, `creditcard`, `card_number`, `cardnumber`, `cvv`, `cvc`, `cvv2`, `ssn`,
+  `social_security`, `pin`, `private_key`, `privatekey`.
+- **JSON bodies**: the same keys, up to 64 levels of nesting. A body is parsed as JSON when its
+  `Content-Type` contains `json`, or when the event has no `Content-Type`. Other bodies are left
+  as they are.
+- **HTTP headers**: `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`,
+  `X-Api-Key`, `X-Auth-Token`, `X-Csrf-Token`, `X-Forwarded-For`, `X-Real-Ip`.
+
+Keys and header names are matched without regard to case.
+
+:::warning[A network filter turns this off]
+The built-in redaction runs only while no network filter is set. As soon as you install one —
+with `setNetworkEventFilter:` or the delegate method — your filter alone decides what is
+recorded. To keep the built-in redaction, run `defaultNetworkSanitizer` in your filter, as shown
+below.
+:::
+
+## Network filters
+
+A filter receives every network event before it is recorded, as a `BugseeNetworkEvent`. Change
+it and pass it to the decision block, or pass `nil` to drop the event.
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
--(void)bugseeFilterNetworkEvent:(BugseeNetworkEvent *)event completionHandler:(BugseeNetworkFilterDecisionBlock)decisionBlock{
-    NSError * error;
-    // Below is an example code that will remove access_token from all URLs going through the filter.
-    if (event.url){
-        NSError * error;
-        NSRegularExpression * regex = [NSRegularExpression regularExpressionWithPattern:@"access_token=[0-9a-z\\-]*" options:NSRegularExpressionCaseInsensitive error:&error];
-        event.url = [regex stringByReplacingMatchesInString:event.url
-                                                    options:0
-                                                      range:NSMakeRange(0, event.url.length)
-                                               withTemplate:@""];
+[Bugsee setNetworkEventFilter:^(BugseeNetworkEvent *event,
+                                BugseeNetworkFilterDecisionBlock decision) {
+    // Keep the built-in redaction
+    [Bugsee.defaultNetworkSanitizer sanitize:event];
+
+    // Drop the traffic of an internal host altogether
+    if ([event.url containsString:@"://telemetry.example.com"]) {
+        decision(nil);
+        return;
     }
 
-    // Send the event further, call with nil if you want to omit this event altogether.
+    // Your own redaction
+    NSMutableDictionary *headers = [event.headers mutableCopy];
+    if (headers[@"X-Session-Id"]) {
+        headers[@"X-Session-Id"] = @"<redacted>";
+        event.headers = headers;
+    }
+
+    decision(event);
+}];
+
+// Remove the filter
+[Bugsee setNetworkEventFilter:nil];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.setNetworkEventFilter { event, decision in
+    // Keep the built-in redaction
+    Bugsee.defaultNetworkSanitizer.sanitize(event)
+
+    // Drop the traffic of an internal host altogether
+    if event.url?.contains("://telemetry.example.com") == true {
+        decision(nil)
+        return
+    }
+
+    // Your own redaction
+    if var headers = event.headers, headers["X-Session-Id"] != nil {
+        headers["X-Session-Id"] = "<redacted>"
+        event.headers = headers
+    }
+
+    decision(event)
+}
+
+// Remove the filter
+Bugsee.setNetworkEventFilter(nil)
+```
+
+  </TabItem>
+</Tabs>
+
+The same filter can be a `BugseeDelegate` method instead:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+- (void)bugseeFilterNetworkEvent:(BugseeNetworkEvent *)event
+               completionHandler:(BugseeNetworkFilterDecisionBlock)decisionBlock {
+    [Bugsee.defaultNetworkSanitizer sanitize:event];
+    // ...your own redaction...
     decisionBlock(event);
 }
 
-// ..somewhere within the class
+// ...somewhere within the class
 [Bugsee sharedInstance].delegate = self;
 ```
 
@@ -75,79 +134,66 @@ Your class should implement the **BugseeDelegate** protocol and it must set itse
   <TabItem value="swift" label="Swift">
 
 ```swift
-func bugseeFilterNetworkEvent(_ event: BugseeNetworkEvent, completionHandler decisionBlock: @escaping BugseeNetworkFilterDecisionBlock) {
-    let regex : NSRegularExpression
-    do {
-        regex = try NSRegularExpression.init(pattern: "access_token=[0-9a-z\\-]*", options: NSRegularExpression.Options.caseInsensitive)
-        if let url = event.url {
-            let range = NSMakeRange(0, url.utf16.count)
-            event.url = regex.stringByReplacingMatches(in: url, options: .reportProgress, range: range, withTemplate: "")
-        }
-    }catch { print("Somethings went wrong!") }
-
-    decisionBlock(event);
+class BugseeHandler: NSObject, BugseeDelegate {
+    func bugsee(filterNetworkEvent event: BugseeNetworkEvent,
+                completionHandler decisionBlock: @escaping BugseeNetworkFilterDecisionBlock) {
+        Bugsee.defaultNetworkSanitizer.sanitize(event)
+        // ...your own redaction...
+        decisionBlock(event)
+    }
 }
 
-// ..somewhere within the class
-Bugsee.sharedInstance()?.delegate = self;
+// ...somewhere in your setup code
+Bugsee.sharedInstance()?.delegate = bugseeHandler
 ```
 
   </TabItem>
 </Tabs>
 
-### Using filter with block
+- If both are set, the block filter is used and the delegate method is not called.
+- Call the decision block once, within 10 seconds. Past that the event is dropped, and a later
+  call is ignored. The filter may finish on any thread.
+- `defaultNetworkSanitizer` changes the event in place and returns once it is done, parsing a
+  JSON body on the calling thread. It is safe to use from any thread, and works before launch
+  and after stop.
+- Events your code records with `addNetworkEvent:` are recorded as they are, without the
+  filter and without the built-in redaction. Record them with
+  `addNetworkEvent:requiresFiltering:` and `YES` to run them through your filter, or through the
+  built-in redaction when no filter is set. See [Network events](/sdk/ios/network).
 
-Alternatively you can set up a filter by registering a block to be executed for every event.
+### Network events
 
+The filter is called several times for one request: usually once for the request
+(`BugseeNetworkEventBegin`) and once when it ends (`BugseeNetworkEventComplete`, or
+`BugseeNetworkEventCancel` / `BugseeNetworkEventError`). WebSocket events carry the
+`BugseeWebSocketEvent*` types.
 
-<Tabs groupId="lang-ios">
-  <TabItem value="objective-c" label="Objective-C">
+| Property | Type | Notes |
+| --- | --- | --- |
+| `bugseeNetworkEventType` | `NSString` | The stage, one of the constants above. Read it to tell the events apart. |
+| `method` | `NSString` | The HTTP method: `GET`, `POST`… |
+| `responseCode` | `NSInteger` | The HTTP status; `0` for the request event. |
+| `url` | `NSString` | The request URL. Change it to redact. |
+| `redirectedFromURL` | `NSString` | The URL the request was redirected from, if any. |
+| `headers` | `NSDictionary` | The request or response headers. Assign a new dictionary to change them. |
+| `body` | `NSData` | The raw request or response body, where it was captured. |
+| `noBodyReason` | `NSString` | Why there is no body: `BugseeNetworkBodySizeTooLarge`, `BugseeNetworkBodyUnsupportedContentType`, `BugseeNetworkBodyNoContentType` or `BugseeNetworkBodyCantReadData`. |
+| `error` | `NSDictionary` | The error of a failed request. |
 
-```objectivec
-[Bugsee setNetworkEventFilter:^(BugseeNetworkEvent *event, BugseeNetworkFilterDecisionBlock decisionBlock) {
+## Limiting bodies
 
-    // modify BugseeNetworkEvent as you wish here
+Two options decide which bodies are kept. Both apply after your filter: the filter sees the body
+as it was captured.
 
+| Option | Default | Effect |
+| --- | --- | --- |
+| `BugseeOptionCaptureNetworkBodySizeLimit` (`maxNetworkBodySize`) | `20480` | Largest body kept, in bytes. A larger body is left out whole, not cut. `0` keeps no bodies. |
+| `BugseeOptionCaptureNetworkBodyWithoutType` | `NO` | Whether to keep a body that has no `Content-Type` header. A filter that removes `Content-Type` therefore also removes the body. WebSocket frames are kept either way. |
 
-    // Send the event further, call with nil if you want to omit this event altogether.
-    decisionBlock(event);
-}];
+## Related
 
-// Unregister a block before de-allocating a class in which it was registered
-[Bugsee removeNetworkEventFilter];
-```
-
-  </TabItem>
-  <TabItem value="swift" label="Swift">
-
-```swift
-Bugsee.setNetworkEventFilter { (event, decisionBlock) in
-
-    // modify BugseeNetworkEvent as you wish
-
-    // Send the event further, call with nil if you want to omit this event altogether.
-    decisionBlock(event)
-}
-
-// always call removeNetworkEventFilter method if you de-allocate class where setNetworkEventFilter: was called
-Bugsee.removeNetworkEventFilter()
-```
-
-  </TabItem>
-</Tabs>
-
-### Network Events
-
-The delegate or hook is going to be called several times for each network request, depending on its life-cycle. Usually for
-successful requests it's going to be called twice, once with the request event (request headers and body) and once after
-completion and will contain headers and body of the response.
-
-
-|Property|Description|Type|Read only|Notes
-|---|---|---|---|---|
-|bugseeNetworkEventType|Type of network event|NSString|YES| Can be one of BugseeNetworkEventBegin, BugseeNetworkEventComplete, BugseeNetworkEventCancel or BugseeNetworkEventError|
-|method|HTTP Request Method|NSString|YES|'GET', 'POST', etc...
-|url|Network event URL|NSString|NO|
-|redirectedFromURL|URL of Network event that we were redirected from|NSString|NO|
-|body|Body|NSData|NO|Raw body of the request or response where available.
-|headers|HTTP Headers|NSDictionary|NO|Key-value store of HTTP headers associated with the event.
+- [Breadcrumbs privacy](/sdk/ios/privacy/breadcrumbs): network filters do not reach the HTTP
+  breadcrumbs. The built-in query parameter redaction does.
+- [HTTP errors](/sdk/ios/issue-detection/http-errors): with a network filter set, the URL in an
+  HTTP-error report also loses its user info, and path segments that look like identifiers are
+  replaced with placeholders.

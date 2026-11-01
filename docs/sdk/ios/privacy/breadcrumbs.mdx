@@ -1,0 +1,124 @@
+---
+title: "Privacy and breadcrumbs"
+description: "What the Bugsee iOS SDK records in breadcrumbs, and how to redact or drop breadcrumbs with the breadcrumb filter before they are recorded."
+sidebar_position: 4
+slug: "/sdk/ios/privacy/breadcrumbs"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Breadcrumbs are short, structured records of what happened before a report: screens shown,
+taps and gestures, keyboard and focus changes, HTTP requests, app lifecycle and device events.
+They are off by default and recorded only with `BugseeOptionCaptureBreadcrumbs` on. See
+[Breadcrumbs](/sdk/ios/breadcrumbs) for the categories and for recording your own.
+
+## What breadcrumbs carry
+
+- **No typed text.** Focus breadcrumbs record which field got focus, by class and
+  accessibility identifier, never its text. For a secure text field, or a view covered by a
+  protected view, not even that is recorded.
+- **Gestures name the view, not its content.** A gesture breadcrumb carries the view's class,
+  accessibility identifier and tag. Gestures on secure, protected and text-input views carry
+  none of them.
+- **HTTP breadcrumbs** carry the request URL, method, body size and the HTTP client that made it (`mechanism`, such as
+  `URLSession`), for each completed or failed request. With the built-in network redaction on
+  (`BugseeOptionCaptureNetworkUseDefaultSanitizer`, the default), the sensitive query
+  parameters of the URL are redacted, as listed on the
+  [network privacy page](/sdk/ios/privacy/network#built-in-redaction).
+- **Device events** that come from a system notification (locale, time zone, clock, significant
+  time change, protected data) can carry that notification's `userInfo`, converted to strings, but
+  only with `BugseeOptionCaptureBreadcrumbsExtras` on.
+  It is off by default.
+- **During a blackout**, gesture, keyboard and focus breadcrumbs are not recorded. Screen and
+  lifecycle breadcrumbs continue. See [Blackout](/sdk/ios/privacy/video#blackout).
+
+## Filtering breadcrumbs
+
+The breadcrumb filter receives every breadcrumb before it is recorded: the ones the SDK collects
+and the ones your code adds. Change it and pass it to the decision block, or pass `nil` to drop
+it.
+
+:::warning[Network filters do not reach breadcrumbs]
+The breadcrumb filter is the only filter breadcrumbs pass through. A URL your network filter
+(`setNetworkEventFilter:` or `bugseeFilterNetworkEvent:`) drops or rewrites still appears in the
+HTTP breadcrumbs unless you repeat the rule here. The built-in query parameter redaction does
+apply to breadcrumb URLs; your own network filter does not.
+:::
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee setBreadcrumbFilter:^(id<BGSBreadcrumb> crumb,
+                              BugseeBreadcrumbFilterDecisionBlock decision) {
+    // Drop the HTTP breadcrumbs of an internal host
+    NSString *url = crumb.data[@"url"];
+    if ([crumb.category isEqualToString:@"http"] &&
+        [url containsString:@"://telemetry.example.com"]) {
+        decision(nil);
+        return;
+    }
+
+    // Redact a value your own breadcrumbs carry
+    if (crumb.data[@"email"] != nil) {
+        [crumb setDataValue:@"<redacted>" forKey:@"email"];
+    }
+
+    decision(crumb);
+}];
+
+// Remove the filter
+[Bugsee setBreadcrumbFilter:nil];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.setBreadcrumbFilter { crumb, decision in
+    // Drop the HTTP breadcrumbs of an internal host
+    if crumb.category == "http",
+       let url = crumb.data?["url"] as? String,
+       url.contains("://telemetry.example.com") {
+        decision(nil)
+        return
+    }
+
+    // Redact a value your own breadcrumbs carry
+    if crumb.data?["email"] != nil {
+        crumb.setDataValue("<redacted>", forKey: "email")
+    }
+
+    decision(crumb)
+}
+
+// Remove the filter
+Bugsee.setBreadcrumbFilter(nil)
+```
+
+  </TabItem>
+</Tabs>
+
+- Call the decision block once, within 10 seconds. Past that the breadcrumb is dropped, and a
+  later call is ignored. The filter may finish on any thread.
+- A breadcrumb keeps the time it was observed, whatever the filter does with it.
+- `addBreadcrumb:` runs your breadcrumbs through the filter. `addBreadcrumb:requiresFiltering:`
+  with `NO` records a breadcrumb as it is: pass `NO` only when you have already applied your
+  breadcrumb filter yourself.
+
+### Breadcrumb fields
+
+| Property | Type | Notes |
+| --- | --- | --- |
+| `category` | `NSString` | For example `http`, `ui.screen`, `ui.keyboard`, `focus.set`, `device.event`. |
+| `type` | `NSString` | For example `http`, `navigation`, `user`, `system`, `lifecycle`. |
+| `level` | `NSInteger` | A `BugseeLogLevel` value. |
+| `message` | `NSString` | A short description; empty for most automatic breadcrumbs. |
+| `data` | `NSDictionary` | Structured details, such as `url` and `method` for `http`. Change entries with `setDataValue:forKey:`; `nil` removes one. |
+| `timestamp` | `NSTimeInterval` | When it was observed. Read-only. |
+
+## Disabling breadcrumbs
+
+Breadcrumbs are off unless you turn on `BugseeOptionCaptureBreadcrumbs`. To stop recording them,
+leave it off, or set it to `NO`.

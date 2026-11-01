@@ -1,0 +1,96 @@
+---
+title: "Frustration"
+description: "Detect user frustration in an iOS app with the Bugsee SDK 7.x: rage taps, taps followed by an error, stuck network requests and a frozen UI."
+sidebar_position: 9
+slug: "/sdk/ios/issue-detection/frustration"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The **frustration detector** reports moments the user is likely frustrated, even when nothing crashed and no request failed outright: tapping the same control again and again, a tap answered by an error, a request that never finishes, a UI that stops responding while the user is touching it. Each finding is filed as a non-fatal error report with the usual video, logs and network events.
+
+Frustration detection is off by default. One option turns on all four patterns.
+
+| | |
+| --- | --- |
+| Option key | `BugseeOptionDetectFrustration` |
+| `BugseeOptions` property | — (set by key) |
+| Default | `NO` |
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+[options updateLaunchOptions:@{
+    BugseeOptionDetectFrustration : @YES,
+}];
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.updateLaunch([
+    BugseeOptionDetectFrustration: true,
+])
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+## Patterns
+
+| Pattern | Trigger | Domain | Summary |
+| --- | --- | --- | --- |
+| Rage tap | Three or more taps on the same element within 1 second | `Frustration::RageTap` | `Rage tap detected` |
+| Error tap | A tap followed within 2 seconds by an HTTP response with status 400 or higher, a failed request, or an error-level log line | `Frustration::ErrorTap` | `Error tap detected` |
+| Stuck loading | An HTTP request still in flight after 10 seconds | `Frustration::StuckLoading::Network` | `Stuck network request detected` |
+| Frozen UI | The main thread unresponsive for 2 seconds or more after the user touched the screen | `Frustration::FrozenUi` | `Frozen UI detected` |
+
+### Taps and elements
+
+A tap is a completed touch. Taps on secure views and text-input controls are ignored.
+
+The tapped element is identified by its accessibility identifier, then by its `tag` (when not `0`), then by its view class name. A tap on a view with none of these is not counted. Set accessibility identifiers on your controls to tell them apart: without one, untagged views of the same class — common in SwiftUI — count as the same element.
+
+The screen is the view controller that appeared last. Moving to another screen resets a rage-tap streak and forgets the taps an error tap would be matched with.
+
+Rage-tap and error-tap reports name the screen and the element, in the issue title and as the `screen` and `element` attributes.
+
+### Stuck loading
+
+Requests are tracked from start until they complete, fail or are cancelled; Bugsee checks once a second for requests older than 10 seconds. The report carries the request's `method` and `url` as attributes, with the query string and fragment removed. Unlike [HTTP error detection](/sdk/ios/issue-detection/http-errors), identifier-like path segments are not templated, even when a network filter is set.
+
+### Frozen UI
+
+A shorter, input-gated relative of the [hang detector](/sdk/ios/issue-detection/hangs): it reports a freeze of 2 seconds or more, but only after the user has completed a tap since the last freeze was reported, so an app that nobody has touched is never reported. That tap can be minutes old. One continuous freeze files one report; the next touch arms the detector again. The report carries the stack of the stuck main thread.
+
+## Deduplication
+
+Each pattern reports a given place once per session:
+
+| Pattern | Reported once per session per |
+| --- | --- |
+| Rage tap | Screen and element |
+| Error tap | Screen and element |
+| Stuck loading | Method and URL |
+| Frozen UI | Call site |
+
+Stopping Bugsee starts a new session.
+
+## The report
+
+| Field | Value |
+| --- | --- |
+| Type | Error (non-fatal), with the error priority (`BugseeOptionReportingDefaultErrorPriority`) |
+| Summary | See the table of patterns |
+| Domain | See the table of patterns |
+
+On the simulator and Mac Catalyst, the detector does not run.

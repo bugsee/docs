@@ -5,8 +5,8 @@ sidebar_position: 4
 slug: "/sdk/ios/builds/vulnerabilities"
 ---
 
-:::info[Requires Bugsee iOS SDK 6.1.5 or newer]
-Vulnerability scanning is fully **server-side** — the `BugseeAgent` post-action does no scanning of its own and adds no env var of its own. The scan runs against the [dependencies blob](/sdk/ios/builds/dependencies) the agent uploads, so the only producer-side requirement is that dependency capture be enabled (it is, by default, in **6.1.5+**).
+:::info
+Vulnerability scanning is fully **server-side** — the `BugseeAgent` post-action does no scanning of its own and adds no env var of its own. The scan runs against the [dependencies blob](/sdk/ios/builds/dependencies) the agent uploads, so the only producer-side requirement is that dependency capture be enabled (it is, by default).
 :::
 
 ## How the scan runs
@@ -15,7 +15,7 @@ Bugsee's worker fires the vulnerability-scan job automatically as soon as the bu
 
 1. Downloads the dependency blob the agent just uploaded.
 2. Filters to scannable entries — CocoaPods and SPM packages, plus Git-based Carthage entries. `binary` Carthage entries are skipped (no Git URL to map to an advisory) and `project` / `file` entries are skipped (no published package identity).
-3. Queries **OSV.dev** in batches for matching advisories. iOS packages map to OSV's `SwiftURL` ecosystem — the query keys off each package's Git `url` (which is why SPM and Carthage entries carry it, and why CocoaPods pods are resolved to their source repository).
+3. Queries **OSV.dev** in batches for matching advisories. iOS packages map to OSV's `SwiftURL` ecosystem — the query keys off each package's Git `url`. SPM and Git-based Carthage entries carry it; CocoaPods entries do not, so the Bugsee backend looks up each pod's source repository on the CocoaPods CDN.
 4. For every advisory ID returned, fetches the full record so the dashboard can show summary text, severity, fixed-in versions, and references.
 5. Cross-references **GitHub Security Advisory** (GHSA) when a backend GitHub token is configured, to pick up severity and freshness data that OSV sometimes lacks.
 6. Derives a numeric **CVSS base score** from the v3 / v3.1 vector when present.

@@ -1,202 +1,367 @@
 ---
 title: "Configuration"
-description: "Complete reference of Bugsee iOS SDK launch options for controlling recording, crash detection, network capture, privacy, and UI behavior."
-sidebar_position: 1
+description: "Every launch option of Bugsee iOS SDK 7.x: BugseeOptions properties, BugseeOption* keys, defaults, stopping and relaunching, and reading the effective options back."
+sidebar_position: 3
 slug: "/sdk/ios/configuration"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
+You configure Bugsee with the options you pass to `launchWithToken:` (and later to `relaunch`). An option you leave out takes its default, listed in the tables below.
+
 ## Launching with options
 
-:::warning
-Since v6.0.0 the Bugsee iOS SDK supports the simulator; crash capture is excluded. For full functionality, launch your app with Bugsee on a real device.
-:::
+Options are passed in one of two forms. Both have the same effect.
 
-Bugsee behavior is very customizable. If the default configuration does not satisfy your needs, you can launch the SDK with additional parameters passed as a dictionary.
-
+**A `BugseeOptions` object.** Start from `defaultOptions` (Swift `BugseeOptions.default()`), set its properties, and launch with it. Options that have no property are set by key with `updateLaunchOptions:` (Swift `updateLaunch(_:)`).
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-- (BOOL)application:(UIApplication *)application
-    didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    // ...other initialization code
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.maxRecordingTime = 60;
+options.shakeToReport = YES;
+options.screenshotToReport = NO;
 
-    NSDictionary * options = @{
-           BugseeMaxRecordingTimeKey   : @60,  
-           BugseeShakeToReportKey      : BugseeFalse,
-           BugseeScreenshotToReportKey : BugseeTrue,
-           BugseeCrashReportKey        : BugseeTrue
-    };
+// Options that have no BugseeOptions property are set by key:
+[options updateLaunchOptions:@{
+    BugseeOptionDetectAndReportHang : @YES,
+    BugseeOptionCaptureBreadcrumbs  : @YES,
+}];
 
-    [Bugsee launchWithToken:@"<your_app_token>" andOptions:options];
-
-    return YES;
-}
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
 ```
 
   </TabItem>
   <TabItem value="swift" label="Swift">
 
 ```swift
-func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-    // ...other initialization code
+let options = BugseeOptions.default()
+options.maxRecordingTime = 60
+options.shakeToReport = true
+options.screenshotToReport = false
 
-    let options : [String: Any] =
-        [ BugseeMaxRecordingTimeKey   : 60,
-          BugseeShakeToReportKey      : false,
-          BugseeScreenshotToReportKey : true,
-          BugseeCrashReportKey        : true ]
+// Options that have no BugseeOptions property are set by key:
+options.updateLaunch([
+    BugseeOptionDetectAndReportHang: true,
+    BugseeOptionCaptureBreadcrumbs: true,
+])
 
-    Bugsee.launch(token: "<your_app_token>", options: options)
-
-    return true
-}
+Bugsee.launch(token: "<your_app_token>", options: options)
 ```
 
   </TabItem>
 </Tabs>
+
+**A dictionary** of `BugseeOption*` keys. In Swift, this overload is `launch(token:dictionaryOptions:)`.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+NSDictionary *options = @{
+    BugseeOptionConfigDuration               : @60,
+    BugseeOptionReportingTriggerByShake      : @YES,
+    BugseeOptionReportingTriggerByScreenshot : @NO,
+    BugseeOptionDetectAndReportCrash         : @YES,
+};
+
+[Bugsee launchWithToken:@"<your_app_token>" andOptions:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options: [String: Any] = [
+    BugseeOptionConfigDuration: 60,
+    BugseeOptionReportingTriggerByShake: true,
+    BugseeOptionReportingTriggerByScreenshot: false,
+    BugseeOptionDetectAndReportCrash: true,
+]
+
+Bugsee.launch(token: "<your_app_token>", dictionaryOptions: options)
+```
+
+  </TabItem>
+</Tabs>
+
+Enum-typed options take an `NSNumber` in a dictionary, for example `@(BugseeCrashHandlerTypeBSD)` in Objective-C or `BugseeCrashHandlerType.bsd.rawValue` in Swift.
+
+### Option keys
+
+Each `BugseeOption*` constant holds a `com.bugsee.option.*` string, the same key the Android SDK and the cross-platform SDKs use. Always pass the constants rather than typing the strings.
+
+The 6.x key constants, such as `BugseeShakeToReportKey` or `BugseeMaxRecordingTimeKey`, still compile: in 7.x they hold the new `com.bugsee.option.*` strings. A dictionary that carries the 6.x strings themselves, for example `@"ShakeToReport"` saved by an older build, is translated to the new keys too. Prefer the `BugseeOption*` constants in new code: they are the names this page documents, and options added in 7.x have no 6.x name. A few 6.x options were removed in 7.x; see [Migrating from 6.x to 7.x](/sdk/ios/migration).
+
+The launch `started:` block and the SDK status are covered in [Lifecycle & status](/sdk/ios/lifecycle/).
 
 ## Stopping
 
-Stopping will fully stop the SDK operation and clean up all the used resources. The operation may take a while to complete.
-
+Stopping ends recording and releases the resources the SDK uses. The completion block runs once the SDK has stopped.
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-  [Bugsee stop:^(void) {
-    // operations to perform upon completion  
-    }];
+[Bugsee stop:^{
+    // Bugsee is stopped
+}];
 ```
 
   </TabItem>
   <TabItem value="swift" label="Swift">
 
 ```swift
-  Bugsee.stop {
-    // operations to perform upon completion
-  }
+Bugsee.stop {
+    // Bugsee is stopped
+}
 ```
 
   </TabItem>
 </Tabs>
+
+A launch called while the SDK is stopping is refused. To launch again with new options, call `launchWithToken:` from the stop completion, or use `relaunch`. Stopping also ends an active [blackout](/sdk/ios/privacy/video/).
 
 ## Relaunching
 
-Relaunching will fully stop the SDK operation and clean up all the used resources. Upon completion it will start recording again with new options.
-
+Relaunching stops the running SDK and launches it again with new options and the same app token.
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-[Bugsee relaunchWithDictionaryOptions:options];
+// With a BugseeOptions object
+[Bugsee relaunchWithOptions:options];
+
+// With a dictionary
+[Bugsee relaunchWithDictionaryOptions:@{ BugseeOptionCaptureVideo : @NO }];
+
+// Told whether the relaunch went ahead
+[Bugsee relaunchWithOptions:options started:^(BOOL success) {
+    NSLog(@"Relaunched: %d", success);
+}];
+
+// The current app token and the default options
+[Bugsee relaunch];
 ```
 
   </TabItem>
   <TabItem value="swift" label="Swift">
 
 ```swift
+// With a BugseeOptions object
 Bugsee.relaunch(options: options)
+
+// With a dictionary
+Bugsee.relaunch(dictionaryOptions: [BugseeOptionCaptureVideo: false])
+
+// Told whether the relaunch went ahead
+Bugsee.relaunch(options: options) { success in
+    print("Relaunched: \(success)")
+}
+
+// The current app token and the default options
+Bugsee.relaunch()
 ```
 
   </TabItem>
 </Tabs>
 
-## Available Options
-|Key|Default value|Notes
-|---|---|---|
-|BugseeMaxRecordingTimeKey|@60|Maximum recording duration|
-|BugseeShakeToReportKey|NO|Shake gesture to trigger report. <br />_Be aware, that enabling this option may cause a startup delay/freeze on iOS 12.x devices due to a bug in the CoreMotion system framework ([read more](https://stackoverflow.com/questions/54607856/main-thread-checker-warning-with-coremotion-only-appearing-on-2018-model-iphone))._|
-|BugseeScreenshotToReportKey|YES|Screenshot key to trigger report|
-|BugseeCrashReportKey\*|YES|Catch and report application crashes|
-|BugseeKillDetectionKey|NO|Detect abnormal termination ([read more](/sdk/ios/app-kills/))|
-|BugseeDetectAppExitKey|NO|Detect any kind of process termination \(e.g. when user swipes off the application from multitasking UI, or when system unloads the app due to memory pressure\). Special error report is generated for this scenario with "BugseeAppExit" domain|
-|BugseeVideoEnabledKey|YES|Enable video recording|
-|BugseeScreenshotEnabledKey|YES|Attach screenshot to a report. Note, that if `BugseeVideoEnabledKey` option is *NO*, default value of this option is *NO* too.|
-|BugseeViewHierarchyEnabledKey|YES|Capture view hierarchy for Bug and Error reports|
-|BugseeCaptureLogsKey|YES|Automatically capture all console logs|
-|BugseeCaptureOSLogsKey|NO|_**Deprecated**_. Capture of OSLog and Logger statements was permanently disabled in 6.3.2. The option is still accepted so existing code keeps building, but setting it has no effect|
-|BugseeMonitorNetworkKey|YES|Capture network traffic|
-|BugseeMaxNetworkBodySizeKey|@20480|The maximal size of network request/response body (in bytes).|
-|BugseeSanitizeNetworkDataKey|YES|Automatically redact values of known sensitive keys (PII) from URL query parameters, HTTP headers, and JSON bodies of captured network events. Applies only when no custom network filter (delegate or block) is set. See [Privacy and Network traffic](/sdk/ios/privacy/network/).|
-|BugseeMonitorBluetoothStatusKey|NO|Monitor bluetooth state.<br />_**IMPORTANT**: You must add "Privacy - Bluetooth Always Usage Description" key into your Info.plist with a string value explaining to the user why you need bluetooth permission_|
-|BugseeMonitorDiskSpaceKey|NO|Monitor available disk space and include it in reports as a system trace.|
-|BugseePerformanceMonitoringKey|YES|Master switch for Application Performance Monitoring (APM). Controls auto-instrumentation of network requests, file operations, view controller lifecycle and app startup, as well as the manual ```Bugsee.startTransaction()``` / ```Bugsee.startSpan()``` API. Captured transactions are attached to every report.|
-|BugseeReportPrioritySelectorKey|NO|Allow user to modify priority when reporting manually|
-|BugseeReportLabelsEnabledKey|NO|Display labels field in the built-in bug reporting UI|
-|BugseeReportLabelsRequiredKey|NO|Controls whether  _"Labels"_ field in bug reporting UI is mandatory or not.|
-|BugseeDefaultCrashPriorityKey|BugseeSeverityBlocker|Default priority for crashes|
-|BugseeDefaultBugPriorityKey|BugseeSeverityHigh|Default priority for bugs|
-|BugseeWifiOnlyUploadKey|NO|Upload reports only when a device is connected to a Wi-Fi network.|
-|BugseeMaxDataSizeKey|@50|Bugsee will avoid using more disk space than specified (in MB). If total Bugsee data size exceeds specified value, oldest recordings (even not sent) will be removed. Value should not be smaller than 10.|
-|BugseeStyleKey|Default|Enumeration of BugseeStyleSystemDefault, BugseeStyleDefault, BugseeStyleDark and BugseeStyleBasedOnStatusBarStyle|
-|BugseeFrameRateKey|BugseeFrameRateHigh|Specifies how often frames are attempted to be captured|
-|BugseeCaptureVideoAdaptiveKey|NO|Opt-in adaptive screen capture. When enabled, capture idles at about 1 frame per second on a static screen and ramps back up to the maximum frame rate on visual activity (scrolling, animation, layer updates).|
-|BugseeVideoScaleKey|@1|Additional down scaling applied to recorded video, (e.x @0.5 would reduce both width and height by half)|
-|BugseeCaptureDeviceAndNetworkNames\*\*|NO|Capture device name, wifi SSID and mobile carrier name.|
-|BugseeReportSummaryRequiredKey|NO|Controls whether  _"Summary"_ field in bug reporting UI is mandatory or not.|
-|BugseeReportDescriptionRequiredKey|NO|Controls whether  _"Description"_ field in bug reporting UI is mandatory or not.|
-|BugseeReportEmailRequiredKey|NO|Controls whether  _"Email"_ field in bug reporting UI is mandatory or not.|
-|BugseeAppLaunchCrashDetectionKey|NO|Controls whether early crashes are intercepted and uploaded. Early crashes are those happening within the first 5 seconds after app launch. And they are uploaded synchronously (with blocking main thread) to guarantee upload|
-|BugseeCaptureAVPlayerKey|NO|When enabled, video playing via AVPlayerLayer and via AVPlayerViewController will be captured on video|
+A relaunch goes ahead only while the SDK is running (`status` is `BugseeStatusLaunched`). While it is stopped, launching or stopping, the relaunch is refused and `started:` receives `NO`. A relaunch called while another one is in progress joins it, and its own options are not applied. An active blackout stays on across a relaunch.
 
+## Reading the options in effect
 
-### Built-in reporting UI adjustments
-
-Alongside stylistic changes, you can also change the placeholders' texts shown in input controls within the built-in bug reporting UI
-
+`getLaunchOptions` returns the options the SDK applies: the ones the app passed, merged over the defaults, keyed by the `com.bugsee.option.*` strings. Before the first launch it holds the defaults. `getHostLaunchOptions` returns only the options the app itself passed, so you can tell "the app asked for this" from "this is the default".
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-  [[Bugsee appearance] setReportSummaryPlaceholder:@"What's happened? Only briefly"];
-  [[Bugsee appearance] setReportDescriptionPlaceholder:@"Here, describe all the pains and frustrations you had. In details"];
-  [[Bugsee appearance] setReportEmailPlaceholder:@"Identify yourself here"];
-  [[Bugsee appearance] setReportLabelsPlaceholder:@"Labels.For.Developers. [Comma separated]"];
+NSDictionary<NSString *, id> *effective = [Bugsee getLaunchOptions];
+NSNumber *duration = effective[BugseeOptionConfigDuration];
+
+NSDictionary<NSString *, id> *passed = [Bugsee getHostLaunchOptions];
 ```
 
   </TabItem>
   <TabItem value="swift" label="Swift">
 
 ```swift
-  Bugsee.appearance().reportSummaryPlaceholder = "What's happened? Only briefly"
-  Bugsee.appearance().reportDescriptionPlaceholder = "Here, describe all the pains and frustrations you had. In details"
-  Bugsee.appearance().reportEmailPlaceholder = "Identify yourself here"
-  Bugsee.appearance().reportLabelsPlaceholder = "Labels.For.Developers. [Comma separated]"
+let effective = Bugsee.getLaunchOptions()
+let duration = effective[BugseeOptionConfigDuration] as? Int
+
+let passed = Bugsee.getHostLaunchOptions()
 ```
 
   </TabItem>
 </Tabs>
 
-&nbsp;
-<hr />
+`getHostLaunchOptions` holds only values the SDK accepted. After `stop:` it still describes the last configuration, and the next launch or relaunch replaces it.
 
-<div class="footnote">
-  * iOS allows only one crash detector to be active at a time. If you insist on using an alternative solution for handling crashes, you might want to use this option and disable Bugsee from taking over.
-</div>
+## Available options
 
-<div class="footnote">
-  ** To obtain WiFi information, the requesting app must meet one of the following requirements (for full details please refer to <a href="https://developer.apple.com/documentation/systemconfiguration/cncopycurrentnetworkinfo">Apple documentation</a>):
+The **Property** column names the `BugseeOptions` property for the option, where there is one. Options marked "—" are set by key, through the dictionary or `updateLaunchOptions:`.
 
-  <ul>
-    <li>The app uses Core Location, and has the user’s authorization to use location information.</li>
-    <li>The app uses the NEHotspotConfiguration API to configure the current Wi-Fi network.</li>
-    <li>The app has active VPN configurations installed.</li>
-    <li>The app has an active <code>NEDNSSettingsManager</code> configuration installed.</li>
-  </ul>
+### Detection
 
-  Note that requesting location access requires a change to your app's <i>Info.plist</i> file. Two keys must be added with appropriate descriptions:
-  <ul>
-    <li>Privacy - Location Always and When In Use Usage Description</li>
-    <li>Privacy - Location When In Use Usage Description</li>
-  </ul>
+| Key | Property | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BugseeOptionDetectAndReportCrash` | `crashReport` | BOOL | `YES` | Catch and report crashes: fatal signals and uncaught exceptions. iOS allows only one crash reporter to be active at a time; turn this off if you use another one. See [Crashes](/sdk/ios/issue-detection/crashes/). |
+| `BugseeOptionDetectAndReportExit` | `detectAppExit` | BOOL | `YES` | Report abnormal app exits, such as out-of-memory terminations, on the next launch. See [Exits](/sdk/ios/issue-detection/exits/). |
+| `BugseeOptionDetectAndReportEarlyCrash` | `appLaunchCrashDetection` | BOOL | `YES` | Protect against crash loops at startup. When the previous launch ended before the app became active — a startup crash, but also a force-quit or a kill at that point — pending reports are sent synchronously at the next launch, before the app can crash again. This blocks the main thread while they upload. See [Crashes](/sdk/ios/issue-detection/crashes/#early-crashes). |
+| `BugseeOptionDetectAndReportHang` | — | BOOL | `NO` | Report main-thread hangs. See [Hangs](/sdk/ios/issue-detection/hangs/). |
+| `BugseeOptionDetectAndReportHangFairLevel` | — | int, ms | `3000` | Hang duration reported at the Fair level. |
+| `BugseeOptionDetectAndReportHangMediumLevel` | — | int, ms | `5000` | Hang duration reported at the Medium level. |
+| `BugseeOptionDetectAndReportHangSevereLevel` | — | int, ms | `10000` | Hang duration reported at the Severe level. The three levels must ascend; otherwise all three fall back to their defaults. |
+| `BugseeOptionDetectAndReportHttpErrors` | — | BOOL | `NO` | Report HTTP server errors (5xx responses) as error reports. See [HTTP errors](/sdk/ios/issue-detection/http-errors/). |
+| `BugseeOptionDetectAndReportAnomaly` | — | BOOL | `NO` | Report performance anomalies. See [Anomaly](/sdk/ios/issue-detection/anomaly/). |
+| `BugseeOptionDetectFrustration` | — | BOOL | `NO` | Report user-frustration patterns. See [Frustration](/sdk/ios/issue-detection/frustration/). |
+| `BugseeOptionDetectAndReportMainThreadMisuse` | — | BOOL | `NO` | Report blocking work done on the main thread. See [Main-thread misuse](/sdk/ios/issue-detection/main-thread-misuse/). |
+| `BugseeOptionDetectCrashSwiftAsyncStackTraces` | — | BOOL | `YES` | Stitch Swift async frames into the stacks recorded for C++ exceptions. iOS only. |
+| `BugseeOptionDetectCrashFillEmptyExceptionStacks` | — | BOOL | `NO` | Fill in the stack of an uncaught `NSException` that has none from the crashing thread. This can change how such crashes are grouped. iOS only. |
 
-  Note: Your app must enable the Access WiFi Information capability in Xcode.
-</div>
+### Capture
+
+| Key | Property | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BugseeOptionCaptureVideo` | `videoEnabled` | BOOL | `YES` | Record the screen. `NO` records no video and no touches. It does not turn off the report screenshot. |
+| `BugseeOptionCaptureScreenshot` | `screenshotEnabled` | BOOL | `YES` | Attach a screenshot to the report. Independent of `BugseeOptionCaptureVideo`. |
+| `BugseeOptionCaptureScreenshotScale` | — | float | `1.0` | Below `1.0`, reduces the detail of the report screenshot, for privacy. |
+| `BugseeOptionCaptureVideoScale` | `videoScale` | float | `1.0` | Between `0` and `1`, reduces the detail of each recorded frame, for privacy. `0` or `1` and above leave frames unchanged. |
+| `BugseeOptionCaptureVideoQuality` | — | `BugseeVideoQuality` | `BugseeVideoQualityDefault` | Size of the recorded frames: `Default`, `Medium` or `High`. Higher is sharper and makes larger reports. |
+| `BugseeOptionCaptureVideoFrameRate` | `framerate` | `BugseeFrameRate` | `BugseeFrameRateHigh` | How often frames are captured: `Low`, `Medium` or `High`. |
+| `BugseeOptionCaptureVideoMaxFramerate` | `maxFramerate` | uint, fps | `0` | Highest capture frame rate. `0` uses the rate the frame-rate option picks. iOS only. |
+| `BugseeOptionCaptureVideoMinFramerate` | `minFramerate` | uint, fps | `0` | Lowest capture frame rate. `0` uses the rate the frame-rate option picks. iOS only. |
+| `BugseeOptionCaptureVideoAdaptive` | — | BOOL | `YES` | Adaptive capture: about 1 frame per second while the screen is static, back up to the full rate on visual activity (scrolling, animation, layer updates). `NO` captures at the full rate all the time. |
+| `BugseeOptionCaptureVideoPrivacyBlur` | — | BOOL | `YES` | Blur the frames of a screen transition instead of leaving them out. `NO` freezes the video for the transition; it is never recorded unprotected. iOS only. |
+| `BugseeOptionCaptureViewHierarchy` | `viewHierarchyEnabled` | BOOL | `YES` | Capture the view hierarchy with bug and error reports. See [View hierarchy](/sdk/ios/events-and-traces/#view-hierarchy). |
+| `BugseeOptionCaptureLogs` | `captureLogs` | BOOL | `YES` | Capture console logs automatically: stdout and stderr (`print`, `NSLog`), CocoaLumberjack, the WebView console, and console output forwarded by the cross-platform SDKs. Lines sent with `Bugsee.log` are recorded either way. See [Console logs](/sdk/ios/logs/). |
+| `BugseeOptionCaptureLogsLevel` | — | `BugseeLogLevel` | `BugseeLogLevelVerbose` | Least severe level kept. `BugseeLogLevelInfo`, for example, keeps errors, warnings and info lines. Console output is recorded at the `Debug` level, so a stricter level drops all of it. See [Console logs](/sdk/ios/logs/). |
+| `BugseeOptionCaptureOSLogs` | `captureOSLogs` | BOOL | `NO` | Accepted and ignored: `os_log` and `Logger` entries are not captured. |
+| `BugseeOptionCaptureNetwork` | `monitorNetwork` | BOOL | `YES` | Capture network traffic. See [Network events](/sdk/ios/network/). |
+| `BugseeOptionCaptureNetworkBodySizeLimit` | `maxNetworkBodySize` | int, bytes | `20480` | Largest request or response body captured. A larger body is left out whole, with the `BugseeNetworkBodySizeTooLarge` reason (`size_too_large`). `0` captures no bodies; a negative value counts as `0`. |
+| `BugseeOptionCaptureNetworkUseDefaultSanitizer` | `sanitizeNetworkData` | BOOL | `YES` | Redact the values of known sensitive keys in URL query parameters, HTTP headers and JSON bodies. Applies only while no network filter is set. See [Privacy: Network](/sdk/ios/privacy/network/). |
+| `BugseeOptionCaptureNetworkBodyWithoutType` | — | BOOL | `NO` | Capture bodies that have no `Content-Type` header. `NO` leaves them out. WebSocket frames are kept either way. |
+| `BugseeOptionCaptureNetworkOnLaunch` | — | BOOL | `NO` | Install network interception synchronously when the launch starts capture, so requests made in the same run-loop turn are captured. It has no effect while a launch [waits for the app to become active](/sdk/ios/lifecycle/#when-the-launch-waits-for-the-app-to-become-active). Off by default because it puts that work back on the launch path. |
+| `BugseeOptionCaptureWebSocket` | `monitorWebSocket` | BOOL | `YES` | Capture WebSocket traffic. iOS only. |
+| `BugseeOptionCaptureWebViewAdvanced` | — | BOOL | `YES` | Inject Bugsee's script into `WKWebView` pages for in-page capture. With `NO`, nothing is injected; network interception at the native layer still applies. |
+| `BugseeOptionCaptureWebViewReportTrigger` | — | BOOL | `NO` | Let an incident inside a WebView page open a report. Off by default, so errors in third-party pages do not file issues. |
+| `BugseeOptionCaptureBreadcrumbs` | — | BOOL | `NO` | Collect breadcrumbs automatically. See [Breadcrumbs](/sdk/ios/breadcrumbs/). |
+| `BugseeOptionCaptureBreadcrumbsExtras` | — | BOOL | `NO` | Attach the raw notification `userInfo` to automatically collected device-event breadcrumbs. |
+| `BugseeOptionCaptureAVPlayer` | `captureAVPlayer` | BOOL | `NO` | Record video played through `AVPlayerLayer` and `AVPlayerViewController`. iOS only. |
+| `BugseeOptionCaptureSampleBufferDisplayLayer` | `captureSampleBufferDisplayLayer` | BOOL | `NO` | Record video the app renders through `AVSampleBufferDisplayLayer`, such as WebRTC or custom players. Only samples backed by a pixel buffer are captured. iOS only. |
+| `BugseeOptionCaptureCameraPreview` | `captureCameraPreview` | BOOL | `NO` | Record the live camera image shown in an `AVCaptureVideoPreviewLayer`. See the caution below. iOS only. |
+| `BugseeOptionCaptureDeviceAndNetworkNames` | `captureDeviceAndNetworkNames` | BOOL | `NO` | Capture the device name, the Wi-Fi network name (SSID) and the mobile carrier name. See [Device and network names](#device-and-network-names). iOS only. |
+| `BugseeOptionCaptureBluetoothStatus` | `monitorBluetoothStatus` | BOOL | `NO` | Record the Bluetooth state as a trace. Your `Info.plist` must contain `NSBluetoothAlwaysUsageDescription` ("Privacy - Bluetooth Always Usage Description"). With `NO`, Bugsee creates no Bluetooth manager. iOS only. |
+| `BugseeOptionCaptureDiskSpace` | `monitorDiskSpace` | BOOL | `NO` | Include free and total disk space in reports, as device properties and system traces. See [Disk space](#disk-space). iOS only. |
+| `BugseeOptionCaptureCrashSignals` | `crashSignals` | `BugseeCrashSignals` | `BugseeCrashSignalsDefault` | Which fatal signals the crash reporter intercepts. See [Crash handler](#crash-handler). |
+| `BugseeOptionCaptureCrashHandlerType` | `crashHandlerType` | `BugseeCrashHandlerType` | `BugseeCrashHandlerTypeMachAndBSD` | How the crash reporter intercepts crashes. See [Crash handler](#crash-handler). |
+| `BugseeOptionCaptureOnDeviceSymbolication` | `enableOnDeviceSymbolication` | BOOL | `NO` | Symbolicate system frames on the device. iOS only. |
+| `BugseeOptionCaptureStatusBarInfo` | `statusBarInfo` | BOOL | `NO` | On-screen indicators of pending reports and recording state, for testing the SDK itself. Has an effect only in a Debug build of the SDK; the published SDK accepts and ignores it. iOS only. |
+
+:::caution[Camera preview]
+`BugseeOptionCaptureCameraPreview` records what the camera sees into bug reports — faces, surroundings, documents — whether or not the user takes a photo. Enable it only if your users know and agree. It also makes Bugsee take part in your capture session: it reads frames from your `AVCaptureVideoDataOutput` if the session has one, or adds its own output, which uses part of the session's hardware budget. While it is off, a camera preview records as an empty rectangle.
+:::
+
+### Reporting
+
+| Key | Property | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BugseeOptionReportingTriggerByShake` | `shakeToReport` | BOOL | `YES` | Open the report dialog when the user shakes the device. Not available on tvOS. |
+| `BugseeOptionReportingTriggerByScreenshot` | `screenshotToReport` | BOOL | `NO` | Open the report dialog when the user takes a screenshot. iOS only. |
+| `BugseeOptionReportingDefaultCrashPriority` | `defaultCrashPriority` | `BugseeSeverityLevel` | `BugseeSeverityBlocker` | Priority of crash reports. |
+| `BugseeOptionReportingDefaultBugPriority` | `defaultBugPriority` | `BugseeSeverityLevel` | `BugseeSeverityHigh` | Priority of bug reports. |
+| `BugseeOptionReportingDefaultErrorPriority` | `defaultErrorPriority` | `BugseeSeverityLevel` | `BugseeSeverityHigh` | Priority of error reports. |
+| `BugseeOptionReportingUISummaryRequired` | `reportSummaryRequired` | BOOL | `NO` | The report dialog cannot be sent while the summary is empty. |
+| `BugseeOptionReportingUIDescriptionRequired` | `reportDescriptionRequired` | BOOL | `NO` | The report dialog cannot be sent while the description is empty. |
+| `BugseeOptionReportingUIEmailRequired` | `reportEmailRequired` | BOOL | `NO` | The report dialog cannot be sent while the email is empty. |
+| `BugseeOptionReportingUILabelsEnabled` | `reportLabelsEnabled` | BOOL | `NO` | Show the labels field in the report dialog. |
+| `BugseeOptionReportingUILabelsRequired` | `reportLabelsRequired` | BOOL | `NO` | The report dialog cannot be sent while the labels field is empty. |
+| `BugseeOptionReportingUIPrioritySelectorEnabled` | `reportPrioritySelector` | BOOL | `NO` | Let the user change the priority in the report dialog. |
+| `BugseeOptionReportingUIStyle` | `bugseeStyle` | `BugseeStyle` | `BugseeStyleSystem` | Style of the report dialog. See [Appearance](/sdk/ios/appearance/). iOS only. |
+
+The priority options accept `BugseeSeverityLow` to `BugseeSeverityBlocker` (1 to 5). A value outside that range leaves the report's severity unset.
+
+### Config
+
+| Key | Property | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BugseeOptionConfigDuration` | `maxRecordingTime` | int, seconds | `60` | Longest stretch of recording kept for a report. |
+| `BugseeOptionConfigWifiOnlyUpload` | `wifiOnlyUpload` | BOOL | `NO` | Upload reports only while the device is on Wi-Fi. |
+| `BugseeOptionConfigMaxDataSize` | `maxDataSize` | int, MB | `150` | Most disk space that reports waiting to be sent may take up. Past it, the oldest reports are deleted whole: errors first, then bug reports, then crashes. The newest crash is kept. Values below 10 count as 10. |
+| `BugseeOptionConfigMaxPendingReports` | `maxPendingReports` | int | `30` | Most reports that may wait to be sent. Past it, the oldest are deleted, in the same order as above. Values below 1 count as 1. |
+| `BugseeOptionConfigMaxPendingReportAge` | `maxPendingReportAge` | int, days | `30` | Days a report may wait to be sent before it is deleted, crashes included. `0` or less keeps reports with no time limit. |
+| `BugseeOptionConfigNotifyFlushDelay` | `notifyFlushDelay` | int, ms | `0` | Upload coalescing delay of the [notification relay](/sdk/ios/notification-relay/). `0` posts each notification as soon as it is written to disk; a positive value batches nearby notifications into one upload. |
+| `BugseeOptionConfigBuildTarget` | `buildTarget` | string | none | Name of the build target, sent with reports. iOS only. |
+| `BugseeOptionConfigBuildType` | `buildType` | string | none | Build type, such as `debug` or `release`, sent with reports. iOS only. |
+
+### Performance
+
+| Key | Property | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `BugseeOptionPerformanceMonitoring` | `performanceMonitoring` | BOOL | `YES` | Master switch for performance monitoring: automatic instrumentation and the manual transaction and span API. See [Performance monitoring](/sdk/ios/performance/). |
+| `BugseeOptionPerformanceSampleRate` | `performanceSampleRate` | float | `0.01` | Sampling rate, from `0.0` to `1.0`, for a standalone performance upload that is not active yet. It does not affect the transactions attached to reports. |
+| `BugseeOptionPerformanceAdaptiveSampling` | `performanceAdaptiveSampling` | BOOL | `YES` | Lets that standalone upload also keep transactions that look interesting. Not active yet either. |
+
+## Crash handler
+
+Two options control how crashes are intercepted. They are covered in detail in [Crashes](/sdk/ios/issue-detection/crashes/).
+
+`crashHandlerType` (`BugseeOptionCaptureCrashHandlerType`) takes a `BugseeCrashHandlerType`:
+
+| Value | Swift | What Bugsee installs |
+| --- | --- | --- |
+| `BugseeCrashHandlerTypeMachAndBSD` | `.machAndBSD` | A Mach exception handler and BSD signal handlers, so both hardware faults and signals raised by software (`raise()`, `kill()`) are reported. The default. |
+| `BugseeCrashHandlerTypeMach` | `.mach` | A Mach exception handler, plus a BSD signal handler for `SIGABRT`. Other signals raised by software are not reported. |
+| `BugseeCrashHandlerTypeBSD` | `.bsd` | BSD signal handlers only. |
+
+tvOS has no Mach exceptions, so every value works as `BugseeCrashHandlerTypeBSD` there.
+
+`crashSignals` (`BugseeOptionCaptureCrashSignals`) takes a combination of `BugseeCrashSignals` values: `BugseeCrashSignalABRT`, `SEGV`, `BUS`, `ILL`, `FPE` and `TRAP` (Swift `.abrt`, `.segv`, `.bus`, `.ill`, `.fpe`, `.trap`), or `BugseeCrashSignalsAll`. The default, `BugseeCrashSignalsDefault`, intercepts every signal (the Xamarin and .NET SDKs leave out `SIGSEGV` and `SIGBUS`, which the .NET runtime handles itself); it works only on its own, not combined with other values. Leaving out `SIGABRT` also stops uncaught Objective-C exceptions from being reported.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.crashHandlerType = BugseeCrashHandlerTypeMachAndBSD;
+options.crashSignals = BugseeCrashSignalABRT | BugseeCrashSignalILL | BugseeCrashSignalTRAP;
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.crashHandlerType = .machAndBSD
+options.crashSignals = [.abrt, .ill, .trap]
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+## Device and network names
+
+With `BugseeOptionCaptureDeviceAndNetworkNames` off (the default), the device name, the Wi-Fi network name and the carrier name in the report's device information are recorded as `<redacted>`.
+
+To read the Wi-Fi network name, the app must meet one of these requirements (see [Apple's documentation](https://developer.apple.com/documentation/systemconfiguration/cncopycurrentnetworkinfo)):
+
+- The app uses Core Location and has the user's authorization to use location information.
+- The app uses the `NEHotspotConfiguration` API to configure the current Wi-Fi network.
+- The app has active VPN configurations installed.
+- The app has an active `NEDNSSettingsManager` configuration installed.
+
+Requesting location access needs two `Info.plist` keys with descriptions: "Privacy - Location Always and When In Use Usage Description" and "Privacy - Location When In Use Usage Description". The app must also have the **Access WiFi Information** capability in Xcode.
+
+The carrier name comes from CoreTelephony, which Bugsee does not link itself: it is recorded only when your app loads that framework. From iOS 16 the system no longer provides it, and it is recorded as `<unavailable>`.
+
+## Disk space
+
+Bugsee reads free disk space with the API reason `E174.1`, which does not allow the information to leave the device. So unless `BugseeOptionCaptureDiskSpace` is on, nothing derived from free disk space goes into reports: the free and total disk space device properties and system traces, the low and no disk space states of the capture trace, and the disk-space lines of the internal log. Bugsee still watches free space to stop writing on a full disk; that never leaves the device. Turn this option on only in debug or development builds.
