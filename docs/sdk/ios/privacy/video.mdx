@@ -162,11 +162,6 @@ BOOL added = [Bugsee addSecureRectangle:CGRectMake(10, 10, 100, 100)];
 // Returns NO if there is no such rectangle
 BOOL removed = [Bugsee removeSecureRectangle:CGRectMake(10, 10, 100, 100)];
 
-// All rectangles, as NSValue
-for (NSValue *value in [Bugsee getAllSecureRectangles]) {
-    CGRect rect = value.CGRectValue;
-}
-
 [Bugsee removeAllSecureRectangles];
 ```
 
@@ -180,16 +175,17 @@ let added = Bugsee.addSecureRectangle(CGRect(x: 10, y: 10, width: 100, height: 1
 // Returns false if there is no such rectangle
 let removed = Bugsee.removeSecureRectangle(CGRect(x: 10, y: 10, width: 100, height: 100))
 
-// All rectangles, as NSValue
-for value in Bugsee.getAllSecureRectangles() ?? [] {
-    let rect = (value as! NSValue).cgRectValue
-}
-
 Bugsee.removeAllSecureRectangles()
 ```
 
   </TabItem>
 </Tabs>
+
+:::warning
+Do not read the values that `getAllSecureRectangles` returns with `CGRectValue` (`cgRectValue`).
+In 7.0.0 they do not hold a `CGRect`, and the call raises an exception. Keep your own list of
+the rectangles you add.
+:::
 
 - Coordinates are in points, in the screen's coordinate space (`UIScreen.coordinateSpace`), with
   the origin in the top-left corner. They follow the interface orientation: when the interface

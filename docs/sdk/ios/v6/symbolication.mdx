@@ -205,7 +205,7 @@ PART 1 — required setup
 
    For Swift Package Manager integrations, replace the `find` line
    with:
-   `SCRIPT_SRC="$BUILD_DIR/../SourcePackages/checkouts/spm/Tools/BugseeAgent"`.
+   `SCRIPT_SRC="${BUILD_DIR%Build/*}SourcePackages/checkouts/spm/Tools/BugseeAgent"`.
 
 3. Ask me for my Bugsee app token before substituting
    `<APP_TOKEN>` — do not guess. Don't ask me to paste the token into
@@ -301,9 +301,10 @@ Option 4 — In-build size regression check
   What it does: Compares each build's `artifact_size` against the
   most-recent prior build of the same configuration. Crossing the
   warning threshold emits a `warning:` log line; crossing the fail
-  threshold emits an `error:` line AND exits the post-action
-  non-zero (which fails the build on CI). Either gate is
-  independently optional — `0` or omitting it disables that gate.
+  threshold emits an `error:` line. Neither fails the build: the
+  line lands in the agent's log, not the build log (see the caveat
+  below). Either gate is independently optional — `0` or omitting
+  it disables that gate.
 
   When you want it: You want a guardrail that catches size
   regressions before they ship — especially on PR pipelines so

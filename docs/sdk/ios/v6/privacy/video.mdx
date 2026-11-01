@@ -101,12 +101,6 @@ Other methods of secure rectangles
 // Remove rect
 [Bugsee removeSecureRect:CGRectMake(10, 10, 100, 100)];
 
-// Get all rectangles
-NSArray * rectangles = [Bugsee getAllSecureRects];
-for (NSValue * rectValue in rectangles){
-    CGRect rect = [rectValue CGRectValue];
-}
-
 // Remove all rectangles
 [Bugsee removeAllSecureRects];
 ```
@@ -118,18 +112,18 @@ for (NSValue * rectValue in rectangles){
 // Remove rect
 Bugsee.removeSecureRect(CGRect(x: 10, y: 10, width: 100, height: 100))
 
-// Get all rectangles
-let rectangles = Bugsee.getAllSecureRects();
-for rectValue in rectangles!{
-    var rect = (rectValue as! NSValue).cgRectValue
-}
-
 // Remove all rectangles
 Bugsee.removeAllSecureRects()
 ```
 
   </TabItem>
 </Tabs>
+
+:::warning
+Do not read the values that `getAllSecureRects` returns with `CGRectValue` (`cgRectValue`). They
+do not hold a `CGRect`, and the call raises an exception. Keep your own list of the rectangles you
+add.
+:::
 
 ## Obscuring contents
 

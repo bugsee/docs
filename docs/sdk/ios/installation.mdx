@@ -236,10 +236,10 @@ Use the `BugseeOption*` constants as keys. Every option, its default and its
 ### Knowing when the SDK is running
 
 Capture is brought up off the main thread, so `launchWithToken:` returns before the SDK is
-fully running. Called from `application:didFinishLaunchingWithOptions:` in a scene-based app, or
-from a SwiftUI `App` initializer, the launch also waits for the app to become active; the crash
-handler is installed right away. Until then the SDK ignores logs, events, traces and reports you
-send it. See [When the launch waits for the app to become active](/sdk/ios/lifecycle#when-the-launch-waits-for-the-app-to-become-active).
+fully running. Called while the app is in the background state or before `UIApplication` exists,
+as from `application:didFinishLaunchingWithOptions:` in a scene-based app or from a SwiftUI `App`
+initializer, the launch also waits for the app to become active; the crash handler is installed
+right away. Until then the SDK ignores logs, events, traces and reports you send it. See [When the launch waits for the app to become active](/sdk/ios/lifecycle#when-the-launch-waits-for-the-app-to-become-active).
 
 The `started:` completion block says whether the launch was **accepted** (`NO` for a refused
 launch, such as an invalid token). It does not mean recording has started: a launch that waits

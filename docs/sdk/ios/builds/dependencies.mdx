@@ -5,8 +5,8 @@ sidebar_position: 3
 slug: "/sdk/ios/builds/dependencies"
 ---
 
-:::info[Requires Bugsee iOS SDK 6.1.5 or newer]
-Dependency capture ships with the `BugseeAgent` post-action in **6.1.5+** and is **on by default**. The same blob feeds Bugsee's [vulnerability scan](/sdk/ios/builds/vulnerabilities), so capturing dependencies is also the gate for OSV-backed CVE reporting.
+:::info
+Dependency capture runs in the `BugseeAgent` post-action and is **on by default**. The same blob feeds Bugsee's [vulnerability scan](/sdk/ios/builds/vulnerabilities), so capturing dependencies is also the gate for OSV-backed CVE reporting.
 :::
 
 ## What gets captured
@@ -28,7 +28,7 @@ Each entry the agent emits is a `DependencyEntry`:
 | `direct` | `true` if the entry is one your project declares directly; `false` for transitive entries (CocoaPods is the only iOS manager that distinguishes the two) |
 | `type` | `"library"` (an external package), `"project"`, or `"file"` |
 | `ecosystem` | `"cocoapods"` or `"spm"` — required so the vulnerability scanner queries OSV against the correct package universe. `binary` Carthage entries have no ecosystem and are not scanned |
-| `url` | The package's Git URL (SPM and Git-based Carthage entries) — OSV's `SwiftURL` query keys off this |
+| `url` | The package's Git URL (SPM and Git-based Carthage entries) — OSV's `SwiftURL` query keys off this. CocoaPods entries have none: the Bugsee backend looks up the pod's source repository on the CocoaPods CDN |
 
 After parsing every manager, the agent **de-duplicates** (on a collision it keeps the entry carrying a `url`, since dropping it would silently exclude the package from the vuln scan) and sorts **direct entries first**. The list is bounded by a max-count cap; entries past the cap are dropped and the upload is flagged `truncated: true`.
 

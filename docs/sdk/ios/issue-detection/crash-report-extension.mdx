@@ -1,6 +1,6 @@
 ---
 title: "Crash Report Extension"
-description: "Report launch watchdog (0x8badf00d) and memory-limit (jetsam) terminations with full thread stacks on iOS 27 and later, using Bugsee's Crash Reporter Extension."
+description: "Report launch watchdog (0x8badf00d) and memory-limit (jetsam) terminations with full thread stacks on iOS 27 and later, using the Bugsee Crash Report Extension."
 sidebar_position: 3
 slug: "/sdk/ios/issue-detection/crash-report-extension"
 ---
@@ -9,7 +9,7 @@ slug: "/sdk/ios/issue-detection/crash-report-extension"
 The Crash Report Extension requires iOS 27 or later on the device and Xcode 27 to build. Your app keeps its own deployment target: only the extension target needs iOS 27.
 :::
 
-Some terminations end an app before any in-process crash handler can run: the launch watchdog (`0x8badf00d`) and the memory limit (jetsam). Starting with iOS 27, the system hands the dead process to a Crash Reporter Extension embedded in the app. With Bugsee's extension, these terminations are reported with the stack of every thread at the moment of death.
+Some terminations end an app before any in-process crash handler can run: the launch watchdog (`0x8badf00d`) and the memory limit (jetsam). Starting with iOS 27, the system hands the dead process to a crash reporter extension embedded in the app (Apple's extension type, which Xcode calls **Crash Reporter Extension**). With Bugsee's extension, these terminations are reported with the stack of every thread at the moment of death.
 
 Nothing changes below iOS 27, without the extension, or when the system evicts a suspended app: the system does not call the extension for that.
 
@@ -29,7 +29,7 @@ The names above are the crash names. Like every [exit report](/sdk/ios/issue-det
 
 The report carries the threads of the dead process with their stacks, and the list of loaded binaries. When the process was a running Bugsee session, the report is the [exit report](/sdk/ios/issue-detection/exits) of that session, with its video, logs and network events; the extension makes it more precise (a jetsam it reads overrides the guess of exit detection) and adds the stacks. When the process died after calling `Bugsee.launch` but before the session began — the launch watchdog fires inside `application:didFinishLaunchingWithOptions:` — the report is filed on its own, without a recording.
 
-Nothing is filed for a process in which the app did not call `Bugsee.launch`, stopped Bugsee, ran with a debugger attached, or turned exit detection off. When the same process also left a crash report from Bugsee's crash handler, that crash report is filed and the extension's document is dropped, so one death normally gives one report.
+Nothing is filed for a process in which the app did not call `Bugsee.launch`, stopped Bugsee, ran with a debugger attached, or turned exit detection off. When the same process also left a crash report from Bugsee's crash handler, that crash report is filed and the extension's document is dropped, so one death normally gives one report. The exception: when a crash happens before the session began and Bugsee's crash handler then hangs until the launch watchdog kills the process, both reports are filed.
 
 These reports do not dispatch the `BugseeLifecycleEventRelaunchedAfterCrash` [lifecycle event](/sdk/ios/lifecycle#available-lifecycle-events): it is sent only for a crash left by Bugsee's crash handler.
 
@@ -37,7 +37,7 @@ These reports do not dispatch the `BugseeLifecycleEventRelaunchedAfterCrash` [li
 
 ### 1. Add the extension target
 
-In Xcode, choose **File › New › Target › iOS › Crash Reporter Extension**. Xcode embeds it in the app.
+In Xcode, choose **File › New › Target › iOS › Crash Reporter Extension**: that is Apple's name for the template. Xcode embeds it in the app.
 
 :::warning[One extension per app]
 An app can have only one crash-reporter extension. With two, the system runs one of them for each crash, and each misses some crashes. Do not add Bugsee's next to another crash-reporter extension.

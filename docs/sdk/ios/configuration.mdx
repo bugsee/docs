@@ -231,7 +231,7 @@ The **Property** column names the `BugseeOptions` property for the option, where
 | `BugseeOptionCaptureScreenshot` | `screenshotEnabled` | BOOL | `YES` | Attach a screenshot to the report. Independent of `BugseeOptionCaptureVideo`. |
 | `BugseeOptionCaptureScreenshotScale` | — | float | `1.0` | Below `1.0`, reduces the detail of the report screenshot, for privacy. |
 | `BugseeOptionCaptureVideoScale` | `videoScale` | float | `1.0` | Between `0` and `1`, reduces the detail of each recorded frame, for privacy. `0` or `1` and above leave frames unchanged. |
-| `BugseeOptionCaptureVideoQuality` | — | `BugseeVideoQuality` | `BugseeVideoQualityDefault` | Base frame size, longest side: `Default` about 640 px, `Medium` about 960 px, `High` about 1280 px. Higher is sharper and makes larger reports. |
+| `BugseeOptionCaptureVideoQuality` | — | `BugseeVideoQuality` | `BugseeVideoQualityDefault` | Size of the recorded frames: `Default`, `Medium` or `High`. Higher is sharper and makes larger reports. |
 | `BugseeOptionCaptureVideoFrameRate` | `framerate` | `BugseeFrameRate` | `BugseeFrameRateHigh` | How often frames are captured: `Low`, `Medium` or `High`. |
 | `BugseeOptionCaptureVideoMaxFramerate` | `maxFramerate` | uint, fps | `0` | Highest capture frame rate. `0` uses the rate the frame-rate option picks. iOS only. |
 | `BugseeOptionCaptureVideoMinFramerate` | `minFramerate` | uint, fps | `0` | Lowest capture frame rate. `0` uses the rate the frame-rate option picks. iOS only. |

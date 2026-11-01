@@ -5,11 +5,7 @@ sidebar_position: 1
 slug: "/sdk/ios/builds/overview"
 ---
 
-:::info[Requires Bugsee iOS SDK 6.1.5 or newer]
-Build info, timings, dependencies, vulnerability scanning, and size analysis all flow through the `BugseeAgent` post-action that ships with **6.1.5+** ([release notes](/sdk/ios/v6/release-notes#615-may-13-2026)). Earlier versions only ship the dSYM-upload half of the post-action and silently ignore the build-info env vars.
-:::
-
-Bugsee turns each iOS build into a first-class signal alongside crashes, ANRs, and session replay. Everything runs inside the **same `BugseeAgent` post-action that already uploads your dSYMs** — there's no second build phase to add. Once the post-action is wired up (see [Crash symbolication → Auto dSYM upload](/sdk/ios/symbolication#auto-dsym-upload)), every Release Archive emits a **single build record** to Bugsee. That one record carries up to four independent payloads:
+Bugsee turns each iOS build into a first-class signal alongside crashes, ANRs, and session replay. Everything runs inside the **same `BugseeAgent` post-action that already uploads your dSYMs** — there's no second build phase to add. Once the post-action is wired up (see [Crash symbolication → Auto dSYM upload](/sdk/ios/symbolication#auto-dsym-upload)), every Release Archive emits a **single build record** to Bugsee. That one record feeds up to four surfaces:
 
 | Surface | What it carries | Where it shows up | Documentation |
 | --- | --- | --- | --- |
@@ -22,7 +18,7 @@ The Bugsee dashboard renders both iOS and Android builds from one shared schema,
 
 ## The upload pipeline
 
-From your CI's perspective, all four payloads are **one upload per Archive**. At the end of the post-action, the agent issues a single:
+From your CI's perspective, all four surfaces come from **one upload per Archive** (vulnerabilities are computed on the server from the dependency list). At the end of the post-action, the agent issues a single:
 
 ```http
 POST /v2/apps/{app_token}/builds

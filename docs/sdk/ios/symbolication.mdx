@@ -91,11 +91,7 @@ end
 
 ## Build info & Size analysis
 
-:::info[Requires Bugsee iOS SDK 6.1.5 or newer]
-The full build-publish flow (build info, size analysis, in-build size check, chunked upload) ships in **6.1.5** ([release notes](/sdk/ios/v6/release-notes#615-may-13-2026)). On older SDKs the post-action only handles dSYM upload and silently ignores the `BUGSEE_BUILD_INFO_*` / `BUGSEE_SIZE_*` env vars described below.
-:::
-
-The same `BugseeAgent` script that uploads dSYMs also runs a build-publish flow. Three optional layers, each controlled by environment variables you set in the scheme's "Run Script" post-action (or export in a CI step before invoking `xcodebuild`).
+The same `BugseeAgent` script that uploads dSYMs also runs a build-publish flow. Build info is on by default and also carries the build's [timings and dependencies](/sdk/ios/builds/overview); size analysis and the in-build size check are opt-in and build on it. Each is controlled by environment variables you set in the scheme's "Run Script" post-action (or export in a CI step before invoking `xcodebuild`).
 
 :::tip[Powered by the Bugsee CLI]
 This whole flow is the **[Bugsee CLI](/cli/)**'s `xcode post-action` command — `BugseeAgent` shells out to it. The `BUGSEE_*` environment variables below each have a matching CLI flag (a command-line flag wins over its env var), and the same flow can run directly in CI without Xcode. See [iOS build publishing](/cli/xcode/) for the full flag reference.
@@ -201,7 +197,7 @@ PART 1 — required setup
 
    For Swift Package Manager integrations, replace the `find` line
    with:
-   `SCRIPT_SRC="$BUILD_DIR/../SourcePackages/checkouts/spm/Tools/BugseeAgent"`.
+   `SCRIPT_SRC="${BUILD_DIR%Build/*}SourcePackages/checkouts/spm/Tools/BugseeAgent"`.
 
 3. Ask me for my Bugsee app token before substituting
    `<APP_TOKEN>` — do not guess. Don't ask me to paste the token into
@@ -297,9 +293,10 @@ Option 4 — In-build size regression check
   What it does: Compares each build's `artifact_size` against the
   most-recent prior build of the same configuration. Crossing the
   warning threshold emits a `warning:` log line; crossing the fail
-  threshold emits an `error:` line AND exits the post-action
-  non-zero (which fails the build on CI). Either gate is
-  independently optional — `0` or omitting it disables that gate.
+  threshold emits an `error:` line. Neither fails the build: the
+  line lands in the agent's log, not the build log (see the caveat
+  below). Either gate is independently optional — `0` or omitting
+  it disables that gate.
 
   When you want it: You want a guardrail that catches size
   regressions before they ship — especially on PR pipelines so
