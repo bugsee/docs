@@ -22,8 +22,8 @@ npx cspell "docs/**/*.md" "docs/**/*.mdx" --no-cache -c cspell.json  # Spell che
 ## Deployment & Git remote
 
 - **Remote**: `origin` → `https://github.com/bugsee/docs` (public GitHub repo, canonical). Push here.
-- **Push target**: do all work on **`main`** and push to `origin main` — there is no separate release branch.
-- **Auto-deploy**: every push to `main` runs `.github/workflows/deploy.yml`, which builds the site, syncs `build/` to the production S3 bucket, and invalidates CloudFront. AWS access uses GitHub OIDC (keyless); the bucket name, distribution ID, region, and deploy-role ARN live in GitHub Actions **secrets/variables**, never in the repo.
+- **Branching**: `main` is protected — direct pushes are rejected. Work on a branch off `origin/main` (e.g. `docs/<topic>`), push it, and open a PR into `main` with `gh pr create`. There is no separate release branch.
+- **Auto-deploy**: a merge into `main` runs `.github/workflows/deploy.yml`, which builds the site, syncs `build/` to the production S3 bucket, and invalidates CloudFront. Merges that only touch paths in the workflow's `paths-ignore` (`.github/**`, `.claude/**`, `.vscode/**`, `README.md`, `LICENSE`, `.gitignore`) don't deploy. On PRs the same workflow runs spell check and build but skips the AWS steps. AWS access uses GitHub OIDC (keyless); the bucket name, distribution ID, region, and deploy-role ARN live in GitHub Actions **secrets/variables**, never in the repo.
 - **Manual run**: the workflow also supports `workflow_dispatch` — trigger it from the **Actions** tab or with `gh workflow run "Build and Deploy"`.
 - **Manual deploy (fallback)**: run `scripts/build.sh` then `scripts/deploy.sh` with `S3CMD_CONFIG`, `DEPLOY_ENDPOINT`, and `CLOUDFRONT_ID` set locally.
 
