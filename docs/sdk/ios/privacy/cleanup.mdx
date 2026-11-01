@@ -1,55 +1,146 @@
 ---
 title: "Privacy and data cleanup"
-description: "How to delete all locally stored Bugsee recording data from an iOS device using the data cleanup API."
-sidebar_position: 5
+description: "How to delete the data the Bugsee iOS SDK has stored on the device: the recording, reports waiting for upload, pending crashes, with the three deleteCollectedDataOnDevice forms."
+sidebar_position: 6
 slug: "/sdk/ios/privacy/cleanup"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Bugsee SDK does not continuously stream any personal data. The collected data and the reports built from it are stored locally on the device. In some specific cases, there might be a need to clean up the data stored on the disk.
-
-## Data cleanup
-
-Bugsee SDK provides a way to clean up the data stored on the disk. This can be useful in cases when you want to remove all the data collected by Bugsee from the device.
-
-:::warning
-Note that this API does not delete the session-related data, such as [attributes](/sdk/ios/custom/#sessionuser-attributes). To clean those up, use the corresponding API (e.g. `[Bugsee clearAllAttributes]`)
+:::note
+Looking for the previous SDK? See the [6.x cleanup page](/sdk/ios/v6/privacy/cleanup).
 :::
 
+Bugsee does not continuously stream any personal data. What it records, and the reports built
+from it, stay on the device until a report is uploaded. When you need that data gone — a user
+signs out, or withdraws consent — delete it with `deleteCollectedDataOnDevice`.
+
+## Deleting everything
+
+The completion-only form deletes everything Bugsee has collected for reports:
+
+- the recording;
+- the data set aside for reports that are not assembled yet;
+- the reports waiting for upload, whose uploads are cancelled;
+- the crashes not reported yet;
+- the performance baselines that anomaly detection has learned from the app.
+
+Stop Bugsee first; a deletion on a running SDK deletes nothing.
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-
-// Bugsee must be stopped before deleting the data
 [Bugsee stop:^{
-    // Clean up all the data stored on the disk
     [Bugsee deleteCollectedDataOnDevice:^(BOOL success) {
-        NSString *message = success ? @"Data deleted successfully" : @"Failed to delete data";
-        NSLog(@"CollectedDataDeletion: %@", message);
+        NSLog(@"Bugsee data deleted: %d", success);
     }];
 }];
-
 ```
 
   </TabItem>
   <TabItem value="swift" label="Swift">
 
 ```swift
-
-// Bugsee must be stopped before deleting the data
 Bugsee.stop {
-    // Clean up all the data stored on the disk
-    Bugsee.deleteCollectedData { success in
-        let message = success ? "Data deleted successfully" : "Failed to delete data"
-        print("CollectedDataDeletion: \(message)")
+    Bugsee.deleteCollectedDataOnDevice { success in
+        print("Bugsee data deleted: \(success)")
     }
 }
-
 ```
 
   </TabItem>
 </Tabs>
+
+## Deleting less
+
+Two more forms delete only part of it, and keep the pending crashes and the anomaly baselines,
+so the next launch can still report those crashes.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// The recording, plus the data set aside for reports not assembled yet.
+// Reports waiting for upload are kept.
+[Bugsee deleteCollectedDataOnDevice:YES completion:^(BOOL success) { /* ... */ }];
+
+// The same, plus the reports waiting for upload.
+[Bugsee deleteCollectedDataOnDevice:YES
+                   includingBundles:YES
+                         completion:^(BOOL success) { /* ... */ }];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// The recording, plus the data set aside for reports not assembled yet.
+// Reports waiting for upload are kept.
+Bugsee.deleteCollectedDataOnDevice(includingIntermediate: true) { success in /* ... */ }
+
+// The same, plus the reports waiting for upload.
+Bugsee.deleteCollectedDataOnDevice(includingIntermediate: true,
+                                   includingBundles: true) { success in /* ... */ }
+```
+
+  </TabItem>
+</Tabs>
+
+| Form | Recording | Data set aside for reports not assembled yet | Reports waiting for upload | Pending crashes, anomaly baselines |
+| --- | --- | --- | --- | --- |
+| `deleteCollectedDataOnDevice:` | Deleted | Deleted | Deleted, uploads cancelled | Deleted |
+| `deleteCollectedDataOnDevice:includingBundles:completion:` | Deleted | With `includingIntermediate` | With `includingBundles` | Kept |
+| `deleteCollectedDataOnDevice:completion:` | Deleted | With `includingIntermediate` | Kept | Kept |
+
+With `includingBundles`, a report the system is uploading at that moment cannot be stopped: it
+is kept and the completion receives `NO`; call again once it is done. The completion-only form
+cancels and deletes uploads in progress instead. A report still being assembled cannot be
+stopped by either of the two: it is kept and the completion receives `NO`.
+
+## How every form behaves
+
+- **Stop first.** Call `stop:` and delete from its completion. On an SDK that is not stopped,
+  nothing is deleted and the completion receives `NO`.
+- **The completion** is called on the main thread once the deletion has finished or been refused,
+  with `YES` if everything asked for was deleted.
+- **A launch waits.** A launch called before the deletion has finished starts after it, unless
+  you call `stop:` before it starts.
+- **It is not a reset.** No form deletes:
+  - the user identifier and the attributes;
+  - the [notification relay](/sdk/ios/notification-relay) queue: notifications not sent yet are
+    still sent on a later launch;
+  - the [Feedback](/sdk/ios/feedback) package's conversation cache (unsent messages included) and
+    the email address the user gave the chat.
+
+  Clear the user identifier and the attributes with their own calls:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee clearUserIdentifier];
+[Bugsee clearAllAttributes];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.clearUserIdentifier()
+Bugsee.clearAllAttributes()
+```
+
+  </TabItem>
+</Tabs>
+
+See [User & session data](/sdk/ios/user-session-data).
+
+## Crash Report Extension documents
+
+If your app embeds the [Crash Report Extension](/sdk/ios/issue-detection/crash-report-extension),
+the documents it writes into your App Group are not deleted by these calls. The SDK reads and
+deletes them on its next launch while exit detection is on. To remove them yourself, delete
+`Library/Bugsee/corpses/corpse-*.json` in the App Group container (and, in Debug builds,
+`Library/Bugsee/crash-extension.log`).

@@ -1,28 +1,22 @@
 ---
 title: "SwiftUI"
-description: "How to initialize Bugsee in a SwiftUI app lifecycle and protect sensitive SwiftUI views from being captured on video."
+description: "How to launch Bugsee iOS SDK 7.x from a SwiftUI App and hide sensitive SwiftUI views from the recorded video with the BugseeSwiftUI module."
 sidebar_position: 2
 slug: "/sdk/ios/swiftui"
 ---
 
-## SwiftUI App Lifecycle
+## SwiftUI App lifecycle
 
-If your app adopts the SwiftUI App Life Cycle, the simplest approach is to launch Bugsee within the App conformer’s initializer:
+If your app uses the SwiftUI App lifecycle, launch Bugsee in the initializer of your `App` type:
 
 ```swift
 import Bugsee
 import SwiftUI
 
 @main
-struct BugseeSwiftUIApp: App {
+struct MyApp: App {
     init() {
-        let options : [String: Any] =
-            [ BugseeMaxRecordingTimeKey   : 60,
-              BugseeShakeToReportKey      : false,
-              BugseeScreenshotToReportKey : true,
-              BugseeCrashReportKey        : true ]
-
-        Bugsee.launch(token: "<your_app_token>", options: options)
+        Bugsee.launch(token: "<your_app_token>")
     }
 
     var body: some Scene {
@@ -33,40 +27,72 @@ struct BugseeSwiftUIApp: App {
 }
 ```
 
+To pass options, use a `BugseeOptions` object, or a dictionary of `BugseeOption*` keys with `launch(token:dictionaryOptions:)`:
+
+```swift
+init() {
+    let options = BugseeOptions.default()
+    options.maxRecordingTime = 60
+    options.shakeToReport = true
+    options.screenshotToReport = false
+
+    Bugsee.launch(token: "<your_app_token>", options: options)
+}
+```
+
+```swift
+init() {
+    let options: [String: Any] = [
+        BugseeOptionConfigDuration: 60,
+        BugseeOptionReportingTriggerByShake: true,
+        BugseeOptionReportingTriggerByScreenshot: false,
+    ]
+
+    Bugsee.launch(token: "<your_app_token>", dictionaryOptions: options)
+}
+```
+
+Always use the `BugseeOption*` constants as keys. See [Configuration](/sdk/ios/configuration/) for every option.
+
 ## Protecting views
 
-All system secure fields ([SecureField](https://developer.apple.com/documentation/swiftui/securefield)) are hidden from the recorded video automatically. In addition we support a way to mark your custom sensitive views so they will be treated similarly, through the `bugseeProtect()` and `bugseeProtect(isEnabled:)` View extensions.
+System secure fields ([SecureField](https://developer.apple.com/documentation/swiftui/securefield)) are hidden from the recorded video automatically. To hide your own sensitive views the same way, use the view modifiers of the `BugseeSwiftUI` module.
 
-These extensions ship with the SDK in a separate `BugseeSwiftUI` module of the [Bugsee Swift package](/sdk/ios/installation/#swift-package-manager). When adding `https://github.com/bugsee/spm` to your project, pick the **BugseeSwiftUI** library product (it also links the core `Bugsee` framework), then import it in the files where you use the modifiers:
+`BugseeSwiftUI` is a library product of the Bugsee Swift package (`https://github.com/bugsee/spm`). Add the **BugseeSwiftUI** product to your app target; it links the core `Bugsee` framework too. Then import both modules where you use the modifiers:
 
 ```swift
 import Bugsee
 import BugseeSwiftUI
 ```
 
-:::info
-`BugseeSwiftUI` requires iOS 13.0 or later; on iOS 12 the core `Bugsee` module remains fully usable. The module is part of the Swift Package Manager distribution only — the CocoaPods pod and the Carthage/manual XCFramework ship the core `Bugsee` framework alone.
+`BugseeSwiftUI` requires iOS 15 (tvOS 15, visionOS 1), like the core SDK. It is not part of the direct-download XCFramework.
 
-In 7.x both modules require iOS 15, Swift Package Manager is the only distribution channel, the dictionary launch above becomes `Bugsee.launch(token:dictionaryOptions:)`, and the option keys are renamed to the `BugseeOption*` family (for example `BugseeMaxRecordingTimeKey` → `BugseeOptionConfigDuration`). See the [7.x migration guide](/sdk/ios/v7/migration).
-:::
-
-**Static protection** (view is always hidden):
+**Static protection** — the view is always hidden:
 
 ```swift
-Text(landmark.description)
+Text(account.number)
     .bugseeProtect()
 ```
 
-**Dynamic protection** (visibility controlled by state or binding):
+**Dynamic protection** — a `Binding<Bool>` turns the protection on and off:
 
 ```swift
 @State private var isHidden = false
 
-Text(landmark.description)
+Text(account.number)
     .bugseeProtect(isEnabled: $isHidden)
-    .onAppear {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            isHidden = true
-        }
-    }
 ```
+
+If the view has offsets, apply `bugseeProtect()` before them, so the protected area follows the view:
+
+```swift
+CircleImage(image: profile.image)
+    .bugseeProtect()
+    .offset(y: -130)
+```
+
+The modifiers place a transparent overlay over the view and mark that overlay as protected, as `UIView.bugseeProtectedView` does for a UIKit view. The overlay does not take touches. To use the same overlay in your own view composition, `BugseeProtectedOverlayUIView(isProtected:)` is public too.
+
+`bugseeProtect(_:)`, the variant that takes a closure receiving the overlay's `UIView`, is deprecated. Use `bugseeProtect()` or `bugseeProtect(isEnabled:)` instead.
+
+See [Privacy: Video](/sdk/ios/privacy/video/) for the other ways to hide content: secure views, secure rectangles and blackout.

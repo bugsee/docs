@@ -1,0 +1,305 @@
+---
+title: "Bug reporting"
+description: "Let users and your code file bug reports with the Bugsee iOS SDK 7.x — shake and screenshot triggers, the report dialog, silent upload, and programmatic report creation."
+sidebar_position: 1
+slug: "/sdk/ios/manual/bug-reporting"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Bug reports cover something that is wrong but did not crash the app. Your users can raise one
+with a gesture, or you can open the report dialog — or file a report without any UI — from your
+own code. Crashes and handled errors are covered in
+[Crash & error reporting](/sdk/ios/manual/crash-error-reporting).
+
+## Built-in report triggers
+
+Two gestures open the report dialog:
+
+| Option | `BugseeOptions` property | Default |
+| --- | --- | --- |
+| `BugseeOptionReportingTriggerByShake` | `shakeToReport` | `YES` |
+| `BugseeOptionReportingTriggerByScreenshot` | `screenshotToReport` | `NO` |
+
+:::note
+These defaults changed in 7.x: in 6.x the screenshot opened the dialog and shaking did not.
+See the [migration guide](/sdk/ios/migration).
+:::
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.shakeToReport = NO;
+options.screenshotToReport = YES;
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.shakeToReport = false
+options.screenshotToReport = true
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+## Show the report dialog
+
+Open the dialog from your own UI — a "Report a problem" button, a debug menu. The overloads
+pre-fill the fields; the user can still change them.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee showReportDialog];
+
+// Pre-fill summary and description; severity is BugseeOptionReportingDefaultBugPriority
+[Bugsee showReportDialogWithSummary:@"Checkout button does nothing"
+                        description:@""];
+
+// ...and severity, and labels
+[Bugsee showReportDialogWithSummary:@"Checkout button does nothing"
+                        description:@""
+                           severity:BugseeSeverityMedium
+                             labels:@[@"checkout"]];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.showReportDialog()
+
+// Pre-fill summary and description; severity is BugseeOptionReportingDefaultBugPriority
+Bugsee.showReportDialog(summary: "Checkout button does nothing",
+                        description: "")
+
+// ...and severity, and labels
+Bugsee.showReportDialog(summary: "Checkout button does nothing",
+                        description: "",
+                        severity: BugseeSeverityMedium,
+                        labels: ["checkout"])
+```
+
+  </TabItem>
+</Tabs>
+
+A three-argument `showReportDialogWithSummary:description:severity:` overload is also available.
+
+:::note
+The dialog opens only while the SDK is fully running (`status == BugseeStatusLaunched`). A call
+made right after `launchWithToken:`, while the SDK is still `Launching`, does nothing. See
+[Lifecycle & status](/sdk/ios/lifecycle).
+:::
+
+### Report form options
+
+These options shape the form the dialog shows:
+
+| Option | `BugseeOptions` property | Default | Effect |
+| --- | --- | --- | --- |
+| `BugseeOptionReportingUISummaryRequired` | `reportSummaryRequired` | `NO` | The form cannot be sent with an empty summary |
+| `BugseeOptionReportingUIDescriptionRequired` | `reportDescriptionRequired` | `NO` | The form cannot be sent with an empty description |
+| `BugseeOptionReportingUIEmailRequired` | `reportEmailRequired` | `NO` | The form cannot be sent with an empty email |
+| `BugseeOptionReportingUILabelsEnabled` | `reportLabelsEnabled` | `NO` | Shows the labels field |
+| `BugseeOptionReportingUILabelsRequired` | `reportLabelsRequired` | `NO` | The form cannot be sent with no labels |
+| `BugseeOptionReportingUIPrioritySelectorEnabled` | `reportPrioritySelector` | `NO` | Lets the user change the severity |
+| `BugseeOptionReportingDefaultBugPriority` | `defaultBugPriority` | `BugseeSeverityHigh` | Severity of a bug report nobody set one for |
+
+The placeholders and colors of the form are set through [Appearance](/sdk/ios/appearance).
+
+### Pre-fill and check the form from code
+
+Two `BugseeDelegate` callbacks run around the dialog: `bugseeAddFieldsBeforeReportCreated`
+(Swift `bugseePrepareReportFields()`) fills the form before it opens — it replaces the summary,
+description and labels outright, including those passed to `showReportDialogWithSummary:…` — and
+`bugseeCheckFieldsAfterReportCreated:` (Swift `bugsee(finalizeReportFields:)`) sees what the user
+entered after they send it. Each has an asynchronous form with a completion. They run only for
+reports filed through the dialog. See [Privacy: report](/sdk/ios/privacy/report) for examples.
+
+## Upload a report without UI
+
+If you collect the summary and description in your own UI, file the report directly. No dialog is
+shown.
+
+:::note
+Use this for user-initiated reports. To report errors your code catches, use
+[`logError:` or `logException`](/sdk/ios/manual/crash-error-reporting) instead, so they are grouped
+into issues the way crashes are.
+:::
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// Severity is BugseeOptionReportingDefaultBugPriority
+[Bugsee uploadWithSummary:@"Upload from code"
+              description:@"Some description"];
+
+[Bugsee uploadWithSummary:@"Upload from code"
+              description:@"Some description"
+                 severity:BugseeSeverityMedium];
+
+[Bugsee uploadWithSummary:@"Upload from code"
+              description:@"Some description"
+                 severity:BugseeSeverityMedium
+                   labels:@[@"from-code"]];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// Severity is BugseeOptionReportingDefaultBugPriority
+Bugsee.upload(summary: "Upload from code",
+              description: "Some description")
+
+Bugsee.upload(summary: "Upload from code",
+              description: "Some description",
+              severity: BugseeSeverityMedium)
+
+Bugsee.upload(summary: "Upload from code",
+              description: "Some description",
+              severity: BugseeSeverityMedium,
+              labels: ["from-code"])
+```
+
+  </TabItem>
+</Tabs>
+
+A call made while the SDK is `Launching` is filed. If recording has not started yet, the report
+goes out without video and logs. A call made while the SDK is stopped is ignored, and Bugsee logs
+that to the console — including while a launch still [waits for the app to become active](/sdk/ios/lifecycle/#when-the-launch-waits-for-the-app-to-become-active).
+
+## Build a report in code
+
+`createReportWithCompletion:` gives you a `BugseeExtendedReport` to fill in — fields, labels,
+attributes, attachments, the screenshot — before you upload it with `uploadReport:`.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee createReportWithCompletion:^(BugseeExtendedReport *report) {
+    if (report == nil) {
+        return; // Bugsee is not running
+    }
+
+    [report setSummary:@"UI is broken"];
+    [report setDescription:@"It happened when I pressed the button"];
+    [report setSeverity:BugseeSeverityHigh];
+    report.labels = @[@"qa"];
+
+    // Attributes set here belong to this report only
+    [report setAttribute:@"screen" withValue:@"checkout"];
+
+    // Edit or replace the screenshot Bugsee captured
+    UIImage *screenshot = report.screenshot;
+    [report setScreenshot:screenshot];
+
+    NSData *data = [NSData dataWithContentsOfFile:pathToMyFile];
+    BugseeAttachment *attachment = [BugseeAttachment attachmentWithName:@"app state"
+                                                               filename:@"state.json"
+                                                                   data:data];
+    if (attachment) {
+        [report setAttachment:attachment];
+    }
+
+    [Bugsee uploadReport:report completion:^{
+        // The report is on its way
+    }];
+}];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.createReport { report in
+    guard let report else {
+        return // Bugsee is not running
+    }
+
+    report.setSummary("UI is broken")
+    report.setDescription("It happened when I pressed the button")
+    report.setSeverity(BugseeSeverityHigh)
+    report.labels = ["qa"]
+
+    // Attributes set here belong to this report only
+    report.setAttribute("screen", value: "checkout")
+
+    // Edit or replace the screenshot Bugsee captured
+    let screenshot = report.screenshot
+    report.setScreenshot(screenshot)
+
+    if let data = FileManager.default.contents(atPath: pathToMyFile),
+       let attachment = BugseeAttachment(name: "app state", filename: "state.json", data: data) {
+        report.setAttachment(attachment)
+    }
+
+    Bugsee.upload(report) {
+        // The report is on its way
+    }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+- The completion receives `nil` when the SDK is not fully running (`BugseeStatusLaunched`). Do not
+  rely on the thread it is called on: dispatch to the main queue yourself before touching UI.
+- `uploadReport:completion:` (Swift `upload(_:completion:)`) calls its completion on the main
+  thread once the report is persisted and scheduled for upload — not when the upload finishes.
+  Calling `stop:` or exiting from the completion does not lose the report. `uploadReport:`
+  (Swift `upload(_:)`) is the same without a completion.
+- A report can be uploaded once. A second `uploadReport:` of the same object uploads nothing; its
+  completion is still called, at once on the calling thread.
+- [Report handlers](/sdk/ios/report-handler) run on the report when you upload it, after your
+  edits are applied.
+
+### `BugseeExtendedReport` reference
+
+| Member | Swift | Notes |
+| --- | --- | --- |
+| `summary`, `reportDescription` | same | Read-only; set with `setSummary:`, `setDescription:` |
+| `setSummary:` | `setSummary(_:)` | |
+| `setDescription:` | `setDescription(_:)` | |
+| `severity` / `setSeverity:` | `severity` / `setSeverity(_:)` | |
+| `labels` | `labels` | Settable |
+| `attributes` | `attributes` | A copy of the report's own attributes |
+| `setAttribute:withValue:` | `setAttribute(_:value:)` | Sets an attribute on this report only, not globally |
+| `clearAttribute:` | `clearAttribute(_:)` | |
+| `clearAllAttributes` | `clearAllAttributes()` | Clears this report's attributes; global attributes set with `+[Bugsee setAttribute:withValue:]` are not affected |
+| `screenshot` | `screenshot` | The screenshot captured for the report; `nil` when the screenshot is turned off |
+| `setScreenshot:` | `setScreenshot(_:)` | Replaces or removes the screenshot |
+| `isScreenshotChanged` | `isScreenshotChanged` | `YES` once an existing screenshot was replaced or removed |
+| `attachments` | `attachments` | |
+| `setAttachment:` | `setAttachment(_:)` | Adds an attachment |
+| `clearAllAttachments` | `clearAllAttachments()` | |
+| `exportVideoToPath:withCompletion:` | `exportVideo(path:completion:)` | See the note below |
+
+Attachments set on a `BugseeExtendedReport` have a budget of their own of three attachments of at
+most 3 MB each, separate from the one the delegate and `BugseeReport` share.
+
+:::caution[`exportVideo` writes no file in 7.0]
+In 7.0 `exportVideoToPath:withCompletion:` calls its completion without exporting anything: no
+video file is created at the path. The video is still part of the uploaded report.
+:::
+
+## Related pages
+
+- [Crash & error reporting](/sdk/ios/manual/crash-error-reporting)
+- [Report handler](/sdk/ios/report-handler)
+- [Privacy: report](/sdk/ios/privacy/report)
+- [Appearance](/sdk/ios/appearance)
+- [Configuration](/sdk/ios/configuration)

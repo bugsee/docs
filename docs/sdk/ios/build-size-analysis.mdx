@@ -5,13 +5,9 @@ sidebar_position: 11
 slug: "/sdk/ios/build-size-analysis"
 ---
 
-Bugsee Build Size Analysis turns app size into a first-class CI signal alongside crashes, ANRs, and session replay. It ships in two layers, configured independently, and works on both iOS and Android — this page covers the iOS setup; see the [Android counterpart](/sdk/android/build-size-analysis) for parity.
+Bugsee Build Size Analysis turns app size into a first-class CI signal alongside crashes, ANRs, and session replay. It ships in two layers, configured independently, plus an optional [in-build size check](#in-build-size-check), and works on both iOS and Android — this page covers the iOS setup; see the [Android counterpart](/sdk/android/build-size-analysis) for parity.
 
 The whole flow runs inside the same `BugseeAgent` post-action that already uploads dSYMs. You don't need a second build phase; you just turn the right environment variables on.
-
-:::info[Requires Bugsee iOS SDK 6.1.5 or newer]
-Build info, size analysis, the in-build size check, and chunked upload all ship together in **6.1.5** ([release notes](/sdk/ios/release-notes#615-may-13-2026)). Earlier versions only ship the dSYM upload half of the post-action and silently ignore the size-related env vars.
-:::
 
 ## Two layers
 
@@ -70,7 +66,7 @@ PART 1 — required setup
 
    For Swift Package Manager integrations, replace the `find` line
    with:
-   `SCRIPT_SRC="$BUILD_DIR/../SourcePackages/checkouts/spm/Tools/BugseeAgent"`.
+   `SCRIPT_SRC="${BUILD_DIR%Build/*}SourcePackages/checkouts/spm/Tools/BugseeAgent"`.
 
 3. Ask me for my Bugsee app token before substituting
    `<APP_TOKEN>` — do not guess. Don't ask me to paste the token into
@@ -166,9 +162,10 @@ Option 4 — In-build size regression check
   What it does: Compares each build's `artifact_size` against the
   most-recent prior build of the same configuration. Crossing the
   warning threshold emits a `warning:` log line; crossing the fail
-  threshold emits an `error:` line AND exits the post-action
-  non-zero (which fails the build on CI). Either gate is
-  independently optional — `0` or omitting it disables that gate.
+  threshold emits an `error:` line. Neither fails the build: the
+  line lands in the agent's log, not the build log (see the caveat
+  below). Either gate is independently optional — `0` or omitting
+  it disables that gate.
 
   When you want it: You want a guardrail that catches size
   regressions before they ship — especially on PR pipelines so
@@ -243,7 +240,7 @@ do it when I'm ready.
 
 ## In-build size check
 
-A CI guardrail that prints an `error:` line and fails the post-action when the IPA grows beyond a configured threshold versus the previous archive for the same `(package_id, format, build_configuration)` tuple. Configured via env vars on the same scheme:
+A CI guardrail that prints an `error:` line to the agent's log when the IPA grows beyond a configured threshold versus the previous archive for the same `(package_id, format, build_configuration)` tuple. Configured via env vars on the same scheme:
 
 ```
 BUGSEE_SIZE_CHECK_ENABLED=1

@@ -1,0 +1,115 @@
+---
+title: "Custom events & traces"
+description: "Record named events, trace how values change over time, and capture the view hierarchy in Bugsee iOS SDK 7.x reports."
+sidebar_position: 4
+slug: "/sdk/ios/events-and-traces"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Events mark moments in the app's life ("payment processed"); traces follow how a value changes
+("credit balance"). Both appear on the report's timeline next to the video, logs and network
+traffic.
+
+## Custom events
+
+An event has a name and an optional dictionary of parameters.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+// Without parameters
+[Bugsee event:@"payment_processed"];
+
+// With parameters
+[Bugsee event:@"payment_processed"
+       params:@{@"amount": @125,
+                @"currency": @"USD"}];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+// Without parameters
+Bugsee.event("payment_processed")
+
+// With parameters
+Bugsee.event("payment_processed", params: ["amount": 125, "currency": "USD"])
+```
+
+  </TabItem>
+</Tabs>
+
+An event with an empty name is ignored. In 6.x this was `registerEvent:` /
+`registerEvent:withParams:`.
+
+## Custom traces
+
+A trace is a named value. Set it every time the value changes; the report shows how it changed
+over the recorded period.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee trace:@"credit_balance" value:@15];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.trace("credit_balance", value: 15)
+```
+
+  </TabItem>
+</Tabs>
+
+Bugsee remembers the last value of each trace, so a report shows the value a trace had when its
+recording starts even if it was set long before. A trace with an empty name is ignored. In 6.x this
+was `traceKey:withValue:` (Swift `trace(key:value:)`).
+
+Events and traces are recorded once the SDK status is `Launched`. Those sent earlier — while the
+SDK is stopped, while a launch [waits for the app to become active](/sdk/ios/lifecycle/#when-the-launch-waits-for-the-app-to-become-active), or while it is still `Launching` — may be lost.
+
+## View hierarchy
+
+Bugsee captures the view hierarchy of the screen with each bug and error report, so you can inspect
+the views behind the screenshot. It is controlled by `BugseeOptionCaptureViewHierarchy`
+(`viewHierarchyEnabled`, default `YES`).
+
+To record the hierarchy at a moment of your choosing — before a transition you want to inspect,
+say — call `captureViewHierarchy`. The snapshot goes into the recording, so a report whose recorded
+period covers that moment includes it.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee captureViewHierarchy];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.captureViewHierarchy()
+```
+
+  </TabItem>
+</Tabs>
+
+- `captureViewHierarchy` does nothing while `BugseeOptionCaptureViewHierarchy` is `NO`, or while
+  the SDK is not fully running (`BugseeStatusLaunched`).
+- No view hierarchy is captured during a [blackout](/sdk/ios/privacy/video), automatically or by
+  this call.
+- Each snapshot adds to the size of the report, more so for deep hierarchies.
+
+## Related pages
+
+- [Breadcrumbs](/sdk/ios/breadcrumbs)
+- [User & session data](/sdk/ios/user-session-data)
+- [Console logs](/sdk/ios/logs)

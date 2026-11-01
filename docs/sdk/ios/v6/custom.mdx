@@ -2,11 +2,15 @@
 title: "Adding custom data"
 description: "How to attach user email, session attributes, custom traces, events, and file attachments to Bugsee reports on iOS."
 sidebar_position: 4
-slug: "/sdk/ios/custom"
+slug: "/sdk/ios/v6/custom"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
+
+:::caution[Previous version]
+This page documents Bugsee iOS SDK **6.x**, the previous major version. The current line is **7.x** — see [Migrating from 6.x to 7.x](/sdk/ios/migration) to upgrade, or [Installation](/sdk/ios/installation) to start a new integration.
+:::
 
 ## User email
 
@@ -275,7 +279,7 @@ func bugseeAttachments(for report: BugseeReport, completionHandler decisionBlock
 
 ## View hierarchy
 
-By default, Bugsee automatically captures view hierarchy upon bug or error report generation. This feature is controlled by the ```BugseeViewHierarchyEnabledKey``` launch option (Refer to [configuration](/sdk/ios/configuration/) section for more details on launch options).
+By default, Bugsee automatically captures view hierarchy upon bug or error report generation. This feature is controlled by the ```BugseeViewHierarchyEnabledKey``` launch option (Refer to [configuration](/sdk/ios/v6/configuration/) section for more details on launch options).
 
 You can also trigger view hierarchy capture manually using the following API:
 

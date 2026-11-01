@@ -1,0 +1,93 @@
+---
+title: "Exits"
+description: "How the Bugsee iOS SDK 7.x reports abnormal app terminations — out-of-memory kills in the foreground and background — that no crash handler can see."
+sidebar_position: 5
+slug: "/sdk/ios/issue-detection/exits"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+iOS terminates an app that uses too much memory without giving it a chance to run any code, so no crash handler sees it. Exit detection infers such terminations across launches and reports them on the next launch, with the recording of the run that ended.
+
+Exit detection is on by default.
+
+| | |
+| --- | --- |
+| Option key | `BugseeOptionDetectAndReportExit` |
+| `BugseeOptions` property | `detectAppExit` |
+| Default | `YES` |
+
+To turn it off:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.detectAppExit = NO;
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.detectAppExit = false
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+## How it works
+
+iOS does not tell an app why its previous process ended, so Bugsee infers it:
+
+1. While a session runs, Bugsee marks the run as one that may end abnormally. Stopping Bugsee cleanly removes the mark.
+2. When the system warns the app about memory, Bugsee records an out-of-memory verdict, foreground or background according to the app's state, and keeps it up to date as the app moves between the two.
+   - A `UIApplicationDidReceiveMemoryWarning` verdict expires if the app is still running 60 seconds later.
+   - A verdict from critical memory pressure lasts until the pressure returns to normal.
+3. On the next launch, a run still marked with an out-of-memory verdict is reported.
+
+A run that ended without a verdict is treated as an ordinary termination and not reported — for example, the user closing the app from the app switcher.
+
+When the previous run also left a crash report, only the crash is reported: one death, one report.
+
+While a debugger is attached, the run is not tracked, because stopping the app from Xcode looks like a kill.
+
+## The report
+
+| Verdict | Title | Report type |
+| --- | --- | --- |
+| Out of memory in the foreground | `Foreground Out of memory` | Crash |
+| Out of memory in the background | `Background Out of memory` | Error (non-fatal) |
+
+A background termination is filed as a non-fatal error because background deaths include ordinary system housekeeping, and counting them all as crashes would inflate the crash rate.
+
+The title is the crash name. Every exit report has the summary `Application process exited`, and its description repeats the title with the evidence behind it, for example `Foreground Out of memory (signal=uikit_memory_warning, state_at_latch=foreground)`. The `exit_signal` attribute holds the signal that set the verdict (`uikit_memory_warning` or `memory_pressure_critical`), and on an out-of-memory report whose app state is known, `exit_foreground` says whether the app was in the foreground.
+
+The report carries the video, logs and network events of the run that ended, and the crash and error priorities of that run, not those of the launch that files it. It is filed by the next launch, so a [report handler](/sdk/ios/report-handler) set before `launchWithToken:` sees it. Exit reports do not dispatch the `BugseeLifecycleEventRelaunchedAfterCrash` [lifecycle event](/sdk/ios/lifecycle#available-lifecycle-events), which is sent only for a crash left by the crash handler.
+
+:::note[A known false positive]
+A verdict from critical memory pressure is cleared only by the pressure returning to normal while the app runs. If the app is suspended with the verdict set and then closed from the app switcher without running again, the next launch reports a background out-of-memory error that did not happen.
+:::
+
+On the simulator and Mac Catalyst, exit reports are not filed.
+
+## With the Crash Report Extension
+
+On iOS 27 and later, the [Crash Report Extension](/sdk/ios/issue-detection/crash-report-extension) reads the real exit reason from the dead process and adds the stack of every thread to the exit report. With it:
+
+- A memory-limit termination is reported even when no memory warning came first, as a foreground or background out-of-memory report according to the state the system recorded.
+- A watchdog termination (`0x8badf00d`), such as a launch that takes too long, is reported as `Main thread locked`, a crash, or a non-fatal error when the system ran the watchdog while the app was not visible. The description adds the watchdog's own lines, for example `Main thread locked (watchdog=scene-create, visibility=Foreground)`.
+- A termination before the session began, such as the launch watchdog inside `application:didFinishLaunchingWithOptions:`, is reported on its own, without a recording.
+
+The extension's documents are read by exit detection, so keep `BugseeOptionDetectAndReportExit` on when you use it.
+
+## Migrating from 6.x
+
+6.x had a separate, opt-in kill detection (`BugseeKillDetectionKey`). It is removed in 7.x: out-of-memory terminations are reported by exit detection, which is on by default. 6.x also guessed that a kill followed an unresponsive main thread; 7.x does not, and reports such a kill only through the Crash Report Extension's watchdog documents on iOS 27 and later. See [Migrating from 6.x](/sdk/ios/migration).

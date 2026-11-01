@@ -29,7 +29,7 @@ The React Native package records no spans from JavaScript on its own: there are 
 While performance monitoring is on, the SDK also measures native components, not React screens, on its own:
 
 - **Android**: the providers listed in the native SDK reference, [Android built-in providers](/sdk/android/performance#built-in-providers). Some of them, such as database and file I/O spans, depend on the Bugsee Gradle plugin.
-- **iOS**: an `http.client` transaction for each HTTP request (only while network capture is on), `file.*` child spans for file operations made inside an active transaction, a `ui.load` transaction for each native screen (view controller) that appears, and one `app.start.cold` or `app.start.warm` transaction for app startup. The iOS documentation has no performance page for 7.x yet; the option keys are in the [iOS 7.x migration guide](/sdk/ios/v7/migration#25-performance).
+- **iOS**: an `http.client` transaction for each HTTP request (only while network capture is on), `file.*` child spans for file operations made inside an active transaction, a `ui.load` transaction for each native screen (view controller) that appears, and one `app.start.cold` or `app.start.warm` transaction for app startup. Native SDK reference: [iOS performance monitoring](/sdk/ios/performance).
 
 ## Transactions and spans
 
@@ -220,4 +220,4 @@ Performance data reaches Bugsee **with reports**: the captured transactions are 
 
 - [Configuration](/sdk/react_native/configuration): every launch option.
 - [Network events](/sdk/react_native/network): network capture on each platform.
-- Native SDK reference: [Android performance monitoring](/sdk/android/performance) and, for iOS, the performance keys in the [iOS 7.x migration guide](/sdk/ios/v7/migration#25-performance).
+- Native SDK reference: [Android performance monitoring](/sdk/android/performance) and [iOS performance monitoring](/sdk/ios/performance).

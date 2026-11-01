@@ -1,0 +1,235 @@
+---
+title: "Network events"
+description: "How the Bugsee iOS SDK 7.x captures URLSession, WebSocket and WKWebView traffic, the options that control it, recording your own network events, and filtering them."
+sidebar_position: 1
+slug: "/sdk/ios/network"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Bugsee records the app's network traffic — requests, responses, headers and bodies — and attaches
+it to every report. No code is needed: capture starts with the SDK.
+
+## What is captured
+
+| Source | What Bugsee records |
+| --- | --- |
+| `URLSession` | Data, upload and download tasks, created with a completion handler or with a session delegate |
+| WebSocket | `URLSessionWebSocketTask`, [SocketRocket](https://github.com/facebookincubator/SocketRocket) (`SRWebSocket`) and [Starscream](https://github.com/daltoniam/Starscream) connections (Starscream through its `onConnect`, `onText`, `onData` and `onDisconnect` callbacks, when they are visible to Objective-C): open, sent and received messages, close and errors |
+| `WKWebView` | Requests the page makes with `fetch` and `XMLHttpRequest`, when `BugseeOptionCaptureWebViewAdvanced` is on (the default) |
+
+Bugsee's own traffic is not recorded.
+
+A web view created before Bugsee launched is not set up for capture. Pass it to
+`+[Bugsee addSecureWebView:]` to add it.
+
+## Options
+
+| Option | `BugseeOptions` property | Default | Effect |
+| --- | --- | --- | --- |
+| `BugseeOptionCaptureNetwork` | `monitorNetwork` | `YES` | Master switch for network capture |
+| `BugseeOptionCaptureWebSocket` | `monitorWebSocket` | `YES` | WebSocket traffic (needs `BugseeOptionCaptureNetwork` too) |
+| `BugseeOptionCaptureNetworkBodySizeLimit` | `maxNetworkBodySize` | `20480` | Largest request or response body kept, in bytes |
+| `BugseeOptionCaptureNetworkBodyWithoutType` | — | `NO` | Keep bodies that have no `Content-Type` header |
+| `BugseeOptionCaptureNetworkOnLaunch` | — | `NO` | Install interception synchronously during `launchWithToken:` |
+| `BugseeOptionCaptureNetworkUseDefaultSanitizer` | `sanitizeNetworkData` | `YES` | Built-in redaction of sensitive values — see [Privacy: network](/sdk/ios/privacy/network) |
+| `BugseeOptionCaptureWebViewAdvanced` | — | `YES` | Script injection into `WKWebView` pages, which network capture in web views relies on |
+
+Options with no `BugseeOptions` property are set by key — see [Configuration](/sdk/ios/configuration).
+
+### Body size
+
+A body larger than `BugseeOptionCaptureNetworkBodySizeLimit` is left out whole, not cut, and the
+event records why (`size_too_large`). A limit of `0` keeps no bodies at all. WebSocket frames of
+exactly the limit are kept.
+
+### Bodies without a `Content-Type`
+
+With `BugseeOptionCaptureNetworkBodyWithoutType` set to `NO` (the default), a request or response
+body that has no `Content-Type` header is left out. WebSocket frames are kept either way.
+
+### Requests made at launch
+
+Capture is brought up off the main thread, so by default a request started in the same run-loop
+turn as the start of capture is in flight before interception is in place and is not recorded at
+all. Set `BugseeOptionCaptureNetworkOnLaunch` to `YES` to install interception synchronously when
+capture starts. It is off by default because it puts the interception install on the launch path.
+
+The option does not help while a launch [waits for the app to become active](/sdk/ios/lifecycle/#when-the-launch-waits-for-the-app-to-become-active): requests started before the app becomes active (for
+example in `application:didFinishLaunchingWithOptions:` of a scene-based app) are not recorded
+either way.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.maxNetworkBodySize = 64 * 1024;
+[options updateLaunchOptions:@{
+    BugseeOptionCaptureNetworkOnLaunch : @YES,
+}];
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.maxNetworkBodySize = 64 * 1024
+options.updateLaunch([
+    BugseeOptionCaptureNetworkOnLaunch: true,
+])
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+## Filter network events
+
+A network filter sees each captured event before it is recorded, and can change it or drop it.
+Install it with a block, or implement `bugseeFilterNetworkEvent:completionHandler:` in your
+`BugseeDelegate`. If both are present, the block is used and the delegate method is not called.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee setNetworkEventFilter:^(BugseeNetworkEvent *event,
+                                BugseeNetworkFilterDecisionBlock decision) {
+    if ([event.url containsString:@"/internal/"]) {
+        decision(nil);   // drop it
+        return;
+    }
+    decision(event);
+}];
+
+// Remove it again
+[Bugsee setNetworkEventFilter:nil];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.setNetworkEventFilter { event, decision in
+    if event.url?.contains("/internal/") == true {
+        decision(nil)    // drop it
+        return
+    }
+    decision(event)
+}
+
+// Remove it again
+Bugsee.setNetworkEventFilter(nil)
+```
+
+  </TabItem>
+</Tabs>
+
+- Call the decision block once, within 10 seconds. Past that the event is dropped, and a later call
+  is ignored.
+- The filter sees the body as intercepted. The body size limit and the `Content-Type` rule are
+  applied after it.
+- A filter turns off the built-in redaction. To keep it, run `Bugsee.defaultNetworkSanitizer` from
+  your filter — see [Privacy: network](/sdk/ios/privacy/network).
+- Breadcrumbs do not pass through the network filter — see
+  [Privacy: breadcrumbs](/sdk/ios/privacy/breadcrumbs).
+
+## Record your own network events
+
+Traffic Bugsee does not intercept — a C networking library, a custom socket protocol — can be
+recorded with `addNetworkEvent:`.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+NSTimeInterval nowMs = [[NSDate date] timeIntervalSince1970] * 1000;
+
+BugseeNetworkEvent *event = [BugseeNetworkEvent new];
+event.ID = requestId;
+event.type = BugseeNetwork;
+event.bugseeNetworkEventType = BugseeNetworkEventComplete;
+event.method = @"GET";
+event.url = @"https://api.example.com/v1/orders";
+event.responseCode = 200;
+event.headers = @{@"Content-Type": @"application/json"};
+event.body = responseData;
+event.dataSize = responseData.length;
+event.timestamp = nowMs;
+
+// Recorded as is
+[Bugsee addNetworkEvent:event];
+
+// Or run through your network filter and the built-in redaction first
+[Bugsee addNetworkEvent:event requiresFiltering:YES];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let event = BugseeNetworkEvent()
+event.id = requestId
+event.type = BugseeNetwork
+event.bugseeNetworkEventType = BugseeNetworkEventComplete
+event.method = "GET"
+event.url = "https://api.example.com/v1/orders"
+event.responseCode = 200
+event.headers = ["Content-Type": "application/json"]
+event.body = responseData
+event.dataSize = Int64(responseData.count)
+event.timestamp = Date().timeIntervalSince1970 * 1000
+
+// Recorded as is
+Bugsee.addNetworkEvent(event)
+
+// Or run through your network filter and the built-in redaction first
+Bugsee.addNetworkEvent(event, requiresFiltering: true)
+```
+
+  </TabItem>
+</Tabs>
+
+- `addNetworkEvent:` records the event as is: it bypasses both your filter and the built-in
+  redaction. Pass `requiresFiltering:YES` to run it through your filter, or through the built-in
+  redaction when no filter is set.
+- A manually added event also feeds [HTTP error detection](/sdk/ios/issue-detection/http-errors/)
+  and the `http` breadcrumbs, so a 5xx event you add can file a report.
+- Set `timestamp`, in milliseconds since 1970. Bugsee does not stamp the event for you, an event
+  left at `0` is discarded, and a filter cannot move it.
+- Events with the same `ID` belong to the same request: record a `BugseeNetworkEventBegin` event
+  when it starts and a `BugseeNetworkEventComplete` (or `BugseeNetworkEventError`,
+  `BugseeNetworkEventCancel`) event when it ends.
+- Events are recorded only while the SDK is fully running (`BugseeStatusLaunched`).
+
+### `BugseeNetworkEvent` fields
+
+| Property | Type | Notes |
+| --- | --- | --- |
+| `ID` (Swift `id`) | `NSString` | Ties the events of one request together |
+| `type` | `BugseeNetworkType` | `BugseeNetwork`, `BugseeWebSocket` or `BugseeUDPSocket` |
+| `bugseeNetworkEventType` | `NSString` | HTTP: `BugseeNetworkEventBegin`, `BugseeNetworkEventComplete`, `BugseeNetworkEventCancel`, `BugseeNetworkEventError`. WebSocket: `BugseeWebSocketEventOpen`, `BugseeWebSocketEventSend`, `BugseeWebSocketEventMessage`, `BugseeWebSocketEventClose`, `BugseeWebSocketEventError` |
+| `url` | `NSString` | |
+| `redirectedFromURL` | `NSString` | The URL the request was redirected from |
+| `method` | `NSString` | HTTP method |
+| `headers` | `NSDictionary` | |
+| `body` | `NSData` | |
+| `noBodyReason` | `NSString` | Why there is no body: `BugseeNetworkBodySizeTooLarge`, `BugseeNetworkBodyUnsupportedContentType`, `BugseeNetworkBodyNoContentType`, `BugseeNetworkBodyCantReadData` |
+| `dataSize` | `int64_t` | Size of the body, in bytes |
+| `responseCode` | `NSInteger` | `0` for `BugseeNetworkEventBegin` |
+| `error` | `NSDictionary` | |
+| `mechanism` | `NSString` | Which stack produced the event, for example `URLSession` |
+| `timestamp` | `NSTimeInterval` | Milliseconds since 1970 |
+
+## Related pages
+
+- [Privacy: network](/sdk/ios/privacy/network)
+- [HTTP errors](/sdk/ios/issue-detection/http-errors)
+- [Breadcrumbs](/sdk/ios/breadcrumbs)
+- [Configuration](/sdk/ios/configuration)

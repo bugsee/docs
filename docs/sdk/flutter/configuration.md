@@ -71,7 +71,7 @@ Future<void> main() async {
 |crashReport|true|Catch and report application crashes (\*)|
 |defaultBugPriority|BugseeSeverityLevel.high|Default priority for bugs|
 |defaultCrashPriority|BugseeSeverityLevel.blocker|Default priority for crashes|
-|killDetection|false|Detect abnormal termination (experimental, [read more](/sdk/ios/app-kills/))|
+|killDetection|false|Detect abnormal termination (experimental, [read more](/sdk/ios/v6/app-kills/))|
 |maxRecordingTime|60|Maximum recording duration|
 |monitorDiskSpace|false|Enable monitoring of disk space. Disabled by default due to privacy limitations|
 |monitorNetwork|true|Capture network traffic. Dart traffic additionally requires installing the HTTP overrides handler — see [Network capture](/sdk/flutter/network/)|

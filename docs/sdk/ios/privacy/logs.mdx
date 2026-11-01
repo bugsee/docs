@@ -1,6 +1,6 @@
 ---
 title: "Privacy and console logs"
-description: "How to disable console log collection or use a delegate filter to strip PII from iOS log entries before they are included in Bugsee reports."
+description: "How to turn off console log capture in the Bugsee iOS SDK, keep only the important levels, and redact or drop log lines with a filter before they are recorded."
 sidebar_position: 2
 slug: "/sdk/ios/privacy/logs"
 ---
@@ -8,37 +8,145 @@ slug: "/sdk/ios/privacy/logs"
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Bugsee automatically captures all standard application console logs. The feature can be either completely disabled or
-logs can be sanitized during recording to strip any PII data.
+:::note
+Looking for the previous SDK? See the [6.x console logs privacy page](/sdk/ios/v6/privacy/logs).
+:::
 
-## Disabling log collection
+Bugsee captures your application's console logs automatically: standard output and standard
+error (`print`, `NSLog`), CocoaLumberjack, the console of web pages in a `WKWebView`, and the
+console output that the React Native, Flutter and Unity SDKs forward. You can turn the capture
+off, keep only the more important levels, or clean every line before it is recorded.
 
-Console log collection can be disabled completely using **BugseeCaptureLogsKey** launch option. See [configuration](/sdk/ios/configuration/) for more info.
+## Disabling log capture
 
-## Sanitizing logs 
-
-Your class should implement the **BugseeDelegate** protocol and it must set itself as the delegate for Bugsee.
-
+Set `BugseeOptionCaptureLogs` (`BugseeOptions.captureLogs`) to `NO`. Nothing is captured
+automatically then. Lines your code sends with `Bugsee.log` are still recorded.
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
--(void)bugseeFilterLog:(BugseeLogEvent *)log completionHandler:(BugseeLogFilterDecisionBlock)decisionBlock
-{
-    // Below is an example that replaces the access_token value in all URLs
-    // going through the filter with a fixed placeholder.
-    NSError * error;
-    NSRegularExpression * regex = [NSRegularExpression regularExpressionWithPattern:@"access_token=[0-9a-z\\-]*" 
-                                                                            options:NSRegularExpressionCaseInsensitive error:&error];
-    log.text = [regex stringByReplacingMatchesInString:log.text
-                                                options:0
-                                                  range:NSMakeRange(0, log.text.length)
-                                           withTemplate:@"access_token=<redacted>"];
+BugseeOptions *options = [BugseeOptions defaultOptions];
+options.captureLogs = NO;
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.captureLogs = false
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+## Keeping only some levels
+
+`BugseeOptionCaptureLogsLevel` takes a `BugseeLogLevel` and drops every line more verbose than
+it. The default, `BugseeLogLevelVerbose`, keeps everything; `BugseeLogLevelWarning` keeps
+warnings and errors only. The level is applied before your filter, so the filter never sees the
+dropped lines.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee launchWithToken:@"<your_app_token>" andOptions:@{
+    BugseeOptionCaptureLogsLevel : @(BugseeLogLevelWarning),
+}];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.launch(token: "<your_app_token>", dictionaryOptions: [
+    BugseeOptionCaptureLogsLevel: BugseeLogLevelWarning.rawValue,
+])
+```
+
+  </TabItem>
+</Tabs>
+
+## Filtering logs
+
+A log filter receives every line before it is recorded, as a `BugseeLogEvent`. Change its
+`text` (or its `level`, `subsystem` and `category`) and pass it to the decision block, or pass
+`nil` to drop the line. A line whose text you set to an empty string is dropped too.
+
+Set the filter with a block:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+NSRegularExpression *regex =
+    [NSRegularExpression regularExpressionWithPattern:@"access_token=[0-9a-z\\-]*"
+                                              options:NSRegularExpressionCaseInsensitive
+                                                error:nil];
+
+[Bugsee setLogEventFilter:^(BugseeLogEvent *event, BugseeLogFilterDecisionBlock decision) {
+    if ([event.text containsString:@"password"]) {
+        decision(nil);   // drop the line
+        return;
+    }
+    event.text = [regex stringByReplacingMatchesInString:event.text
+                                                 options:0
+                                                   range:NSMakeRange(0, event.text.length)
+                                            withTemplate:@"access_token=<redacted>"];
+    decision(event);
+}];
+
+// Remove the filter
+[Bugsee setLogEventFilter:nil];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let regex = try! NSRegularExpression(pattern: "access_token=[0-9a-z\\-]*",
+                                     options: .caseInsensitive)
+
+Bugsee.setLogEventFilter { event, decision in
+    if event.text.contains("password") {
+        decision(nil)   // drop the line
+        return
+    }
+    let range = NSRange(event.text.startIndex..., in: event.text)
+    event.text = regex.stringByReplacingMatches(in: event.text, options: [], range: range,
+                                                withTemplate: "access_token=<redacted>")
+    decision(event)
+}
+
+// Remove the filter
+Bugsee.setLogEventFilter(nil)
+```
+
+  </TabItem>
+</Tabs>
+
+Or implement the filter in your `BugseeDelegate`:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+- (void)bugseeFilterLog:(BugseeLogEvent *)log
+      completionHandler:(BugseeLogFilterDecisionBlock)decisionBlock {
+    if ([log.text containsString:@"password"]) {
+        decisionBlock(nil);
+        return;
+    }
     decisionBlock(log);
 }
 
-// ..somewhere within the class
+// ...somewhere within the class
 [Bugsee sharedInstance].delegate = self;
 ```
 
@@ -46,23 +154,46 @@ Your class should implement the **BugseeDelegate** protocol and it must set itse
   <TabItem value="swift" label="Swift">
 
 ```swift
-private func bugseeFilterLog(log: BugseeLogEvent, completionHandler decisionBlock: @escaping BugseeLogFilterDecisionBlock) {
-    let regex : NSRegularExpression
-    do {
-        regex = try NSRegularExpression.init(pattern: "access_token=[0-9a-z\\-]*",
-                                                 options: NSRegularExpression.Options.caseInsensitive)
-        let range = NSMakeRange(0 , log.text.count)
-        log.text = regex.stringByReplacingMatches(in: log.text, options: .reportProgress, range: range, withTemplate: "access_token=<redacted>")
-    }catch { print("Somethings went wrong!") }
-
-    decisionBlock(log);
+class BugseeHandler: NSObject, BugseeDelegate {
+    func bugsee(filterLog log: BugseeLogEvent,
+                completionHandler decisionBlock: @escaping BugseeLogFilterDecisionBlock) {
+        if log.text.contains("password") {
+            decisionBlock(nil)
+            return
+        }
+        decisionBlock(log)
+    }
 }
 
-// ..somewhere within the class
-Bugsee.sharedInstance()?.delegate = self;
+// ...somewhere in your setup code
+Bugsee.sharedInstance()?.delegate = bugseeHandler
 ```
 
   </TabItem>
 </Tabs>
 
-More about console logs - [Logging](/sdk/ios/logs/)
+- If both are set, the block filter is used and the delegate method is not called.
+- Call the decision block once, within 10 seconds. Past that the line is dropped, and a later
+  call is ignored. The filter may finish on any thread.
+- Lines sent with `Bugsee.log` skip the filter, because your code wrote them. To run such a line
+  through the filter, send it with `log:level:requiresFiltering:` and `requiresFiltering` set to
+  `YES`:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[Bugsee log:message level:BugseeLogLevelInfo requiresFiltering:YES];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+Bugsee.log(message, level: BugseeLogLevelInfo, requiresFiltering: true)
+```
+
+  </TabItem>
+</Tabs>
+
+More about console logs: [Console logs](/sdk/ios/logs).
