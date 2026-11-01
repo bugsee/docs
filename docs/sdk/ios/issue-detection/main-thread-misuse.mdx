@@ -1,0 +1,82 @@
+---
+title: "Main-thread misuse"
+description: "Detect blocking disk, UserDefaults and synchronous network calls made on the main thread of an iOS app with the Bugsee SDK 7.x."
+sidebar_position: 6
+slug: "/sdk/ios/issue-detection/main-thread-misuse"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The **main-thread misuse detector** reports blocking work done on the main thread — the kind of call that causes stutter and, when it takes long enough, a [hang](/sdk/ios/issue-detection/hangs). Each violation is filed as a non-fatal error report with the stack of the call.
+
+Main-thread misuse detection is off by default.
+
+| | |
+| --- | --- |
+| Option key | `BugseeOptionDetectAndReportMainThreadMisuse` |
+| `BugseeOptions` property | — (set by key) |
+| Default | `NO` |
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+[options updateLaunchOptions:@{
+    BugseeOptionDetectAndReportMainThreadMisuse : @YES,
+}];
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.updateLaunch([
+    BugseeOptionDetectAndReportMainThreadMisuse: true,
+])
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+## What gets flagged
+
+Bugsee intercepts these Foundation calls and reports the ones made on the main thread:
+
+| Category | Calls | Domain |
+| --- | --- | --- |
+| Disk read | `+[NSData dataWithContentsOfFile:]`, `+[NSData dataWithContentsOfURL:]` and their `options:error:` variants | `MainThreadMisuse::DiskRead` |
+| Disk write | `-[NSData writeToFile:atomically:]`, `-[NSData writeToURL:atomically:]` and their `options:error:` variants | `MainThreadMisuse::DiskWrite` |
+| UserDefaults | `-[NSUserDefaults synchronize]` | `MainThreadMisuse::UserDefaults` |
+| Network | `+[NSURLConnection sendSynchronousRequest:returningResponse:error:]` | `MainThreadMisuse::Network` |
+
+Bugsee's own file access is never reported.
+
+:::caution[Objective-C entry points only]
+The detector intercepts the Objective-C methods above, so it does not see:
+
+- Swift's Foundation calls such as `Data(contentsOf:)`, `data.write(to:)` and `String(contentsOfFile:)`, which do not go through these methods.
+- `-[NSData initWithContentsOfFile:]` and `-[NSData initWithContentsOfURL:]`.
+- `FileManager` / `NSFileManager`, streams, POSIX file I/O, and a `URLSession` request waited on with a semaphore.
+
+A clean result does not mean the main thread does no blocking work.
+:::
+
+## The report
+
+| Field | Value |
+| --- | --- |
+| Type | Error (non-fatal), with the error priority (`BugseeOptionReportingDefaultErrorPriority`) |
+| Summary | `Disk read on main thread`, `Disk write on main thread`, `UserDefaults access on main thread` or `Network operation on main thread` |
+| Domain | One of the domains above |
+| Stack | The call stack at the violation. The issue is titled after its top frame, the violating call site |
+
+Each call site is reported once per session, identified by the first frame of the stack outside the SDK. Stopping Bugsee starts a new session.
+
+On the simulator and Mac Catalyst, the detector installs nothing and reports nothing.

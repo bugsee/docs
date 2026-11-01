@@ -1,0 +1,114 @@
+---
+title: "Hangs"
+description: "Detect main-thread hangs in an iOS app with the Bugsee SDK 7.x: thresholds, how the watchdog works, and what a hang report contains."
+sidebar_position: 4
+slug: "/sdk/ios/issue-detection/hangs"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The **hang detector** reports the main thread staying unresponsive long enough to hurt the user experience. The app keeps running: a hang is filed as a non-fatal error report with the stack of the stuck main thread, alongside the usual video, logs and network events.
+
+Hang detection is off by default.
+
+| | |
+| --- | --- |
+| Option key | `BugseeOptionDetectAndReportHang` |
+| `BugseeOptions` property | — (set by key) |
+| Default | `NO` |
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+[options updateLaunchOptions:@{
+    BugseeOptionDetectAndReportHang : @YES,
+}];
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.updateLaunch([
+    BugseeOptionDetectAndReportHang: true,
+])
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+:::tip
+Enable hang detection on internal and pre-release builds first, to tune the thresholds against your app's real main-thread behavior before turning it on in production.
+:::
+
+## How it works
+
+A timer on a background thread ticks once a second and posts a ping to the main queue. Each tick adds a second to the hang duration; the main queue running the ping resets it. While the main thread is blocked the ping never runs, so the duration grows and crosses the thresholds below. Once a hang reaches the first threshold, every tick samples the main thread's stack.
+
+## Thresholds
+
+A hang is graded in three levels, each with its own threshold in milliseconds. Each level crossed files its own report, so a hang that lasts past 10 seconds files three: Fair, Medium and Severe.
+
+| Level | Option key | Default |
+| --- | --- | --- |
+| Fair | `BugseeOptionDetectAndReportHangFairLevel` | 3000 |
+| Medium | `BugseeOptionDetectAndReportHangMediumLevel` | 5000 |
+| Severe | `BugseeOptionDetectAndReportHangSevereLevel` | 10000 |
+
+The three values must be positive and strictly ascending: `Fair < Medium < Severe`. Otherwise all three fall back to the defaults. The duration grows in one-second steps, so a threshold is crossed on the first whole second at or past it.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+[options updateLaunchOptions:@{
+    BugseeOptionDetectAndReportHang            : @YES,
+    BugseeOptionDetectAndReportHangFairLevel   : @2000,
+    BugseeOptionDetectAndReportHangMediumLevel : @4000,
+    BugseeOptionDetectAndReportHangSevereLevel : @8000,
+}];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+options.updateLaunch([
+    BugseeOptionDetectAndReportHang: true,
+    BugseeOptionDetectAndReportHangFairLevel: 2000,
+    BugseeOptionDetectAndReportHangMediumLevel: 4000,
+    BugseeOptionDetectAndReportHangSevereLevel: 8000,
+])
+```
+
+  </TabItem>
+</Tabs>
+
+## The report
+
+| Field | Value |
+| --- | --- |
+| Type | Error (non-fatal), with the error priority (`BugseeOptionReportingDefaultErrorPriority`) |
+| Summary | `Main thread hang detected for at least N seconds` |
+| Domain | `AppHang::Fair`, `AppHang::Medium` or `AppHang::Severe` |
+| Stack | The main thread's stack sampled when the level was crossed. The issue is titled after its top frame, the stuck call site |
+
+The level is part of the grouping, so Fair, Medium and Severe hangs at the same call site are separate issues.
+
+Each level is reported at most once per call site per session: a call site that hangs again in the same session does not file the same level twice. Stopping Bugsee starts a new session.
+
+The call site is the top frame of the main thread's stack that is not Bugsee's own. When the main thread is blocked waiting — on a lock, synchronous I/O or `sleep` — that frame is a system wait function, so unrelated hangs of that kind share a title and a once-per-session limit. Look further down the stack for your own code.
+
+## Related
+
+- [Frustration](/sdk/ios/issue-detection/frustration) reports a shorter freeze, 2 seconds, but only while the user is interacting with the app.
+- On iOS 27 and later, the [Crash Report Extension](/sdk/ios/issue-detection/crash-report-extension) reports a hang that the system's watchdog ended by killing the app.
+- On the simulator and Mac Catalyst, the watchdog does not run.

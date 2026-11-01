@@ -1,44 +1,150 @@
 ---
-title: "Privacy and Report fields"
-description: "How to pre-populate or post-process Bugsee report fields such as summary, description, severity, and labels using the BugseeDelegate protocol on iOS."
-sidebar_position: 4
+title: "Privacy and report fields"
+description: "How to strip sensitive data from Bugsee iOS reports before upload: the report handler for every report, and the report-fields delegate methods for reports filed from the report dialog."
+sidebar_position: 5
 slug: "/sdk/ios/privacy/report"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-You can use both pre and postprocessing for report fields. This is useful when you want to strip any sensitive data user may enter into it or when you want to apply some specific formatting.
+:::note
+Looking for the previous SDK? See the [6.x report privacy page](/sdk/ios/v6/privacy/report).
+:::
 
-The principle is simple, for every generated report, Bugsee will call the corresponding delegate method from provided ```BugseeDelegate``` protocol.
-Your class should implement the **BugseeDelegate** protocol and it must set itself as the delegate for Bugsee (choose the sync or async delegate method that fits your needs).
-You should then perform all the required fields manipulations and pass your changes back to Bugsee.
+A report carries fields the user typed or your code set — summary, description, email, labels —
+plus attributes and attachments. Before a report is uploaded you can inspect all of it and strip
+what must not leave the device. Two mechanisms do this:
 
+- **The report handler** sees every report, whatever filed it: the report dialog, `upload…`,
+  `logError`, `logException`, a crash recovered on the next launch. It can change every field,
+  attribute, label and attachment.
+- **The report-fields delegate methods** see only reports filed from the built-in report dialog,
+  and only their summary, description, severity and labels. Use them to pre-fill the dialog or
+  to post-process what the user typed.
+
+## Report handler
+
+Set an object that conforms to `BugseeReportHandler` with `setReportHandler:`. Each callback
+receives the report itself, as a `BugseeReport`: whatever you change on it is what gets uploaded.
+Set the handler before `launchWithToken:`, so that it also sees the crashes recovered at launch.
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-// sample code blocks are provided for async versions
-- (void)bugseeAddFieldsBeforeReportCreatedWith:(void (^)(BugseeReportFields * _Nonnull))completion {
-    __block BugseeReportFields *report = [BugseeReportFields reportFieldsWith:@"Begin;" description:@"Begin;" severity:BugseeSeverityBlocker labels:@[@"qa"]];
-    
+@interface PrivacyReportHandler : NSObject <BugseeReportHandler>
+@end
+
+@implementation PrivacyReportHandler
+
+- (void)onAfterReportCreated:(BugseeReport *)report
+               isTerminating:(BOOL)isTerminating
+                  completion:(BugseeEmptyBlock)completion {
+    // Strip what the user may have typed into the dialog
+    // (-redact: stands for your own redaction code)
+    report.email = nil;
+    report.reportDescription = [self redact:report.reportDescription];
+
+    // Remove an attribute that must not leave the device
+    [report removeAttribute:@"session_token"];
+
+    // No attachments at all: clear them, and return none from the delegate
+    [report clearAttachments];
+
+    completion();
+}
+
+@end
+
+// Before launch
+[Bugsee setReportHandler:[PrivacyReportHandler new]];
+[Bugsee launchWithToken:@"<your_app_token>"];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+final class PrivacyReportHandler: NSObject, BugseeReportHandler {
+    func onAfterReportCreated(_ report: BugseeReport,
+                              isTerminating: Bool,
+                              completion: @escaping BugseeEmptyBlock) {
+        // Strip what the user may have typed into the dialog
+        // (redact(_:) stands for your own redaction code)
+        report.email = nil
+        report.reportDescription = redact(report.reportDescription)
+
+        // Remove an attribute that must not leave the device
+        report.removeAttribute("session_token")
+
+        // No attachments at all: clear them, and return none from the delegate
+        report.clearAttachments()
+
+        completion()
+    }
+}
+
+// Before launch
+Bugsee.setReportHandler(PrivacyReportHandler())
+Bugsee.launch(token: "<your_app_token>")
+```
+
+  </TabItem>
+</Tabs>
+
+What you can change on the report:
+
+| Member | Notes |
+| --- | --- |
+| `summary`, `reportDescription`, `email` | Set to `nil` to clear. |
+| `severity` | `BugseeSeverityLow` to `BugseeSeverityBlocker`; any other value is ignored. |
+| `labels`, `addLabel:`, `addLabels:`, `clearLabels` | Assigning `labels` replaces the whole set. |
+| `attributes`, `getAttribute:`, `setAttribute:withValue:`, `removeAttribute:`, `clearAllAttributes` | The report's own attributes. A `nil` value removes the attribute. |
+| `attachments`, `addAttachment:`, `clearAttachments` | `clearAttachments` also removes attachments set on a `BugseeExtendedReport`. Attachments your delegate returns afterwards are still added. |
+
+Call `completion` once, when you are done; changes made after it are ignored. A callback may be
+called again for a report recovered after a crash, so make a second run harmless. The callbacks,
+their threads and their time limits are described in [Report handler](/sdk/ios/report-handler).
+
+:::note
+Attributes set with `+[Bugsee setAttribute:withValue:]` and the user identifier persist across
+launches and go into every report. Removing an attribute from one report does not clear it; use
+`clearAttribute:` or `clearUserIdentifier` for that. See
+[User & session data](/sdk/ios/user-session-data).
+:::
+
+## Report-fields delegate methods
+
+These `BugseeDelegate` methods apply to reports filed from the built-in report dialog. Each comes
+in a synchronous and an asynchronous form; if you implement both, the synchronous one is used.
+
+- **Before the dialog opens**, `bugseeAddFieldsBeforeReportCreated` (Swift
+  `bugseePrepareReportFields()`) or its asynchronous form returns the fields to pre-fill. The
+  user can still edit them.
+- **After the user sends the report**, `bugseeCheckFieldsAfterReportCreated:` (Swift
+  `bugsee(finalizeReportFields:)`) or its asynchronous form receives what the user entered and
+  returns the fields to upload. The dialog closes once you answer.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+- (void)bugseeAddFieldsBeforeReportCreatedWith:(void (^)(BugseeReportFields *))completion {
+    completion([BugseeReportFields reportFieldsWith:@"Checkout issue"
+                                        description:@""
+                                           severity:BugseeSeverityHigh
+                                             labels:@[@"checkout"]]);
+}
+
+- (void)bugseeCheckFieldsAfterReportCreated:(BugseeReportFields *)report
+                          completionHandler:(void (^)(BugseeReportFields *))completion {
+    report.summary = [self redact:report.summary];
+    report.reportDescription = [self redact:report.reportDescription];
     completion(report);
 }
 
-- (void)bugseeCheckFieldsAfterReportCreated:(BugseeReportFields *)report completionHandler:(void (^)(BugseeReportFields * _Nonnull))completion {
-    report.summary = [report.summary stringByAppendingString:@";End"];
-    report.reportDescription = [report.reportDescription stringByAppendingString:@";End"];
-    report.severity = BugseeSeverityHigh;
-    
-    NSMutableArray<NSString *> * currentLabels = [NSMutableArray arrayWithArray:report.labels];
-    [currentLabels addObject:@"dev"];
-    report.labels = currentLabels;
-
-    completion(report);
-}
-
-// somewhere within the class
+// ...somewhere within the class
 [Bugsee sharedInstance].delegate = self;
 ```
 
@@ -46,25 +152,36 @@ You should then perform all the required fields manipulations and pass your chan
   <TabItem value="swift" label="Swift">
 
 ```swift
-// sample code blocks are provided for async versions
-func bugseeAddFieldsBeforeReportCreated(_ completion: @escaping (BugseeReportFields) -> Void) {
-    let reportFields = BugseeReportFields("Begin;", description: "Begin;", severity: BugseeSeverityBlocker, labels: ["qa"])
+class BugseeHandler: NSObject, BugseeDelegate {
+    func bugseePrepareReportFields(completion: @escaping @Sendable (BugseeReportFields) -> Void) {
+        let fields = BugseeReportFields()
+        fields.summary = "Checkout issue"
+        fields.severity = BugseeSeverityHigh
+        fields.labels = ["checkout"]
+        completion(fields)
+    }
 
-    completion(reportFields)
+    func bugsee(finalizeReportFields report: BugseeReportFields,
+                completionHandler completion: @escaping @Sendable (BugseeReportFields) -> Void) {
+        report.summary = redact(report.summary)
+        report.reportDescription = redact(report.reportDescription)
+        completion(report)
+    }
 }
 
-func bugseeCheckFields(afterReportCreated report: BugseeReportFields, completionHandler completion: @escaping (BugseeReportFields) -> Void) {
-    report.summary = report.summary?.appending(";End")
-    report.reportDescription = report.reportDescription?.appending(";End")
-    report.severity = BugseeSeverityHigh
-    report.labels?.append("dev")
-    
-    completion(report)
-}
-
-// somewhere within the class
-Bugsee.sharedInstance()?.delegate = self
+// ...somewhere in your setup code
+Bugsee.sharedInstance()?.delegate = bugseeHandler
 ```
 
   </TabItem>
 </Tabs>
+
+The synchronous forms are `bugseeAddFieldsBeforeReportCreated` /
+`bugseePrepareReportFields()`, which returns a `BugseeReportFields`, and
+`bugseeCheckFieldsAfterReportCreated:` / `bugsee(finalizeReportFields:)`, which returns the
+changed fields.
+
+On a dialog report the order is: the report handler's `onBeforeReportCreated`, then the
+pre-fill method, which replaces the summary, description and labels it set (and the severity,
+when it returns one from 1 to 5), and the user's edits; then, once the user sends the report, `onAfterReportCreated`, then the finalize
+method.
