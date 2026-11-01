@@ -23,8 +23,8 @@ uploaded are unchanged, so it is a drop-in upgrade.
   advisories.** The components behind networking, TLS, compression and archive
   handling are now current. Upgrading is recommended for everyone.
 - **Log output is plain text unless stderr is a terminal.** Xcode and Gradle build
-  logs, CI logs and the background upload log no longer contain colour escape
-  codes. Setting a non-empty `NO_COLOR` turns colour off in a terminal too.
+  logs, CI logs and the background upload log no longer contain color escape
+  codes. Setting a non-empty `NO_COLOR` turns color off in a terminal too.
 - **Building from source needs Rust 1.89 or later.** Prebuilt binaries and the
   installers are not affected.
 - **The older `@bugsee/bugsee-cli` npm package is retired.** It receives no new
