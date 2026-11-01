@@ -1,0 +1,74 @@
+---
+title: "Overview"
+description: "What the Bugsee iOS SDK 7.x records and detects, the platforms it supports, the Swift packages it ships as, and where to find each topic."
+sidebar_position: 0
+slug: "/sdk/ios/overview"
+---
+
+The Bugsee iOS SDK captures what happened before a bug: a video of the screen, network traffic, console logs and the user's steps. It attaches them to crash, error and manual reports that you replay in the Bugsee dashboard. It runs in the background of your app, needs one line of code to start, and uploads reports on its own.
+
+This section documents **7.x**, the current release line. Upgrading from 6.x? See [Migrating from 6.x to 7.x](/sdk/ios/migration). The 6.x documentation is under [Previous versions](/sdk/ios/v6/installation/).
+
+## What Bugsee records
+
+Every report carries a synchronized timeline of the session that led up to it:
+
+- **Video** — a rolling recording of the screen, with [sensitive views, rectangles and WebView content hidden](/sdk/ios/privacy/video/).
+- **Network** — `URLSession` requests and responses, WebSocket traffic and in-WebView traffic; see [Network events](/sdk/ios/network/), with [redaction and filtering](/sdk/ios/privacy/network/).
+- **Console logs** — `print`, `NSLog`, CocoaLumberjack and your own lines; see [Console logs](/sdk/ios/logs/).
+- **Breadcrumbs** (opt-in) — navigation, taps and system events leading up to the issue; see [Breadcrumbs](/sdk/ios/breadcrumbs/).
+- **Your own data** — [events and traces](/sdk/ios/events-and-traces/), a [user identifier and attributes](/sdk/ios/user-session-data/), and attachments added in the [report handler](/sdk/ios/report-handler/).
+- **Performance (APM)** — [transactions and spans](/sdk/ios/performance/) for app start, screens, network and file I/O.
+
+## What Bugsee detects
+
+The SDK turns problems into reports automatically:
+
+- **Crashes** — signals and uncaught exceptions; see [Crashes](/sdk/ios/issue-detection/crashes/). On iOS 27 and later, the optional [Crash Report Extension](/sdk/ios/issue-detection/crash-report-extension/) adds the stacks of terminations no in-process handler can see, such as the launch watchdog and memory-limit kills.
+- **App exits**, and opt-in **hangs, HTTP errors** and more — see [Issue detection](/sdk/ios/issue-detection/).
+- **Manual reports** — let users shake the device or take a screenshot to report, or open the report dialog from code; see [Bug reporting](/sdk/ios/manual/bug-reporting/).
+
+## Requirements
+
+| Platform | Minimum version |
+| --- | --- |
+| iOS | 15.0 |
+| tvOS | 15.0 |
+| visionOS | 1.0 |
+
+Simulator builds of the SDK have no crash reporter, so crashes are not captured there. Run on a real device to test crash and error reporting.
+
+## How it ships
+
+7.x is distributed through Swift Package Manager. CocoaPods and Carthage are no longer supported.
+
+| Product | Package | What it is |
+| --- | --- | --- |
+| `Bugsee` | `https://github.com/bugsee/spm` | The core SDK. Every app needs it. |
+| `BugseeSwiftUI` | `https://github.com/bugsee/spm` | SwiftUI modifiers that hide views from the video. Links `Bugsee` too. See [SwiftUI](/sdk/ios/swiftui/). |
+| `BugseeCrashExtension` | `https://github.com/bugsee/spm` | For the app's Crash Reporter Extension target only (iOS 27 and later). See [Crash Report Extension](/sdk/ios/issue-detection/crash-report-extension/). |
+| `BugseeFeedback` | `https://github.com/bugsee/feedback-spm` | Optional in-app feedback chat. Add it at the same exact version as `Bugsee`. See [Feedback](/sdk/ios/feedback/). |
+
+For builds that cannot resolve a Swift package, such as Unity projects or frameworks embedded by hand, the same `Bugsee.xcframework` is available as a direct download. See [Installation](/sdk/ios/installation/).
+
+## How it works
+
+- **One call to start.** Call `Bugsee.launch(token:)` from your app delegate or SwiftUI `App` initializer. Capture starts off the main thread; see [Lifecycle & status](/sdk/ios/lifecycle/).
+- **Options at launch.** Every behavior is a launch option, passed as a `BugseeOptions` object or as a dictionary of `BugseeOption*` keys; see [Configuration](/sdk/ios/configuration/).
+- **Privacy on the device.** Hide views and screen areas from the video, and filter or redact network, log and breadcrumb data before it is recorded; see [Privacy](/sdk/ios/privacy/overview/).
+- **Automatic upload.** Reports are stored on the device and uploaded in the background. A crash is reported on the app's next launch.
+
+## Where to go next
+
+- [Installation](/sdk/ios/installation/) — add the package and launch the SDK.
+- [SwiftUI](/sdk/ios/swiftui/) — launch from a SwiftUI `App` and protect SwiftUI views.
+- [Configuration](/sdk/ios/configuration/) — every launch option, with its default.
+- [Lifecycle & status](/sdk/ios/lifecycle/) — stop, relaunch, SDK status and lifecycle events.
+- Manual reporting — [bug reports](/sdk/ios/manual/bug-reporting/) and [crash & error reports](/sdk/ios/manual/crash-error-reporting/) from code.
+- [Report handler](/sdk/ios/report-handler/) — change every report before it is sent.
+- Data capture — [network](/sdk/ios/network/), [console logs](/sdk/ios/logs/), [breadcrumbs](/sdk/ios/breadcrumbs/), [events & traces](/sdk/ios/events-and-traces/), [user & session data](/sdk/ios/user-session-data/).
+- [Privacy](/sdk/ios/privacy/overview/) — [video](/sdk/ios/privacy/video/), [console logs](/sdk/ios/privacy/logs/), [network](/sdk/ios/privacy/network/), [breadcrumbs](/sdk/ios/privacy/breadcrumbs/), [report fields](/sdk/ios/privacy/report/), [data cleanup](/sdk/ios/privacy/cleanup/).
+- [Feedback](/sdk/ios/feedback/), [Notification relay](/sdk/ios/notification-relay/), [Appearance](/sdk/ios/appearance/).
+- [Issue detection](/sdk/ios/issue-detection/) — [crashes](/sdk/ios/issue-detection/crashes/), [Crash Report Extension](/sdk/ios/issue-detection/crash-report-extension/), [hangs](/sdk/ios/issue-detection/hangs/), [exits](/sdk/ios/issue-detection/exits/), [main-thread misuse](/sdk/ios/issue-detection/main-thread-misuse/), [HTTP errors](/sdk/ios/issue-detection/http-errors/), [anomaly](/sdk/ios/issue-detection/anomaly/), [frustration](/sdk/ios/issue-detection/frustration/).
+- [Performance monitoring](/sdk/ios/performance/), [Crash symbolication](/sdk/ios/symbolication/), [Builds](/sdk/ios/builds/overview/).
+- [Release notes](/sdk/ios/release-notes/), [FAQ](/sdk/ios/faq/), [Migrating from 6.x](/sdk/ios/migration/).

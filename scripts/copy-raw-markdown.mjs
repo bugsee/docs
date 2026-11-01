@@ -163,6 +163,53 @@ async function main() {
   }
 
   console.log(`Copied ${copied} raw Markdown files to build/`);
+
+  const aliased = await aliasRedirectedPages();
+  console.log(`Added ${aliased} raw Markdown files for redirected pages`);
+}
+
+/**
+ * The client-redirects plugin writes an HTML page for each old route, but nothing
+ * for its raw Markdown URL, so /sdk/ios/custom.md would 404 while /sdk/ios/custom/
+ * redirects. For every redirect page in build/, write <old route>.md with the content
+ * of the target's .md (its front matter keeps the target's url).
+ */
+async function aliasRedirectedPages() {
+  let aliased = 0;
+
+  async function walk(dir) {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const fullPath = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(fullPath);
+        continue;
+      }
+      if (entry.name !== 'index.html' || dir === BUILD_DIR) continue;
+
+      const html = await readFile(fullPath, 'utf-8');
+      const refresh = html.match(/<meta http-equiv="refresh" content="0; url=([^"]+)">/);
+      if (!refresh || !refresh[1].startsWith('/')) continue;
+
+      const targetPath = join(BUILD_DIR, refresh[1].replace(/^\/+|\/+$/g, '') + '.md');
+      const aliasPath = `${dir}.md`;
+      if (!(await exists(targetPath)) || (await exists(aliasPath))) continue;
+
+      await writeFile(aliasPath, await readFile(targetPath, 'utf-8'));
+      aliased++;
+    }
+  }
+
+  await walk(BUILD_DIR);
+  return aliased;
+}
+
+async function exists(path) {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 main().catch((err) => {

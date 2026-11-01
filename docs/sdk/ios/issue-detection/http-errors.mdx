@@ -1,0 +1,89 @@
+---
+title: "HTTP errors"
+description: "Report 5xx server responses as standalone Bugsee issues from an iOS app with the Bugsee SDK 7.x."
+sidebar_position: 7
+slug: "/sdk/ios/issue-detection/http-errors"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+The **HTTP error detector** files a report when the app receives a server error, so backend regressions show up in Bugsee without anyone filing a bug. The report carries the video, logs and network events recorded up to that moment, like a report filed from code.
+
+HTTP error detection is off by default.
+
+| | |
+| --- | --- |
+| Option key | `BugseeOptionDetectAndReportHttpErrors` |
+| `BugseeOptions` property | — (set by key) |
+| Default | `NO` |
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+BugseeOptions *options = [BugseeOptions defaultOptions];
+[options updateLaunchOptions:@{
+    BugseeOptionDetectAndReportHttpErrors : @YES,
+}];
+
+[Bugsee launchWithToken:@"<your_app_token>" options:options];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+let options = BugseeOptions.default()
+options.updateLaunch([
+    BugseeOptionDetectAndReportHttpErrors: true,
+])
+
+Bugsee.launch(token: "<your_app_token>", options: options)
+```
+
+  </TabItem>
+</Tabs>
+
+## What gets flagged
+
+Only responses with a **5xx status** (500–599). Client errors (4xx) are ignored: they usually reflect normal operation — authentication, validation, a missing resource — and would drown the real problems. Requests that fail without an HTTP response (a timeout, no connection) are ignored too.
+
+The detector observes the requests Bugsee intercepts. It reads only the method, the URL and the status code, never headers or bodies, and it works whether or not [network capture](/sdk/ios/network) is on.
+
+## Deduplication
+
+Each combination of method, URL and status code is reported once per session: retries and polling of a failing endpoint file one report, not one per request. The URL is normalized first (see below), so requests that differ only in their query string count as one. Stopping Bugsee starts a new session.
+
+## URL normalization
+
+The query string and the fragment are always removed from the URL before it is used for deduplication, grouping or the report.
+
+When your app has a network filter set — `setNetworkEventFilter:` or the `bugseeFilterNetworkEvent:completionHandler:` delegate method, which tells Bugsee that your request data is sensitive — the detector also:
+
+- drops the user name and password from the URL;
+- replaces path segments that look like identifiers with a placeholder:
+
+| Segment | Placeholder |
+| --- | --- |
+| An email address | `{email}` |
+| Digits only | `{id}` |
+| A UUID | `{uuid}` |
+| 16 or more hexadecimal characters | `{hex}` |
+| 24 or more URL-safe characters, at least one of them a digit | `{token}` |
+
+Your network filter itself is not applied to these reports: the detector does its own redaction. See [Network privacy](/sdk/ios/privacy/network).
+
+## The report
+
+| Field | Value |
+| --- | --- |
+| Type | Error (non-fatal) |
+| Severity | High |
+| Summary | `HTTP 503 Service Unavailable`: the status code and its standard reason phrase, or the code alone for a non-standard one |
+| Domain | `HttpError::Server` |
+| Attributes | `http_status_code`, `http_method`, `http_url` (normalized), `http_status_text` |
+
+The issue is grouped by method, normalized URL and status code. The reason phrase is generated from the status code, in English, since iOS does not expose the one the server sent.
+
+On the simulator and Mac Catalyst, HTTP error reports are not filed.

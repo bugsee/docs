@@ -75,10 +75,12 @@ const config: Config = {
       {
         redirects: [
           // Section roots have no page of their own; send them to the first page.
-          { from: '/sdk/ios', to: '/sdk/ios/installation/' },
-          { from: '/sdk/ios/v7', to: '/sdk/ios/v7/installation/' },
+          { from: '/sdk/ios', to: '/sdk/ios/overview/' },
           { from: '/sdk/ios/builds', to: '/sdk/ios/builds/overview/' },
+          { from: '/sdk/ios/manual', to: '/sdk/ios/manual/bug-reporting/' },
           { from: '/sdk/ios/privacy', to: '/sdk/ios/privacy/overview/' },
+          { from: '/sdk/ios/v6', to: '/sdk/ios/v6/installation/' },
+          { from: '/sdk/ios/v6/privacy', to: '/sdk/ios/v6/privacy/overview/' },
           { from: '/sdk/android', to: '/sdk/android/overview/' },
           { from: '/sdk/android/manual', to: '/sdk/android/manual/bug-reporting/' },
           { from: '/sdk/android/privacy', to: '/sdk/android/privacy/overview/' },
@@ -102,6 +104,11 @@ const config: Config = {
           { from: '/sdk/android/v7/detection', to: '/sdk/android/issue-detection/' },
           { from: '/sdk/android/v7/extensions', to: '/sdk/android/extensibility/bugsee-extensions/' },
           { from: '/sdk/android/v7/manual', to: '/sdk/android/manual/bug-reporting/' },
+          // iOS pages that were split or renamed in 7.x.
+          { from: '/sdk/ios/custom', to: '/sdk/ios/user-session-data/' },
+          { from: '/sdk/ios/app-kills', to: '/sdk/ios/issue-detection/exits/' },
+          { from: '/sdk/ios/v7', to: '/sdk/ios/overview/' },
+          { from: '/sdk/ios/v7/privacy', to: '/sdk/ios/privacy/overview/' },
           // React Native 6.x pages moved under /sdk/react_native/v6/; old routes with no 7.x page keep their 6.x content.
           { from: '/sdk/react_native/custom', to: '/sdk/react_native/v6/custom/' },
           { from: '/sdk/react_native/crashes', to: '/sdk/react_native/v6/crashes/' },
@@ -117,14 +124,17 @@ const config: Config = {
           { from: '/sdk/react_native/v6', to: '/sdk/react_native/v6/installation/' },
           { from: '/sdk/react_native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
         ],
-        // Android 7.x lived under /sdk/android/v7/ until it became the default;
-        // every current Android page keeps answering at its old v7 address.
+        // Android 7.x and iOS 7.x lived under /sdk/<platform>/v7/ until they became the
+        // default; every current Android and iOS page keeps answering at its old v7 address.
         //
         // The React Native docs live under /sdk/react_native/; the hyphenated spelling is
         // what people (and the other platform URLs) naturally try.
         createRedirects(existingPath: string) {
           if (existingPath.startsWith('/sdk/android/') && !existingPath.startsWith('/sdk/android/v6/')) {
             return existingPath.replace('/sdk/android/', '/sdk/android/v7/');
+          }
+          if (existingPath.startsWith('/sdk/ios/') && !existingPath.startsWith('/sdk/ios/v6/')) {
+            return existingPath.replace('/sdk/ios/', '/sdk/ios/v7/');
           }
           if (existingPath.startsWith('/sdk/react_native/')) {
             return existingPath.replace('/sdk/react_native/', '/sdk/react-native/');

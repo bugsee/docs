@@ -11,7 +11,7 @@ This page documents Bugsee React Native SDK **7.x**, which is in beta and can ch
 
 Release history for Bugsee React Native SDK 7.x: `@bugsee/react-native` and `@bugsee/react-native-feedback`, which are released together at the same version. Looking for the stable release? See the [6.x release notes](/sdk/react_native/v6/release-notes). Upgrading from 6.x? See the [migration guide](/sdk/react_native/migration).
 
-Each release lists the native SDKs it is built on. Their own changes are in the native SDK release notes: [Android](/sdk/android/release-notes) and [iOS 7.x](/sdk/ios/v7/release-notes).
+Each release lists the native SDKs it is built on. Their own changes are in the native SDK release notes: [Android](/sdk/android/release-notes) and [iOS](/sdk/ios/release-notes).
 
 ## 7.0.0-beta3 (October 20 2026)
 

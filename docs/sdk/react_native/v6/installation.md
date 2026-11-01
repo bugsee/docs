@@ -50,7 +50,7 @@ Copy ```Bugsee.xcframework``` to your project by drag and dropping it into the r
 
 ![Copy frameworks](../../ios/copy-frameworks.png)
 
-You can also use the instructions for native iOS applications from [here](/sdk/ios/installation/) to install the native part of the Bugsee SDK for React Native.
+You can also use the instructions for native iOS applications from [here](/sdk/ios/v6/installation/) to install the native part of the Bugsee SDK for React Native.
 
 ### 3. Prepare Android project
 
@@ -100,7 +100,7 @@ export default class App extends Component<{}> {
 iOS/iPadOS: Since v6.0.0 the underlying Bugsee iOS SDK supports the simulator; crash capture is excluded. For full functionality, launch your app with Bugsee on a real device.
 :::
 
-In most cases, launching Bugsee from JavaScript code should be sufficient. However, if you prefer to launch it from native code (e.g., to catch early crashes), then you should follow the corresponding instructions for [iOS](/sdk/ios/configuration/) and [Android](/sdk/android/configuration/).
+In most cases, launching Bugsee from JavaScript code should be sufficient. However, if you prefer to launch it from native code (e.g., to catch early crashes), then you should follow the corresponding instructions for [iOS](/sdk/ios/v6/configuration/) and [Android](/sdk/android/configuration/).
 
 When launching Bugsee from native code, you have to initialize JS layer yourself. You should do that by calling `Bugsee.initialize()`. Refer to the code snippet below for an example.
 

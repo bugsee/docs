@@ -1,89 +1,233 @@
 ---
 title: "Feedback"
-description: "How to show the built-in Bugsee in-app messenger on iOS, receive new message notifications, and set a default greeting for users."
-sidebar_position: 7
+description: "Add in-app feedback chat to an iOS app with the BugseeFeedback package for Bugsee SDK 7.x — installation, registration, showing the chat, greeting and new-message callbacks."
+sidebar_position: 8
 slug: "/sdk/ios/feedback"
 ---
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Bugsee implements a built-in single-threaded messenger to allow your users to communicate with your support and developers.
+Feedback is an in-app chat your users can write to, and you answer from the Bugsee dashboard. In 7.x
+it ships as a separate Swift package, `BugseeFeedback`, on top of the core SDK: apps that do not use
+it do not carry it.
 
-## Feedback controller
+## Install the package
 
-To start the feedback controller from within your application
+Add `https://github.com/bugsee/feedback-spm` next to the core package, at **exactly the same
+version** as `Bugsee`. Each `BugseeFeedback` release is published together with the core release of
+the same version and requires exactly that version, so when you upgrade, change both together.
 
+```swift
+dependencies: [
+    .package(url: "https://github.com/bugsee/spm", exact: "7.0.0"),
+    .package(url: "https://github.com/bugsee/feedback-spm", exact: "7.0.0"),
+],
+targets: [
+    .target(
+        name: "YourApp",
+        dependencies: [
+            .product(name: "Bugsee", package: "spm"),
+            // The package identity is "feedback-spm".
+            .product(name: "BugseeFeedback", package: "feedback-spm"),
+        ]
+    ),
+]
+```
+
+In Xcode, choose **File → Add Package Dependencies…**, paste the URL and set the rule to **Exact
+Version**. `BugseeFeedback` requires iOS 15 or later, like the core SDK.
+
+## Register before launch
+
+The package registers itself with the SDK when it is loaded. That automatic registration is
+best effort — a static link without `-ObjC` can strip it — so also register it explicitly; doing
+both is harmless. Register it **before** `launchWithToken:`.
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-[Bugsee showFeedbackController];
+@import Bugsee;
+@import BugseeFeedback;
+
+[BugseeFeedback register];
+[Bugsee launchWithToken:@"<your_app_token>"];
 ```
 
   </TabItem>
   <TabItem value="swift" label="Swift">
 
 ```swift
-Bugsee.showFeedbackController()
+import Bugsee
+import BugseeFeedback
+
+BugseeFeedback.register()
+Bugsee.launch(token: "<your_app_token>")
 ```
 
   </TabItem>
 </Tabs>
 
-## Notifications
+## Show the chat
 
-To receive notifications about new messages arriving from the server, your delegate should implement the **BugseeDelegate** protocol:
-
+Present the chat wherever it fits your app — a settings screen, a support button:
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
--(void)bugsee:(Bugsee *)bugsee didReceiveNewFeedback:(NSArray<NSString *> *)messages
-{
-    ///...
-}
-
-// ..somewhere within the class
-[Bugsee sharedInstance].delegate = self;
+[[BugseeFeedback shared] showFeedbackUI];
 ```
 
   </TabItem>
   <TabItem value="swift" label="Swift">
 
 ```swift
-func bugsee(_ bugsee: Bugsee, didReceiveNewFeedback messages: [String]) {
-    ///...
-}
-
-// ..somewhere within the class
-Bugsee.sharedInstance()?.delegate = self;
+BugseeFeedback.shared.showFeedbackUI()
 ```
 
   </TabItem>
 </Tabs>
+
+The chat is presented modally over the top view controller of the key window, and can be called
+from any thread.
+
+The first time, the chat asks the user for an email address, which they can skip. The screen is
+not shown again once it has been shown — also when it was shown by a 6.x version of the app — and it is
+skipped when the [user identifier](/sdk/ios/user-session-data#user-identity) contains `@`. Messages
+are sent with the email the user gave, or else with the user identifier.
+
+While the chat is on screen it checks for new messages every 10 seconds; while it is closed,
+nothing is fetched. The conversation is cached on the device. A message that could not be sent is
+retried the next time Bugsee is launched.
 
 ## Default greeting
 
-Default greeting can be set on the server in your application settings. However, for the cases when network is not available, you can
-set default greeting on the client as well:
-
+The greeting is set in your application settings on the server. Set one on the client too, for when
+the network is not available:
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
-[Bugsee setDefaultFeedbackGreeting:@"Hi! How can we help?"];
+[[BugseeFeedback shared] setGreeting:@"Hi! How can we help?"];
 ```
 
   </TabItem>
   <TabItem value="swift" label="Swift">
 
 ```swift
-Bugsee.setDefaultFeedbackGreeting("Hi! How can we help?")
+BugseeFeedback.shared.setGreeting("Hi! How can we help?")
 ```
 
   </TabItem>
 </Tabs>
+
+## New-message callbacks
+
+To find out when messages arrive or are sent, set a listener that conforms to
+`BugseeFeedbackListener`. New messages are fetched only while the chat is on screen, so
+`onNewMessagesReceived:` is called only then: it cannot drive a badge for replies that arrive while
+the chat is closed.
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+@interface SupportBadge : NSObject <BugseeFeedbackListener>
+@end
+
+@implementation SupportBadge
+
+- (void)onNewMessagesReceived:(NSArray<NSString *> *)messages {
+    // New messages from your team
+}
+
+- (void)onNewMessageSent:(NSString *)message {
+    // The user's message was delivered
+}
+
+@end
+
+// Keep a strong reference to the listener
+[[BugseeFeedback shared] setListener:self.supportBadge];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+final class SupportBadge: NSObject, BugseeFeedbackListener {
+    func onNewMessagesReceived(_ messages: [String]) {
+        // New messages from your team
+    }
+
+    func onNewMessageSent(_ message: String) {
+        // The user's message was delivered
+    }
+}
+
+// Keep a strong reference to the listener
+BugseeFeedback.shared.setListener(supportBadge)
+```
+
+  </TabItem>
+</Tabs>
+
+- Both callbacks are called on the main thread.
+- The listener is held weakly: keep it alive yourself. Pass `nil` to remove it.
+
+## Accessing the add-on through the SDK
+
+The add-on is also reachable through the core SDK's extension registry, as a
+`BugseeFeedbackExtension`, which declares `showFeedbackUI`, `setGreeting:` and `setListener:`:
+
+<Tabs groupId="lang-ios">
+  <TabItem value="objective-c" label="Objective-C">
+
+```objectivec
+id<BugseeFeedbackExtension> feedback = [Bugsee ext:[BugseeFeedback class]];
+[feedback showFeedbackUI];
+```
+
+  </TabItem>
+  <TabItem value="swift" label="Swift">
+
+```swift
+if let feedback = Bugsee.ext(BugseeFeedback.self) as? BugseeFeedbackExtension {
+    feedback.showFeedbackUI()
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Appearance
+
+The chat and its email screen read five colors from `+[Bugsee getAppearance]`:
+`feedbackBackgroundColor`, `feedbackEmailBackgroundColor`, `feedbackEmailContinueActiveColor`,
+`feedbackEmailContinueNotActiveColor` and `feedbackEmailSkipColor`. The other `feedback…`
+properties of `BugseeTheme` are not applied. See [Appearance](/sdk/ios/appearance).
+
+## Privacy
+
+The package carries its own privacy manifest. It declares the data the chat collects: the messages
+the user types (customer support), their email address and their user ID.
+
+## Migrating from 6.x
+
+| 6.x | 7.x |
+| --- | --- |
+| `+[Bugsee showFeedbackController]` | `[BugseeFeedback.shared showFeedbackUI]` |
+| `+[Bugsee setDefaultFeedbackGreeting:]` | `[BugseeFeedback.shared setGreeting:]` |
+| `-[BugseeDelegate bugsee:didReceiveNewFeedback:]` | `-[BugseeFeedbackListener onNewMessagesReceived:]` (called only while the chat is on screen) |
+| _(not available)_ | `-[BugseeFeedbackListener onNewMessageSent:]` |
+
+See the [migration guide](/sdk/ios/migration).
+
+## Related pages
+
+- [Installation](/sdk/ios/installation)
+- [Appearance](/sdk/ios/appearance)
+- [User & session data](/sdk/ios/user-session-data)
