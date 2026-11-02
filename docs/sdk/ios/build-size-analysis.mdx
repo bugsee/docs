@@ -58,7 +58,7 @@ PART 1 — required setup
    `$CONFIGURATION` and silently skips). The script body:
 
        SCRIPT_SRC=$(find "$PROJECT_DIR" -name 'BugseeAgent' | head -1)
-       if [ ! "$SCRIPT_SRC" ]; then
+       if [ ! -f "$SCRIPT_SRC" ]; then
            echo "Error: BugseeAgent not found"
            exit 1
        fi
@@ -66,7 +66,7 @@ PART 1 — required setup
 
    For Swift Package Manager integrations, replace the `find` line
    with:
-   `SCRIPT_SRC="${BUILD_DIR%Build/*}SourcePackages/checkouts/spm/Tools/BugseeAgent"`.
+   `SCRIPT_SRC="${BUILD_DIR%/Build/*}/SourcePackages/checkouts/spm/Tools/BugseeAgent"`.
 
 3. Ask me for my Bugsee app token before substituting
    `<APP_TOKEN>` — do not guess. Don't ask me to paste the token into

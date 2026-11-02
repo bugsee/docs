@@ -32,7 +32,7 @@ Edit your scheme by going to Product->Scheme->Edit Scheme.
 
 ```sh
 SCRIPT_SRC=$(find "$PROJECT_DIR" -name 'BugseeAgent' | head -1)
-if [ ! "${SCRIPT_SRC}" ]; then
+if [ ! -f "${SCRIPT_SRC}" ]; then
     echo "Error: BugseeAgent script not found !!!"
     echo "If you link Bugsee.framework from outside the project folder, please copy the script"
     echo "into your main project directory or manually update SCRIPT_SRC variable with the right path"
@@ -45,11 +45,9 @@ python3 "${SCRIPT_SRC}" <your_app_token> >> /tmp/BugseeAgent.txt
   <TabItem value="spm" label="SPM">
 
 ```sh
-SCRIPT_SRC="${BUILD_DIR%Build/*}SourcePackages/checkouts/spm/Tools/BugseeAgent"
-if [ ! "${SCRIPT_SRC}" ]; then
-    echo "Error: BugseeAgent script not found !!!"
-    echo "If you link Bugsee.framework from outside the project folder, please copy the script"
-    echo "into your main project directory or manually update SCRIPT_SRC variable with the right path"
+SCRIPT_SRC="${BUILD_DIR%/Build/*}/SourcePackages/checkouts/spm/Tools/BugseeAgent"
+if [ ! -f "${SCRIPT_SRC}" ]; then
+    echo "Error: BugseeAgent script not found at ${SCRIPT_SRC}"
     exit 1
 fi
 python3 "${SCRIPT_SRC}" <your_app_token> >> /tmp/BugseeAgent.txt
@@ -189,7 +187,7 @@ PART 1 — required setup
    `$CONFIGURATION` and silently skips). The script body:
 
        SCRIPT_SRC=$(find "$PROJECT_DIR" -name 'BugseeAgent' | head -1)
-       if [ ! "$SCRIPT_SRC" ]; then
+       if [ ! -f "$SCRIPT_SRC" ]; then
            echo "Error: BugseeAgent not found"
            exit 1
        fi
@@ -197,7 +195,7 @@ PART 1 — required setup
 
    For Swift Package Manager integrations, replace the `find` line
    with:
-   `SCRIPT_SRC="${BUILD_DIR%Build/*}SourcePackages/checkouts/spm/Tools/BugseeAgent"`.
+   `SCRIPT_SRC="${BUILD_DIR%/Build/*}/SourcePackages/checkouts/spm/Tools/BugseeAgent"`.
 
 3. Ask me for my Bugsee app token before substituting
    `<APP_TOKEN>` — do not guess. Don't ask me to paste the token into
