@@ -20,6 +20,7 @@ This page documents Bugsee iOS SDK **6.x**, the previous major version. The curr
 - Fix: dSYM upload could fail on Python 3.14 when BugseeAgent fell back to its Python upload path.
 
 ## 6.3.0 (July 31 2026)
+- Feat: Notification relay. `Bugsee.notify` sends a title, and optionally a body, a severity and string fields, straight to your messaging integrations without creating an issue and without attaching video, logs or events. Notifications are queued on the device and uploaded in batches, so they survive going offline.
 - Feat: Opt-in adaptive screen capture — lowers the video frame rate when the UI is idle (`BugseeCaptureVideoAdaptiveKey` / `CaptureVideoAdaptive`, default: NO).
 - Fix: iOS 27 compatibility improvements.
 - Fix: Rare screen-capture issues with zero-size layers.
