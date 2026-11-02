@@ -235,7 +235,6 @@ Some keys are accepted by one SDK only; the other SDK does not recognize them. `
 | `com.bugsee.option.capture.websocket` | boolean | `true` | Record WebSocket traffic; see [Network events](/sdk/react_native/network#websocket-traffic). |
 | `com.bugsee.option.config.build-target` | string | none | Build target name, sent with reports. |
 | `com.bugsee.option.config.build-type` | string | none | Build type, such as `debug` or `release`, sent with reports. |
-| `com.bugsee.option.config.data-encryption` | number | `0` | Encryption of the collected data: `0` none, `1` on device (keys kept in the Secure Enclave), `2` end to end (decrypted only on the server, so some features, such as the video preview, are missing). The package exports no constants for it. |
 | `com.bugsee.option.detect.crash.fill_empty_exception_stacks` | boolean | `false` | Fill in the stack of an uncaught `NSException` that has none from the crashing thread. This can change how crashes are grouped. |
 | `com.bugsee.option.detect.crash.swift_async_stacktraces` | boolean | `true` | Stitch Swift async frames into the stacks of C++ exceptions. |
 | `com.bugsee.option.reporting.ui.style` | number | `3` | Style of the report UI: `0` Light, `1` Dusk, `2` based on the status bar, `3` the system style. The package exports no constants for it. |
