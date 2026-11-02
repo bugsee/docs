@@ -25,8 +25,7 @@ changed since 7.0.0-beta7.
   `registerExt:`, `BugseeCommunicationManager`, `BGSOptionsContainer` and the
   `BGSLifecycleEvent*` names. App code keeps `Bugsee.ext(_:)`. Headers that were never app
   API, such as `BGSContracts.h`, and the unprefixed protocol and type aliases they declared,
-  are no longer public. `BGSAppearance` is removed (use `+[Bugsee getAppearance]`), and the data
-  encryption option and `BugseeDataEncryptionMode` are no longer in the public headers.
+  are no longer public. `BGSAppearance` is removed (use `+[Bugsee getAppearance]`).
 - `BugseeOptionConfigMaxDataSize` now limits the disk space taken by reports waiting to be
   sent, and its default rises from 50 to 150 MB. Past the limit the oldest reports are deleted
   whole: errors first, then bug reports, then crashes. The newest crash is always kept.
