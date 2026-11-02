@@ -388,8 +388,10 @@ list of API changes and the order to apply them in.
 - Feat: Blackout. `startBlackout` / `endBlackout` suppress everything that describes the
   screen — video, the report screenshot, touches and the view hierarchy — while logs,
   network events and traces keep being captured.
-- Feat: Notification relay. `Bugsee.notify` sends a message straight to your messaging
-  integrations without creating an issue and without attaching video, logs or events.
+- Feat: Notification relay gains an `urgent:` overload, which skips ahead of the queue and posts
+  that one notification right away when the network is available, and
+  `BugseeOptionConfigNotifyFlushDelay`, which sets how long to wait before flushing the queue
+  (default `0`; 6.x always waited one second). `Bugsee.notify` itself shipped in 6.3.0.
 - Feat: New issue detection — hangs, HTTP errors, main-thread misuse, anomalies and
   frustration, each behind its own `BugseeOptionDetect*` option.
 - Feat: User identity. `setUserIdentifier:` / `getUserIdentifier` / `clearUserIdentifier`
