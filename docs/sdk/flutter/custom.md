@@ -13,7 +13,7 @@ When you already have your users identified within your app, you might want to a
 // setting email
 Bugsee.setEmail('name@example.com');
 
-// getting email, null will be returned if email was not set.
+// getting email, an empty string will be returned if email was not set.
 email = await Bugsee.getEmail();
 
 // clearing email
