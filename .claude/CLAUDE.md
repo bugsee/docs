@@ -76,4 +76,4 @@ All markdown content, organized by section:
 - **Navigation**: Defined in `sidebars.ts` — new pages must be added there
 - **Search**: Local client-side via `@easyops-cn/docusaurus-search-local`
 - **Raw Markdown**: Every page is available as `.md` at its URL (e.g., `/sdk/ios/installation.md`) for AI agent consumption
-- **Node**: Requires Node.js >= 20
+- **Node**: Requires Node.js >= 20.18.1
