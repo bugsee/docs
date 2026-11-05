@@ -37,7 +37,7 @@ export default class App extends Component<{}> {
 
     bugseeOptions.shakeToReport = true;
     bugseeOptions.reportPrioritySelector = true;
-    bugseeOptions.defaultBugPriority = Bugsee.BugseeSeverityLevel.Critical;
+    bugseeOptions.defaultBugPriority = Bugsee.Severity.Critical;
 
     Bugsee.launch("<your token>", bugseeOptions);
   }
