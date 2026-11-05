@@ -67,7 +67,7 @@ Bugsee.Relaunch(options);
 |---|---|---|
 |CaptureLogs|true|Automatically capture all console logs|
 |CrashReport|true|Catch and report application crashes (\*)|
-|DefaultBugPriority|High|Default priority for bugs|
+|DefaultBugPriority|Low|Default priority for bugs|
 |DefaultCrashPriority|Blocker|Default priority for crashes|
 |KillDetection|false|Detect abnormal termination (experimental, [read more](/sdk/ios/v6/app-kills/))|
 |MaxRecordingTime|60|Maximum recording duration|
