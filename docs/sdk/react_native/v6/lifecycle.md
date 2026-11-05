@@ -17,7 +17,7 @@ You should call **Bugsee.setLifecycleEventHandler** and provide the callback tha
 
 ```javascript
 /**
-    For eventType definition, refer to {@see Bugsee.LifecycleEventTypes} in
+    For eventType definition, refer to {@see Bugsee.LifecycleEventsTypes} in
     "index.ts" in bugsee-react-native package.
 */
 Bugsee.setLifecycleEventHandler((eventType) => {
