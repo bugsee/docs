@@ -71,7 +71,7 @@ The full set of detection options is documented on each detector's own page in [
 | `Options` constant | Manifest key | Type | Default | Description |
 | --- | --- | --- | --- | --- |
 | `DetectAndReportCrash` | `com.bugsee.option.detect.crash` | boolean | `true` | Catch unhandled Java/Kotlin exceptions and report them as crashes. |
-| `DetectAndReportEarlyCrash` | `com.bugsee.option.detect.early-crash` | boolean | `false` | Also catch crashes that happen very early in startup, before the SDK is fully attached. |
+| `DetectAndReportEarlyCrash` | `com.bugsee.option.detect.early-crash` | boolean | `true` | Recover crashes that happen during app startup, before the first Activity is visible: the crash is detected on the next launch and its report is flushed first. Also drives the `RelaunchedAfterCrash` lifecycle event. |
 | `DetectAndReportHang` | `com.bugsee.option.detect.hang` | boolean | `false` | Detect and report when the main (UI) thread is blocked long enough to count as a hang. |
 | `DetectAndReportHangFairLevel` | `com.bugsee.option.detect.hang.level.fair` | int (ms) | `3000` | Main-thread block duration that triggers a "Fair"-severity hang report. Must be smaller than the Medium level; detection resolution is roughly 1 s. |
 | `DetectAndReportHangMediumLevel` | `com.bugsee.option.detect.hang.level.medium` | int (ms) | `5000` | Main-thread block duration that triggers a "Medium"-severity hang report. Must sit between the Fair and Severe levels. |
