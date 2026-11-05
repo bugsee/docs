@@ -7,6 +7,30 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.4.2
+
+A lifecycle and privacy release. `relaunch()` always reports its outcome, and secure fields stay
+masked in more situations while they scroll, animate or are removed.
+
+- **`relaunch()` always calls back.** Before, the completion callback was skipped when the SDK was
+  not launched, so a caller could not tell a refused relaunch from a slow one. A relaunch that
+  cannot run (the SDK is not launched, is launching or is stopping) now calls back with `false`. A
+  second `relaunch()` while one is in progress joins it and receives its outcome.
+- **`stop()` cancels a pending relaunch.** Calling `stop()` while a relaunch is stopping the SDK,
+  or in the gap before it launches again, now leaves the SDK stopped. Before, the relaunch
+  launched it again afterwards.
+- **Secure fields stay masked while they move.** A password field that scrolls, is flung in a
+  list, is removed, or sits in a screen that transitions or pans for the keyboard is masked in the
+  recorded video along its whole path, including a short margin around it and a brief trail after
+  it moves or disappears. Before, strips of a field could appear next to the mask in those frames.
+- **Secure-field rectangles follow what is on screen.** A field that is partly scrolled under a
+  bottom bar no longer swallows taps on the bar, so those taps are no longer dropped from the
+  report, and a field that was re-attached without a new layout pass (for example in
+  `react-native-screens` tabs) is masked again.
+- **Lower cost of masking.** Overlapping secure-mask rectangles are merged before they are
+  painted, so a list of secure rows no longer makes frame masking several times more expensive
+  while it scrolls. The pixels that are masked do not change.
+
 ## 7.4.1
 
 A single fix for touch capture.
