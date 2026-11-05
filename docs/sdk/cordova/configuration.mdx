@@ -83,7 +83,6 @@ Bugsee.launch("<your token>", bugseeOptions);
 |crashReport|true|Catch and report application crashes|
 |defaultBugPriority|High|Default priority for bugs|
 |defaultCrashPriority|Blocker|Default priority for crashes|
-|extendedVideoMode|true|Enables or disables the use of MediaProjection API (\*\*)|
 |frameRate|High|Specifies how often frames are captured|
 |logLevel|Verbose|Minimal log level of Logcat messages, which will be attached to report|
 |maxDataSize|50|Maximum disk space consumed by Bugsee|
@@ -95,10 +94,11 @@ Bugsee.launch("<your token>", bugseeOptions);
 |serviceMode|false|Used, when Bugsee is launched from service. No video and no visual controls available. Recording continues even in background.|
 |shakeToReport|false|Shake gesture to trigger report|
 |videoEnabled|true|Enable video recording|
+|videoMode|V3|Screen capture mechanism: `Bugsee.VideoMode.None`, `V1`, `V2` or `V3` (\*\*)|
 |wifiOnlyUpload|false|Upload reports only when a device is connected to a WiFi network|
 
 :::warning
-** If extendedVideoMode is set to true, the MediaProjection API is used while recording video. In this case, all types of views are recorded, but the user is asked to allow video recording. If false (experimental), the view drawing cache is used to capture the screen. In this case, the user is not asked to allow video recording, but the frame rate is lower and some special views like the status bar, soft keyboard, and views that contain Surface (MapView, VideoView, GlSurfaceView, etc.) are not recorded. This option has no effect if the VideoEnabled option is set to false.
+** If videoMode is set to V2, the MediaProjection API is used while recording video. In this case, all types of views are recorded, but the user is asked to allow video recording. If V1, the view drawing cache is used to capture the screen. In this case, the user is not asked to allow video recording, but the frame rate is lower and some special views like the status bar, soft keyboard, and views that contain Surface (MapView, VideoView, GlSurfaceView, etc.) are not recorded. V3 (experimental, Android API level 24 and higher) does not ask for permission either, but system views like the status bar and soft keyboard are not recorded. This option has no effect if the VideoEnabled option is set to false.
 :::
 
 
