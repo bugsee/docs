@@ -10,10 +10,10 @@ slug: "/sdk/unity/manual"
 In addition to detection of a shake gesture or launching with notification bar item, report view can be triggered programmatically:
 
 ```csharp
-BugseePlugin.Bugsee.ShowReportDialog();
+BugseePlugin.Bugsee.ShowReport();
 
 // or pre-fill some fields, user will be able to modify them
-BugseePlugin.Bugsee.ShowReportDialog("Pre-filled summary",
+BugseePlugin.Bugsee.ShowReport("Pre-filled summary",
 										"Pre-filled description",
 										BugseePlugin.BugseeSeverityLevel.Critical);
 ```
