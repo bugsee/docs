@@ -9,6 +9,21 @@ Release history for Bugsee iOS SDK 7.x. Looking for the previous major version? 
 [6.x release notes](/sdk/ios/v6/release-notes). See the
 [migration guide](/sdk/ios/migration) when planning your upgrade from 6.x.
 
+## 7.0.1 (November 3 2026)
+
+### iOS SDK
+
+**Fixes**
+
+- Fix: A crash or app-exit report recovered at the next launch now starts where the run's
+  recording began, and no traces are lost. The last second before the crash, including the
+  tap that caused it, is no longer cut off.
+- Fix: Internal improvements.
+
+### BugseeFeedback module
+
+- No API or behavior changes.
+
 ## 7.0.0 (October 30 2026)
 
 The first stable release of the 7.x line. Coming from 6.x, follow the
