@@ -7,7 +7,7 @@ features, 30+ integration providers, webhooks, and MCP.
 
 ## Prerequisites
 
-- Node.js >= 20
+- Node.js >= 20.18.1
 
 ## Local development
 
