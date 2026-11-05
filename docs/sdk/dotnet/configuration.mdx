@@ -132,7 +132,6 @@ namespace YourNameSpace
 |DefaultCrashPriority|Blocker|Default priority for crashes|
 |DetectAppExit|false|Detect any kind of process termination \(e.g. when user swipes off the application from multitasking UI, or when system unloads the app due to memory pressure\). Special error report is generated for this scenario with "BugseeAppExit" domain|
 |FrameRate|BugseeFrameRate.High|Specifies how often frames are captured|
-|ExtendedVideoMode|false|Enables or disables the use of MediaProjection API (\*\*)|
 |LogLevel|Verbose|Minimal log level of Logcat messages, which will be attached to report|
 |MaxDataSize|50|Maximum disk space consumed by Bugsee|
 |MaxNetworkBodySize|5120|The limit above which network requests bodies will not be captured. Specified in bytes.|
@@ -147,11 +146,12 @@ namespace YourNameSpace
 |ServiceMode|false|Used, when Bugsee is launched from service. No video and no visual controls available. Recording continues even in background.|
 |ShakeToReport|false|Shake gesture to trigger report|
 |VideoEnabled|true|Enable video recording|
+|VideoMode|V3|Screen capture mechanism: `BugseeAndroidVideoMode.None`, `V1`, `V2` or `V3` (\*\*)|
 |ViewHierarchyEnabled|true|Capture view hierarchy for bug and error reports|
 |WifiOnlyUpload|false|Upload reports only when a device is connected to a WiFi network|
 
 :::warning
-** If ExtendedVideoMode is set to true, MediaProjection API is used, while recording video. In this case all types of views are recorded, but user is asked to allow video recording. If false (experimental), view drawing cache is used to capture the screen. In this case user is not asked to allow video recording, but frame rate is lower and some special views like status bar, soft keyboard and views, which contain Surface (MapView, VideoView, GlSurfaceView, etc.) are not recorded. Option has no effect, if VideoEnabled option is set to false.
+** If VideoMode is set to V2, MediaProjection API is used, while recording video. In this case all types of views are recorded, but user is asked to allow video recording. If V1, view drawing cache is used to capture the screen. In this case user is not asked to allow video recording, but frame rate is lower and some special views like status bar, soft keyboard and views, which contain Surface (MapView, VideoView, GlSurfaceView, etc.) are not recorded. V3 (experimental, Android API level 24 and higher) does not ask for permission either, but system views like status bar and soft keyboard are not recorded. Option has no effect, if VideoEnabled option is set to false.
 :::
 
 
