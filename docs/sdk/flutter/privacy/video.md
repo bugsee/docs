@@ -15,13 +15,11 @@ You can temporarily black out the whole video and stop recording touch events, w
 
 ```dart
 // Black out the video
-Bugsee.startBlackout();
+Bugsee.pause();
 
 // Resume normal video recording
-Bugsee.endBlackout();
+Bugsee.resume();
 ```
-
-> **Note:** ```Bugsee.pause()``` and ```Bugsee.resume()``` are deprecated aliases of ```Bugsee.startBlackout()``` and ```Bugsee.endBlackout()```.
 
 ## Protecting flutter views
 
