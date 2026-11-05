@@ -12,10 +12,11 @@ import TabItem from '@theme/TabItem';
 
 `bugsee-cli` is a single, cross-platform command-line tool that handles the
 build-time side of Bugsee: it uploads **debug information files** (R8/ProGuard
-mappings, native ELF symbols, Apple dSYMs, JavaScript source maps), uploads
-**build artefacts** for size analysis, packages **build-info** metadata, and
-resolves **build-environment metadata** (VCS, CI provider, iOS dependency graph,
-Xcode version, Mach-O UUIDs) — all from one binary.
+mappings, native ELF symbols, Apple dSYMs, JavaScript source maps, Unity IL2CPP
+line maps, Unity Mono portable PDBs), uploads **build artefacts** for size
+analysis, packages **build-info** metadata, and resolves **build-environment
+metadata** (VCS, CI provider, iOS dependency graph, Xcode version, Mach-O
+UUIDs) — all from one binary.
 
 It is the canonical origin for everything Bugsee needs at build time. The
 per-build-system integrations (the Android Gradle plugin, the iOS SDK's build
@@ -34,7 +35,7 @@ themselves.
 
 | Area | Commands |
 |---|---|
-| Debug information files | [`debug-files upload`](/cli/debug-files/) |
+| Debug information files | [`debug-files upload`](/cli/debug-files/), [`debug-files convert`](/cli/debug-files/#convert-without-uploading) |
 | JavaScript source maps | [`sourcemaps inject`](/cli/sourcemaps/) + `debug-files upload --type sourcemaps` |
 | Build artefacts & metadata | [`upload build`](/cli/builds/), [`upload build-info`](/cli/builds/), [`pack`](/cli/builds/) |
 | iOS build publishing | [`xcode post-action`](/cli/xcode/), [`xcode upload-dsyms`](/cli/xcode/#xcode-upload-dsyms) |

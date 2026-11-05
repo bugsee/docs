@@ -32,7 +32,8 @@ See [Configuration](/cli/configuration/) for details.
 
 | Command | What it does | Guide |
 |---|---|---|
-| `debug-files upload` | Discover, package, and upload debug information files (ProGuard, ELF, dSYM, source maps). | [Debug files](/cli/debug-files/) |
+| `debug-files upload` | Discover, package, and upload debug information files (ProGuard, ELF, dSYM, source maps, Unity IL2CPP line maps, Unity Mono portable PDBs). | [Debug files](/cli/debug-files/) |
+| `debug-files convert` | Convert .NET assemblies and their portable PDBs to BMF files, without uploading. CLI 0.9.0+. | [Debug files](/cli/debug-files/#convert-without-uploading) |
 | `sourcemaps inject` | Inject deterministic debug IDs into JS bundles and their `.map` files. | [Source maps](/cli/sourcemaps/) |
 | `upload build` | Register a build and upload its artefact (single-PUT or chunked). | [Builds](/cli/builds/#upload-build) |
 | `upload build-info` | Upload per-build metadata sidecars in one bundle. | [Builds](/cli/builds/#upload-build-info) |

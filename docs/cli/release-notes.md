@@ -12,6 +12,48 @@ Release history for the Bugsee CLI (`bugsee-cli`). To install or upgrade, see
 Android Gradle plugin and the iOS build scripts keep the CLI they manage up to
 date for you.
 
+## 0.9.x
+
+### 0.9.0 (November 4 2026)
+
+Unity Mono Release builds can now be symbolicated. A panic is mapped to the
+exit-code contract instead of 101, and `update` on Windows no longer leaves
+leftover binaries behind.
+
+- **Unity Mono Release builds now symbolicate: `debug-files upload --type
+  portable-pdb` and `convert --to bmf`.** A Unity Mono Release build ships no
+  pdb, so the runtime prints a managed frame as `at Ns.Class.Method (args)
+  [0x0000b] in:0`. The CLI pairs each assembly the compiler produced with its
+  portable pdb, converts them to a BMF mapping keyed by method signature and IL
+  offset, and uploads it under the module id (MVID) the app actually ships.
+  `--shipped-dir` covers the builds whose linker rewrites the assemblies
+  (managed stripping Low or higher): the BMF is keyed by the shipped MVID. A
+  pdb that does not belong to its assembly exits `11` and uploads nothing, and
+  a failed run leaves no partial set of results. The matching worker is
+  deployed to staging. This is a new capability: an integrator must raise its
+  minimum CLI version to 0.9.0 before using it. See
+  [Unity Mono](/cli/debug-files/#unity-mono).
+- **`bugsee-cli update` on Windows no longer accumulates leftover binaries.**
+  The updater's helper makes one attempt to delete the old binary after it
+  exits and never retries, so a file scanner holding it at that moment left an
+  8 MB copy in `%TEMP%` for good, once per update. `update` now removes such
+  leftovers from earlier runs before replacing itself (only this binary's own
+  names, with the exact 32-letter random part; errors ignored). Windows only;
+  nothing changes on macOS or Linux. See [Updating the CLI](/cli/update/).
+- **A Rust panic no longer exits 101.** 101 is outside the
+  [exit-code contract](/cli/exit-codes/), so every integrator read it as a
+  substantive failure and did not fall back. A panic is now caught in `main`
+  and mapped by phase. Before any network request was sent (a read-only GET
+  counts too, so the answer errs towards "may have been sent") it exits **1**
+  (`Unexpected`), which every integrator already treats as "fall back". Once a
+  request may have been sent it exits the new code **50**
+  (`InternalAfterSend`): the server's state is unknown, so nothing may redo the
+  work blindly (a build registration would be duplicated). 50 is in the
+  reserved no-fallback range, so an older integrator treats it as a substantive
+  failure, exactly as it treated 101. A panic inside source-map strip/pack is
+  classified the same way. The message and location still go to stderr. No
+  other exit code changes.
+
 ## 0.8.x
 
 ### 0.8.2 (October 30 2026)

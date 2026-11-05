@@ -22,6 +22,16 @@ replaces the current executable (so even the Windows running-`.exe` case works).
 The download is verified **before** the running binary is replaced, so a failed
 or corrupt download never leaves you with a broken install.
 
+### Windows leftover binaries
+
+*(CLI 0.9.0 and newer.)* On Windows, the helper that swaps the running `.exe`
+makes one attempt to delete the old binary after `update` exits and never
+retries. A file scanner holding that file at that moment used to leave an 8 MB
+copy in `%TEMP%` for good, once per update. `update` now removes such leftovers
+from earlier runs **before** replacing itself — only this binary's own names,
+with the exact 32-letter random part; errors are ignored. Windows only; nothing
+changes on macOS or Linux.
+
 ## Options
 
 | Option | Description |
