@@ -58,7 +58,7 @@ export default class App extends Component<{}> {
 
     const bugseeOptions = new Bugsee.AndroidLaunchOptions();
 
-    bugseeOptions.shakeToTrigger = true;
+    bugseeOptions.shakeToReport = true;
     bugseeOptions.notificationBarTrigger = false;
 
     Bugsee.launch("<your token>", bugseeOptions);
@@ -121,7 +121,7 @@ Note that when you launch Bugsee, it starts working in background with the speci
 |reportPrioritySelector|false|Allow user to modify priority when reporting manually|
 |screenshotEnabled|true|Attach screenshot to a report|
 |serviceMode|false|Used, when Bugsee is launched from service. No video and no visual controls available. Recording continues even in background.|
-|shakeToTrigger|false|Shake gesture to trigger report|
+|shakeToReport|false|Shake gesture to trigger report|
 |videoEnabled|true|Enable video recording|
 |videoMode|VideoMode.V3|Specifies video recording mode. Available options are: VideoMode.V1, VideoMode.V2, VideoMode.V3|
 |wifiOnlyUpload|false|Upload reports only when a device is connected to a WiFi network|
