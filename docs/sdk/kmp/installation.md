@@ -33,7 +33,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation("com.bugsee:bugsee-kotlin-multiplatform:0.1.1")
+            implementation("com.bugsee:bugsee-kotlin-multiplatform:0.1.2")
         }
     }
 }
