@@ -77,7 +77,7 @@ Future<void> main() async {
 |monitorNetwork|true|Capture network traffic. Dart traffic additionally requires installing the HTTP overrides handler — see [Network capture](/sdk/flutter/network/)|
 |reportPrioritySelector|false|Allow user to modify priority when reporting manually|
 |screenshotToReport|true|Screenshot key to trigger report|
-|shakeToReport|false|Shake gesture to trigger report|
+|shakeToReport|true|Shake gesture to trigger report|
 |style|Default|Enumeration of Default, Dark and BasedOnStatusBar
 |videoEnabled|true|Enable video recording|
 |videoScale|1.0|Custom video scale|
@@ -105,9 +105,9 @@ Future<void> main() async {
 |reportPrioritySelector|false|Allow user to modify priority when reporting manually|
 |screenshotEnabled|true|Attach screenshot to a report|
 |serviceMode|false|Used, when Bugsee is launched from service. No video and no visual controls available. Recording continues even in background.|
-|shakeToTrigger|false|Shake gesture to trigger report|
+|shakeToReport|true|Shake gesture to trigger report|
 |videoEnabled|true|Enable video recording|
 |videoScale|1.0|Custom video scale|
 |wifiOnlyUpload|false|Upload reports only when a device is connected to a WiFi network|
-|captureDeviceAndNetworkNames|true|Capture device name, wifi SSID and mobile carrier name.|
+|captureDeviceAndNetworkNames|false|Capture device name, wifi SSID and mobile carrier name.|
 |viewHierarchyEnabled|true|Enable View hierarchy capturing|
