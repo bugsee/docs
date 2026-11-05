@@ -13,19 +13,19 @@ Video recording can be disabled completely using **VideoEnabled** launch option.
 
 Bugsee allows hiding screen area by absolute coordinates as well:
 
-RectInt you make must be in pixels, with 0,0 coordinates in top left corner.
+Rect you make must be in pixels, with 0,0 coordinates in top left corner.
 
 ```csharp
-Bugsee.AddSecureRect(new RectInt(10,10,100,100));
+Bugsee.AddSecureRect(new Rect(10, 10, 100, 100));
 
 // Other methods
 // Remove secure Rect
-Bugsee.RemoveSecureRect(new RectInt(10, 10, 100, 100));
+Bugsee.RemoveSecureRect(new Rect(10, 10, 100, 100));
 
 // Remove all rectangles
 Bugsee.RemoveAllSecureRects();
 
-// Get all rectangles (RectInt[])
+// Get all rectangles (Rect[])
 Bugsee.GetAllSecureRects();
 ```
 
