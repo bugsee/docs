@@ -12,7 +12,6 @@ slug: "/sdk/unity/versions"
 ## All releases
 
 - [6.0.2](https://download.bugsee.com/sdk/unity/BugseeUnity-6.0.2.unitypackage)
-- [6.0.0](https://download.bugsee.com/sdk/unity/BugseeUnity-6.0.0.unitypackage)
 - [5.3.9](https://download.bugsee.com/sdk/unity/BugseeUnity-5.3.9.unitypackage)
 - [5.3.8](https://download.bugsee.com/sdk/unity/BugseeUnity-5.3.8.unitypackage)
 - [5.3.7](https://download.bugsee.com/sdk/unity/BugseeUnity-5.3.7.unitypackage)
