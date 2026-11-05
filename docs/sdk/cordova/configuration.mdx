@@ -25,7 +25,7 @@ var bugseeOptions = new Bugsee.IOSLaunchOptions();
 
 bugseeOptions.shakeToReport = true;
 bugseeOptions.reportPrioritySelector = true;
-bugseeOptions.defaultBugPriority = Bugsee.BugseeSeverityLevel.Critical;
+bugseeOptions.defaultBugPriority = Bugsee.Severity.Critical;
 
 Bugsee.launch("<your token>", bugseeOptions);
 ```
