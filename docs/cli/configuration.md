@@ -47,7 +47,7 @@ self-hosted or regional deployments.
 
 The endpoint is used only by the upload-flavoured subcommands. The metadata
 resolvers (`vcs-metadata`, `ios-deps`, `build-env`, `dsym`, `sourcemaps inject`)
-do no network I/O and ignore it.
+do no network I/O and ignore it, as do `pack` and `debug-files convert`.
 
 ## Flags vs. environment variables
 

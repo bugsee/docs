@@ -22,11 +22,20 @@ can't do the job.
 | `20–29` | Configuration problems (bad token, invalid flags). | no |
 | `30–39` | Upload problems (network, server 4xx/5xx). | no |
 | `40` | Size-check failed (the `xcode post-action` in-build size gate). | no |
+| `41–49` | Reserved. | no |
+| `50` | Internal error: the CLI panicked **after** a request may have been sent (`InternalAfterSend`). Server state is unknown; do not redo the work. A panic **before** any request (a read-only GET counts) exits `1` (`Unexpected`) instead. Never `101`. *(CLI 0.9.0+)* | no |
+| `51+` | Reserved. | no |
 
 The fallback rule: codes ≤ `2` mean the CLI never got a fair chance to run, so a
 caller may retry with its own uploader; codes ≥ `10` are substantive failures
 the in-language uploader would hit the same way, so falling back would just
-fail again.
+fail again. `50` is in that no-fallback range, so an older integrator that
+never heard of it still treats it as a substantive failure — the same way it
+treated `101`.
+
+A panic is caught in `main` and mapped by phase as above. The message and
+location still go to stderr. A panic during source-map strip/pack is classified
+the same way. No other exit code changed in 0.9.0.
 
 ## Resolvers exit 0 even on "no result"
 

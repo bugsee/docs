@@ -1,6 +1,6 @@
 ---
 title: "Uploading debug information files"
-description: "Upload R8/ProGuard mappings, native ELF symbols, and Apple dSYMs to Bugsee with bugsee-cli debug-files upload."
+description: "Upload R8/ProGuard mappings, native ELF symbols, Apple dSYMs, and Unity Mono portable PDBs to Bugsee with bugsee-cli debug-files upload."
 sidebar_position: 3
 slug: "/cli/debug-files"
 ---
@@ -29,9 +29,10 @@ relevant debug files for the chosen type.
 | `sourcemaps` | JavaScript source maps | See [Source maps](/cli/sourcemaps/). |
 | `rust` | Rust (Cargo) build output | Discovers whichever format the target emitted. See [Rust](#rust-cargo). |
 | `il2cpp-linemap` | Unity IL2CPP line-number mappings | See [Unity IL2CPP](#unity-il2cpp). |
+| `portable-pdb` | Unity Mono / .NET portable PDBs | Converted to a BMF mapping. CLI 0.9.0+. See [Unity Mono](#unity-mono). |
 
-Other types (`pe`, `portable-pdb`, `breakpad`, `jvm`, `wasm`, `sourcebundle`)
-are recognised by the discovery layer but not yet processed.
+Other types (`pe`, `breakpad`, `jvm`, `wasm`, `sourcebundle`) are recognised by
+the discovery layer but not yet processed.
 
 ## Common options
 
@@ -40,7 +41,7 @@ are recognised by the discovery layer but not yet processed.
 | `--version <VERSION>` | App version (Android `versionName`) recorded on the symbol document. |
 | `--build <BUILD>` | Build number (Android `versionCode`) recorded on the symbol document. |
 | `--type <TYPE>` | Restrict discovery to a specific debug-file type (default `proguard`). |
-| `--uuid <UUID>` | Override the auto-computed debug-id with a caller-supplied UUID. **Required** for `--type elf` (the SDK `BUILD_UUID`; each library is still keyed by GNU build-id). Rejected for `--type dsym`, `pdb`, and `rust`. |
+| `--uuid <UUID>` | Override the auto-computed debug-id with a caller-supplied UUID. **Required** for `--type elf` (the SDK `BUILD_UUID`; each library is still keyed by GNU build-id). Rejected for `--type dsym`, `pdb`, `portable-pdb`, and `rust`. |
 | `--icon <ICON>` | Attach a launcher icon to the symbol zip (entry `icon.<ext>`). |
 | `--zstd-level <N>` | Zstd level `9..=22` (default `11`); or pass `--no-zstd`. |
 | `--force` | Re-upload even if the server already has the symbol. |
@@ -51,6 +52,7 @@ are recognised by the discovery layer but not yet processed.
 | `--extension <SUFFIX>` | *(CLI 0.7.12+)* Also pick up files whose name ends in `SUFFIX`, on top of the names the `--type` already knows. See [Extra file suffixes](#extra-file-suffixes). |
 | `--il2cpp-uuid <UUID>` | *(`--type il2cpp-linemap` only)* Additional module UUID for a multi-ABI build. |
 | `--il2cpp-root <PATH>` | *(`--type il2cpp-linemap` only)* Path to `il2cppFileRoot.txt` when it isn't beside the JSON. |
+| `--shipped-dir <DIR>` | *(`--type portable-pdb` only, CLI 0.9.0+)* Directory of the assemblies the app actually ships, when the linker rewrote them. See [Unity Mono](#unity-mono). |
 
 `--concurrency`, `--allow-empty` and `--strip-sources-content` are **rejected with
 exit `20`** for any other `--type`, rather than accepted and ignored — so a caller
@@ -75,7 +77,9 @@ name, so multi-part suffixes work. They only widen the *name* match: each type's
 content check still applies (an ELF still needs a GNU build-id, a PDB the MSF
 container, a dSYM its `DWARF` folder), and stylesheet and type-declaration source
 maps are still skipped under the new spelling. An empty, dot-only or path-like
-value is a configuration error (exit `20`).
+value is a configuration error (exit `20`). `--type portable-pdb` takes no extra
+suffixes (an assembly is `X.dll` beside `X.pdb`); passing `--extension` is an
+error.
 
 ## Re-uploads and missing paths
 
@@ -270,6 +274,74 @@ non-negative integer line numbers (an optional top-level `__debug-id__` entry is
 ignored). A truncated, empty or wrong file exits `11` with a message naming the
 file and the problem — also in a dry run — instead of uploading a map that can't
 symbolicate anything.
+
+## Unity Mono
+
+*(CLI 0.9.0 and newer.)* A Unity Mono Release build ships no pdb, so the runtime
+prints a managed frame as `at Ns.Class.Method (args) [0x0000b] in:0`: a method,
+an IL offset, and a module id (MVID), with no file or line. `--type portable-pdb`
+takes the compiler's output (a `.dll` and its portable `.pdb`, found under the
+given directories, for example `Library/Bee/artifacts/...`) and uploads a BMF
+mapping keyed by that module id, so the server can turn the frame into
+`File.cs:42`. An integrator must raise its minimum CLI version to 0.9.0 before
+using this type.
+
+```bash
+# stripping Disabled: the shipped dll is the compiler's, one directory is enough
+bugsee-cli debug-files upload Library/Bee/artifacts/1300b0aP.dag \
+    --type portable-pdb --version 1.2.3 --build 45
+
+# stripping Low or higher: the linker rewrote the dlls (a new module id)
+bugsee-cli debug-files upload Library/Bee/artifacts/1300b0aP.dag \
+    --type portable-pdb --version 1.2.3 --build 45 \
+    --shipped-dir Library/Bee/artifacts/Android/ManagedStripped
+```
+
+`--shipped-dir` is the directory holding the assemblies the app actually ships
+(`Library/Bee/artifacts/Android/ManagedStripped`, or `assets/bin/Data/Managed`
+of an unpacked APK). Each `X.dll` under the paths is paired with the `X.dll`
+there, and the mapping is registered under **that** module id — the one the
+runtime prints. Methods are matched by full signature and IL offset, never by
+metadata token (the linker renumbers those). Methods the build removed, or whose
+IL size changed, are left out and counted in the log, since the compiler's
+offsets would be wrong for them. Without `--shipped-dir`, the dlls in the given
+paths are taken to be what ships (managed stripping Disabled, where the two are
+identical).
+
+- **Point it at one build's output.** With `--shipped-dir`, two different
+  compiler copies of one assembly name (the Editor's and the player's `.dag`
+  directories, say) map to the same shipped dll and module id, so passing their
+  common parent exits `11` (`two different assemblies ...`). Name the one `.dag`
+  directory, as above. The same build found twice is taken once.
+- **The pdb must belong to its assembly.** It is checked against the dll's
+  CodeView entry; a pdb from another build exits `11` with nothing sent. A
+  failed run leaves no partial set of results.
+-   **Development builds work too.** They ship their `.pdb` files and need
+  nothing, but if those files were stripped after the build the frames look like
+  Release ones and these mappings resolve them.
+- A dll without a pdb beside it (Unity's own `UnityEngine.*`, the BCL) and files
+  that are not .NET assemblies are skipped when scanning a directory. A named
+  `.dll` or `.pdb` must have its partner.
+- Only portable PDBs are read (what Roslyn / Unity 2021+ emit). Windows PDBs,
+  embedded portable PDBs, Mono `.mdb`, and Xamarin AOT (`.msym`) are not read.
+  `--uuid` is rejected: the identity comes from the assembly. `--force` applies,
+  as it does for the other working types except ProGuard.
+
+### Convert without uploading
+
+`debug-files convert` does the same conversion as `--type portable-pdb` but
+writes the files and sends nothing:
+
+```bash
+bugsee-cli debug-files convert Library/Bee/artifacts/1300b0aP.dag \
+    --to bmf --output ./bmf \
+    --shipped-dir Library/Bee/artifacts/Android/ManagedStripped
+```
+
+`--to bmf` writes one `<module id>.bmf` per assembly into `--output` (created if
+missing). `--shipped-dir` has the same meaning as on upload. `--to bsf` is not
+implemented (exit `20`). Convert does no network I/O and ignores `--app-token`
+and `--endpoint`.
 
 ## Compression
 

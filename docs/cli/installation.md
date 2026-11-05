@@ -58,7 +58,7 @@ work for direct installs too.
 | Channel | Package |
 |---|---|
 | npm | `@bugsee/cli` (per-OS `optionalDependencies` pull the right binary) |
-| npm | `@bugsee/bugsee-cli` (single package; downloads the binary on install) |
+| npm | `@bugsee/bugsee-cli` (legacy; frozen at 0.8.2 — it does not have 0.9.0) |
 | Homebrew | the Bugsee tap |
 
 The Android Gradle plugin does not use a package manager: it downloads the CLI from
@@ -72,8 +72,8 @@ Prefer `@bugsee/cli` in JavaScript projects. Its binary ships inside per-platfor
 packages, so npm resolves exactly one and **nothing runs at install time** — it
 works under `--ignore-scripts`, under a lockfile-pinned CI install, and offline
 from a warm cache. `@bugsee/bugsee-cli` is the older single package whose
-`postinstall` downloads the binary on every fresh install; it is still published
-and supported, but it needs network access at install time.
+`postinstall` downloads the binary on every fresh install. It is deprecated and
+frozen at **0.8.2**; it does not receive 0.9.0 or later. Use `@bugsee/cli`.
 :::
 
 Published platforms: macOS arm64 and x86_64, Linux x86_64 and aarch64, Windows
