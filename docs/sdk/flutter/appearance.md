@@ -62,7 +62,7 @@ You can always change colors of the [Report](/sdk/flutter/manual/) and [Feedback
 | setReportActionBarButtonBackgroundClickedColor | Action bar buttons background color in clicked state in Report UI |
 | setReportActionBarColor | Action bar background color in Report UI |
 | setReportActionBarTextColor | Action bar buttons text color in Report UI |
-| setReportCellBackgroundColor | Report UI background color |
+| setReportBackgroundColor | Report UI background color |
 | setReportEditTextBackgroundColor | EditTexts background color in Report UI |
 | setReportHintColor | EditTexts hint text color in Report UI |
 | setReportSeverityLabelActiveColor | Issue severity label text color in active state in Report UI |
