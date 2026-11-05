@@ -29,15 +29,15 @@ Java crash detection is on by default; disable it only if another crash SDK on y
 
 ## Early crashes
 
-Some crashes happen so early in process startup that they fire **before** `Bugsee.launch()` has wired its handler. The `DetectAndReportEarlyCrash` option arms the handler in the SDK's auto-init phase (via `BugseeInitProvider`) so these very-early failures are still captured.
+Some crashes happen so early in process startup, before the first Activity is visible, that the app can crash again before their report is sent. The `DetectAndReportEarlyCrash` option is **on by default**: such a crash is detected on the next launch and its pending report is flushed synchronously before the app can crash again. Turning it off also disables the `RelaunchedAfterCrash` lifecycle event.
 
 | Form | Setting |
 | --- | --- |
-| Manifest meta-data | `<meta-data android:name="com.bugsee.option.detect.early-crash" android:value="true" />` |
-| `Bugsee.launch()` map | `options.put(Options.DetectAndReportEarlyCrash, true)` |
-| Default | `false` |
+| Manifest meta-data | `<meta-data android:name="com.bugsee.option.detect.early-crash" android:value="false" />` |
+| `Bugsee.launch()` map | `options.put(Options.DetectAndReportEarlyCrash, false)` |
+| Default | `true` |
 
-Early-crash detection is mainly useful when you initialise Bugsee programmatically (rather than via the manifest auto-init) and need coverage for crashes that happen in `Application.onCreate()` before your `Bugsee.launch(...)` call runs.
+Set it to `false` only if you do not want Bugsee to recover and flush startup crashes on the next launch.
 
 ## Report a caught exception
 
