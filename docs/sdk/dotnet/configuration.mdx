@@ -70,10 +70,10 @@ namespace YourNameSpace
 
       var bugseeOptions = new BugseePlugin.AndroidLaunchOptions();
 
-      bugseeOptions.ShakeToTrigger = true;
+      bugseeOptions.ShakeToReport = true;
       bugseeOptions.NotificationBarTrigger = false;
 
-      BugseePlugin.Bugsee.Launch(this, "<your token>", bugseeOptions);
+      BugseePlugin.Bugsee.Launch("<your token>", bugseeOptions);
     }
   }
 }
