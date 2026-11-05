@@ -9,6 +9,24 @@ slug: "/sdk/android/gradle-plugin/releases"
 
 ## 4.x (SDK 7.x)
 
+### 4.0.8 (October 2026)
+
+Native symbol uploads are reliable again for libraries that were first uploaded with a symbol table
+only. The Bugsee CLI the plugin downloads by default is now 0.8.1.
+
+- **Full native symbols replace symbol-table-only ones.** The server keeps one copy of a native
+  library per GNU build-id, so full debug symbols for a prebuilt library (for example
+  `libreactnative.so`) were skipped when an earlier release had uploaded only its symbol table. The
+  plugin now forces the upload when the symbols zip contains full `.so.dbg` symbols. It re-sends
+  symbols that were uploaded without this flag once.
+
+- **Default `bugsee-cli` raised to 0.8.1.** `bugsee-cli` 0.7.0 through 0.7.11 skipped symbol-table
+  `.so.sym` uploads and still reported success. Builds that pin the CLI, turn its auto-update off,
+  or cannot reach the update check now use a CLI that uploads both `.so.sym` and `.so.dbg`. Since
+  0.8.1 a directory upload also replaces a poorer stored copy of the same library, so you no longer
+  need a build with `forceDebugSymbolsUpload` to upgrade stored symbols. Symbols that an older CLI
+  recorded as uploaded are sent again once.
+
 ### 4.0.7 (September 2026)
 
 Fixes a serious regression in 4.0.6 that silently disabled every Bugsee extension. Everyone on
