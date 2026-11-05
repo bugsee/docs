@@ -17,8 +17,8 @@ Add the `bugsee-kotlin-multiplatform-protect` dependency to your shared module:
 
 ```kotlin
 commonMain.dependencies {
-    implementation("com.bugsee:bugsee-kotlin-multiplatform:0.1.1")
-    implementation("com.bugsee:bugsee-kotlin-multiplatform-protect:0.1.1")
+    implementation("com.bugsee:bugsee-kotlin-multiplatform:0.1.2")
+    implementation("com.bugsee:bugsee-kotlin-multiplatform-protect:0.1.2")
 }
 ```
 
