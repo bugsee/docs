@@ -90,10 +90,7 @@ Bugsee.OnAttachmentForReport += delegate (BugseeReport report)
 {
     var attachments = new List<BugseeAttachment>();
 
-    if (
-        report.Severity == BugseeSeverityLevel.Blocker &&
-        report.Type == BugseeIssueType.Crash
-    )
+    if (report.severityLevel == BugseeSeverityLevel.Blocker)
     {
         attachments.Add(new BugseeAttachment()
         {
