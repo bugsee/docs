@@ -9,7 +9,7 @@ Nothing needs to be done on your part if all you need is to retrieve standard lo
 
 
 ```csharp
-// With default log level (info)
+// With default log level (debug)
 BugseePlugin.Bugsee.Log("Some log message");
 
 // Set the log level explicitly
