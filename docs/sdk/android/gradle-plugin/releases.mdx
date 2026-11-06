@@ -9,6 +9,99 @@ slug: "/sdk/android/gradle-plugin/releases"
 
 ## 4.x (SDK 7.x)
 
+### 4.1.1 (unreleased)
+
+A follow-up release with robustness and log-hygiene fixes. It has no DSL changes.
+
+- **The minimum AGP check runs in either plugin order.** With Bugsee listed before the Android plugin,
+  an AGP older than 8.6 used to build silently without the readable error. It now fails with the same
+  message as when the Android plugin comes first.
+- **`bugsee-cli` falls back to an installed copy.** If downloading the pinned CLI fails (offline or
+  restricted network), the plugin reuses the newest cached CLI that is the same major version and at
+  least the pinned version. The built-in Kotlin uploader remains the last resort.
+- **Proxy credentials are redacted in logs.** A `user:pass@` part of a URL no longer appears in plugin
+  output.
+- **The native-symbol upload cache is scoped to the endpoint.** A native symbols zip uploaded to one
+  Bugsee backend is no longer treated as uploaded for another. Each app re-uploads its native symbols
+  once on its first build with this version; symbols the server already has are skipped as before.
+- **Java-only Android apps are documented.** The plugin is also a Kotlin compiler plugin, so an app with
+  no Kotlin in the build needs the Kotlin Gradle plugin on the build classpath (declared with
+  `apply false` in the root `plugins {}` block). See the plugin README for the snippet.
+
+### 4.1.0 (November 2026)
+
+A compatibility and reliability release. The order of plugins no longer matters, unsupported
+toolchains and module types fail or warn clearly, native symbols are uploaded from unstripped
+libraries, and uploads can be made to fail the build. Requires AGP 8.6.0 or newer and Gradle 8.7 or
+newer (Gradle 9 is supported). The core Bugsee Android SDK the plugin adds automatically is now
+`7.5.0` or newer.
+
+**Build setup**
+
+- **Plugin order no longer matters.** Listing Bugsee before the Android plugin in `plugins {}` used to
+  silently do nothing. It now wires up the same way in either order.
+- **Readable errors for unsupported toolchains.** AGP older than 8.6 or Gradle older than 8.7 fails
+  early with a clear message.
+- **Isolated Projects compatible.** The plugin does not read other projects' models. Two behaviors
+  differ when the mode is on; see the README section on Isolated Projects.
+- **Flutter asset ordering.** `injectBugsee<Variant>BuildId` now runs after Flutter's asset copy, and
+  `assetsDependsOn(...)` lets you name another task to order after.
+- **Default `bugsee-cli` is 0.9.0.** The plugin also falls back to the Kotlin uploader when the CLI did
+  not run, and a cancelled build stays cancelled.
+
+**SDK auto-add**
+
+- **Auto-add floor is 7.5.0.** An app that does not declare the core SDK gets `[7.5.0,)` within the
+  current major version.
+- **Production configurations decide.** Only production configurations (not test ones) count when
+  deciding whether the core SDK or an extension such as OkHttp, Compose, Ktor or Cronet is present.
+  Core pins from project dependencies and `compileOnly` pins are honored, and extension modules below
+  their first release version are skipped.
+- **New warnings.** The plugin warns when the core SDK is declared only on debug configurations
+  (silence with `warnDebugOnlySdk=false`) and when resolved Bugsee modules are on different versions.
+
+**Native symbols**
+
+- **Unstripped native libraries are uploaded.** With `ndk.enabled`, symbols are taken from
+  `merged_native_libs`, so file and line frames no longer depend on `debugSymbolLevel` and your AAB does
+  not grow. Set `ndk.useMergedNativeLibs=false` to use only AGP's `native-debug-symbols.zip`.
+- **Non-debuggable variants only.** The native upload task is registered only for non-debuggable
+  variants. Set `ndk.allBuildTypes=true` to include the others. An unchanged upload is skipped on the
+  next build.
+- **Stored symbol tables are upgraded automatically** to full debug symbols, with no
+  `forceDebugSymbolsUpload` needed.
+
+**Uploads**
+
+- **`failOnUploadError`.** Opt in to fail the build when a mapping, native symbol or build upload does
+  not complete. By default it still only warns. Transient HTTP errors on submit requests are retried.
+- **Proxy support.** Uploads, including `bugsee-cli`, honor the JVM proxy system properties.
+- **Secrets stay out of logs.** The app token, presigned URLs, response bodies and `bugsee-cli` output
+  are redacted, and the token is passed to the CLI through the environment instead of its arguments.
+
+**Settings**
+
+- **Per-variant settings.** `variant.<name>.app_token` and `variant.<name>.plugin.*` keys in
+  `bugsee.properties`, and `variant("<name>") { }` blocks in the DSL, set a token or option for a
+  variant, flavor or build type.
+- **`composeInTests`.** Opt in to Compose tagging and secure wrapping in test compilations.
+
+**Module types**
+
+- **Library, dynamic-feature and test modules.** Applying Bugsee to a library, KMP library, fused
+  library, dynamic-feature or test module logs one warning instead of failing the build
+  (`warnLibraryModule=false` silences it). Dynamic-feature and test modules no longer get the SDK
+  added automatically unless they use Compose; declare it `compileOnly` there if you call the SDK.
+- **No AGP on the classpath.** A module without AGP, for example a plain JVM module, logs a warning
+  instead of failing with `NoClassDefFoundError`.
+
+**Instrumentation**
+
+- **A method that cannot be instrumented is left as it is** instead of failing the build, and very
+  large classes are skipped.
+- **Compose fixes** on Kotlin 1.9 and 2.x: only `@Composable` calls are tagged, and a callee's own
+  default modifier is kept when `modifier` is omitted.
+
 ### 4.0.8 (October 2026)
 
 Native symbol uploads are reliable again for libraries that were first uploaded with a symbol table
