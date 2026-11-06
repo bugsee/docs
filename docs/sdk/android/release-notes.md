@@ -10,10 +10,9 @@ Release history for Bugsee Android SDK 7.x. Looking for the previous major versi
 ## 7.5.0
 
 A feature and reliability release. The NDK handler can be told which fatal signals to intercept,
-cross-platform wrappers can hold recording until they are ready, devices that moved from 6.x are no
-longer counted twice, and the SDK keeps running when its native libraries are missing or cannot be
-linked. Report attachments and `updateFrom` are safer under concurrency, and several capture and
-trace values are more accurate.
+cross-platform wrappers can hold recording until they are ready, and the SDK keeps running when its
+native libraries are missing or cannot be linked. Report attachments and `updateFrom` are safer
+under concurrency, and several capture and trace values are more accurate.
 
 **New features**
 
@@ -46,10 +45,6 @@ trace values are more accurate.
 
 **Reliability and privacy**
 
-- **Devices that moved from 6.x are no longer counted twice.** 7.x sent the raw Android ID, GSF ID
-  and Widevine hash as device ids, where 6.x sent name-based UUIDs of them, so the server saw a
-  second session for every upgraded device. 7.x now sends the 6.x-format ids and adopts the ids a
-  6.x install stored on the device, unless they were restored onto another device.
 - **The app token is no longer written into report bundles.** It was stored in clear text as a
   `.apptoken` entry of every bundle. It is now kept in the SDK's private preferences, and crash
   recovery still finds it for bundles written by older SDKs.
