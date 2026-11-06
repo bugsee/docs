@@ -11,8 +11,18 @@ slug: "/sdk/android/gradle-plugin/releases"
 
 ### 4.1.1 (unreleased)
 
-A follow-up release with robustness and log-hygiene fixes. It has no DSL changes.
+A follow-up release that fixes native crash capture for apps that declare the Bugsee SDK in another
+module, plus robustness and log-hygiene fixes. It has no DSL changes.
 
+- **Native crash capture works when the Bugsee SDK is declared in another module.** If the SDK sits in
+  a library module that the app depends on (for example the exported `unityLibrary` of a Unity project),
+  4.1.0 could remove the Bugsee extension providers from the manifest without registering the
+  extensions, so native crashes were silently not captured. The plugin now decides what to remove and
+  what to register from the same list: the Bugsee extension modules on the variant's runtime classpath.
+  On 4.1.0, setting `optimizeExtensionsLoading = false` in the `bugsee { }` block works around it. If you
+  remove an extension's provider yourself with `tools:node="remove"` but keep its module, the plugin still
+  registers that extension and warns during the build. Set `optimizeExtensionsLoading = false` to let the
+  manifest alone decide.
 - **The minimum AGP check runs in either plugin order.** With Bugsee listed before the Android plugin,
   an AGP older than 8.6 used to build silently without the readable error. It now fails with the same
   message as when the Android plugin comes first.
@@ -24,8 +34,8 @@ A follow-up release with robustness and log-hygiene fixes. It has no DSL changes
 - **The native-symbol upload cache is scoped to the endpoint.** A native symbols zip uploaded to one
   Bugsee backend is no longer treated as uploaded for another. Each app re-uploads its native symbols
   once on its first build with this version; symbols the server already has are skipped as before.
-- **Java-only Android apps are documented.** The plugin is also a Kotlin compiler plugin, so an app with
-  no Kotlin in the build needs the Kotlin Gradle plugin on the build classpath (declared with
+- **Java-only Android apps are documented.** The plugin is also a Kotlin compiler plugin, so with AGP 8.x
+  an app with no Kotlin in the build needs the Kotlin Gradle plugin on the build classpath (declared with
   `apply false` in the root `plugins {}` block). See the plugin README for the snippet.
 
 ### 4.1.0 (November 2026)
