@@ -17,11 +17,14 @@ accurate.
 **New features**
 
 - **Choose the fatal signals the NDK handler intercepts.** The new `NdkOptions.CrashSignals` option
-  (`com.bugsee.option.capture.crash-signals`) is a bit set with the same values as iOS
-  `BugseeCrashSignals`: `ABRT` 1, `SEGV` 2, `BUS` 4, `ILL` 8, `FPE` 16, `TRAP` 32, `ALL`, and
-  `DEFAULT` 128, which means every signal. A signal you leave out keeps its previous handler, so a
-  runtime that turns `SIGSEGV` into a managed exception (Mono, for example) is no longer reported as
-  a native crash. The first arming in a process wins.
+  (`com.bugsee.option.capture.crash-signals`) takes a bit set of the `CrashSignals` constants:
+  `ABRT` (1), `SEGV` (2), `BUS` (4), `ILL` (8), `FPE` (16) and `TRAP` (32), or `ALL` (63) for every
+  one of them. The bit values are the same as the iOS `BugseeCrashSignals`. The default,
+  `CrashSignals.DEFAULT` (128), means every signal and works only on its own, not combined with
+  other values. Any other value is used as given, so list every signal you want. A signal you leave
+  out keeps its previous handler, so a runtime that turns `SIGSEGV` into a managed exception (Mono,
+  for example) is no longer reported as a native crash. `SIGQUIT` and `SIGSYS` are always
+  intercepted. The value is read once, when the handler is first armed in the process.
 - **New system trace `sound_volume`.** The level of the voice call, system, ring, music, alarm and
   notification streams, from 0.0 to 1.0, recorded when a volume step changes.
 - **More display and process data.** The `displays` trace now carries `scale` (device pixels per dp)
