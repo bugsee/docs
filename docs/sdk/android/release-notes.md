@@ -7,6 +7,85 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.5.0
+
+A feature and reliability release. The NDK handler can be told which fatal signals to intercept,
+and the SDK keeps running when its native libraries are missing or cannot be linked. Report
+attachments are safer once a report is submitted, and several capture and trace values are more
+accurate.
+
+**New features**
+
+- **Choose the fatal signals the NDK handler intercepts.** The new `NdkOptions.CrashSignals` option
+  (`com.bugsee.option.capture.crash-signals`) takes a bit set of the `CrashSignals` constants:
+  `ABRT` (1), `SEGV` (2), `BUS` (4), `ILL` (8), `FPE` (16) and `TRAP` (32), or `ALL` (63) for every
+  one of them. The bit values are the same as the iOS `BugseeCrashSignals`. The default,
+  `CrashSignals.DEFAULT` (128), means every signal and works only on its own, not combined with
+  other values. Any other value is used as given, so list every signal you want. A signal you leave
+  out keeps its previous handler, so a runtime that turns `SIGSEGV` into a managed exception (Mono,
+  for example) is no longer reported as a native crash. `SIGQUIT` and `SIGSYS` are always
+  intercepted. The value is read once, when the handler is first armed in the process.
+- **New system trace `sound_volume`.** The level of the voice call, system, ring, music, alarm and
+  notification streams, from 0.0 to 1.0, recorded when a volume step changes.
+- **More display and process data.** The `displays` trace now carries `scale` (device pixels per dp)
+  and `max_fps` (the highest supported refresh rate), and the report environment includes
+  `app.uptime_s`, the process uptime when the session started. It is left out when the process
+  start time is unknown, never written as 0.
+
+**Reliability and privacy**
+
+- **The app token is no longer written into report bundles.** It was stored in clear text as a
+  `.apptoken` entry of every bundle. It is now kept in the SDK's private preferences, and crash
+  recovery still finds it for bundles written by older SDKs.
+- **Missing or unlinked native libraries no longer crash the app.** Without `libbugsee-native`
+  (for example after a partial split-APK install), starting capture killed the capture thread and
+  the app, and reports went out without their captured data. Video capture is now skipped with a
+  warning in that case, reports still carry their captured data, and crashes left on disk are still
+  recovered.
+- **A crash is no longer followed by AppHang reports.** The main thread sitting in the
+  uncaught-exception handler chain (Bugsee's, then the app's or a game engine's) looked like a
+  freeze. The hang detector now stays quiet while a crash is being processed.
+- **A software signal the app had set to `SIG_IGN` is not reported.** An app that ignores
+  `SIGTRAP` and then raises it survives, but the crash handler used to report it as a crash, and a
+  later real crash was then not reported.
+- **A non-positive `Duration` falls back to 60 s.** A value of 0 or below emptied the retention
+  window and started a new recording generation on every return from the background.
+- **A background time left by a previous process is not applied to the new one** when deciding
+  whether to keep the current recording or start a new generation.
+
+**Reports and attachments**
+
+- **Edits on a restored report are no longer lost.** A report restored after a configuration change
+  of a custom report UI, or reloaded from disk, lost the summary, description, severity, email,
+  labels, attributes and attachments you had set on it. They now reach the uploaded report.
+- **Attachments cannot change after the report is submitted.** An attachment added at that point is
+  refused, and a stream still open stops writing: later writes are dropped with one warning per
+  stream and `openStream()` returns `null`. Before, a late write could land after the report had
+  been read, and a late `addAttachment` returned success for an attachment missing from the
+  report, left an orphan file and, with `move = true`, consumed the source file.
+
+  :::note
+  The stream returned by `openStream()` is unbuffered. If you wrap it in a `BufferedOutputStream`,
+  `GZIPOutputStream` or writer, flush or close the wrapper before the report is submitted.
+  :::
+
+**Capture and traces**
+
+- **The report screenshot includes `SurfaceView` content.** Flutter, video, maps and games drew a
+  black hole where the surface should be, sometimes an all-black screenshot.
+- **No crash in screen capture on API 24** when the capture request was reset mid-frame during
+  rapid window changes.
+- **OkHttp: a body-less request starts when its headers are sent.** GET, HEAD and DELETE requests
+  were timed from the start of the interceptor, while requests with a body were timed after DNS,
+  connect and TLS, so their durations were not comparable.
+- **Touch capture around a blackout.** A gesture that started during a blackout and continued
+  after it is no longer recorded without its start, and a secure gesture whose end was dropped by a
+  blackout no longer causes later secure touches to be recorded without a start.
+- **Battery and connection values.** An unknown battery level is omitted from the `battery` trace and
+  from `hardware.battery` instead of being written as -1, plugging and unplugging the charger no
+  longer writes a false charging entry before the real battery state arrives, and the `connection`
+  trace writes `not_reachable` while offline instead of `unknown`, matching iOS and JavaScript.
+
 ## 7.4.2
 
 A lifecycle and privacy release. `relaunch()` always reports its outcome, and secure fields stay
