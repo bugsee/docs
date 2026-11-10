@@ -124,7 +124,7 @@ jobs:
 
       - name: Open or update the sync PR
         if: steps.mirror.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v8.1.1
+        uses: peter-evans/create-pull-request@v8.1.2
         with:
           token: ${{ steps.app.outputs.token || secrets.GITHUB_TOKEN }}
           branch: automation/sync-agent-skills
