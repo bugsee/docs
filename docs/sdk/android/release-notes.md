@@ -24,8 +24,8 @@ ways; read **Behavior changes to be aware of** before you upgrade.
 
 **Memory leaks**
 
-Each item below stopped the SDK from keeping a destroyed Activity, a View or a thread reachable
-after the app was done with it.
+Each item below stopped the SDK from holding on to a destroyed Activity, a View, a thread or other
+memory longer than needed.
 
 - **WebView.** The interception registry no longer holds a WebView, its wrapper and the Activity
   that the app's `WebViewClient` captures.
