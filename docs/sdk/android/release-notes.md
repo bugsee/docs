@@ -7,6 +7,110 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.5.1
+
+A stability release. It removes a set of memory leaks, a native abort in the compression code and
+several lifecycle problems, and adds two read-only version getters. A few behaviors change in small
+ways; read **Behavior changes to be aware of** before you upgrade.
+
+**New features**
+
+- **Read the running SDK version.** `Bugsee.getSdkVersion()` returns the version of the SDK that is
+  running (for example `"7.5.1"`), and `Bugsee.getSdkBuild()` returns the short commit hash of its
+  build. Both are static and read-only, work before `launch()`, and need no application context or
+  token. They are kept by name through R8, so wrappers and embedders can look them up by reflection.
+  They return the same values the SDK writes to the report environment as `sdk.version` and
+  `sdk.build`.
+
+**Memory leaks**
+
+Each item below stopped the SDK from keeping a destroyed Activity, a View or a thread reachable
+after the app was done with it.
+
+- **WebView.** The interception registry no longer holds a WebView, its wrapper and the Activity
+  that the app's `WebViewClient` captures.
+- **Startup tracing.** The first Activity is released if it is destroyed before its first draw.
+- **Privacy masking.** Views of a destroyed screen that were still masked are released on a timer,
+  so a backgrounded app no longer keeps the last Activity alive.
+- **Compose.** The secure-area scanner no longer keeps a view-root handler, and a rebind that raced
+  with a detach is handled.
+- **Threading and reflection.** The SDK's internal handler caches hold their values weakly so
+  stopped looper threads can be collected, and the reflection cache no longer holds classes and
+  class loaders.
+- **Network.** The `HttpEngine` adapter holds its current callback weakly.
+- **Screen capture.** The video capture engine no longer keeps views after a skipped or failed
+  frame or leaves ripple animations altered.
+- **Report screenshots, report dialog and screenshot editor.** The screenshot helper is released
+  after each report, a report dialog destroyed without Send or Discard releases its request, the
+  editor's back-press dialog is dismissed when the editor stops, and the annotated bitmap is
+  recycled once it has been written. Running out of memory while burning annotations into the
+  screenshot no longer fails the report: the unannotated screenshot is kept.
+- **Displays.** The display tracker takes its `DisplayManager` from the application context, and the
+  cached visual context is returned for secondary displays.
+- **Span attributes.** An object passed as a span attribute value (an Activity or View, for example)
+  is no longer kept by the span; see **Behavior changes to be aware of**.
+- **Leak extension.** Navigation observers no longer accumulate, the Compose composition watcher no
+  longer holds its target strongly, and a stale ViewModel monitor is dropped.
+- **Feedback.** The chat poll is cancelled when the chat closes, and the Compose `FeedbackApp`
+  clears only a listener that it set itself. See **Feedback listener** below for the listener you
+  set.
+
+**Crashes and native code**
+
+- **Compression no longer aborts the process on a failed allocation.** The LZ4 and xxHash native
+  code now raises a Java `OutOfMemoryError` instead of killing the process, makes no JNI calls
+  inside a critical array region, and checks the creation of `XXH32` and `XXH64` streaming state.
+
+**Lifecycle**
+
+- **A startup transaction no longer stays open.** If the first Activity is destroyed before its
+  first draw (other than for a configuration change), the transaction ends as `CANCELLED` instead of
+  staying open until `stop()`.
+- **The screenshot trigger releases its callback on Android 14 and later.** The system
+  `ScreenCaptureCallback` is unregistered when the screenshot trigger is disabled.
+
+**Feedback listener**
+
+The `FeedbackListener` you set with `Feedback.setOnNewFeedbackListener` is kept across
+`Bugsee.stop()`, `launch()` and `relaunch()`, exactly as in 7.5.0, so set it once. It is released
+only when you replace it or pass `null`. The SDK holds it strongly in a process-wide object, so pass
+`null` when its owner goes away and do not let it capture an Activity, Fragment or View. Passing
+`null` takes effect asynchronously, so one more callback may still arrive on a worker thread.
+
+**Behavior changes to be aware of**
+
+- **Span attributes are normalized when set.** `Span.getAttributes()` returns plain copies: a
+  collection becomes an `ArrayList` (a `Set` included), an object array becomes `Object[]`, a
+  `CharSequence` becomes a `String`, any other number becomes a `Long`, and any other object becomes
+  its `toString()`. A map is copied, and at most 10,000 elements are kept per value. Later changes
+  to the original object are not reflected. Primitive arrays are stored as given.
+
+  :::note
+  `performance.json` in reports now carries the `toString()` text of object values that used to be
+  dropped. That text can include application data, so do not put sensitive objects into span
+  attributes.
+  :::
+- **Compression failures throw.** LZ4 and xxHash allocation failures raise `OutOfMemoryError`
+  instead of aborting the process.
+- **A destroyed report dialog releases its request.** The saved snapshot is kept.
+- **A periodic timer runs on the main thread while the SDK holds a retired secure view.** It backs
+  off up to 8 s between runs and stops when nothing is held.
+- **Report screenshots use a helper thread per report,** which is freed afterwards. On the one
+  device it was measured on, later report screenshots were about 4.5 ms slower and about 3.6 MB of
+  native memory was freed.
+- **One Activity is tracked for the screenshot callback.** Only one registered Activity is tracked,
+  so an Activity on another display can keep its callback until it is destroyed.
+- **New consumer ProGuard keep rules** cover the WebView ownership fields and
+  `Bugsee.getSdkVersion()` / `Bugsee.getSdkBuild()`. No change is needed in your rules.
+- **Documentation.** The API documentation now states which host-set objects the SDK holds
+  strongly, and that you own the bitmap you pass to `setScreenshotAsync`.
+
+**Known limitations**
+
+The SDK holds these objects you set strongly until you replace them, set them to `null`, or the
+process ends: the report handler, report filters, the lifecycle listener, a wrapper you supply, and
+the feedback listener. Do not let them capture an Activity, Fragment or View.
+
 ## 7.5.0
 
 A feature and reliability release. The NDK handler can be told which fatal signals to intercept,
