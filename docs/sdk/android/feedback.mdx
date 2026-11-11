@@ -143,6 +143,10 @@ Register a `FeedbackListener` to be notified about feedback activity. It has two
 `onNewMessagesReceived` may be invoked on a background thread. Marshal to the main thread before touching UI.
 :::
 
+:::note
+The SDK keeps the listener strongly across `stop()`, `launch()` and `relaunch()` until you replace it or pass `null`. Do not let it capture an Activity, Fragment or View: pass `null` when its owner goes away. The anonymous listeners in the examples below capture the enclosing Activity or Fragment if you write them inside one, so use an application-scoped listener there. `setOnNewFeedbackListener(null)` takes effect asynchronously, so one more callback may still arrive.
+:::
+
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
 

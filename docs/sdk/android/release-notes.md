@@ -9,18 +9,19 @@ Release history for Bugsee Android SDK 7.x. Looking for the previous major versi
 
 ## 7.5.1
 
-A stability release. It removes a set of memory leaks, a native abort in the compression code and
-several lifecycle problems, and adds two read-only version getters. A few behaviors change in small
-ways; read **Behavior changes to be aware of** before you upgrade.
+A stability release. It removes a set of memory leaks, hardens out-of-memory handling in the
+compression code, fixes several lifecycle problems, and adds two read-only version getters. A few
+behaviors change in small ways; read the notes under **Behavior changes** before you upgrade.
 
 **New features**
 
 - **Read the running SDK version.** `Bugsee.getSdkVersion()` returns the version of the SDK that is
   running (for example `"7.5.1"`), and `Bugsee.getSdkBuild()` returns the short commit hash of its
   build. Both are static and read-only, work before `launch()`, and need no application context or
-  token. They are kept by name through R8, so wrappers and embedders can look them up by reflection.
-  They return the same values the SDK writes to the report environment as `sdk.version` and
-  `sdk.build`.
+  token. They are kept by name through R8, so wrappers and embedders can look them up by
+  reflection. They return the values the SDK writes to the environment of reports built in this
+  process as `sdk.version` and `sdk.build`; a recovered report keeps the identity of the session
+  that produced it.
 
 **Memory leaks**
 
@@ -30,86 +31,102 @@ memory longer than needed.
 - **WebView.** The interception registry no longer holds a WebView, its wrapper and the Activity
   that the app's `WebViewClient` captures.
 - **Startup tracing.** The first Activity is released if it is destroyed before its first draw.
-- **Privacy masking.** Views of a destroyed screen that were still masked are released on a timer,
-  so a backgrounded app no longer keeps the last Activity alive.
+- **Privacy masking.** After a masked view leaves the screen, the SDK checks on the main thread,
+  about every 0.5 s and backing off to every 8 s while the view stays attached, until it has
+  released the view. Before, a backgrounded app kept the last Activity alive through it.
 - **Compose.** The secure-area scanner no longer keeps a view-root handler, and a rebind that raced
   with a detach is handled.
 - **Threading and reflection.** The SDK's internal handler caches hold their values weakly so
   stopped looper threads can be collected, and the reflection cache no longer holds classes and
   class loaders.
 - **Network.** The `HttpEngine` adapter holds its current callback weakly.
-- **Screen capture.** The video capture engine no longer keeps views after a skipped or failed
-  frame or leaves ripple animations altered.
+- **Screen capture.** The manual-draw capture engine no longer keeps views after a skipped or
+  failed frame or leaves ripple animations altered.
 - **Report screenshots, report dialog and screenshot editor.** The screenshot helper is released
-  after each report, a report dialog destroyed without Send or Discard releases its request, the
-  editor's back-press dialog is dismissed when the editor stops, and the annotated bitmap is
-  recycled once it has been written. Running out of memory while burning annotations into the
-  screenshot no longer fails the report: the unannotated screenshot is kept.
-- **Displays.** The display tracker takes its `DisplayManager` from the application context, and the
-  cached visual context is returned for secondary displays.
-- **Span attributes.** An object passed as a span attribute value (an Activity or View, for example)
-  is no longer kept by the span; see **Behavior changes to be aware of**.
+  after each report, a report dialog closed for good without Send or Discard releases its request,
+  the editor's back-press dialog is dismissed when the editor stops, and the annotated bitmap is
+  recycled once it has been written.
+- **Displays.** The display tracker takes its `DisplayManager` from the application context.
+- **Span attributes.** An object passed as a span attribute value (an Activity or View, for
+  example) is no longer kept by the span; see **Behavior changes**.
 - **Leak extension.** Navigation observers no longer accumulate, the Compose composition watcher no
   longer holds its target strongly, and a stale ViewModel monitor is dropped.
 - **Feedback.** The chat poll is cancelled when the chat closes, and the Compose `FeedbackApp`
-  clears only a listener that it set itself. See **Feedback listener** below for the listener you
-  set.
+  clears only a listener that it set itself.
 
-**Crashes and native code**
+**Other fixes**
 
-- **Compression no longer aborts the process on a failed allocation.** The LZ4 and xxHash native
-  code now raises a Java `OutOfMemoryError` instead of killing the process, makes no JNI calls
-  inside a critical array region, and checks the creation of `XXH32` and `XXH64` streaming state.
-
-**Lifecycle**
-
+- **Rare out-of-memory failures in compression no longer abort the process.** If the LZ4 or xxHash
+  native code cannot allocate memory, it now raises a Java `OutOfMemoryError` instead of aborting.
+- **The cached visual context works for secondary displays.** It was returned as `null` when it
+  was already cached for the display.
+- **Out of memory while drawing annotations keeps the report.** The report is delivered with the
+  unannotated screenshot.
+- **ViewModel leak detection survives a relaunch.** In an Activity that outlives a `relaunch()`, it
+  reports to the current run again.
 - **A startup transaction no longer stays open.** If the first Activity is destroyed before its
-  first draw (other than for a configuration change), the transaction ends as `CANCELLED` instead of
-  staying open until `stop()`.
+  first draw (other than for a configuration change), the transaction is now recorded with status
+  `CANCELLED` instead of staying open until `stop()`.
 - **The screenshot trigger releases its callback on Android 14 and later.** The system
   `ScreenCaptureCallback` is unregistered when the screenshot trigger is disabled.
 
-**Feedback listener**
+**Behavior changes**
 
-The `FeedbackListener` you set with `Feedback.setOnNewFeedbackListener` is kept across
-`Bugsee.stop()`, `launch()` and `relaunch()`, exactly as in 7.5.0, so set it once. It is released
-only when you replace it or pass `null`. The SDK holds it strongly in a process-wide object, so pass
-`null` when its owner goes away and do not let it capture an Activity, Fragment or View. Passing
-`null` takes effect asynchronously, so one more callback may still arrive on a worker thread.
+- **Span attributes are normalized when set.** `Span.getAttributes()` returns plain copies made
+  when `setAttribute` is called, not your objects. Strings, booleans, `Character` and the standard
+  number types (`Integer`, `Long`, `Double`, `Float`, `Short`, `Byte`, `BigDecimal`, `BigInteger`)
+  are kept as they are. Any other number becomes a `Long`, and a subclass of `BigDecimal` or
+  `BigInteger` becomes a `Double` or a `BigInteger`. A `CharSequence` becomes a `String`, any
+  `Iterable` an `ArrayList`, an object array an `Object[]`, and a map is copied without the
+  entries that have a non-`String` key or a `null` value. Any other object becomes its
+  `toString()`, and nesting deeper than 8 levels becomes an empty string. At most 10,000 elements
+  are kept per value in total; primitive arrays are not counted and are stored as given.
 
-**Behavior changes to be aware of**
-
-- **Span attributes are normalized when set.** `Span.getAttributes()` returns plain copies: a
-  collection becomes an `ArrayList` (a `Set` included), an object array becomes `Object[]`, a
-  `CharSequence` becomes a `String`, any other number becomes a `Long`, and any other object becomes
-  its `toString()`. A map is copied, and at most 10,000 elements are kept per value. Later changes
-  to the original object are not reflected. Primitive arrays are stored as given.
-
-  :::note
-  `performance.json` in reports now carries the `toString()` text of object values that used to be
-  dropped. That text can include application data, so do not put sensitive objects into span
-  attributes.
+  :::note[Behavior change]
+  The copy, including your object's `toString()`, now runs on the thread that calls
+  `setAttribute`, often the main thread. Before, it ran at encode time on a background thread.
   :::
-- **Compression failures throw.** LZ4 and xxHash allocation failures raise `OutOfMemoryError`
-  instead of aborting the process.
-- **A destroyed report dialog releases its request.** The saved snapshot is kept.
-- **A periodic timer runs on the main thread while the SDK holds a retired secure view.** It backs
-  off up to 8 s between runs and stops when nothing is held.
+
+  :::note[Behavior change]
+  `performance.json` in reports used to leave out attribute values that are not serializable (an
+  Activity or View, for example). It now carries their `toString()` text, which sampled
+  transactions uploaded to Bugsee already carried. Enum values are written as their name instead
+  of their ordinal. That text can include application data, so do not put sensitive objects into
+  span attributes.
+  :::
+
+- **A report dialog closed for good without Send or Discard** (for example, swiped away from
+  Recents) no longer keeps its report in memory. The report is not sent, and the next launch
+  discards the unsent copy, as before.
+- **A periodic main-thread timer** runs while the SDK holds a masked view that has left the screen;
+  see **Privacy masking** above.
 - **Report screenshots use a helper thread per report,** which is freed afterwards. On the one
   device it was measured on, later report screenshots were about 4.5 ms slower and about 3.6 MB of
   native memory was freed.
-- **One Activity is tracked for the screenshot callback.** Only one registered Activity is tracked,
-  so an Activity on another display can keep its callback until it is destroyed.
-- **New consumer ProGuard keep rules** cover the WebView ownership fields and
-  `Bugsee.getSdkVersion()` / `Bugsee.getSdkBuild()`. No change is needed in your rules.
-- **Documentation.** The API documentation now states which host-set objects the SDK holds
-  strongly, and that you own the bitmap you pass to `setScreenshotAsync`.
+
+**Compatibility**
+
+- New public API: `Bugsee.getSdkVersion()` and `Bugsee.getSdkBuild()`. No new options.
+- The ProGuard rules shipped in the AAR gain keep rules for an internal WebView class and for
+  `Bugsee.getSdkVersion()` / `getSdkBuild()`. No change is needed in your rules.
 
 **Known limitations**
 
 The SDK holds these objects you set strongly until you replace them, set them to `null`, or the
 process ends: the report handler, report filters, the lifecycle listener, a wrapper you supply, and
-the feedback listener. Do not let them capture an Activity, Fragment or View.
+the feedback listener. Do not let them capture an Activity, Fragment or View, and pass `null` when
+their owner goes away.
+
+:::note[Known limit]
+The `FeedbackListener` you set with `Feedback.setOnNewFeedbackListener` is kept across
+`Bugsee.stop()`, `launch()` and `relaunch()`, as in 7.5.0, so set it once. `null` takes effect
+asynchronously, so one more callback may still arrive on a worker thread.
+:::
+
+:::note[Known limit]
+Only one Activity is tracked for the screenshot callback. An Activity on another display can keep
+its callback until it is destroyed.
+:::
 
 ## 7.5.0
 
