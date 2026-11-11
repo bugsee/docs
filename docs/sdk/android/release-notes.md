@@ -96,7 +96,7 @@ memory longer than needed.
   :::
 
 - **A report dialog closed for good without Send or Discard** (for example, swiped away from
-  Recents) no longer keeps its report in memory. The report is not sent, and the next launch
+  the recent-apps list) no longer keeps its report in memory. The report is not sent, and the next launch
   discards the unsent copy, as before.
 - **A periodic main-thread timer** runs while the SDK holds a masked view that has left the screen;
   see **Privacy masking** above.
