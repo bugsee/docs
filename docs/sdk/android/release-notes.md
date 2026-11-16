@@ -7,7 +7,7 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
-## 7.5.1
+## 7.5.1 (November 11 2026)
 
 A stability release. It removes a set of memory leaks, hardens out-of-memory handling in the
 compression code, fixes several lifecycle problems, and adds two read-only version getters. A few
@@ -128,7 +128,7 @@ Only one Activity is tracked for the screenshot callback. An Activity on another
 its callback until it is destroyed.
 :::
 
-## 7.5.0
+## 7.5.0 (November 6 2026)
 
 A feature and reliability release. The NDK handler can be told which fatal signals to intercept,
 and the SDK keeps running when its native libraries are missing or cannot be linked. Report
@@ -207,7 +207,7 @@ accurate.
   longer writes a false charging entry before the real battery state arrives, and the `connection`
   trace writes `not_reachable` while offline instead of `unknown`, matching iOS and JavaScript.
 
-## 7.4.2
+## 7.4.2 (October 19 2026)
 
 A lifecycle and privacy release. `relaunch()` always reports its outcome, and secure fields stay
 masked in more situations while they scroll, animate or are removed.
@@ -231,7 +231,7 @@ masked in more situations while they scroll, animate or are removed.
   painted, so a list of secure rows no longer makes frame masking several times more expensive
   while it scrolls. The pixels that are masked do not change.
 
-## 7.4.1
+## 7.4.1 (October 13 2026)
 
 A single fix for touch capture.
 
@@ -239,7 +239,7 @@ A single fix for touch capture.
   Native apps in particular, and any native app with a view whose id matched an internal one, since
   7.0.0. Reports from such apps had video but no touch data. No change is needed in your app.
 
-## 7.4.0
+## 7.4.0 (October 13 2026)
 
 A reliability and API-clarity release. Crash reports are registered earlier and carry the crash
 time, stopping the SDK always completes, `capture.logs` no longer swallows your own `Bugsee.log()`
@@ -301,7 +301,7 @@ also remove finished report bundles.
   deprecated.
 - No new options.
 
-## 7.3.1
+## 7.3.1 (October 9 2026)
 
 A network-capture and reliability release. Network capture no longer holds large bodies in memory,
 requests are reported from the moment they are sent until their transfer really ends, and requests
@@ -450,7 +450,7 @@ duplicated, arrived without crash details, or lost its breadcrumbs are fixed.
   default implementations, so your own `NetworkEvent` implementations keep compiling.
 - No new options.
 
-## 7.3.0
+## 7.3.0 (September 29 2026)
 
 A security and reliability release. Reports no longer carry your app's request URLs or user values
 in the SDK's internal log, and they now say which of their parts is missing and why. Report video
@@ -676,7 +676,7 @@ is more reliable, and new options limit how much unsent report data stays on the
   were listed as public but were never present in the published artifact; use
   `Feedback.showFeedbackActivity()`.
 
-## 7.2.0
+## 7.2.0 (September 8 2026)
 
 A feature release. Your app can now send a message straight to your Slack or Teams integration
 without filing an issue, hang and ANR reports are attributed to the code that actually caused the
@@ -808,7 +808,7 @@ the whole screen — every window on it, and the shape of the display underneath
   `DetectAndReportAnrSampling` options, and `TimeUtils.uptimeToWallTimeMillis()`. No source changes
   are required to upgrade.
 
-## 7.1.4
+## 7.1.4 (August 26 2026)
 
 A patch release that keeps Bugsee out of your test runs and fixes three crashes that could reach
 your users.
@@ -834,7 +834,7 @@ your users.
   Bugsee stores identical screenshots, the screenshot was dropped from the report instead of being
   saved another way.
 
-## 7.1.3
+## 7.1.3 (August 21 2026)
 
 A single fix for how notification-initiated reports are labelled.
 
@@ -842,7 +842,7 @@ A single fix for how notification-initiated reports are labelled.
   they had been started from code, so they could not be told apart from reports opened with
   `Bugsee.showReportDialog()`.
 
-## 7.1.2
+## 7.1.2 (August 20 2026)
 
 A patch release for native crash reporting. Crashes in the first moments of a launch — a window that
 was previously uncovered — are now captured, and crashes that kill the app before it can report are
@@ -888,7 +888,7 @@ delivered on the next start.
   AAR onto an existing build. No source changes are required.
   :::
 
-## 7.1.1
+## 7.1.1 (August 12 2026)
 
 A patch release covering dependencies.
 
@@ -902,7 +902,7 @@ A patch release covering dependencies.
   `org.jetbrains:annotations` indirectly, declare them yourself. Projects that already use Kotlin are unaffected.
   :::
 
-## 7.1.0
+## 7.1.0 (August 10 2026)
 
 A feature and hardening release. WebSocket traffic is now captured, crash / ANR / exit reports carry
 substantially more diagnostic detail, and screens marked as secure by the Android platform are
@@ -996,7 +996,7 @@ capture, and restores native crash reporting on older Android versions.
 - **Leaner dependencies.** The OkHttp and Cronet extensions no longer pull the Kotlin standard
   library or `androidx.annotation` into your dependency graph.
 
-## 7.0.4
+## 7.0.4 (July 10 2026)
 
 A follow-up privacy release that keeps WebView redaction reliable on the latest devices and extends it to more kinds of web content.
 
@@ -1006,7 +1006,7 @@ A follow-up privacy release that keeps WebView redaction reliable on the latest 
 - **Secure fields inside web components are now redacted.** Password and hidden fields rendered inside Shadow DOM — used by many modern web components, in both open and closed modes — are now detected and blacked out like any other secure field.
 - **Redaction keeps up as the page changes.** Masks now track more kinds of page updates — layout reflow, images and fonts finishing loading, scrolling inside a nested scroll area, and fields that appear or disappear dynamically — so secure content stays covered instead of briefly drifting out of place.
 
-## 7.0.3
+## 7.0.3 (July 9 2026)
 
 A broad privacy, reliability, and compatibility release.
 
@@ -1030,7 +1030,7 @@ A broad privacy, reliability, and compatibility release.
 - Now built against the stable **Bugsee Android Gradle plugin 4.0.0** (previously a 4.0.0 beta). Works with **4.0.0** or newer.
 
 
-## 7.0.2
+## 7.0.2 (June 25 2026)
 
 **Fixes**
 
@@ -1038,12 +1038,12 @@ A broad privacy, reliability, and compatibility release.
 - **More resilient SurfaceView capture.** The `SurfaceView` / `PixelCopy` capture path now recovers if a copy-result callback is never delivered — a watchdog reschedules capture instead of stalling the recording — and additional capture callbacks and bitmap handling are guarded against null and concurrent recycling.
 
 
-## 7.0.1
+## 7.0.1 (June 24 2026)
 
 - **SurfaceView composition.** Captured SurfaceView may be incorrectly composited (in captured video) outside the app window after scrolling when activity is shown in a bubble (Android 17).
 
 
-## 7.0.0
+## 7.0.0 (June 23 2026)
 
 The first stable release of the 7.x line. It is the same modular, instrumented SDK as the late betas, with two reliability fixes on top of `7.0.0-beta15`. The full rewrite is summarized in the [migration guide](/sdk/android/migration); the per-beta history below documents how the line evolved.
 
@@ -1052,7 +1052,7 @@ The first stable release of the 7.x line. It is the same modular, instrumented S
 - **More resilient report uploads.** Creating an issue is now retried when the initial attempt fails with a transient network or TLS error, instead of dropping the report. Previously a single cold-connection blip at the moment the report was created could lose that report entirely — most visible on slow or flaky links and on older OS versions where the first TLS handshake is more likely to stall.
 - **Screenshot-to-report triggering now works across device makers.** Triggering a report by taking a screenshot previously missed some OEMs (notably Samsung and other devices that save screenshots to `DCIM/Screenshots`). The SDK now runs an always-on MediaStore observer as a fallback alongside the Android 14 `ScreenCaptureCallback`, so screenshot detection is consistent regardless of where the device stores the image.
 
-## 7.0.0-beta15
+## 7.0.0-beta15 (June 21 2026)
 
 GLSurfaceView capture and the wrapper secure-rectangle API.
 
@@ -1065,7 +1065,7 @@ GLSurfaceView capture and the wrapper secure-rectangle API.
 
 - No plugin upgrade required — continues to work with the Bugsee Android Gradle plugin **4.0.0-beta10** or newer.
 
-## 7.0.0-beta14
+## 7.0.0-beta14 (June 18 2026)
 
 A privacy refinement for wrapper-driven redaction, plus packaging fixes.
 
@@ -1082,7 +1082,7 @@ A privacy refinement for wrapper-driven redaction, plus packaging fixes.
 
 - No plugin upgrade required — continues to work with the Bugsee Android Gradle plugin **4.0.0-beta10** or newer.
 
-## 7.0.0-beta13
+## 7.0.0-beta13 (June 18 2026)
 
 A large release: a new memory & thread leak-detection module, hardened multi-process support, cross-platform wrapper integration, broader input capture, and the groundwork that makes the SDK run cleanly on every Android device type.
 
@@ -1110,7 +1110,7 @@ A large release: a new memory & thread leak-detection module, hardened multi-pro
 
 - Requires the Bugsee Android Gradle plugin **4.0.0-beta10** or newer.
 
-## 7.0.0-beta12
+## 7.0.0-beta12 (May 27 2026)
 
 This release completes the cold-start tracing rollout: per-method spans now correctly bracket the user-method body for Activity lifecycle callbacks on API 29+, the cold-start waterfall uses distinct operation names per source kind, and the underlying event pipeline is driven by an event-folder rather than SDK-centric phase spans.
 
@@ -1141,7 +1141,7 @@ This release completes the cold-start tracing rollout: per-method spans now corr
 
 - Requires Bugsee Android Gradle plugin **4.0.0-beta10** or newer. The plugin gates instrumentation against `MIN_SDK_VERSION_WITH_DISPATCHER = 7.0.0-beta11` at configuration time; pairing an older plugin with this SDK won't crash, but pairing this plugin with an older SDK (`< 7.0.0-beta11`) is refused with a Gradle warning rather than a runtime `NoClassDefFoundError`.
 
-## 7.0.0-beta11
+## 7.0.0-beta11 (May 20 2026)
 
 This release rewrites the UI performance provider for accurate TTID/TTI metrics, ships privacy scaling for screen capture, closes a year-long screen-capture memory + concurrency audit, and adds frustration detection.
 
@@ -1166,7 +1166,7 @@ This release rewrites the UI performance provider for accurate TTID/TTI metrics,
 
 - Requires Bugsee Android Gradle plugin **4.0.0-beta7** or newer.
 
-## 7.0.0-beta10
+## 7.0.0-beta10 (May 10 2026)
 
 Maintenance release shipping the frustration-detection provider's parity detectors and a tracker-initialization refactor for tests.
 
@@ -1183,7 +1183,7 @@ Maintenance release shipping the frustration-detection provider's parity detecto
 
 - Requires Bugsee Android Gradle plugin **4.0.0-beta6** or newer.
 
-## 7.0.0-beta9
+## 7.0.0-beta9 (May 2 2026)
 
 This release adds dynamic debug logging, hardens tracker initialization and report uploads against early-launch and session-expiry edge cases, and decouples touch capture from breadcrumb capture.
 
@@ -1201,7 +1201,7 @@ This release adds dynamic debug logging, hardens tracker initialization and repo
 **Build**
 - No Gradle plugin upgrade required — continues to work with **4.0.0-beta4** or newer.
 
-## 7.0.0-beta8
+## 7.0.0-beta8 (April 29 2026)
 
 This release adds an exchange factory for constructing `Breadcrumb` and `NetworkEvent` containers without allocating them yourself, makes hang detection thresholds configurable, and reduces GC pressure on the network-event fallback path.
 
@@ -1226,7 +1226,7 @@ This release adds an exchange factory for constructing `Breadcrumb` and `Network
 **Build**
 - No Gradle plugin upgrade required — continues to work with **4.0.0-beta4** or newer.
 
-## 7.0.0-beta7
+## 7.0.0-beta7 (April 27 2026)
 
 This release adds three small public APIs for inspecting blackout state and injecting custom network events and breadcrumbs into the capture pipeline.
 
@@ -1241,7 +1241,7 @@ This release adds three small public APIs for inspecting blackout state and inje
 **Build**
 - No Gradle plugin upgrade required — continues to work with **4.0.0-beta4** or newer.
 
-## 7.0.0-beta6
+## 7.0.0-beta6 (April 27 2026)
 
 This release introduces anomaly detection, splits NDK crash reporting into its own optional module, and consolidates how the SDK captures logs, network, input, and WebView events.
 
@@ -1276,14 +1276,14 @@ This release introduces anomaly detection, splits NDK crash reporting into its o
 - Adds new `:ndk` and `:ai` modules and enables Bugsee's own build size analysis in CI.
 - Expanded test coverage: end-to-end tests for anomaly detection, load tests across all interception paths, and new encoder and leak benchmarks.
 
-## 7.0.0-beta5
+## 7.0.0-beta5 (April 15 2026)
 
 - Network monitoring is now driven by a single shared coordinator consumed by both capture and APM, removing duplicated work between the two pipelines.
 - A new capture data entry registry eliminates a class of startup race conditions around provider and exporter discovery.
 - Requires the Bugsee Android Gradle plugin 4.0.0-beta2 or newer.
 - Adds comprehensive instrumentation tests for network interception.
 
-## 7.0.0-beta4
+## 7.0.0-beta4 (April 14 2026)
 
 This release focuses on startup performance and resource footprint.
 
@@ -1293,14 +1293,14 @@ This release focuses on startup performance and resource footprint.
 - Removes a redundant back-press override in the feedback activity.
 - Adds behavioral tests for the connection and thread pool configurations.
 
-## 7.0.0-beta3
+## 7.0.0-beta3 (April 14 2026)
 
 - Cold start is faster — non-critical initialization has been moved off the startup path.
 - The feedback activity now supports Android's predictive back gesture.
 - Fix: Provider discovery in minified builds — runtime annotations used by capture and detection are now preserved through ProGuard/R8.
 - Adds annotation-integrity checks and release-AAR verification to the test suite.
 
-## 7.0.0-beta2
+## 7.0.0-beta2 (April 13 2026)
 
 - All SDK modules are now published to Maven Central as `bugsee-android-*` artifacts (core, feedback, okhttp, ktor-2, ktor-3, cronet, compose), with proper Javadoc and source JARs.
 - All extension modules are now built with R8 minification and self-obfuscation enabled.
@@ -1310,7 +1310,7 @@ This release focuses on startup performance and resource footprint.
 - Requires the Bugsee Android Gradle plugin 4.0.0-beta1 or newer.
 - Adds fuzz tests for capture data entries, core utilities, native components, and the screen-capture bitmap cache.
 
-## 7.0.0-beta1
+## 7.0.0-beta1 (April 13 2026)
 
 First public beta of the 7.x line — a ground-up rewrite of every major subsystem.
 
