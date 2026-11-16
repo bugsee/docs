@@ -14,7 +14,7 @@ Bug reports cover something that is wrong but did not crash the app. Your users 
 
 ## Built-in report triggers
 
-The SDK can surface the report dialog through two user-facing gestures. Both are controlled by manifest options (or programmatic overrides at `Bugsee.launch(...)` time). Since 7.6.0 every trigger is off by default; turn on the ones you want:
+The SDK can surface the report dialog through four built-in triggers. Each is controlled by a manifest option (or a programmatic override at `Bugsee.launch(...)` time). Since 7.6.0 every trigger is off by default; turn on the ones you want:
 
 | Option                            | Manifest key                                           | Default |
 | --------------------------------- | ------------------------------------------------------ | ------- |
@@ -23,7 +23,7 @@ The SDK can surface the report dialog through two user-facing gestures. Both are
 | `ReportingTriggerByNotification`  | `com.bugsee.option.reporting.triggers.notification-bar`| `false` |
 | `ReportingTriggerByBroadcast`     | `com.bugsee.option.reporting.triggers.broadcast`       | `false` |
 
-:::note Changed in 7.6.0
+:::note[Changed in 7.6.0]
 Shake and the notification-bar entry were on by default in 7.5.1 and earlier. If your app relies on either, set it to `true` explicitly; an app that already sets it is unaffected.
 :::
 

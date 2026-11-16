@@ -183,7 +183,7 @@ Bugsee.launch(this, "<APP_TOKEN>", options);
 | `ReportingTriggerByNotification` | `com.bugsee.option.reporting.triggers.notification-bar` | boolean | `false` | Show a notification-bar entry that opens the bug-reporting UI when tapped. The default was `true` before 7.6.0. |
 | `ReportingTriggerByBroadcast` | `com.bugsee.option.reporting.triggers.broadcast` | boolean | `false` | Allow a report to be triggered by an Android broadcast intent. |
 
-:::note Changed in 7.6.0
+:::note[Changed in 7.6.0]
 All four triggers are off by default. In 7.5.1 and earlier, shake and the notification-bar entry were on. If your app relies on either, set it to `true` explicitly. An app that already sets it keeps working unchanged. A device that last launched an older SDK can restore the old `true` values from the saved configuration until the app has launched once on 7.6.0.
 :::
 
