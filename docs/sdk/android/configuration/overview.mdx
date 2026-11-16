@@ -178,17 +178,21 @@ Bugsee.launch(this, "<APP_TOKEN>", options);
 
 | `Options` constant | Manifest key | Type | Default | Description |
 | --- | --- | --- | --- | --- |
-| `ReportingTriggerByShake` | `com.bugsee.option.reporting.triggers.shake` | boolean | `true` | Open the bug-reporting UI when the device is shaken. |
+| `ReportingTriggerByShake` | `com.bugsee.option.reporting.triggers.shake` | boolean | `false` | Open the bug-reporting UI when the device is shaken. The default was `true` before 7.6.0. |
 | `ReportingTriggerByScreenshot` | `com.bugsee.option.reporting.triggers.screenshot` | boolean | `false` | Open the bug-reporting UI when the user takes a screenshot. |
-| `ReportingTriggerByNotification` | `com.bugsee.option.reporting.triggers.notification-bar` | boolean | `true` | Show a notification-bar entry that opens the bug-reporting UI when tapped. |
+| `ReportingTriggerByNotification` | `com.bugsee.option.reporting.triggers.notification-bar` | boolean | `false` | Show a notification-bar entry that opens the bug-reporting UI when tapped. The default was `true` before 7.6.0. |
 | `ReportingTriggerByBroadcast` | `com.bugsee.option.reporting.triggers.broadcast` | boolean | `false` | Allow a report to be triggered by an Android broadcast intent. |
+
+:::note Changed in 7.6.0
+All four triggers are off by default. In 7.5.1 and earlier, shake and the notification-bar entry were on. If your app relies on either, set it to `true` explicitly. An app that already sets it keeps working unchanged. A device that last launched an older SDK can restore the old `true` values from the saved configuration until the app has launched once on 7.6.0.
+:::
 
 <Tabs groupId="config">
   <TabItem value="manifest" label="AndroidManifest.xml">
 
 ```xml
 <meta-data android:name="com.bugsee.option.reporting.triggers.shake"
-           android:value="false" />
+           android:value="true" />
 ```
 
   </TabItem>
@@ -196,7 +200,7 @@ Bugsee.launch(this, "<APP_TOKEN>", options);
 
 ```java
 HashMap<String, Object> options = new HashMap<>();
-options.put(Options.ReportingTriggerByShake, false);
+options.put(Options.ReportingTriggerByShake, true);
 Bugsee.launch(this, "<APP_TOKEN>", options);
 ```
 

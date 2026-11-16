@@ -14,21 +14,25 @@ Bug reports cover something that is wrong but did not crash the app. Your users 
 
 ## Built-in report triggers
 
-The SDK can surface the report dialog through two user-facing gestures. Both are controlled by manifest options (or programmatic overrides at `Bugsee.launch(...)` time):
+The SDK can surface the report dialog through two user-facing gestures. Both are controlled by manifest options (or programmatic overrides at `Bugsee.launch(...)` time). Since 7.6.0 every trigger is off by default; turn on the ones you want:
 
 | Option                            | Manifest key                                           | Default |
 | --------------------------------- | ------------------------------------------------------ | ------- |
-| `ReportingTriggerByShake`         | `com.bugsee.option.reporting.triggers.shake`           | `true`  |
+| `ReportingTriggerByShake`         | `com.bugsee.option.reporting.triggers.shake`           | `false` |
 | `ReportingTriggerByScreenshot`    | `com.bugsee.option.reporting.triggers.screenshot`      | `false` |
-| `ReportingTriggerByNotification`  | `com.bugsee.option.reporting.triggers.notification-bar`| `true`  |
+| `ReportingTriggerByNotification`  | `com.bugsee.option.reporting.triggers.notification-bar`| `false` |
 | `ReportingTriggerByBroadcast`     | `com.bugsee.option.reporting.triggers.broadcast`       | `false` |
 
-Disable the shake trigger in `AndroidManifest.xml`:
+:::note Changed in 7.6.0
+Shake and the notification-bar entry were on by default in 7.5.1 and earlier. If your app relies on either, set it to `true` explicitly; an app that already sets it is unaffected.
+:::
+
+Enable the shake trigger in `AndroidManifest.xml`:
 
 ```xml
 <meta-data
     android:name="com.bugsee.option.reporting.triggers.shake"
-    android:value="false" />
+    android:value="true" />
 ```
 
 Or override at launch time:
@@ -38,7 +42,7 @@ Or override at launch time:
 
 ```java
 Map<String, Serializable> options = new HashMap<>();
-options.put(Options.ReportingTriggerByShake, false);
+options.put(Options.ReportingTriggerByShake, true);
 options.put(Options.ReportingTriggerByScreenshot, true);
 Bugsee.launch(application, "<your-app-token>", options);
 ```
@@ -48,7 +52,7 @@ Bugsee.launch(application, "<your-app-token>", options);
 
 ```kotlin
 val options = HashMap<String, java.io.Serializable>()
-options[Options.ReportingTriggerByShake] = false
+options[Options.ReportingTriggerByShake] = true
 options[Options.ReportingTriggerByScreenshot] = true
 Bugsee.launch(application, "<your-app-token>", options)
 ```
