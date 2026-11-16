@@ -389,6 +389,8 @@ Every option key changed name. Use this table to do a mechanical search/replace 
 | `NotificationBarTrigger` | `ReportingTriggerByNotification` |
 | _(no broadcast trigger)_ | `ReportingTriggerByBroadcast` |
 
+In 6.x, `ShakeToTrigger` and `NotificationBarTrigger` defaulted to `true`. In 7.6.0 and later the 7.x defaults for `ReportingTriggerByShake` and `ReportingTriggerByNotification` are `false` (7.5.1 and earlier kept `true`). If your app relied on either trigger, set it to `true` explicitly.
+
 ### Detection flags
 
 | 6.x | 7.x |
