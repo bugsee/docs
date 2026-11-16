@@ -19,20 +19,22 @@ Two gestures open the report dialog:
 
 | Option | `BugseeOptions` property | Default |
 | --- | --- | --- |
-| `BugseeOptionReportingTriggerByShake` | `shakeToReport` | `YES` |
+| `BugseeOptionReportingTriggerByShake` | `shakeToReport` | `NO` |
 | `BugseeOptionReportingTriggerByScreenshot` | `screenshotToReport` | `NO` |
 
 :::note
-These defaults changed in 7.x: in 6.x the screenshot opened the dialog and shaking did not.
-See the [migration guide](/sdk/ios/migration).
+Neither gesture opens the dialog until you turn it on. In 6.x the screenshot opened it by
+default; see the [migration guide](/sdk/ios/migration).
 :::
+
+Turn on the gestures your users should have:
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
 BugseeOptions *options = [BugseeOptions defaultOptions];
-options.shakeToReport = NO;
+options.shakeToReport = YES;
 options.screenshotToReport = YES;
 
 [Bugsee launchWithToken:@"<your_app_token>" options:options];
@@ -43,7 +45,7 @@ options.screenshotToReport = YES;
 
 ```swift
 let options = BugseeOptions.default()
-options.shakeToReport = false
+options.shakeToReport = true
 options.screenshotToReport = true
 
 Bugsee.launch(token: "<your_app_token>", options: options)

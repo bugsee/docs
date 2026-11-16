@@ -313,13 +313,12 @@ Bugsee.launch(token: "<your_app_token>", options: options)
 
 ## 3. Defaults that changed
 
-Seven defaults that a 6.x app is running today changed. Most were realigned with the Android
+Six defaults that a 6.x app is running today changed. Most were realigned with the Android
 SDK, so the same option means the same thing on both platforms. The crash handler type is iOS's
 own, and the data size limit came with the new pending-report caps.
 
 | Option | 6.x | 7.x |
 | --- | --- | --- |
-| `BugseeOptionReportingTriggerByShake` | NO | **YES** |
 | `BugseeOptionReportingTriggerByScreenshot` | YES | **NO** |
 | `BugseeOptionDetectAndReportExit` | NO | **YES** |
 | `BugseeOptionDetectAndReportEarlyCrash` | NO | **YES** |
@@ -332,23 +331,23 @@ These are behavioral changes, not compile-time ones. Nothing fails to build and 
 warns at runtime. An app that never set these options gets the new behavior the moment it
 upgrades.
 
-The consequence to plan for: **taking a screenshot no longer opens the report dialog, and
-shaking the device now does.** If your users were taught the screenshot gesture, set both
-keys explicitly.
+The consequence to plan for: **taking a screenshot no longer opens the report dialog.** If
+your users were taught the screenshot gesture, set `BugseeOptionReportingTriggerByScreenshot`
+to `YES`. Shaking the device does not open it either: `BugseeOptionReportingTriggerByShake` is
+off by default, as in 6.x.
 :::
 
 With `BugseeCrashHandlerTypeMachAndBSD`, Bugsee installs a Mach exception handler and BSD
 signal handlers, so it also reports signals raised by software (`raise()`, `kill()`). tvOS
 always uses BSD signal handlers. See [§2.2](#22-capture) for the three handler types.
 
-To keep 6.x behavior, pin all seven:
+To keep 6.x behavior, pin all six:
 
 <Tabs groupId="lang-ios">
   <TabItem value="objective-c" label="Objective-C">
 
 ```objectivec
 NSDictionary *options = @{
-    BugseeOptionReportingTriggerByShake:      @NO,
     BugseeOptionReportingTriggerByScreenshot: @YES,
     BugseeOptionDetectAndReportExit:          @NO,
     BugseeOptionDetectAndReportEarlyCrash:    @NO,
@@ -365,7 +364,6 @@ NSDictionary *options = @{
 
 ```swift
 let options: [String: Any] = [
-    BugseeOptionReportingTriggerByShake:      false,
     BugseeOptionReportingTriggerByScreenshot: true,
     BugseeOptionDetectAndReportExit:          false,
     BugseeOptionDetectAndReportEarlyCrash:    false,

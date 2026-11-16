@@ -19,7 +19,7 @@ No. 7.x is distributed through Swift Package Manager (`https://github.com/bugsee
 
 **3. Taking a screenshot no longer opens the report dialog. Why?**
 
-In 7.x, shaking the device opens the report dialog by default and taking a screenshot does not. To change either trigger, set `BugseeOptionReportingTriggerByShake` and `BugseeOptionReportingTriggerByScreenshot`. See [Configuration](/sdk/ios/configuration/#reporting). Shake to report is not available on tvOS; open the dialog from code there with `showReportDialog`.
+In 7.x, taking a screenshot does not open the report dialog by default, and neither does shaking the device. To turn either trigger on, set `BugseeOptionReportingTriggerByShake` or `BugseeOptionReportingTriggerByScreenshot`. See [Configuration](/sdk/ios/configuration/#reporting). Shake to report is not available on tvOS; open the dialog from code there with `showReportDialog`.
 
 <br />
 
