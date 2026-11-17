@@ -13,6 +13,25 @@ Release history for Bugsee React Native SDK 7.x: `@bugsee/react-native` and `@bu
 
 Each release lists the native SDKs it is built on. Their own changes are in the native SDK release notes: [Android](/sdk/android/release-notes) and [iOS](/sdk/ios/release-notes).
 
+## 7.0.0-beta5 (November 17 2026)
+
+Updates the Bugsee Gradle plugin the package builds against to **4.1.1** (it was 4.0.8). There are no changes to the JavaScript API.
+
+**Changes**
+
+- **Gradle plugin 4.1.1.** The Expo config plugin declares it by default, and the [installation](/sdk/react_native/installation) and [symbolication](/sdk/react_native/symbolication/android) pages use it for bare apps. If you pin the plugin yourself, set `id 'com.bugsee.android.gradle' version '4.1.1' apply false`.
+- **The plugin needs the Android Gradle Plugin 8.6 or newer and Gradle 8.7 or newer** (Gradle 9 is supported). On older versions the build fails early with a message that says so. See [Gradle plugin requirements](/sdk/android/gradle-plugin/requirements).
+- **Failing the build on an upload error is now possible.** Set `failOnUploadError` in the `bugsee { }` block to fail the build when a mapping, native symbol or build upload does not complete. By default it still only warns.
+- **Native symbols** are still uploaded from the unstripped libraries, and an upload that did not change is skipped on the next build.
+- **Uploads honour the JVM proxy settings,** secrets such as the app token stay out of build logs, and the plugin falls back to an installed `bugsee-cli` when the download fails.
+- `@bugsee/react-native-feedback` requires `@bugsee/react-native` `^7.0.0-beta5`.
+
+**Compatibility**
+
+- Android: Bugsee Android SDK 7.6.0, Bugsee Gradle plugin 4.1.1.
+- iOS: Bugsee iOS SDK 7.1.0.
+- `@bugsee/cli` 0.7.12.
+
 ## 7.0.0-beta4 (November 16 2026)
 
 Built on Bugsee Android SDK 7.6.0 and Bugsee iOS SDK 7.1.0, the first stable iOS SDK a 7.x release is built on. **Shake-to-report and the Android notification-bar trigger are now off by default.**
