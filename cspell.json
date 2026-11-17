@@ -106,6 +106,7 @@
         "netstandard",
         "Logcat",
         "SSID",
+        "BSSID",
         "unitypackage",
         "Podfile",
         "symbolicator",
