@@ -13,6 +13,37 @@ Release history for Bugsee React Native SDK 7.x: `@bugsee/react-native` and `@bu
 
 Each release lists the native SDKs it is built on. Their own changes are in the native SDK release notes: [Android](/sdk/android/release-notes) and [iOS](/sdk/ios/release-notes).
 
+## 7.0.0-beta4 (November 16 2026)
+
+Built on Bugsee Android SDK 7.6.0 and Bugsee iOS SDK 7.1.0, the first stable iOS SDK a 7.x release is built on. **Shake-to-report and the Android notification-bar trigger are now off by default.**
+
+**Changes**
+
+- **Shake-to-report is off by default on both platforms** (`com.bugsee.option.reporting.triggers.shake`, iOS SDK 7.1.0 and Android SDK 7.6.0). If your app relied on it, turn it on at launch: `options.setCustomOption('com.bugsee.option.reporting.triggers.shake', true)`. See [Bug reporting](/sdk/react_native/manual/bug-reporting#built-in-report-triggers).
+- **The Android notification-bar trigger is off by default** (`triggerByNotification`, Android SDK 7.6.0). Set `options.triggerByNotification = true` on an Android options object to keep it.
+- **`crashSignals` is available on both platforms.** Both native SDKs now register `com.bugsee.option.capture.crash-signals`, with the same bit values (`ABRT` 1, `SEGV` 2, `BUS` 4, `ILL` 8, `FPE` 16, `TRAP` 32). The accessor moved from the iOS options to the shared options. The default, 128, means every signal when it is the whole value; combined with other bits it is dropped and only the signal bits count. On Android it is read once, when the native crash handler is armed. See [Configuration](/sdk/react_native/configuration#shared-accessors).
+- Launch options are synchronized with the option manifests the two native SDKs published for these versions.
+- `@bugsee/react-native-feedback` requires `@bugsee/react-native` `^7.0.0-beta4`.
+
+**Also since 7.0.0-beta3**
+
+- Exceptions: `ErrorBoundary` honours `detect.crash`, and a crash after a handled report is kept.
+- Spans: status is synced after finish, and open JavaScript spans are cancelled on reload.
+- iOS: an active blackout ends on `stop()`, matching Android.
+- `deleteCollectedDataOnDevice` exposes `includingFinishedReports`, and iOS resolves with the real outcome.
+- Android: a warning at launch when Bugsee's OkHttp interceptor is missing.
+- Log, network and breadcrumb filters fail closed on a 9 second deadline, and after a JavaScript reload until the new runtime installs its filter.
+- Auto-launch: `attach()` registers the wrapper identity, with an opt-in fail-closed filter hold at process start.
+- Breadcrumbs: an opt-in URL scrubber for HTTP breadcrumbs.
+- Build tooling: the dSYM token is read from `.xcode.env.local`, `editGradleFiles` supports Kotlin projects, and there is a strip `sourcesContent` option.
+- The Expo plugin removes the `com.bugsee.app-token` it wrote earlier when `autoLaunch` is off.
+
+**Compatibility**
+
+- Android: Bugsee Android SDK 7.6.0, Bugsee Gradle plugin 4.0.8.
+- iOS: Bugsee iOS SDK 7.1.0.
+- `@bugsee/cli` 0.7.12.
+
 ## 7.0.0-beta3 (October 20 2026)
 
 Fixes the package's shell scripts, which 7.0.0-beta1 and 7.0.0-beta2 published without the executable bit.

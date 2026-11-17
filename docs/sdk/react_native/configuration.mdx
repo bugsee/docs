@@ -70,7 +70,7 @@ import {
 
 const options = createDefaultLaunchOptions();
 if (options instanceof AndroidLaunchOptions) {
-  options.triggerByNotification = false;
+  options.triggerByNotification = true;
 } else if (options instanceof IOSLaunchOptions) {
   options.captureDiskSpace = true;
 }
@@ -101,6 +101,7 @@ These accessors exist on both platforms.
 | `captureBreadcrumbs` | `com.bugsee.option.capture.breadcrumbs` | boolean | `false` | Record breadcrumbs. While off, `Bugsee.addBreadcrumb` records nothing, on both platforms. |
 | `detectAndReportCrash` | `com.bugsee.option.detect.crash` | boolean | `true` | Report crashes. `false` also turns off the reporting of uncaught JavaScript errors, unhandled promise rejections and uncaught render errors. See [Turning automatic reporting off](/sdk/react_native/manual/crash-error-reporting#turning-automatic-reporting-off). |
 | `detectAndReportHang` | `com.bugsee.option.detect.hang` | boolean | `false` | Report when the main thread is blocked long enough to count as a hang. |
+| `crashSignals` | `com.bugsee.option.capture.crash-signals` | number (bit set) | `128` (every signal) | The fatal signals the native crash handler intercepts (iOS crash reporter, Android NDK handler): `ABRT` 1, `SEGV` 2, `BUS` 4, `ILL` 8, `FPE` 16, `TRAP` 32. Add the values to combine them. The default, 128, means every signal only when it is the whole value. On Android it is read once, when the handler is armed. |
 
 The **Default** column applies to both platforms unless the row gives one per platform. Read the values in effect with [`getLaunchOptions()`](#reading-the-effective-options).
 
@@ -117,7 +118,7 @@ The **Default** column applies to both platforms unless the row gives one per pl
 | `detectAndReportExitLowMemoryBackgroundAsError` | `com.bugsee.option.detect.exit.bg_low_memory_as_error` | boolean | `false` | Report a low-memory kill of a process that was not in the foreground as a non-fatal error rather than a crash. Applies only while `detectAndReportExitLowMemory` is on. |
 | `maxPendingReports` | `com.bugsee.option.config.max-pending-reports` | number | `30` | Most reports kept waiting to be sent. |
 | `maxPendingReportAge` | `com.bugsee.option.config.max-pending-report-age` | number (days) | `30` | Oldest a report waiting to be sent may get; `0` or less keeps reports until they are sent or evicted. |
-| `triggerByNotification` | `com.bugsee.option.reporting.triggers.notification-bar` | boolean | `true` | Show a notification-bar entry that opens the report UI. |
+| `triggerByNotification` | `com.bugsee.option.reporting.triggers.notification-bar` | boolean | `false` | Show a notification-bar entry that opens the report UI. Off by default since Android SDK 7.6.0. |
 
 The other Android-only keys are reachable with `setCustomOption`: see [Platform-only keys](#platform-only-keys).
 
@@ -131,7 +132,6 @@ The other Android-only keys are reachable with `setCustomOption`: see [Platform-
 | `captureAVPlayer` | `com.bugsee.option.capture.avplayer` | boolean | `false` | Capture video that plays through `AVPlayerLayer` and `AVPlayerViewController` in the recording. |
 | `captureDiskSpace` | `com.bugsee.option.capture.disk-space` | boolean | `false` | Monitor available disk space and include it in reports as a system trace and device properties. |
 | `crashHandlerType` | `com.bugsee.option.capture.crash-handler-type` | `CrashHandlerType` | `MachAndBSD` | How the crash reporter intercepts crashes. |
-| `crashSignals` | `com.bugsee.option.capture.crash-signals` | number (bit set) | every signal | The fatal signals the crash reporter intercepts: `ABRT` 1, `SEGV` 2, `BUS` 4, `ILL` 8, `FPE` 16, `TRAP` 32. Add the values to combine them. |
 
 ## Other shared keys
 
@@ -172,7 +172,7 @@ These keys are accepted by both native SDKs but have no accessor. Set them with 
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `com.bugsee.option.reporting.triggers.shake` | boolean | `true` | Open the report UI when the device is shaken. |
+| `com.bugsee.option.reporting.triggers.shake` | boolean | `false` | Open the report UI when the device is shaken. Off by default since iOS SDK 7.1.0 and Android SDK 7.6.0. |
 | `com.bugsee.option.reporting.triggers.screenshot` | boolean | `false` | Open the report UI when the user takes a screenshot. |
 | `com.bugsee.option.reporting.defaults.crash-priority` | `IssueSeverity` | `Blocker` | Severity of crash reports. |
 | `com.bugsee.option.reporting.defaults.error-priority` | `IssueSeverity` | `High` | Severity of error reports. |
@@ -346,11 +346,11 @@ options.duration = 90;
 options.captureBreadcrumbs = true;
 options.captureLogsLevel = LogLevel.Info;
 options.detectAndReportHang = true;
-options.setCustomOption('com.bugsee.option.reporting.triggers.shake', false);
+options.setCustomOption('com.bugsee.option.reporting.triggers.shake', true);
 options.setCustomOption('com.bugsee.option.reporting.defaults.bug-priority', IssueSeverity.Medium);
 
 if (options instanceof AndroidLaunchOptions) {
-  options.triggerByNotification = false;
+  options.triggerByNotification = true;
 } else if (options instanceof IOSLaunchOptions) {
   options.crashHandlerType = CrashHandlerType.MachAndBSD;
 }

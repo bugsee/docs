@@ -82,7 +82,7 @@ The Bugsee Gradle plugin (`com.bugsee.android.gradle`) uploads the R8/ProGuard m
 
 It is also what records `fetch` and `XMLHttpRequest` on Android: React Native sends them through OkHttp, and the plugin is what lets the SDK record OkHttp traffic. Without the plugin, those requests are not recorded on Android; see [Network events](/sdk/react_native/network).
 
-Use the plugin version the package is built against: `android.gradlePlugin` in `node_modules/@bugsee/react-native/native-versions.json`, which is **4.0.8** for `7.0.0-beta3`. Its requirements (Android Gradle Plugin and Gradle versions) are on [Gradle plugin requirements](/sdk/android/gradle-plugin/requirements).
+Use the plugin version the package is built against: `android.gradlePlugin` in `node_modules/@bugsee/react-native/native-versions.json`, which is **4.0.8** for `7.0.0-beta4`. Its requirements (Android Gradle Plugin and Gradle versions) are on [Gradle plugin requirements](/sdk/android/gradle-plugin/requirements).
 
 **`android/settings.gradle`**: the plugin is published to Maven Central, which Gradle does not search for plugins unless told to:
 

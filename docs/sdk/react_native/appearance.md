@@ -56,8 +56,8 @@ Each property exists on Android, on iOS, or on both:
 | `cellBackgroundColor` | | `reportCellBackgroundColor`: the background of the table cells. |
 | `navigationBarColor` | | `reportNavigationBarColor` |
 | `placeholderColor` | | `reportPlaceholderColor`: the input fields' placeholder text. |
-| `sendButtonColor` | | `reportSendButtonColor`. **Not applied** in iOS SDK 7.0.0-beta7, whose report screen uses the system Done button. |
-| `closeButtonColor` | | `reportCloseButtonColor`. **Not applied** in iOS SDK 7.0.0-beta7, whose report screen uses the system Cancel button. |
+| `sendButtonColor` | | `reportSendButtonColor`. **Not applied** in iOS SDK 7.0.0-beta6 and later, where the setting is deprecated and the report screen uses the system Done button. |
+| `closeButtonColor` | | `reportCloseButtonColor`. **Not applied** in iOS SDK 7.0.0-beta6 and later, where the setting is deprecated and the report screen uses the system Cancel button. |
 
 Check `Platform.OS` before setting a property that exists on one platform only: setting it on the other throws.
 

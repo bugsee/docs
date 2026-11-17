@@ -31,7 +31,7 @@ The SDK turns problems into reports automatically:
 - **JavaScript exceptions**: `Bugsee.launch()` installs global handlers for uncaught errors and unhandled promise rejections. An [error boundary](/sdk/react_native/error-boundary) reports render errors.
 - **Native crashes**: on Android, uncaught Java and Kotlin exceptions and native (NDK) crashes; on iOS, uncaught Objective-C exceptions and fatal signals, including Swift runtime traps. See [Native crashes](/sdk/react_native/manual/crash-error-reporting#native-crashes).
 - **Handled errors** you report yourself; see [Crash & error reporting](/sdk/react_native/manual/crash-error-reporting).
-- **Manual reports**: let users shake the device to report, or open the report dialog or upload a report from code; see [Bug reporting](/sdk/react_native/manual/bug-reporting).
+- **Manual reports**: turn on shake-to-report (off by default), or open the report dialog or upload a report from code; see [Bug reporting](/sdk/react_native/manual/bug-reporting).
 
 ## How it works
 
@@ -59,12 +59,12 @@ Hermes is required. JavaScriptCore (Hermes off) is not supported: React Native r
 
 ## Versions
 
-This beta, `7.0.0-beta3`, is built on these native SDKs:
+This beta, `7.0.0-beta4`, is built on these native SDKs:
 
 | Platform | Native SDK | Notes |
 | --- | --- | --- |
-| Android | `com.bugsee:bugsee-android` 7.4.2 | Bugsee Gradle plugin 4.0.8 for release uploads and Android network capture |
-| iOS | Bugsee iOS SDK 7.0.0-beta7 | The iOS SDK is itself a beta |
+| Android | `com.bugsee:bugsee-android` 7.6.0 | Bugsee Gradle plugin 4.0.8 for release uploads and Android network capture |
+| iOS | Bugsee iOS SDK 7.1.0 | A stable release of the iOS SDK |
 
 `@bugsee/react-native` 7.x replaces `react-native-bugsee` 6.x. They are different packages with different APIs, not an upgrade in place: remove the old package and follow [Migrating from 6.x to 7.x](/sdk/react_native/migration).
 

@@ -13,7 +13,7 @@ This page documents Bugsee React Native SDK **7.x**, which is in beta and can ch
 :::
 
 :::note
-This guide compares `react-native-bugsee` 6.0.x with `@bugsee/react-native` `7.0.0-beta3`. If you are setting up a new project, start from [Installation](/sdk/react_native/installation) instead.
+This guide compares `react-native-bugsee` 6.0.x with `@bugsee/react-native` `7.0.0-beta4`. If you are setting up a new project, start from [Installation](/sdk/react_native/installation) instead.
 :::
 
 This guide walks through every public-API change between the 6.x package (`react-native-bugsee`) and the 7.x package (`@bugsee/react-native`, plus `@bugsee/react-native-feedback` for the feedback chat).
@@ -74,7 +74,7 @@ On the legacy architecture the 7.x package fails when it is imported. See [Overv
 | | 6.x | 7.x |
 | --- | --- | --- |
 | iOS SDK | The `Bugsee` pod from CocoaPods trunk, or `Bugsee.xcframework` copied in by hand | Brought by the package: its `Package.swift` with React Native's Swift Package Manager integration (0.87 and later), or its podspec, which downloads and vendors the XCFramework during `pod install`. Remove a hand-copied `Bugsee.xcframework`. |
-| Android SDK | `com.bugsee:bugsee-android:+` (any version) | `com.bugsee:bugsee-android` 7.4.2, plus its NDK and OkHttp modules, pinned by the package |
+| Android SDK | `com.bugsee:bugsee-android:+` (any version) | `com.bugsee:bugsee-android` 7.6.0, plus its NDK and OkHttp modules, pinned by the package |
 | Android Gradle plugin | Not needed | The Bugsee Gradle plugin (`com.bugsee.android.gradle`), for `fetch`/XHR network capture on Android and for the R8 mapping and native-symbol uploads. See [Symbolication: Android](/sdk/react_native/symbolication/android). |
 
 Without the Bugsee Gradle plugin, a 7.x Android app builds and runs, but records no `fetch` or `XMLHttpRequest` traffic. See [Installation](/sdk/react_native/installation#android).
@@ -147,8 +147,8 @@ Because 7.x sends only what you set, the native defaults apply where 6.x sent it
 
 | Behavior | 6.x default (set by the 6.x package) | 7.x default (native) |
 | --- | --- | --- |
-| Shake to report (`com.bugsee.option.reporting.triggers.shake`) | Off | On |
 | Default bug severity (`com.bugsee.option.reporting.defaults.bug-priority`) | `Low` | `High` |
+| Notification-bar trigger on Android (`triggerByNotification`, `com.bugsee.option.reporting.triggers.notification-bar`) | On | Off |
 | Screenshot to report on iOS (`com.bugsee.option.reporting.triggers.screenshot`) | On | Off |
 | Disk space for pending reports on Android (`maxDataSize`) | 50 MB | 150 MB |
 | Android video mode (`videoMode`) | `V3` | `V2` |
@@ -221,7 +221,7 @@ In the tables below, a 7.x accessor is a property of the options object; a key w
 
 ### 3.4 New in 7.x
 
-Options with no 6.x counterpart include `captureLogsLevel`, `captureBreadcrumbs`, `detectAndReportHang`, `endpoint`, Android's `logsUseAllSources`, `detectAndReportExitLowMemory`, `maxPendingReports` and `maxPendingReportAge`, iOS's `crashHandlerType` and `crashSignals`, and keys such as `com.bugsee.option.detect.http-errors`, `com.bugsee.option.capture.network.default-sanitizer` and `com.bugsee.option.performance.enabled`. See [Configuration](/sdk/react_native/configuration).
+Options with no 6.x counterpart include `captureLogsLevel`, `captureBreadcrumbs`, `detectAndReportHang`, `endpoint`, Android's `logsUseAllSources`, `detectAndReportExitLowMemory`, `maxPendingReports`, `maxPendingReportAge` and `crashSignals` (on both platforms), iOS's `crashHandlerType`, and keys such as `com.bugsee.option.detect.http-errors`, `com.bugsee.option.capture.network.default-sanitizer` and `com.bugsee.option.performance.enabled`. See [Configuration](/sdk/react_native/configuration).
 
 ---
 

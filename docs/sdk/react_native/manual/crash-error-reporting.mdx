@@ -58,7 +58,7 @@ Crashes in native code are captured too:
 - **Android**: uncaught exceptions in Java and Kotlin code, and crashes in native (NDK) code.
 - **iOS**: uncaught Objective-C exceptions (`NSException`), and fatal signals (`SIGABRT`, `SIGSEGV`, `SIGBUS`, `SIGILL`, `SIGFPE` and `SIGTRAP`, which includes Swift runtime traps), whether raised by a hardware fault or by software (with the default `crashHandlerType`).
 
-On iOS, `crashHandlerType` and `crashSignals` choose how crashes are intercepted; see [iOS accessors](/sdk/react_native/configuration#ios-accessors). Other detectors (hangs, low-memory exits, HTTP errors) are launch options too; see [Detection](/sdk/react_native/configuration#detection).
+On iOS, `crashHandlerType` chooses how crashes are intercepted; see [iOS accessors](/sdk/react_native/configuration#ios-accessors). `crashSignals` chooses which fatal signals are intercepted, on both platforms; see [Shared accessors](/sdk/react_native/configuration#shared-accessors). Other detectors (hangs, low-memory exits, HTTP errors) are launch options too; see [Detection](/sdk/react_native/configuration#detection).
 
 :::caution[iOS Simulator]
 In this beta, the iOS Simulator produces no crash reports: neither native crashes nor JavaScript crashes. Test crash reporting on a physical iPhone.

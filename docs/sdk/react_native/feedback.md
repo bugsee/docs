@@ -13,7 +13,7 @@ Bugsee includes an in-app chat that lets your users talk to your support team an
 
 ## Installation
 
-Add the feedback package next to `@bugsee/react-native`. The two must be the **same release**: install both at the same version, or both with the `@beta` tag. Nothing enforces it: the package's peer dependency accepts any `@bugsee/react-native` from `7.0.0-beta3` on.
+Add the feedback package next to `@bugsee/react-native`. The two must be the **same release**: install both at the same version, or both with the `@beta` tag. Nothing enforces it: the package's peer dependency accepts any `@bugsee/react-native` from `7.0.0-beta4` on.
 
 ```sh
 yarn add @bugsee/react-native@beta @bugsee/react-native-feedback@beta
@@ -25,8 +25,8 @@ The native side comes with the package, at the versions the core package pins:
 
 | Platform | What is added |
 | --- | --- |
-| Android | Autolinking adds the Android feedback module, `com.bugsee:bugsee-android-feedback`, at the same version as the core Android SDK (7.4.2 in this beta). No Gradle changes. |
-| iOS | With CocoaPods, run `pod install`: the podspec fetches the sources of the iOS feedback package, `bugsee/feedback-spm`, at the same version as the core iOS SDK (7.0.0-beta7 in this beta), and compiles them. With React Native 0.87 and later, Swift Package Manager resolves that package instead. |
+| Android | Autolinking adds the Android feedback module, `com.bugsee:bugsee-android-feedback`, at the same version as the core Android SDK (7.6.0 in this beta). No Gradle changes. |
+| iOS | With CocoaPods, run `pod install`: the podspec fetches the sources of the iOS feedback package, `bugsee/feedback-spm`, at the same version as the core iOS SDK (7.1.0 in this beta), and compiles them. With React Native 0.87 and later, Swift Package Manager resolves that package instead. |
 
 The package has no Expo config plugin.
 
