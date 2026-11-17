@@ -31,10 +31,7 @@ Shake-to-report is now off by default. If your app relies on it, set `shakeToRep
 
 **Fixes**
 
-- Fix: The shake and screenshot report triggers follow the launch options. In 7.0.0 and 7.0.1
-  both opened the report dialog whatever the options said, an explicit `NO` included. A
-  relaunch applies new values, and a trigger that is off no longer listens for shakes or
-  screenshots.
+- Fix: The shake and screenshot report triggers follow the launch options.
 - Fix: `wifiOnlyUpload` (`BugseeOptionConfigWifiOnlyUpload`) keeps report uploads off cellular
   again. On cellular, the request that creates a report fails and is retried as it is while
   the device is offline, and the report is deleted when those retries run out. Once the report
