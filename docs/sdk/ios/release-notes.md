@@ -37,8 +37,8 @@ Shake-to-report is now off by default. If your app relies on it, set `shakeToRep
   the device is offline, and the report is deleted when those retries run out. Once the report
   is created, its upload waits for Wi-Fi without using those retries.
 - Fix: The Wi-Fi and cellular traces record the network name (SSID and BSSID) and the carrier
-  name, MCC and MNC only when `captureDeviceAndNetworkNames` is on. Before, they recorded them
-  whatever the option said. See [Device and network names](/sdk/ios/configuration#device-and-network-names).
+  name, MCC and MNC only when `captureDeviceAndNetworkNames` is on. See
+  [Device and network names](/sdk/ios/configuration#device-and-network-names).
 - Fix: A crash after `stop`, or after a relaunch that turns `crashReport` off, is no longer
   reported at the next launch.
 - Fix: A launch without options from `application(_:didFinishLaunchingWithOptions:)`
