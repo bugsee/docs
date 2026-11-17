@@ -7,6 +7,107 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.6.0 (November 16 2026)
+
+A release that turns two report triggers off by default and hardens network capture, the internal
+log, crash recovery, privacy masking and report storage. It also includes everything in 7.5.1. Read
+**Behavior changes** before you upgrade.
+
+**Behavior changes**
+
+- **The shake and notification-bar triggers are off by default.** `ReportingTriggerByShake`
+  (`com.bugsee.option.reporting.triggers.shake`) and `ReportingTriggerByNotification`
+  (`com.bugsee.option.reporting.triggers.notification-bar`) now default to `false`, so all four
+  built-in triggers are off unless you turn them on. Several launch paths fall back to the SDK
+  defaults instead of the app's options, and an on-by-default trigger meant a gesture or a standing
+  notification the app never asked for. Apps that set either option explicitly are unaffected. A
+  configuration saved by an older SDK keeps the values stored in it. See
+  [Bug reporting](/sdk/android/manual/bug-reporting) and the
+  [migration guide](/sdk/android/migration).
+- **`HttpURLConnection` captures keep the URL as written.** The URL is no longer
+  percent-decoded, as with OkHttp and Cronet. Encoded reserved characters (`%23`, `%26`, `%3F`,
+  `%40`) used to become live delimiters before the default sanitizer parsed the URL, which could
+  leak a user name or a token. A network event filter (`setNetworkEventFilter`), a breadcrumb URL
+  and a network entry now see the encoded form (`%20`, `%C3%A9`).
+- **An `HttpURLConnection` response body is captured without blocking your call.** With body
+  capture on, the SDK used to read the body inside your own `getResponseCode()` or
+  `getInputStream()` call, which hung streaming responses such as server-sent events and long
+  polls. It now copies what your code reads, and the body reaches subscribers and your network
+  event filter as a second event for the same request, marked as an override, after you reach the
+  end of the stream, close it, or it fails. The filter runs for that event on an SDK thread, so it
+  must make the same keep-or-drop decision for every event of one request id. A body that was not
+  read to its end is reported as not there. Bodies wait on a bounded executor under a budget for
+  pending bytes.
+- **Uploads of recovered reports honour `WifiOnlyUpload`.** After a relaunch, a pending bundle used
+  to upload over metered data even with the option set. It is now scheduled for a network that
+  is not metered, and the SDK keeps one pending upload job per bundle.
+- **The `WifiOnlyUpload` wait notices Wi-Fi joining while mobile data stays up.** It re-evaluates on
+  every connectivity change and requires a validated Wi-Fi network that can reach the internet.
+- **`WebViewClientWrapper` hands two callbacks to your client.** `onRenderProcessGone` and
+  `onSafeBrowsingHit` are forwarded to the client you set and return its answer, so a renderer
+  crash that your client handles no longer kills the app. A plain `new WebViewClient()` that you
+  set is no longer mistaken for the platform default, so links are not all opened in an external
+  browser.
+
+**Privacy**
+
+- **HTTP breadcrumb URLs are redacted before they reach the report.** The default network
+  sanitizer runs on breadcrumbs of type `http` whose URL is text, ahead of your breadcrumb filter.
+  It covers the SDK's network capture, the WebView bridge and `Bugsee.addBreadcrumb`, applies when
+  `requiresFiltering` is true, and follows `CaptureNetworkUseDefaultSanitizer`.
+- **A huge secure-area coordinate still masks.** An edge that saturated and wrapped made the
+  rectangle inside out, so the mask was skipped. Edges are computed in `double` and clamped, and a
+  `NaN`, an infinity or a non-positive scale covers the whole frame.
+- **The Compose secure-area scanner fails closed.** When a node cannot be read, or the scan cannot
+  run, the walk covers the whole managing view instead of reporting that nothing is secure, which
+  used to unpublish fields that were masked before.
+- **A WebView's reported page scale is validated** where it is stored, so secure-field rectangles
+  cannot collapse.
+
+**Fixes**
+
+- **Auto-launch after the process is restarted starts the components with the restored options.** They
+  used to start with a container of defaults while reporting used the restored options.
+- **Crash stubs record an uncaught throwable before the report is built.** A cycle in the
+  `logException` options map no longer breaks `crash.json`.
+- **A native crash whose capture copy fails is still reported.** A dialog bug report keeps its
+  awaiting-submission marker from its first save, and the snapshot folders are recreated after a
+  failed generation open.
+- **The native crash marker survives torn lines.** The writer and reader tolerate a partly written
+  marker, and lines read after a torn one are marked so cut columns are not trusted.
+- **A saved report whose options class this build cannot resolve is still read,** with its saved
+  options kept, and the class named by a saved report is never initialized while it is checked.
+  An unusable pending record is rebuilt like a corrupt one instead of being read as empty, and the
+  read is capped.
+- **An opened crash or error report is not persisted before it names its payload.**
+- **The first `logcat` start reads from the session start,** not the whole ring buffer. A large
+  backlog used to cost about 0.8 to 1.2 s of CPU on a background logging thread and delayed the
+  current lines, so a short-session crash report could carry its log late or not at all.
+- **The `logcat` reader parses records by header, not by blank lines,** infers the year per record
+  and follows time zone changes, and restarts when its child process ends on its own.
+- **The internal log:** exactly one writer thread starts, a record that fails to serialize is cut
+  out, and only complete records of a torn file are exported.
+- **Restored options:** enum options come back as constants when a persisted configuration is read
+  back, and API 21 devices restore booleans that were stored as integers.
+- **Capture:** a binary entry is staged so a failed write cannot corrupt the stream, an entry the
+  stream ends inside is dropped, and a native view hierarchy larger than 16 MiB is dropped and
+  marked as truncated.
+- **The MediaProjection service releases only the engine that started it,** ignores a start for an
+  engine that is no longer started, and a device rotation during the consent dialog is no longer
+  counted as a denial. A deadlock between two engine locks is fixed.
+- **Serialization and JSON:** whole numbers beyond the range of `long` no longer wrap, fractions
+  and exponents parse exactly like `Double.parseDouble`, `BigInteger` and `BigDecimal` are written
+  as numbers, non-`String` map keys are written instead of dropped, a value that cannot be encoded is
+  written as a marker, nesting depth is bounded, and ordered maps and sets keep their order.
+- **A JNI mask routine** computes byte offsets in 64 bits and caps rows at the row stride.
+- **An extension registered under its own type** is found by the register guard.
+
+**Compatibility**
+
+- No new options: the set of option keys is the same as in 7.5.1. The only default that changed is
+  the two triggers above.
+- The `ai` module, which was never published, is removed from the source tree.
+
 ## 7.5.1 (November 11 2026)
 
 A stability release. It removes a set of memory leaks, hardens out-of-memory handling in the
