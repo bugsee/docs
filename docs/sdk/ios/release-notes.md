@@ -46,14 +46,11 @@ Shake-to-report is now off by default. If your app relies on it, set `shakeToRep
   crash reporting at once instead of when the app becomes active, and a `stop` before the app
   becomes active cancels it.
 - Fix: A launch while Bugsee is already running is answered as already launched, also when the
-  app still reads as in the background, for example in `sceneWillEnterForeground(_:)`. Before,
-  it waited for the foreground, and a `stop` in between reported success while the recording
-  went on.
+  app still reads as in the background, for example in `sceneWillEnterForeground(_:)`.
 - Fix: After `stop`, the SDK no longer adds a video output to new `AVPlayerItem`s or holds
   frames of `AVSampleBufferDisplayLayer` and the camera preview.
 - Fix: The 6.x option key string `CaptureVideoAdaptive` is translated to
-  `BugseeOptionCaptureVideoAdaptive`. Before, a dictionary that passed it was ignored, so
-  `"CaptureVideoAdaptive": false` left adaptive capture on.
+  `BugseeOptionCaptureVideoAdaptive`.
 
 ### BugseeFeedback module
 
