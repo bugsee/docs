@@ -39,8 +39,9 @@ log, crash recovery, privacy masking and report storage. It also includes everyt
   read to its end is reported as not there. Bodies wait on a bounded executor under a budget for
   pending bytes.
 - **Uploads of recovered reports honour `WifiOnlyUpload`.** After a relaunch, a pending bundle used
-  to upload over metered data even with the option set. It is now scheduled for a network that
-  is not metered, and the SDK keeps one pending upload job per bundle.
+  to upload over metered data even with the option set. It is now scheduled with the same network
+  requirement the SDK uses for its other uploads when the option is set, and the SDK keeps one
+  pending upload job per bundle.
 - **The `WifiOnlyUpload` wait notices Wi-Fi joining while mobile data stays up.** It re-evaluates on
   every connectivity change and requires a validated Wi-Fi network that can reach the internet.
 - **`WebViewClientWrapper` hands two callbacks to your client.** `onRenderProcessGone` and
