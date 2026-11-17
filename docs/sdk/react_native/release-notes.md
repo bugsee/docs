@@ -33,7 +33,7 @@ Built on Bugsee Android SDK 7.6.0 and Bugsee iOS SDK 7.1.0, the first stable iOS
 - `deleteCollectedDataOnDevice` exposes `includingFinishedReports`, and iOS resolves with the real outcome.
 - Android: a warning at launch when Bugsee's OkHttp interceptor is missing.
 - Log, network and breadcrumb filters fail closed on a 9 second deadline, and after a JavaScript reload until the new runtime installs its filter.
-- Auto-launch: `attach()` registers the wrapper identity, with an opt-in fail-closed filter hold at process start.
+- Auto-launch: an opt-in fail-closed filter hold at process start.
 - Breadcrumbs: an opt-in URL scrubber for HTTP breadcrumbs.
 - Build tooling: the dSYM token is read from `.xcode.env.local`, `editGradleFiles` supports Kotlin projects, and there is a strip `sourcesContent` option.
 - The Expo plugin removes the `com.bugsee.app-token` it wrote earlier when `autoLaunch` is off.
