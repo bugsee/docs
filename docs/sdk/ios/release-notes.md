@@ -9,6 +9,59 @@ Release history for Bugsee iOS SDK 7.x. Looking for the previous major version? 
 [6.x release notes](/sdk/ios/v6/release-notes). See the
 [migration guide](/sdk/ios/migration) when planning your upgrade from 6.x.
 
+## 7.1.0 (November 16 2026)
+
+Shake-to-report is now off by default. If your app relies on it, set `shakeToReport`
+(`BugseeOptionReportingTriggerByShake`) to `YES` when you launch Bugsee.
+
+### iOS SDK
+
+**Changes**
+
+- Change: `BugseeOptionReportingTriggerByShake` (`shakeToReport`) defaults to `NO`. Set it to
+  `YES` to keep opening the report dialog when the user shakes the device.
+- Change: URLs recorded in performance spans are redacted, whatever `sanitizeNetworkData` says.
+  In the `http.url`, `url.full`, `url.original` and `http.target` attributes, the user name,
+  the password and the fragment are removed, and the values of the
+  [query parameters that network redaction treats as sensitive](/sdk/ios/privacy/network#built-in-redaction),
+  such as `access_token` and `api_key`, are replaced with `<redacted>`, URL-encoded as
+  `%3Credacted%3E`. In the `url.query` and `url.fragment` attributes, the values of those
+  parameters are replaced the same way and the rest is kept. This applies to every span, the
+  SDK's HTTP spans and your own, and to a remote URL recorded by a file operation span.
+
+**Fixes**
+
+- Fix: The shake and screenshot report triggers follow the launch options. In 7.0.0 and 7.0.1
+  both opened the report dialog whatever the options said, an explicit `NO` included. A
+  relaunch applies new values, and a trigger that is off no longer listens for shakes or
+  screenshots.
+- Fix: `wifiOnlyUpload` (`BugseeOptionConfigWifiOnlyUpload`) keeps report uploads off cellular
+  again. On cellular, the request that creates a report fails and is retried as it is while
+  the device is offline, and the report is deleted when those retries run out. Once the report
+  is created, its upload waits for Wi-Fi without using those retries.
+- Fix: The Wi-Fi and cellular traces record the network name (SSID and BSSID) and the carrier
+  name, MCC and MNC only when `captureDeviceAndNetworkNames` is on. Before, they recorded them
+  whatever the option said. See [Device and network names](/sdk/ios/configuration#device-and-network-names).
+- Fix: A crash after `stop`, or after a relaunch that turns `crashReport` off, is no longer
+  reported at the next launch.
+- Fix: A launch without options from `application(_:didFinishLaunchingWithOptions:)`
+  (`launch(token:)`, or `launch(token:dictionaryOptions:)` with an empty dictionary) arms
+  crash reporting at once instead of when the app becomes active, and a `stop` before the app
+  becomes active cancels it.
+- Fix: A launch while Bugsee is already running is answered as already launched, also when the
+  app still reads as in the background, for example in `sceneWillEnterForeground(_:)`. Before,
+  it waited for the foreground, and a `stop` in between reported success while the recording
+  went on.
+- Fix: After `stop`, the SDK no longer adds a video output to new `AVPlayerItem`s or holds
+  frames of `AVSampleBufferDisplayLayer` and the camera preview.
+- Fix: The 6.x option key string `CaptureVideoAdaptive` is translated to
+  `BugseeOptionCaptureVideoAdaptive`. Before, a dictionary that passed it was ignored, so
+  `"CaptureVideoAdaptive": false` left adaptive capture on.
+
+### BugseeFeedback module
+
+- No API or behavior changes.
+
 ## 7.0.1 (November 3 2026)
 
 ### iOS SDK
