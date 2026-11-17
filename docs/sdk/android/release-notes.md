@@ -36,19 +36,17 @@ log, crash recovery, privacy masking and report storage. It also includes everyt
   event filter as a second event for the same request, marked as an override, after you reach the
   end of the stream, close it, or it fails. The filter runs for that event on an SDK thread, so it
   must make the same keep-or-drop decision for every event of one request id. A body that was not
-  read to its end is reported as not there. Bodies wait on a bounded executor under a budget for
-  pending bytes.
+  read to its end is reported as not there. The memory used to hold pending bodies is bounded.
 - **Uploads of recovered reports honour `WifiOnlyUpload`.** After a relaunch, a pending bundle used
   to upload over metered data even with the option set. It is now scheduled with the same network
   requirement the SDK uses for its other uploads when the option is set, and the SDK keeps one
   pending upload job per bundle.
 - **The `WifiOnlyUpload` wait notices Wi-Fi joining while mobile data stays up.** It re-evaluates on
   every connectivity change and requires a validated Wi-Fi network that can reach the internet.
-- **`WebViewClientWrapper` hands two callbacks to your client.** `onRenderProcessGone` and
-  `onSafeBrowsingHit` are forwarded to the client you set and return its answer, so a renderer
-  crash that your client handles no longer kills the app. A plain `new WebViewClient()` that you
-  set is no longer mistaken for the platform default, so links are not all opened in an external
-  browser.
+- **A WebView client you set now receives `onRenderProcessGone` and `onSafeBrowsingHit`.** Its
+  answer is used, so a renderer crash that your client handles no longer kills the app. A plain
+  `new WebViewClient()` that you set is no longer mistaken for the platform default, so links are
+  not all opened in an external browser.
 
 **Privacy**
 
@@ -67,47 +65,37 @@ log, crash recovery, privacy masking and report storage. It also includes everyt
 
 **Fixes**
 
-- **Auto-launch after the process is restarted starts the components with the restored options.** They
-  used to start with a container of defaults while reporting used the restored options.
-- **Crash stubs record an uncaught throwable before the report is built.** A cycle in the
-  `logException` options map no longer breaks `crash.json`.
-- **A native crash whose capture copy fails is still reported.** A dialog bug report keeps its
-  awaiting-submission marker from its first save, and the snapshot folders are recreated after a
-  failed generation open.
-- **The native crash marker survives torn lines.** The writer and reader tolerate a partly written
-  marker, and lines read after a torn one are marked so cut columns are not trusted.
-- **A saved report whose options class this build cannot resolve is still read,** with its saved
-  options kept, and the class named by a saved report is never initialized while it is checked.
-  An unusable pending record is rebuilt like a corrupt one instead of being read as empty, and the
-  read is capped.
-- **An opened crash or error report is not persisted before it names its payload.**
+- **Auto-launch after the process is restarted starts the components with the restored options.**
+  They used to start with defaults while reporting used the restored options.
+- **An uncaught exception is recorded before its report is built.** A cycle in the options you pass
+  to `logException` no longer breaks the crash report.
+- **A native crash is still reported when its data cannot be fully copied,** and a native crash
+  record that was only partly written no longer corrupts the next one.
+- **Saved reports are read more reliably.** A saved report whose options can no longer be resolved
+  is still read, and an unusable pending report is rebuilt as a corrupt one instead of being read
+  as empty. A bug report from the dialog keeps its place in the queue from its first save.
 - **The first `logcat` start reads from the session start,** not the whole ring buffer. A large
   backlog used to cost about 0.8 to 1.2 s of CPU on a background logging thread and delayed the
   current lines, so a short-session crash report could carry its log late or not at all.
 - **The `logcat` reader parses records by header, not by blank lines,** infers the year per record
   and follows time zone changes, and restarts when its child process ends on its own.
-- **The internal log:** exactly one writer thread starts, a record that fails to serialize is cut
-  out, and only complete records of a torn file are exported.
+- **The SDK's own log** is written by exactly one thread, and a broken record no longer spoils the
+  export.
 - **Restored options:** enum options come back as constants when a persisted configuration is read
   back, and API 21 devices restore booleans that were stored as integers.
-- **Capture:** a binary entry is staged so a failed write cannot corrupt the stream, an entry the
-  stream ends inside is dropped, and a native view hierarchy larger than 16 MiB is dropped and
-  marked as truncated.
-- **The MediaProjection service releases only the engine that started it,** ignores a start for an
-  engine that is no longer started, and a device rotation during the consent dialog is no longer
-  counted as a denial. A deadlock between two engine locks is fixed.
-- **Serialization and JSON:** whole numbers beyond the range of `long` no longer wrap, fractions
-  and exponents parse exactly like `Double.parseDouble`, `BigInteger` and `BigDecimal` are written
-  as numbers, non-`String` map keys are written instead of dropped, a value that cannot be encoded is
-  written as a marker, nesting depth is bounded, and ordered maps and sets keep their order.
-- **A JNI mask routine** computes byte offsets in 64 bits and caps rows at the row stride.
-- **An extension registered under its own type** is found by the register guard.
+- **Capture files are not corrupted by a failed write,** and a native view hierarchy larger than
+  16 MiB is dropped and marked as truncated.
+- **Screen recording:** rotating the device during the screen-capture consent dialog is no longer
+  counted as a denial, a deadlock between two recording locks is fixed, and a recording service
+  stops only the recording it started.
+- **Values in reports are written correctly.** Very large whole numbers no longer wrap, decimals
+  keep their exact value, big numbers are written as numbers, map entries with non-text keys are
+  kept, and a value that cannot be encoded is replaced by a marker. Maps and sets keep their order.
 
 **Compatibility**
 
 - No new options: the set of option keys is the same as in 7.5.1. The only default that changed is
   the two triggers above.
-- The `ai` module, which was never published, is removed from the source tree.
 
 ## 7.5.1 (November 11 2026)
 
