@@ -82,7 +82,7 @@ The Bugsee Gradle plugin (`com.bugsee.android.gradle`) uploads the R8/ProGuard m
 
 It is also what records `fetch` and `XMLHttpRequest` on Android: React Native sends them through OkHttp, and the plugin is what lets the SDK record OkHttp traffic. Without the plugin, those requests are not recorded on Android; see [Network events](/sdk/react_native/network).
 
-Use the plugin version the package is built against: `android.gradlePlugin` in `node_modules/@bugsee/react-native/native-versions.json`, which is **4.0.8** for `7.0.0-beta4`. Its requirements (Android Gradle Plugin and Gradle versions) are on [Gradle plugin requirements](/sdk/android/gradle-plugin/requirements).
+Use the plugin version the package is built against: `android.gradlePlugin` in `node_modules/@bugsee/react-native/native-versions.json`, which is **4.1.1** for `7.0.0-beta5`. Its requirements (Android Gradle Plugin and Gradle versions) are on [Gradle plugin requirements](/sdk/android/gradle-plugin/requirements).
 
 **`android/settings.gradle`**: the plugin is published to Maven Central, which Gradle does not search for plugins unless told to:
 
@@ -101,7 +101,7 @@ pluginManagement {
 
 ```groovy title="android/build.gradle"
 plugins {
-    id 'com.bugsee.android.gradle' version '4.0.8' apply false
+    id 'com.bugsee.android.gradle' version '4.1.1' apply false
 }
 ```
 
@@ -138,7 +138,7 @@ The plugin's upload tasks, `uploadBugsee<Variant>Mapping`, `uploadBugsee<Variant
 
 ## 3. Native symbols
 
-With `plugin.ndk.enabled=true`, each Release build's `uploadBugsee<Variant>Native` task uploads native symbols. Gradle plugin 4.0.8 reads them from the **unstripped** libraries that the Android Gradle Plugin leaves in `build/intermediates/merged_native_libs/<variant>`, keyed by GNU build ID. That makes them independent of `ndk.debugSymbolLevel`:
+With `plugin.ndk.enabled=true`, each Release build's `uploadBugsee<Variant>Native` task uploads native symbols. Gradle plugin 4.0.8 and later read them from the **unstripped** libraries that the Android Gradle Plugin leaves in `build/intermediates/merged_native_libs/<variant>`, keyed by GNU build ID. That makes them independent of `ndk.debugSymbolLevel`:
 
 - Every library that still has its debug info is uploaded with it, so crash frames get function names and `file:line`. That covers your own native code, and React Native's `libreactnative.so`, which the Maven `react-android` artifact ships with full debug info.
 - Libraries that ship stripped (Hermes's `libhermesvm.so` from Maven, the Bugsee SDK's own) get their symbol table: function names only.
@@ -169,7 +169,7 @@ Then trigger a test crash in the Release build and check the report's frames; se
 ## Turning uploads off
 
 - **Source maps**: `-PbugseeUploadSourcemaps=false`, `bugseeUploadSourcemaps=false` in `android/gradle.properties`, or `BUGSEE_UPLOAD_SOURCEMAPS=false`.
-- **Mapping, native symbols and build info**: native symbols follow `plugin.ndk.enabled`, but the Gradle plugin 4.0.8 has no switch for its mapping upload. The Expo config plugin's `uploadSymbols: false` turns all of the plugin's upload tasks off with this line in `android/app/build.gradle`, which a bare app can use too:
+- **Mapping, native symbols and build info**: native symbols follow `plugin.ndk.enabled`, but the Gradle plugin 4.1.1 has no switch for its mapping upload. The Expo config plugin's `uploadSymbols: false` turns all of the plugin's upload tasks off with this line in `android/app/build.gradle`, which a bare app can use too:
 
   ```groovy title="android/app/build.gradle"
   tasks.matching { it.name.startsWith('uploadBugsee') }.configureEach { enabled = false }
