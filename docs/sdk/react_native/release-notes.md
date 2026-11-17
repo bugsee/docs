@@ -19,10 +19,10 @@ Updates the Bugsee Gradle plugin the package builds against to **4.1.1** (it was
 
 **Changes**
 
-- **Gradle plugin 4.1.1.** The Expo config plugin declares it by default, and the [installation](/sdk/react_native/installation) and [symbolication](/sdk/react_native/symbolication/android) pages use it for bare apps. If you pin the plugin yourself, set `id 'com.bugsee.android.gradle' version '4.1.1' apply false`.
+- **Gradle plugin 4.1.1.** The Expo config plugin declares it by default, and the [Android symbolication](/sdk/react_native/symbolication/android) page uses it in the bare-app snippet. If you pin the plugin yourself, set `id 'com.bugsee.android.gradle' version '4.1.1' apply false`.
 - **The plugin needs the Android Gradle Plugin 8.6 or newer and Gradle 8.7 or newer** (Gradle 9 is supported). On older versions the build fails early with a message that says so. See [Gradle plugin requirements](/sdk/android/gradle-plugin/requirements).
 - **Failing the build on an upload error is now possible.** Set `failOnUploadError` in the `bugsee { }` block to fail the build when a mapping, native symbol or build upload does not complete. By default it still only warns.
-- **Native symbols** are still uploaded from the unstripped libraries, and an upload that did not change is skipped on the next build.
+- **Native symbols** are still uploaded from the unstripped libraries, and an upload that did not change is skipped on the next build. The upload cache is now scoped to the endpoint, so each app uploads its native symbols once more on its first build with 4.1.1; symbols the server already has are skipped as before.
 - **Uploads honour the JVM proxy settings,** secrets such as the app token stay out of build logs, and the plugin falls back to an installed `bugsee-cli` when the download fails.
 - `@bugsee/react-native-feedback` requires `@bugsee/react-native` `^7.0.0-beta5`.
 

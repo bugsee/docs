@@ -147,6 +147,8 @@ With `plugin.ndk.enabled=true`, each Release build's `uploadBugsee<Variant>Nativ
 
 So `ndk { debugSymbolLevel … }` is your own choice, for what Google Play receives. Bugsee does not need it.
 
+The unstripped libraries are the default source, not the only one. The Gradle plugin's `ndk.useMergedNativeLibs` option, when set to `false`, makes it upload only the Android Gradle Plugin's `native-debug-symbols.zip`, and that upload does depend on `debugSymbolLevel`; see the [Gradle plugin releases](/sdk/android/gradle-plugin/releases). The first build with plugin 4.1.1 uploads each app's native symbols once more, because the upload cache is now scoped to the endpoint.
+
 The plugin uses its own copy of the Bugsee CLI. If you pin that CLI yourself (`plugin.cliPath` or `plugin.cliVersion`), use 0.8.1 or later: older CLIs do not read `merged_native_libs`, and the plugin then falls back to the Android Gradle Plugin's `native-debug-symbols.zip`, which depends on `debugSymbolLevel`.
 
 Native crash **reporting** is a separate matter from symbol upload: the NDK module detects the crash, the upload makes it readable. The package brings in the NDK module either way.
