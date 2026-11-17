@@ -25,8 +25,8 @@ The native side comes with the package, at the versions the core package pins:
 
 | Platform | What is added |
 | --- | --- |
-| Android | Autolinking adds the Android feedback module, `com.bugsee:bugsee-android-feedback`, at the same version as the core Android SDK (7.4.2 in this beta). No Gradle changes. |
-| iOS | With CocoaPods, run `pod install`: the podspec fetches the sources of the iOS feedback package, `bugsee/feedback-spm`, at the same version as the core iOS SDK (7.0.0-beta7 in this beta), and compiles them. With React Native 0.87 and later, Swift Package Manager resolves that package instead. |
+| Android | Autolinking adds the Android feedback module, `com.bugsee:bugsee-android-feedback`, at the same version as the core Android SDK (7.6.0 in this beta). No Gradle changes. |
+| iOS | With CocoaPods, run `pod install`: the podspec fetches the sources of the iOS feedback package, `bugsee/feedback-spm`, at the same version as the core iOS SDK (7.1.0 in this beta), and compiles them. With React Native 0.87 and later, Swift Package Manager resolves that package instead. |
 
 The package has no Expo config plugin.
 
