@@ -82,3 +82,26 @@ Bugsee.trace("logged_in", true)
 
   </TabItem>
 </Tabs>
+
+## System traces
+
+Besides your own traces, every report carries traces that the SDK records on its own while it runs. They need no code and no option. Some depend on the device's Android version:
+
+| Trace | What it shows | Android version |
+| --- | --- | --- |
+| CPU | The app process's CPU usage. | All |
+| Memory | JVM and native heap (total, free, used), the process's native, Dalvik, other and total memory, the device's total, available and advertised memory, and the low-memory state. | All |
+| Power | Battery level, charging state and source, and power saving. | All |
+| Connectivity | The active connection type (Wi-Fi, cellular, Ethernet, Bluetooth and others). | All |
+| Wi-Fi | Whether Wi-Fi is on, RSSI and signal level, link speed and bandwidth, frequency, Passpoint provider names, the local IP address and the MAC address, and the network name (SSID) and BSSID, each when Android returns it to the app. The Wi-Fi standard and maximum link speeds need Android 11 (API 30), the security type Android 13 (API 33). No option turns these fields off. | All |
+| Cellular | For each SIM: network type, data connection state, operator name, MCC and MNC, roaming state and signal strength. | All |
+| Bluetooth, NFC | Bluetooth and NFC state. | All |
+| App and screen | Foreground or background, the current activity, orientation, screen brightness, the connected displays, and accessibility state. | All |
+| Sound volume | Volume level of each audio stream. | All |
+| Capture | Whether recording is active, in a blackout, or in a partial blackout. | All |
+| Frame rate, fold state | Frame rate; fold state on foldable devices. | 7.0 (API 24) and later |
+| Hinge angle | The hinge angle, on foldable devices with a hinge-angle sensor. | 11 (API 30) and later |
+| Thermal state | The device's thermal status. | 10 (API 29) and later |
+| Disk space, thermal headroom | Free and total storage; thermal headroom. | 11 (API 30) and later |
+| Game mode | The Android Game Mode the system applies to the app (`unsupported` for apps the system does not treat as games). | 12 (API 31) and later |
+| Satellite | Whether the satellite modem is on. Needs a phone-state permission that the SDK does not request; without one the trace reports it as unavailable. | 16 (API 36) and later |

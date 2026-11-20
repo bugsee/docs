@@ -108,6 +108,35 @@ Bugsee.captureViewHierarchy()
   this call.
 - Each snapshot adds to the size of the report, more so for deep hierarchies.
 
+## System traces
+
+Besides your own traces, every report carries traces that the SDK records on its own while it
+runs. They need no code. CPU, memory, queue latency and frame rate are sampled about once a
+second while the app is in the foreground; that sampling pauses in the background. The others are
+recorded when they change.
+
+| Recorded by default | What it shows |
+| --- | --- |
+| CPU | The app's CPU usage. |
+| Memory | The app's resident, virtual and footprint memory, the memory still available to it, the device's total memory, and whether the system reports memory pressure. |
+| Queue latency | Latency of the main queue and of the high, default, low and background global queues. |
+| Power and thermal | Battery level and charging state, Low Power Mode, and the thermal state. |
+| Network | Network reachability. |
+| Cellular | For each SIM: the radio technology and whether it has a data connection. Bugsee does not link CoreTelephony; unless your app loads it, the trace reports cellular as unavailable. The carrier name, MCC and MNC are recorded only with `BugseeOptionCaptureDeviceAndNetworkNames`. Not on tvOS or visionOS. |
+| App and screen | Foreground or background, the current view controller, orientation and screen brightness (not on tvOS or visionOS), the connected displays, and the frame rate. |
+| Accessibility | Whether VoiceOver or Switch Control is running. |
+| NFC | Whether the device can read NFC tags. Recorded only if your app links CoreNFC. |
+| Capture | Whether recording is active or in a blackout. With `BugseeOptionCaptureDiskSpace` on, also the low and no disk space states; see [Disk space](/sdk/ios/configuration#disk-space). |
+| Fold state | Fold state and hinge angle, on devices that report them. Not on tvOS or visionOS. |
+
+These are recorded only when you turn on their option:
+
+| Trace | Option | Notes |
+| --- | --- | --- |
+| Disk space | `BugseeOptionCaptureDiskSpace` | Free and total disk space. See [Disk space](/sdk/ios/configuration#disk-space). |
+| Bluetooth | `BugseeOptionCaptureBluetoothStatus` | Bluetooth state. Your `Info.plist` must contain `NSBluetoothAlwaysUsageDescription`, and the app must already have Bluetooth permission: Bugsee never asks for it. Without the permission, the trace records the state as unknown or unauthorized. |
+| Wi-Fi | `BugseeOptionCaptureDeviceAndNetworkNames` | The Wi-Fi network name (SSID) and BSSID. iOS returns them only to an app with the Wi-Fi information entitlement (and, from iOS 13, location permission). Not on tvOS or visionOS. |
+
 ## Related pages
 
 - [Breadcrumbs](/sdk/ios/breadcrumbs)

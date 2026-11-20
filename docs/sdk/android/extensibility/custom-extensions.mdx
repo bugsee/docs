@@ -222,7 +222,7 @@ Required methods:
 | `void stop()` | When the performance coordinator is stopped |
 | `boolean isRunning()` | Optional. Default returns `true` between `launch` and `stop` |
 
-Inside `launch`, store the `SpanFactory` reference. Whenever your provider observes a measurable operation, call `spanFactory.startSpan(...)` or `spanFactory.startTransaction(...)`, then `finish()` on the returned `Span` / `Transaction` when the operation completes. The coordinator routes finished transactions into the capture pipeline (so they appear in reports) and, separately, into the standalone APM upload queue (subject to the `PerformanceSampleRate` option).
+Inside `launch`, store the `SpanFactory` reference. Whenever your provider observes a measurable operation, call `spanFactory.startSpan(...)` or `spanFactory.startTransaction(...)`, then `finish()` on the returned `Span` / `Transaction` when the operation completes. The coordinator routes finished transactions into the capture pipeline, so they appear in reports. A separate standalone APM upload, subject to the `PerformanceSampleRate` option, is not active yet.
 
 ### Registration
 
@@ -263,7 +263,7 @@ Providers added *after* `BugseePerformanceCoordinator.launch()` are **not** auto
 
 ### Sampling boundary
 
-The `PerformanceSampleRate` option gates **standalone APM uploads** only. Every transaction still flows into the capture pipeline so APM data shows up in issue reports regardless of sampling. `NoOpTransaction` is returned only when `PerformanceMonitoring` is disabled outright — never as a side-effect of sampling.
+The `PerformanceSampleRate` option gates only the **standalone APM upload**, which is not active yet. Every transaction still flows into the capture pipeline so APM data shows up in issue reports regardless of sampling. `NoOpTransaction` is returned when `PerformanceMonitoring` is disabled, and before the SDK is launched or after it is stopped — never as a side-effect of sampling.
 
 ### Built-in example
 

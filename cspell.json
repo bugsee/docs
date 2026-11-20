@@ -275,6 +275,9 @@
         "collapsable",
         "RGBA",
         "RRGGBB",
-        "RRGGBBAA"
+        "RRGGBBAA",
+        "Dalvik",
+        "RSSI",
+        "Passpoint"
     ]
 }
