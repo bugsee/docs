@@ -263,7 +263,7 @@ Providers added *after* `BugseePerformanceCoordinator.launch()` are **not** auto
 
 ### Sampling boundary
 
-The `PerformanceSampleRate` option gates only the **standalone APM upload**, which is not active yet. Every transaction still flows into the capture pipeline so APM data shows up in issue reports regardless of sampling. `NoOpTransaction` is returned only when `PerformanceMonitoring` is disabled outright — never as a side-effect of sampling.
+The `PerformanceSampleRate` option gates only the **standalone APM upload**, which is not active yet. Every transaction still flows into the capture pipeline so APM data shows up in issue reports regardless of sampling. `NoOpTransaction` is returned when `PerformanceMonitoring` is disabled, and before the SDK is launched or after it is stopped — never as a side-effect of sampling.
 
 ### Built-in example
 

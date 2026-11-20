@@ -7,7 +7,7 @@ slug: "/dashboard/ai-insights"
 
 # AI Insights
 
-AI Insights analyzes a crash or a handled error and explains it: the most likely root cause, whose code has to change, a suggested fix, and how confident the analysis is. It works from the report alone. Connect the app's GitHub or GitLab repository, with read-only access, and it also reads the code around the crashing frames.
+AI Insights analyzes a crash or a handled error and explains it: the most likely root cause, whose code has to change, a suggested fix, and how confident the analysis is. It works from the report alone. Connect the app's GitHub or GitLab repository, read-only, and it also reads the code around the crashing frames.
 
 :::info[Beta]
 AI Insights is in beta. It is available on every plan except Lite, and during a trial.
@@ -31,20 +31,26 @@ The analysis runs in the background, so you can leave the page. The tab waits fo
 | --- | --- |
 | Summary and **Root cause** | The most likely reason for the failure. The analysis walks nested causes and quotes the implicated lines when it has source code. Without source, it says so and reasons from the stack, the exception message and the device environment. |
 | **Likely origin** | Whose code has to change: **Application code**, **Bugsee SDK**, **System** (nothing the app's author can change, such as an OS or device fault or a kill from outside the process) or **Unknown**. A crash inside platform code that failed on what the app handed it counts as application code. |
-| **Confidence** | 0–100%: how much the report itself establishes. Insights asks for values above 90% only when the stack, the message or the source shows the cause directly, and for lower values when the cause is inferred from a pattern. |
+| **Confidence** | The model's own rating, from 0 to 100%, of how well the evidence in the report (the stack, the exception message and any source it read) supports the stated cause. A high value means the evidence shows the cause directly; a low value means the cause is inferred and other causes could look the same. It is an estimate, not a measured probability. |
 | **Implicated files** | Files named in the stack, the source excerpts or the exception message. |
-| **Suggested fix** | What to change in your app's code. When the fix is in a file Insights read from your repository, it is shown as a diff. |
+| **Suggested fix** | What to change in your app's code. When the fix is in a file Insights read from your repository, it can be shown as a diff: only when the lines it replaces appear exactly once in the code that was read, and the replacement is at most 20 lines. Otherwise the fix is described in prose. |
 | **Bugsee SDK** | Notes on Bugsee's own SDK, when it is involved. Such reports are also marked **Bugsee SDK involved**. |
 | **Sources** | The source files the analysis used. Files from your repository link to them in your provider, at the revision that was read. Android platform files link to the Android Open Source Project (AOSP). Bugsee SDK files are listed by path. |
 
 ## What it reads
 
-To produce the analysis, AI Insights sends an AI model:
+To produce the analysis, AI Insights sends an AI model the following, and nothing else from the report:
 
-- the exception, the stack trace with its nested causes, and the device environment;
+- the report's environment record (device, OS and app details) with the device identifiers removed, plus the wrapper (runtime) and Bugsee SDK type, version and build;
+- whether Bugsee flagged the report as an error in its own SDK;
 - the report's summary and description;
-- up to 40 recent log entries from the report, only error entries when there are any;
-- source excerpts around the frames in the stack: from your repository when one is connected, from the Bugsee SDK (at the version that produced the report) when SDK frames are in the stack, and from AOSP (at the device's OS release) for Android platform frames.
+- how the report was triggered: trigger, mechanism and origin;
+- the exception: crash or handled error, the signal name and code, the reason or message, and the stack trace with its nested causes (or the crashed thread's stack when there is no exception);
+- for native crashes, the machine code around the crashing instruction, decoded, when the SDK captured it;
+- when a repository is connected: its provider, its name, and the revision that was read;
+- when Bugsee SDK frames were matched against Bugsee's own debug symbols: details of those symbols (SDK version, format, image UUIDs);
+- source excerpts around the frames in the stack: from your repository when one is connected, from the Bugsee SDK (at the version that produced the report) when SDK frames are in the stack, and from AOSP (at the device's OS release) for Android platform frames;
+- up to 40 recent log entries from the report (only error entries when there are any), at most 24 KB.
 
 The report must include crash data; without it, the analysis fails with *Crash data was not available*.
 
@@ -54,7 +60,7 @@ People who can modify the app connect its repository in the app's settings, unde
 
 - **GitHub.** Install the **Bugsee AI Insights** GitHub App, with read-only access (Contents: Read and Metadata: Read). You sign in so Bugsee can list the installations you can see. Bugsee does not keep your GitHub user token after setup; Insights reads files with a short-lived installation token.
 - **GitLab.** Authorize with OAuth and the `read_api` scope, which lists your projects and reads files. Insights stores a refresh token for the app. Use a bot or service account if you do not want to use a personal login.
-- **Access token.** For GitHub Enterprise or a self-hosted GitLab, or if you prefer a token, choose **Use an access token instead** and enter the **Clone URL** (leave it blank for github.com and gitlab.com), the **Repository** and the **Access token**.
+- **Access token.** If you prefer a token to an app connection, choose **Use an access token instead**, leave **Clone URL** blank, and enter the **Repository** and the **Access token**. The token needs only read access: Insights uses it to read the repository's metadata, branches and files, the same calls the app connections make with Contents: Read and Metadata: Read on GitHub and `read_api` on GitLab.
 
 Then pick the **Default branch** and, if the app's source lives in a subdirectory of the repository, a **Path prefix**. **Disconnect** in the same panel removes the connection.
 
@@ -62,14 +68,16 @@ Then pick the **Default branch** and, if the app's source lives in a subdirector
 
 Insights reads the code that shipped, trying in this order:
 
-1. the commit SHA of the matching build (same app version and build number), when that build was registered with Bugsee with a commit SHA (see [Builds & artefacts](/cli/builds));
+1. the commit SHA of the matching build (same app version and build number), when that build was registered with Bugsee with a commit SHA (see [`vcs-metadata`](/cli/metadata#vcs-metadata));
 2. a git tag that matches the app version, with or without a leading `v`;
 3. the default branch.
 
 ## Monthly limit
 
-Each analysis counts toward a monthly limit for the organization, set by its plan. Once the limit is reached, requests fail with *AI usage quota for this organization has been exceeded* until the next calendar month.
+Each request that starts an analysis counts toward a monthly limit for the organization, set by its plan. That includes runs that fail and retries; a request is refunded only when Bugsee cannot schedule the run at all. Once the limit is reached, the dashboard shows *Your organization account has reached the maximum number of AI Insights requests allowed per month (N)*, with N the limit, until the next calendar month. Contact Bugsee support to raise it.
 
 ## Bug reports: UI/UX analysis
 
 For a bug report, the **AI Insights** tab offers a UI/UX analysis instead: click **Request UI/UX analysis**. It reviews frames from the video recorded before the report, the screenshot (including annotations the user drew), and the report's summary and description, and describes what most likely led the user to file the report. It counts toward the same monthly limit.
+
+The analysis needs the report's video. For a report without one, no analysis is produced, but the request still counts toward the limit; after 60 seconds the tab stops waiting and suggests reloading the page later.

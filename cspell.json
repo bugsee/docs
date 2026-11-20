@@ -276,6 +276,8 @@
         "RGBA",
         "RRGGBB",
         "RRGGBBAA",
-        "Dalvik"
+        "Dalvik",
+        "RSSI",
+        "Passpoint"
     ]
 }
