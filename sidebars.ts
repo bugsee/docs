@@ -1225,6 +1225,12 @@ const sidebars: SidebarsConfig = {
       items: [
         { type: "doc", id: "dashboard/search", label: "Search" },
         {
+          type: "doc",
+          id: "dashboard/release-health",
+          label: "Release health",
+        },
+        { type: "doc", id: "dashboard/ai-insights", label: "AI Insights" },
+        {
           type: "category",
           label: "Accounts",
           collapsed: true,

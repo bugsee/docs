@@ -11,7 +11,7 @@ The Bugsee plugin gives your AI coding assistant everything it needs to work wit
 
 ## What the plugin provides
 
-- **SDK setup skills** — opinionated wizards for iOS, Android (and Android 7.x beta), Flutter, React Native, Unity, .NET/MAUI, Xamarin, Cordova, and Kotlin Multiplatform. Your assistant detects the platform and walks through install, initialization, and configuration. See [Agent Skills](/ai/agent-skills).
+- **SDK setup skills** — opinionated wizards for iOS and Android (7.x, plus separate skills for apps still on 6.x), Flutter, React Native, Unity, .NET/MAUI, Xamarin, Cordova, and Kotlin Multiplatform. Your assistant detects the platform and walks through install, initialization, and configuration. See [Agent Skills](/ai/agent-skills).
 - **Workflow skills** — *fix issues* (triage and root-cause crashes, errors, and bug reports through the MCP server), *build insights* (build size, regressions, and dependency vulnerabilities through the MCP server), and *upload symbols* (dSYMs, JavaScript source maps, Android mapping files).
 - **MCP server** — connects your assistant to your Bugsee issues and builds at `https://api.bugsee.com/mcp`. See [MCP](/mcp).
 

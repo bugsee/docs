@@ -1,6 +1,6 @@
 ---
 title: "Performance monitoring"
-description: "Application performance monitoring (APM) with transactions, spans, built-in providers, sampling, and upload modes in Bugsee Android SDK 7.x."
+description: "Application performance monitoring (APM) with transactions, spans, built-in providers, and sampling options in Bugsee Android SDK 7.x."
 sidebar_position: 13
 slug: "/sdk/android/performance"
 ---
@@ -176,19 +176,19 @@ Set the terminal status via `finish(SpanStatus)` (or `setStatus` before calling 
 
 ## Sampling and upload modes
 
-APM emits two independent data streams — see [Two data paths](#two-data-paths) below — which are controlled by four options:
+Four options control APM:
 
 | Option | Default | Purpose |
 | --- | --- | --- |
 | `PerformanceMonitoring` | `true` | Master switch. When `false`, `startTransaction`/`startSpan` return no-op instances and no provider runs. |
-| `PerformanceSampleRate` | `0.01` | Probability (0.0–1.0) that a completed transaction is uploaded through the standalone APM pipeline. Does **not** affect whether transactions appear in issue reports. When `PerformanceAdaptiveSampling` is on, this acts as a floor: transactions that lose the random draw can still be promoted on merit. |
-| `PerformanceAdaptiveSampling` | `true` | Adaptive sampling — transactions that lost the random draw are scored at finish time on status, duration outlier-ness, and span-tree complexity, and sufficiently "interesting" ones are promoted into the upload pipeline. Set to `false` to keep `PerformanceSampleRate` as a fixed probability. _New in 7.0.0._ |
-| `PerformanceUploadMode` | `"batched"` | How sampled transactions are uploaded. `"batched"` flushes on a 30-second interval; `"realtime"` uploads as soon as a transaction finishes. |
+| `PerformanceSampleRate` | `0.01` | Probability (0.0–1.0) that a transaction is sampled for a standalone APM upload, which is not active yet. It does **not** affect whether transactions appear in issue reports: every transaction is captured either way. |
+| `PerformanceAdaptiveSampling` | `true` | Lets the standalone upload also keep transactions that lost the random draw but look interesting, scored at finish time on status, duration outlier-ness, and span-tree complexity. Not active yet either: while the upload is off, the SDK does not score transactions. _New in 7.0.0._ |
+| `PerformanceUploadMode` | `"batched"` | How the standalone upload would send sampled transactions: `"batched"` on a 30-second interval, `"realtime"` as soon as a transaction finishes. Accepted, but not active yet. |
 
 All four options can be set programmatically via the `Bugsee.launch(...)` options map or via manifest metadata. See [Configuration](/sdk/android/configuration) for the mapping between `Options.*` constants and `com.bugsee.option.performance.*` manifest keys.
 
-## Two data paths
+## Where performance data goes
 
-:::note
-Every transaction is recorded into the capture buffer used for issue reports, regardless of `PerformanceSampleRate`. Sampling only gates the **standalone APM upload pipeline**. That means low sample rates keep APM storage costs down without losing performance context inside bug reports.
-:::
+Performance data reaches Bugsee **with reports**. Every transaction is recorded into the capture buffer used for issue reports, regardless of `PerformanceSampleRate`.
+
+Transactions are not sent on their own. The standalone APM upload that `PerformanceSampleRate`, `PerformanceAdaptiveSampling`, and `PerformanceUploadMode` are meant for is not active yet (as of 7.6.0): the SDK accepts the three options, but they do not change which transactions are captured or sent. `Transaction.isSampled()` reports the result of the random draw made when the transaction started.

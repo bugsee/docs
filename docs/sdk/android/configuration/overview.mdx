@@ -235,11 +235,11 @@ See [Performance monitoring](/sdk/android/performance) for the APM overview.
 | `Options` constant | Manifest key | Type | Default | Description |
 | --- | --- | --- | --- | --- |
 | `PerformanceMonitoring` | `com.bugsee.option.performance.enabled` | boolean | `true` | Master switch for performance monitoring (APM). |
-| `PerformanceSampleRate` | `com.bugsee.option.performance.sample-rate` | float `[0, 1]` | `0.01` | Probability that a transaction is sampled for standalone APM upload. Does not affect capture — every transaction still flows into the report pipeline. |
-| `PerformanceUploadMode` | `com.bugsee.option.performance.upload-mode` | String | `"batched"` | How standalone APM data is uploaded: `"batched"` (30 s flush) or `"realtime"`. |
-| `PerformanceAdaptiveSampling` | `com.bugsee.option.performance.adaptive-sampling` | boolean | `true` | On top of the static sample rate, promote "interesting" unsampled transactions — scored at finish by status, duration outlier-ness, and span-tree complexity — into the upload pipeline. |
+| `PerformanceSampleRate` | `com.bugsee.option.performance.sample-rate` | float `[0, 1]` | `0.01` | Probability that a transaction is sampled for a standalone APM upload, which is not active yet. Does not affect capture — every transaction still flows into the report pipeline. |
+| `PerformanceUploadMode` | `com.bugsee.option.performance.upload-mode` | String | `"batched"` | How the standalone APM upload would send data: `"batched"` (30 s flush) or `"realtime"`. Not active yet. |
+| `PerformanceAdaptiveSampling` | `com.bugsee.option.performance.adaptive-sampling` | boolean | `true` | On top of the static sample rate, promote "interesting" unsampled transactions — scored at finish by status, duration outlier-ness, and span-tree complexity — into the standalone upload. Not active yet. |
 
-`PerformanceUploadMode` accepts `"batched"` (30 s flush) or `"realtime"`. `PerformanceSampleRate` gates **standalone APM uploads only** — every transaction still flows into the capture pipeline for reports regardless of sampling. `PerformanceAdaptiveSampling = true` turns the sample rate into a floor rather than a fixed probability — scored transactions are promoted on top of the random draw.
+The standalone APM upload that `PerformanceSampleRate`, `PerformanceAdaptiveSampling`, and `PerformanceUploadMode` configure is not active yet (as of 7.6.0): the SDK accepts these options, but they do not change which transactions are captured or sent. Performance data reaches Bugsee only inside reports — every transaction flows into the capture pipeline for reports regardless of sampling. See [Where performance data goes](/sdk/android/performance#where-performance-data-goes).
 
 ## Enum reference
 
