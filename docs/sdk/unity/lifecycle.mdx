@@ -19,8 +19,8 @@ You can launch, relaunch and stop the SDK at runtime, ask for its status, and su
 | `Bugsee.LaunchAsync(string appToken, Dictionary<string, object> options = null)` | `Task<bool>` | `Launch` that completes with the SDK's answer. |
 | `Bugsee.Relaunch(Dictionary<string, object> options = null)` | `void` | Restarts a launched SDK with a new option set. |
 | `Bugsee.RelaunchAsync(Dictionary<string, object> options = null)` | `Task<bool>` | `Relaunch` that completes with the SDK's answer. |
-| `Bugsee.Stop(Action completion = null)` | `void` | Stops the SDK. `completion` runs once it has stopped. |
-| `Bugsee.StopAsync()` | `Task` | `Stop` that completes once the SDK has stopped. |
+| `Bugsee.Stop(Action completion = null)` | `void` | Stops the SDK. `completion` runs once the SDK has reported the stop, or after a timeout. |
+| `Bugsee.StopAsync()` | `Task` | `Stop` that completes once the SDK has reported the stop, and faults on the timeout. |
 | `Bugsee.DeleteCollectedDataOnDevice(...)` | `void` or `Task<bool>` | Stops the SDK and deletes the data it collected. See [Delete collected data](#delete-collected-data). |
 
 The `options` argument takes `AndroidLaunchOptions`, `IOSLaunchOptions` or `OptionsBuilder`; see [Configuration](/sdk/unity/configuration).
@@ -66,7 +66,7 @@ public class BugseeLifecycleExample : MonoBehaviour
 
 - **`Launch` and `LaunchAsync`** start a session when the SDK accepts the request. They do not wait for the native SDK to finish launching. A launch made while a stop is in flight waits for the stop. A launch while the SDK is already running ignores the new token and the new native options. On iOS, the managed capture options (`CaptureManagedExceptions`, `CaptureUnobservedTaskExceptions`) are applied again by such a repeated launch, so it can change or switch off managed exception capture in a running session. Android leaves the managed capture hooks unchanged.
 - **`Relaunch` and `RelaunchAsync`** replace the whole option set; they do not merge. Every native option you leave out goes back to its default, and a `Relaunch()` without options resets every option. Handlers, filters and the lifecycle listener are kept. `TreatUnityLogExceptionsAsFatal` is read only when the managed exception hooks are installed, so a relaunch that keeps the hooks does not change it. Android ignores a `Relaunch` unless the status is `Launched`.
-- **`Stop` and `StopAsync`** stop the SDK. The `Stop` completion runs when the SDK has reported the stop. A `Launch` or `Relaunch` requested during the stop waits for it, and the completion runs before that launch does. If the completion itself calls `Launch`, that call replaces the waiting one. An unfinished managed `IReport` and an in-flight managed upload are dropped by a stop.
+- **`Stop` and `StopAsync`** stop the SDK. The `Stop` completion runs when the SDK has reported the stop, or after the 10-second timeout described below while the native stop is still in flight. A callback cannot tell the two cases apart. A `StopAsync` that completes normally means the stop was reported. A `Launch` or `Relaunch` requested during the stop waits for it, and the completion runs before that launch does. If the completion itself calls `Launch`, that call replaces the waiting one. An unfinished managed `IReport` and an in-flight managed upload are dropped by a stop.
 - **`LaunchAsync` and `RelaunchAsync`** complete `true` when the SDK accepted the request. They complete `false` when the SDK refused it, or when a later request cancelled it while it waited. If the SDK gives no answer within 10 seconds, they complete `true` when the status is `Launching` or `Launched`, and `false` otherwise.
 - **`StopAsync`** completes when the SDK has reported the stop, even if a `Launch` follows. It faults with `TimeoutException` when the SDK has not reported the stop within 10 seconds of the call.
 

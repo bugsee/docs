@@ -12,7 +12,7 @@ This page documents Bugsee Unity SDK **7.x**, which is in beta and can change be
 You configure the SDK with launch options, the second argument of `Bugsee.Launch`. The options are the same `com.bugsee.option.*` keys the native [Android](/sdk/android/configuration) and [iOS](/sdk/ios/configuration) SDKs read. This page lists the options the package documents, with their type, default and key. The typed properties are also in the API reference and in IntelliSense.
 
 :::warning[Defaults changed in 7.x]
-Shake-to-report is off on both platforms, and the notification-bar trigger is off on Android. Both were on in earlier versions. To keep them, set `ReportingTriggerByShake = true` (both platforms) and `ReportingTriggerByNotification = true` (Android).
+Shake-to-report is off on both platforms, and the notification-bar trigger is off on Android. In 6.x, shake was on for Android and off for iOS, and the Android notification-bar trigger was on. To keep the 6.x Android behavior, set `ReportingTriggerByShake = true` and `ReportingTriggerByNotification = true` on `AndroidLaunchOptions`. Set `ReportingTriggerByShake = true` on iOS only if you want a shake trigger there.
 :::
 
 ## How launch options work

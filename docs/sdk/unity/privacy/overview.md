@@ -9,7 +9,7 @@ slug: "/sdk/unity/privacy/overview"
 This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
 :::
 
-Bugsee does not stream data continuously. The SDK keeps what it records in a rolling buffer on the device, as long as the `Duration` launch option (60 seconds by default on both platforms), and sends it only when a report is created: by a crash or another issue Bugsee detects, from the report dialog, or from your code. The shake trigger and the Android notification-bar trigger are off by default in 7.x. They were on in 6.x.
+Bugsee does not stream data continuously. The SDK keeps what it records in a rolling buffer on the device, as long as the `Duration` launch option (60 seconds by default on both platforms), and sends it only when a report is created: by a crash or another issue Bugsee detects, from the report dialog, or from your code. The shake trigger and the Android notification-bar trigger are off by default in 7.x. In 6.x, the Android shake trigger and the Android notification-bar trigger were on, and the iOS shake trigger was off.
 
 The data in a report (screen video, touches, console logs, network traffic, breadcrumbs, attributes and the text a user types into the report dialog) can contain personal data. It is the responsibility of your application to keep sensitive data out of reports before they leave the device. Bugsee gives you a control at each point where data is recorded.
 
@@ -34,7 +34,7 @@ You set every option below on the launch options you pass to `Bugsee.Launch`. Se
 | --- | --- | --- | --- |
 | Screen video and touches | `CaptureVideo` | on | [Privacy: Video](/sdk/unity/privacy/video) |
 | Report screenshot | `CaptureScreenshot` | on | Separate from the video option. |
-| Unity scene tree (names and component types, no text) | `CaptureViewHierarchy` | on | [View hierarchy](/sdk/unity/view-hierarchy) |
+| Unity scene tree (names and component types, no text) | `CaptureViewHierarchy` | on | [View hierarchy](/sdk/unity/view-hierarchy). Secure rectangles can miss a node on a scaled or offset surface: see [Privacy: Video](/sdk/unity/privacy/video). |
 | Console logs | `CaptureLogs` | on | Includes the Unity console output the package forwards. [Privacy: Console logs](/sdk/unity/privacy/logs) |
 | Network traffic | `CaptureNetwork` | on | [Privacy: Network](/sdk/unity/privacy/network) |
 | WebSocket traffic (iOS) | `CaptureWebSocket` | on | Set on `IOSLaunchOptions`. |
@@ -55,7 +55,7 @@ These options are off by default. Each one records data you may not want in a re
 :::warning[iOS early launch starts before your consent check]
 If you turn on the optional iOS early launch at build time, the iOS SDK starts natively before any C# code runs, so before any consent check of yours, and even if your app never calls `Bugsee.Launch`. Do not turn it on if Bugsee must wait for user consent. See [iOS build setup](/sdk/unity/build-setup/ios).
 
-With early launch, options you pass to `Bugsee.Launch` that differ from the early options are logged and not applied. A privacy option you set in C#, such as `CaptureNetwork = false` or `CaptureLogs = false`, is ignored: put it in the early launch options. Filters and the report handler are set from C# later, so what the SDK captures before you set them is not filtered.
+With early launch, options you pass to `Bugsee.Launch` that differ from the early options are logged and not applied. A privacy option you set in C#, such as `CaptureNetwork = false` or `CaptureLogs = false`, is ignored: put it in the early launch options. Filters and the report handler are set from C# later, so what the SDK captures before you set them is not filtered. With early launch on, an `IReportHandler` registered from C# cannot see or edit the report of the previous run's crash, so do not rely on a report handler to redact it.
 :::
 
 The optional iOS [Crash Report Extension](/sdk/unity/issue-detection/crash-report-extension) is a separate component. Read its page before you add it to an app that asks for consent.
@@ -84,7 +84,7 @@ Two features send data without a report, and only when your app calls them:
 - **Install filters and the report handler before `Bugsee.Launch`.** A filter applies to what is recorded after you set it. Set the log, network and breadcrumb filters and the report handler at the top of your startup code.
 - **Filters and the report handler run on the Unity main thread.** The native SDKs can call them on other threads, and the package hands each call to the main thread. While the app is in the background, Unity's loop is paused, and filter calls wait until it resumes.
 - **A filter that throws drops the event.** The package drops an event when your filter throws an exception. It does not record the event unfiltered.
-- **A report handler that throws does not drop the report.** The package logs the exception. On Android the edits made before the throw are kept and later edits are blocked. On iOS every edit except a screenshot change is dropped. A redaction handler that throws before its first edit uploads the report unredacted on both platforms, so the handler is not a redaction boundary. Make the edits inside a `try` block and call `completionCallback()` in a `finally` block. An exception thrown after an `await` in an `async void` handler is not caught, and the report waits about 31 seconds for the abandon timeout. See [Privacy: Report](/sdk/unity/privacy/report).
+- **A report handler that throws does not drop the report.** The package logs the exception. On Android the edits made before the throw are kept and later edits are blocked. On iOS every edit except a screenshot change is dropped. If a handler makes some edits and then throws, Android keeps the earlier edits and iOS drops them. A redaction handler that throws before its first edit uploads the report unredacted on both platforms, so the handler is not a redaction boundary. Make the edits inside a `try` block and call `completionCallback()` in a `finally` block. An exception thrown after an `await` in an `async void` handler is not caught, and the report waits about 31 seconds for the abandon timeout. See [Privacy: Report](/sdk/unity/privacy/report).
 - **A network filter turns the built-in network redaction off.** Run `Bugsee.ApplyDefaultNetworkSanitizer` first in your filter to keep it. See [Privacy: Network](/sdk/unity/privacy/network).
 - **The report handler is not a redaction boundary for every report.** It is skipped for a report that is created while the process is terminating, it uploads the report unredacted if it throws, and it cannot remove the video, the logs or the network traffic from a report. See [Privacy: Report](/sdk/unity/privacy/report).
 - **Secure rectangles cover Unity content.** Unity draws its UI itself, so the native secure views and the automatic masking of native password fields do not know your Unity elements. Register a rectangle for each one. See [Privacy: Video](/sdk/unity/privacy/video).

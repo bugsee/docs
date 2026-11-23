@@ -48,7 +48,7 @@ BugseeSdk.SetReportHandler(new MyReportHandler());
 | `OnBeforeReportCreated` | First, before the report is assembled. For a report from the dialog, before the dialog opens on iOS. |
 | `OnAfterReportCreated` | Later in the pipeline, before upload. For a dialog report on iOS, after the player sends it. |
 
-The exact order differs a little between platforms: see the native pages above. Use the "before" callback to change summary, description, severity, labels and attributes. Use the "after" callback to add attachments.
+The exact order differs a little between platforms: see the native pages above. Use the "before" callback to change summary, severity, labels and attributes. Use the "after" callback to add attachments and to redact the description and email: for a dialog report on iOS, the text the player typed exists only there.
 
 ## Complete the callback
 
@@ -124,7 +124,12 @@ public override void OnBeforeReportCreated(IReport report, bool isTerminating, A
     if (report.Type == IssueType.Error && report.Severity == null)
         report.Severity = IssueSeverity.Medium;
 
-    // Remove text a player typed into the form.
+    completionCallback();
+}
+
+public override void OnAfterReportCreated(IReport report, bool isTerminating, Action completionCallback)
+{
+    // Remove text a player typed into the form. On iOS, a dialog report holds it only in this callback.
     if (report.Description != null)
         report.Description = System.Text.RegularExpressions.Regex.Replace(report.Description, @"\d{16}", "[CARD]");
 

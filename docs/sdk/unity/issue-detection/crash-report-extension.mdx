@@ -104,7 +104,7 @@ An export that appends to an existing Xcode project keeps the extension target a
 By default, Bugsee starts when C# calls `Bugsee.Launch`. Early launch is an opt-in that starts the iOS SDK natively when the app finishes launching, before Unity's first scene. The first `Bugsee.Launch` then adopts that session instead of starting another.
 
 :::warning[Consent and privacy]
-With early launch on, the iOS SDK starts before any C# code runs, so before any consent check of yours, and even if your app never calls `Bugsee.Launch`. Do not turn it on if Bugsee must wait for the player's consent. The app token is stored in the app bundle (`Info.plist`).
+With early launch on, the iOS SDK starts before any C# code runs, so before any consent check of yours, and even if your app never calls `Bugsee.Launch`. Do not turn it on if Bugsee must wait for the player's consent. The app token is stored in the app bundle (`Info.plist`). With early launch on, an `IReportHandler` registered from C# cannot see or edit the report of the previous run's crash, so do not rely on a report handler to redact it.
 :::
 
 Turn it on for the export with these environment variables:

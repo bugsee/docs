@@ -149,6 +149,9 @@ using BugseeSdk = Bugsee.Bugsee;
 
 BugseeSdk.SetNetworkEventFilter(e =>
 {
+    // Keep the built-in redaction (see below), then add your own rules.
+    if (!BugseeSdk.ApplyDefaultNetworkSanitizer(e)) return null;
+
     // Drop health checks.
     if (e.Url != null && e.Url.Contains("/health")) return null;
 

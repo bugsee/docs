@@ -29,7 +29,7 @@ The first beta of the 7.x line, which continues the sequence from 6.x. It is a n
 The [migration guide](/sdk/unity/migration) lists every change from 6.x, with the old and the new code. These are the main ones.
 
 - **New package, new API.** The `.unitypackage` and the `Assets/Plugins/Bugsee` files, the `BugseeLauncher` component and the namespace `BugseePlugin` are replaced by the git package and the namespace `Bugsee`. Remove the 6.x plugin files and the old AAR, and port your calls.
-- **Shake-to-report and the Android notification-bar trigger are off by default** (iOS SDK 7.1.0 and Android SDK 7.6.0). Set `ReportingTriggerByShake = true` (both platforms) and `AndroidLaunchOptions.ReportingTriggerByNotification = true` (Android) to turn them on.
+- **Shake-to-report and the Android notification-bar trigger are off by default** (iOS SDK 7.1.0 and Android SDK 7.6.0). In 6.x, shake was on for Android and off for iOS, and the Android notification-bar trigger was on. Set `ReportingTriggerByShake = true` (both platforms) and `AndroidLaunchOptions.ReportingTriggerByNotification = true` (Android) to turn them on.
 - **`ShowReportDialog` and `Upload` take `IssueSeverity? severity = null`.** `null` uses the `ReportingDefaultBugPriority` option. They used to always send High.
 - **Attribute values read back as `long` and `double` on Android**, as on iOS: `GetAttribute`, `GetAllAttributes` and `IReport.GetAttribute`. Replace `(int)` unboxing with `Convert.ToInt32` or a cast to `long`.
 - **There is no typed `Debug` or `Endpoint` launch option.** Set an endpoint with `SetCustomOption("com.bugsee.option.$$ENDPOINT", url)`.
@@ -89,6 +89,8 @@ The [migration guide](/sdk/unity/migration) lists every change from 6.x, with th
 - Handled managed exceptions in a Release IL2CPP build on Android without IL2CPP line information stay unsymbolicated (no file and line) when the symbols are Public (symbol table only). Use Debugging symbols plus the IL2CPP line map. Development builds send no addresses on Android, and Debugging symbols do not change that. See [Symbolication: Android](/sdk/unity/symbolication/android#public-and-debugging-symbols).
 - Switching the symbol level from Public to Debugging for the same `libil2cpp.so` build id may leave frames raw on the dashboard. This is open and under investigation ([issue 263](https://github.com/bugsee/bugsee-unity/issues/263)).
 - After an iOS launch that ended before the app became active, the next launch may block the main thread for up to about 8 seconds while the crash report uploads. The fix is in the native iOS SDK and is not released yet. Normal Unity launches do not hit it, because the SDK starts while the app is active. The opt-in iOS native early launch starts the SDK at app launch, before the app is active, so an app that uses it can hit this.
+- Secure rectangles and scaled or offset surfaces: with Resolution Scaling, `Screen.SetResolution` or a surface that is offset in the window, a view hierarchy node under a secure rectangle can keep its name and components ([bugsee-unity#291](https://github.com/bugsee/bugsee-unity/issues/291)). Set `CaptureViewHierarchy = false` if those names must not reach Bugsee. See [Privacy: Video](/sdk/unity/privacy/video).
+- A report handler that throws does not drop the report, and is not a redaction boundary ([bugsee-unity#293](https://github.com/bugsee/bugsee-unity/issues/293)). See [Privacy: Report](/sdk/unity/privacy/report).
 
 **Compatibility**
 

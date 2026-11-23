@@ -41,7 +41,7 @@ A Unity Editor started from the Hub or the Finder does not inherit your shell's 
 | Variable | Platform | Default | What it does |
 | --- | --- | --- | --- |
 | `BUGSEE_NO_IL2CPP_MAPPING` | Android, iOS | Unset | Flag. Turns off the IL2CPP line map flags and the line map upload. The iOS Run Script reads it too, and still uploads the dSYMs. |
-| `BUGSEE_IL2CPP_MAPPING` | Android, iOS | Unset | Path to a `LineNumberMappings.json` of your own to upload instead of the build's. A missing file gives a warning and no upload. |
+| `BUGSEE_IL2CPP_MAPPING` | Android, iOS | Unset | Path to a `LineNumberMappings.json` of your own to upload instead of the build's. Set it, and `BUGSEE_APP_TOKEN`, in the Unity Editor's environment before the build: the Editor reads it, and a Run Script in Xcode does not. A missing file gives a warning and no upload. |
 | `BUGSEE_IL2CPP_UUIDS` | Android, iOS | Read from the build | The IL2CPP module UUIDs, comma separated, for the line map upload. The iOS Run Script reads it from the Xcode environment. |
 | `BUGSEE_SKIP_UPLOAD_ON_DEBUG` | iOS | Unset | Set to `1` in the Xcode environment to skip the upload for the Debug configuration. |
 | `BUGSEE_NO_DSYM_FORCE` | iOS | Unset | Flag. The export keeps Unity's `DEBUG_INFORMATION_FORMAT` and does not force `dwarf-with-dsym`. The Debug configuration then has no dSYM. |
