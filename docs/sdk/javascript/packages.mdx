@@ -54,6 +54,15 @@ Install the adapter on its own. It depends on `@bugsee/bugsee` and re-exports it
 | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/svelte" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/svelte</code></a> | Svelte 4 or later and SvelteKit 2 or later: `handleError` hook and navigation naming. | [Svelte](/sdk/javascript/frameworks/svelte) |
 | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/solid" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/solid</code></a> | Solid 1.6 or later: error primitives and router naming. | [Solid](/sdk/javascript/frameworks/solid) |
 
+### Component name plugins
+
+Optional development dependencies that keep component names in reports when minification mangles them. They are unrelated to source maps. See [Component names](/sdk/javascript/frameworks/component-names).
+
+| Package | Use it for | Page |
+| --- | --- | --- |
+| <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/babel-plugin-component-annotate" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/babel-plugin-component-annotate</code></a> | Optional. Labels DOM elements of React, Preact and Solid components with the component name (`data-bugsee-component`), so clicks and errors are attributed to a component even after minification. | [Component names](/sdk/javascript/frameworks/component-names) |
+| <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/svelte-plugin-component-annotate" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/svelte-plugin-component-annotate</code></a> | Optional. The same labels for Svelte and SvelteKit, as a Svelte preprocessor. | [Component names](/sdk/javascript/frameworks/component-names) |
+
 ### Meta-framework adapters
 
 Each is a single install. It wires the browser client and the server (and the edge, where the framework has one) together, so one session covers the request and the browser that made it.
@@ -89,8 +98,6 @@ Install these as development dependencies. They upload source maps and stamp deb
 | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/vite-plugin" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/vite-plugin</code></a> | Vite. | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
 | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/webpack-plugin" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/webpack-plugin</code></a> | webpack. | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
 | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/bundler-plugin-core" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/bundler-plugin-core</code></a> | The engine behind the two plugins. Install it directly only for the Rollup, esbuild and Rspack plugins (`bugseeRollupPlugin`, `bugseeEsbuildPlugin`, `bugseeRspackPlugin`), which are less exercised than Vite and webpack. | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
-| <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/babel-plugin-component-annotate" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/babel-plugin-component-annotate</code></a> | Optional. Labels DOM elements of React, Preact and Solid components with the component name (`data-bugsee-component`), so clicks and errors are attributed to a component even after minification. | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
-| <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/svelte-plugin-component-annotate" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/svelte-plugin-component-annotate</code></a> | Optional. The same labels for Svelte and SvelteKit, as a Svelte preprocessor. | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
 
 The `bugsee-cli` command-line tool, which the plugins run, is a separate package, `@bugsee/cli`. See [Symbolication: manual](/sdk/javascript/symbolication/manual).
 

@@ -1,6 +1,6 @@
 ---
 title: "Bundler plugins"
-description: "Upload source maps from your build with the Bugsee plugins for Vite, webpack, Rollup, esbuild and Rspack, and label components with the annotate plugins. All options explained."
+description: "Upload source maps from your build with the Bugsee plugins for Vite, webpack, Rollup, esbuild and Rspack. All options explained."
 sidebar_position: 2
 slug: "/sdk/javascript/symbolication/bundler-plugins"
 ---
@@ -186,42 +186,6 @@ For a build made from an artifact, with no working tree, pass `commit` or set `B
 
 - **Angular.** Its builder does not accept esbuild plugins. Use the [CLI recipe](/sdk/javascript/symbolication/manual#angular).
 - **Bun's bundler, `tsc` and `swc`.** They have no hook. Use the [CLI recipe](/sdk/javascript/symbolication/manual).
-
-## Annotate plugins
-
-These optional plugins label the DOM elements that a component renders with the component's name, in a `data-bugsee-component` attribute. Bugsee reads it to attribute clicks and errors to a component even when minification mangled the names. Without them, everything is still captured.
-
-| Framework | Package | How |
-| --- | --- | --- |
-| React, Preact, Solid | `@bugsee/babel-plugin-component-annotate` | A Babel plugin with no options. Needs `@babel/core` 7. |
-| Svelte, SvelteKit | `@bugsee/svelte-plugin-component-annotate` | A Svelte preprocessor. Needs `svelte` 4 or newer. |
-| Vue | `@bugsee/vue` | A runtime mixin instead of a build plugin. See [Vue](/sdk/javascript/frameworks/vue). |
-
-```bash
-npm install --save-dev @bugsee/babel-plugin-component-annotate
-```
-
-```js title="babel.config.js"
-module.exports = {
-  plugins: [['@bugsee/babel-plugin-component-annotate']],
-};
-```
-
-The Babel plugin adds `data-bugsee-component="<ComponentName>"` to each host element, such as a `<button>` or `<div>`, that a PascalCase function or class component renders. It does not annotate component elements.
-
-```js title="svelte.config.js"
-import { componentAnnotatePreprocessor } from '@bugsee/svelte-plugin-component-annotate';
-
-export default {
-  preprocess: [componentAnnotatePreprocessor()],
-};
-```
-
-The name comes from the file name, so `UserCard.svelte` becomes `UserCard`. For `index.svelte` and SvelteKit route files, the folder name is used.
-
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `renderSpans` | `boolean` | `false` | Also record a render span for each component's initialization in your performance data. Needs `@bugsee/svelte`. |
 
 ## Related pages
 

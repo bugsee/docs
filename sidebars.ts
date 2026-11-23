@@ -1057,6 +1057,7 @@ const sidebars: SidebarsConfig = {
               id: "sdk/javascript/frameworks/astro",
               label: "Astro",
             },
+{ type: "doc", id: "sdk/javascript/frameworks/component-names", label: "Component names" },
           ],
         },
         {
