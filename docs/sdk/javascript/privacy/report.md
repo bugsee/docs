@@ -43,7 +43,8 @@ bugsee.setReportHandler({
     const { report } = request;
     // Do not send a report about a certain error at all. Clearing the description
     // would not help: the message and stack are also in the crash detail.
-    if (report.summary?.includes('PaymentError')) {
+    // The summary of an error report is its message, so match on message text.
+    if (report.summary?.includes('Card declined')) {
       return null;
     }
     // Do not report on behalf of staff accounts

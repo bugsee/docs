@@ -75,7 +75,7 @@ launch('<your_app_token>', {
 });
 ```
 
-Targets are tested against the full request URL, including the path. Anchor a regular expression at the start with the scheme and end it at the host boundary, as above. A bare host string such as `'https://billing.internal.example.com'` also matches `https://billing.internal.example.com.attacker.test/`, so end a string with `/`.
+Targets are tested against the full request URL, including the path. A string matches anywhere in the URL, so `'https://billing.internal.example.com/'` also matches `https://attacker.test/https://billing.internal.example.com/` and a bare host string without the trailing `/` also matches `https://billing.internal.example.com.attacker.test/`. For host targets, use a regular expression anchored at the start with the scheme and ended at the host boundary, as in the second entry above.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |

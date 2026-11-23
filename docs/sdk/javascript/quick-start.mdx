@@ -94,17 +94,15 @@ Call `launch()` once, as early as you can: at the top of your entry module, befo
 ```ts title="main.ts"
 import { launch } from '@bugsee/bugsee';
 
-launch('<your_app_token>', {
+export const bugsee = await launch('<your_app_token>', {
   appVersion: '1.4.2',
   appBuild: '381',
 });
 ```
 
-In the browser `launch()` returns a `Promise` of the client. Await it only if you need the client right away:
+In the browser `launch()` returns a `Promise` of the client. Capture starts without awaiting it, but keep the client (as above) if you need it later, for example in the verify step. Use it like this:
 
 ```ts
-const bugsee = await launch('<your_app_token>', { appVersion: '1.4.2' });
-
 bugsee.addBreadcrumb({ message: 'checkout started' });
 ```
 

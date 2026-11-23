@@ -165,6 +165,7 @@ launch('<your_app_token>', {
 With `propagateTrace`, Bugsee adds the W3C `traceparent` header to your outgoing requests, and the backend transaction continues the trace of the frontend.
 
 - In a browser, `propagateTrace` is off by default, so no header is sent until you enable it. When you do, same-origin requests receive the header, and cross-origin requests only when their URL matches `tracePropagationTargets`.
+- In a browser, a cross-origin request that carries `traceparent` triggers a CORS preflight. The target API must list `traceparent` in `Access-Control-Allow-Headers`, otherwise the browser blocks the request.
 - On a server, `propagateTrace` is on by default, but nothing is sent until you set `tracePropagationTargets`. See the [backend overview](/sdk/javascript/backend/overview#trace-correlation).
 
 ```ts
