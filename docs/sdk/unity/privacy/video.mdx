@@ -173,8 +173,8 @@ For what the native SDKs hide inside a page, see [Android WebView](/sdk/android/
 
 On Android, the SDK blanks a window that carries the system `FLAG_SECURE` flag, without any Bugsee call. The `CaptureRespectFlagSecure` option controls this on `AndroidLaunchOptions`. It is on by default. Set it to `false` if your app marks windows `FLAG_SECURE` broadly and you want them recorded. See [Android video privacy](/sdk/android/privacy/video).
 
-:::caution[The frame pusher does not honor FLAG_SECURE]
-With `VideoMode.DirectBuffers`, the experimental [frame pusher](/sdk/unity/video-capture) records Unity's surface even when its window carries `FLAG_SECURE`. The package has no `FLAG_SECURE` handling for pushed frames, and the SDK does not mask them. Use secure rectangles or a blackout for what must stay out of the video.
+:::note[FLAG_SECURE with the frame pusher]
+With `VideoMode.DirectBuffers`, the experimental [frame pusher](/sdk/unity/video-capture) follows the same option. On Android with `CaptureRespectFlagSecure` true (the default), frames are not recorded while the activity window carries `FLAG_SECURE`, and the video shows placeholders. With it set to `false`, they are recorded. This was verified on Android SDK 7.6.0 on one device and OS version. Secure rectangles and Unity-side redaction stay your responsibility for what must stay out of the video.
 :::
 
 ## Blackout

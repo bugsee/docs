@@ -184,7 +184,7 @@ At the end of each due frame the capturer calls `ScreenCapture.CaptureScreenshot
 
 - It records Unity's final composite, including screen-space overlay UI. Native Android views, such as WebViews, dialogs and system UI, are not in the video.
 - The SDK does not mask frames pushed this way: no secure views, no secure WebViews and no pixelation. The pusher blanks the rectangles you register with `Bugsee.AddSecureRectangle` and with `Bugsee.AddSecureScreenRectangle`. See [Secure rectangles](#secure-rectangles).
-- The pusher records Unity's surface even when its window sets `FLAG_SECURE`, and the package has no `FLAG_SECURE` handling for pushed frames. `CaptureRespectFlagSecure` does not blank them. Use secure rectangles or a blackout for what must stay out of the video.
+- On Android with `CaptureRespectFlagSecure` true (the default), pushed frames are not recorded while the activity window carries `FLAG_SECURE`, and the video shows placeholders. With it set to `false`, they are recorded. This was verified on Android SDK 7.6.0 on one device and OS version. Secure rectangles and Unity-side redaction stay your responsibility for what must stay out of the video.
 - Blackout is honored by the SDK.
 - `Bugsee.AddSecureWebView` has no effect while the pusher is the capture source.
 
