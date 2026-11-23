@@ -951,3 +951,18 @@ svg[class*="iconExternalLink"] {
     display: none;
   }
 }
+/* ===== External link icon (opt-in: class="external-link-icon") =====
+   A small "open in new tab" arrow after the link text. Used for links that leave the docs, such as
+   the npm package links on the JavaScript SDK installation and packages pages. */
+a.external-link-icon::after {
+  content: "";
+  display: inline-block;
+  width: 0.75em;
+  height: 0.75em;
+  margin-left: 0.25em;
+  vertical-align: baseline;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M14 3h7v7h-2V6.4l-9.3 9.3-1.4-1.4L17.6 5H14V3zM5 5h6v2H5v12h12v-6h2v8H3V5h2z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M14 3h7v7h-2V6.4l-9.3 9.3-1.4-1.4L17.6 5H14V3zM5 5h6v2H5v12h12v-6h2v8H3V5h2z'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: 0.7;
+}
