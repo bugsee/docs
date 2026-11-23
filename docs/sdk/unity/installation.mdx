@@ -1,6 +1,6 @@
 ---
 title: "Installation"
-description: "TODO(writer-A): Installation for the Bugsee Unity SDK 7.x."
+description: "Install the Bugsee Unity SDK 7.x package from a pinned git tag, launch it from C#, and check that your first report arrives."
 sidebar_position: 1
 slug: "/sdk/unity/installation"
 ---
@@ -9,4 +9,153 @@ slug: "/sdk/unity/installation"
 This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
 :::
 
-TODO(writer-A)
+The Bugsee Unity SDK is a Unity Package Manager (UPM) package named `com.bugsee.unity`. You add it from a git tag, call `Bugsee.Launch` once, and build for iOS or Android. This page covers the install, the first launch and a check that it works.
+
+## Requirements
+
+- **Unity 2021.3 or later.**
+- **iOS** builds: a Mac with Xcode, and an iOS 15.0 or later deployment target. The package raises a lower deployment target to 15.0 on export.
+- **Android** builds: Android Build Support for your Unity version. The package needs no Gradle template and no extra dependency manager.
+- A Bugsee app token from the Bugsee dashboard. App tokens are per platform: your iOS app and your Android app each have their own token.
+
+See [Overview](/sdk/unity/overview#requirements) for the full list.
+
+## Install the package
+
+The package is installed from git, pinned to a release tag:
+
+```
+https://github.com/bugsee/bugsee-unity.git#v7.0.0-beta.1
+```
+
+Always include the `#v7.0.0-beta.1` part. Without a tag, Unity follows the repository's default branch, which is not a release.
+
+Pick one of the following routes.
+
+### Package Manager
+
+1. In Unity, open **Window > Package Manager**.
+2. Click **+**, then **Add package from git URL...**.
+3. Paste the URL above and click **Add**.
+
+### Edit the manifest
+
+Add the dependency to `Packages/manifest.json`. Unity resolves it the next time the Editor has focus.
+
+```json
+{
+  "dependencies": {
+    "com.bugsee.unity": "https://github.com/bugsee/bugsee-unity.git#v7.0.0-beta.1"
+  }
+}
+```
+
+### A clone or another git host
+
+Unity accepts a git URL that ends in `.git` (before the optional `#tag`) or starts with `git+`. Other spellings are rejected as an invalid version. For a clone on disk or a mirror, use one of these forms:
+
+```
+file:///path/to/bugsee-unity.git#v7.0.0-beta.1
+git+file:///path/to/bugsee-unity#v7.0.0-beta.1
+```
+
+### From disk
+
+1. Open **Window > Package Manager**, click **+**, then **Add package from disk...**.
+2. Pick the `package.json` in the root of a checkout, the folder that holds `package.json`, `Runtime` and `Editor`.
+
+In `manifest.json` the entry is `"com.bugsee.unity": "file:/path/to/bugsee-unity"`. Unity reads the folder in place, so keep it where it is.
+
+### From a tarball
+
+1. Open **Window > Package Manager**, click **+**, then **Add package from tarball...**.
+2. Pick the `.tgz` file.
+
+Unity needs the package files under a top-level `package/` folder, which is what `npm pack` makes. It rejects an archive whose files are at the top level or under another folder name. That includes GitHub's "Source code" download, whose top folder is named after the repository and the tag. From a checkout, make the archive with:
+
+```bash
+git archive --format=tar.gz --prefix=package/ -o bugsee-unity-7.0.0-beta.1.tgz v7.0.0-beta.1
+```
+
+## What the package declares
+
+The package depends on three built-in Unity modules, which Unity resolves for you: `com.unity.modules.androidjni`, `com.unity.modules.jsonserialize` and `com.unity.modules.ui`. Keep them enabled.
+
+You do not add a scoped registry, a dependency-resolve step or custom Gradle templates. The package wires the native SDKs in when you build:
+
+- **Android**: every build declares `com.bugsee:bugsee-android` and `com.bugsee:bugsee-android-ndk`, version 7.6.0, in the Gradle project that Unity generates. It adds `mavenCentral()` to the project repositories if they lack it. See [Android build setup](/sdk/unity/build-setup/android).
+- **iOS**: every export adds the Bugsee Swift package (`https://github.com/bugsee/spm`, version 7.1.0) to the Xcode project. See [iOS build setup](/sdk/unity/build-setup/ios).
+
+If your project already uses the External Dependency Manager (EDM4U) for other SDKs, it keeps working. If the project already declares `com.bugsee:bugsee-android` itself, through EDM4U, a custom `mainTemplate.gradle` or a local AAR, the package keeps that declaration and adds nothing next to it. The build log warns when its version differs from the one this package pins.
+
+If your game code lives in its own assembly definition, add a reference to `Bugsee.Runtime`. The assembly is auto-referenced for the default `Assembly-CSharp`.
+
+## Launch the SDK
+
+Call `Bugsee.Launch` once, as early as you can, for example from a component in your first scene. This example launches with the SDK defaults.
+
+```csharp
+using UnityEngine;
+using BugseeSdk = Bugsee.Bugsee;
+
+public class BugseeStartup : MonoBehaviour
+{
+#if UNITY_ANDROID
+    const string AppToken = "<your Android app token>";
+#elif UNITY_IOS
+    const string AppToken = "<your iOS app token>";
+#else
+    const string AppToken = "<your app token>";
+#endif
+
+    void Awake()
+    {
+        BugseeSdk.Launch(AppToken);
+    }
+}
+```
+
+:::note[Name clash]
+The package namespace and its static class are both named `Bugsee`. In code outside the `Bugsee` namespace, `Bugsee.Launch(...)` does not compile, because `Bugsee` resolves to the namespace. The alias `using BugseeSdk = Bugsee.Bugsee;` fixes it. You can also write `Bugsee.Bugsee.Launch(...)`. The examples on this site use the alias.
+:::
+
+`Launch` does not wait for the native SDK to finish. It throws `ArgumentException` if the token is empty. In the Unity Editor it does nothing: test on a device. To pass options, or to launch and read the result, see [Configuration](/sdk/unity/configuration) and [Lifecycle & status](/sdk/unity/lifecycle).
+
+Shake-to-report is off by default. To turn it on, set `ReportingTriggerByShake = true` in the launch options; see [Configuration](/sdk/unity/configuration).
+
+## Check that it works
+
+Build to a device, run the app, and trigger a test report and a test crash. This component calls both from your own UI.
+
+```csharp
+using UnityEngine;
+using BugseeSdk = Bugsee.Bugsee;
+
+public class BugseeInstallCheck : MonoBehaviour
+{
+    // Wire these to two buttons.
+    public void SendTestReport() => BugseeSdk.ShowReportDialog("Install check", "Sent from the install check");
+
+    public void CrashTheApp() => BugseeSdk.TestCrash();
+}
+```
+
+1. Tap the first button. The report dialog opens. Send it.
+2. Tap the second button. The app ends with a native crash.
+3. Start the app again. The SDK sends the crash report on that launch.
+4. Open your app in the Bugsee dashboard. Both reports appear there.
+
+On the iOS Simulator the SDK has no crash reporter, so `TestCrash` is not reported there. Use a physical device to test crashes; see the [iOS FAQ](/sdk/ios/faq).
+
+If nothing arrives, check that the token matches the platform of the build, and read the Unity player log for lines that start with `[Bugsee]`.
+
+## Sample project
+
+The repository ships a small sample game that exercises the API. Open [`Samples~/BugseeMiniGame`](https://github.com/bugsee/bugsee-unity/tree/v7.0.0-beta.1/Samples~/BugseeMiniGame) in Unity Hub (Unity 2021.3 or later).
+
+## Next steps
+
+- [Android build setup](/sdk/unity/build-setup/android) and [iOS build setup](/sdk/unity/build-setup/ios): what the Editor does to your build.
+- [Configuration](/sdk/unity/configuration): launch options and their defaults.
+- [Symbolication](/sdk/unity/symbolication/overview): upload symbols so crash frames resolve to your code.
+- [Privacy overview](/sdk/unity/privacy/overview): decide what is recorded.

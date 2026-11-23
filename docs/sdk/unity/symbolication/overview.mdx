@@ -1,6 +1,6 @@
 ---
 title: "Symbolication overview"
-description: "TODO(writer-E): Symbolication overview for the Bugsee Unity SDK 7.x."
+description: "What Bugsee needs to turn Unity 7.x crash and exception frames back into your own method names, files and lines, and which build step uploads each piece."
 sidebar_position: 1
 slug: "/sdk/unity/symbolication/overview"
 ---
@@ -9,4 +9,95 @@ slug: "/sdk/unity/symbolication/overview"
 This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
 :::
 
-TODO(writer-E)
+A Release player ships stripped native libraries, and IL2CPP turns your C# into C++. A crash or exception from that build carries addresses and generated names. To show your own methods, files and lines, Bugsee needs the debug files of that exact build. The Unity package uploads them for you while the build runs, when you give the build an app token.
+
+This page explains what is uploaded, by which step, and what to check. The platform pages have the setup:
+
+- [Symbolication: Android](/sdk/unity/symbolication/android)
+- [Symbolication: iOS](/sdk/unity/symbolication/ios)
+- [Symbolication: C# code](/sdk/unity/symbolication/managed-code)
+- [Build environment variables](/sdk/unity/symbolication/environment-variables)
+
+## What gets uploaded
+
+| Debug file | Platform | When it is uploaded | `bugsee-cli` type |
+| --- | --- | --- | --- |
+| Native symbols: Unity's `symbols.zip` (`libil2cpp.so`, `libunity.so`, `libmain.so`) | Android | After the Unity build, from the Editor | `elf` |
+| Native libraries of your plugins and AARs that still carry symbols | Android | After the Unity build, from the Editor | `elf` |
+| R8/ProGuard `mapping.txt` | Android | After the Unity build, from the Editor, when the build has one | `proguard` |
+| IL2CPP line map (`LineNumberMappings.json`, with `MethodMap.tsv`) | Android | After the Unity build, from the Editor | `il2cpp-linemap` |
+| Managed-code mapping made from the portable `.pdb` files | Android, Mono scripting backend, not a Development Build | After the Unity build, from the Editor | `portable-pdb` |
+| dSYM bundles | iOS | While Xcode builds, from the `Bugsee Upload Symbols` Run Script phase | `dsym` |
+| IL2CPP line map | iOS | While Xcode builds, from the same Run Script phase | `il2cpp-linemap` |
+
+The package adds `--emit-source-mapping --emit-method-map` to the IL2CPP arguments of every IL2CPP build unless `BUGSEE_NO_IL2CPP_MAPPING` is set, so the line map is written whether or not you set a token. The token only decides whether it is uploaded. See [Symbolication: C# code](/sdk/unity/symbolication/managed-code).
+
+## Turn the upload on
+
+The upload is opt-in. Set `BUGSEE_APP_TOKEN` in the environment of the process that builds:
+
+- **Android:** the Unity Editor process (or the batch-mode command line). The Editor runs `bugsee-cli` after the build.
+- **iOS:** the environment of Xcode or `xcodebuild`. The Unity export never writes the token into the Xcode project, and the Run Script phase reads it when Xcode builds.
+
+```bash
+export BUGSEE_APP_TOKEN="your-app-token"
+```
+
+A Unity Editor started from the Hub or the Finder does not inherit your shell's environment. Start the Editor from a terminal that has the variable, or set it in your CI job.
+
+Set `BUGSEE_NO_SYMBOL_UPLOAD` to any value to turn every upload off. [Build environment variables](/sdk/unity/symbolication/environment-variables) lists all the variables and Editor settings.
+
+## An upload never fails your build
+
+The package treats every symbol upload as best effort. A missing token, a missing `bugsee-cli`, a missing map or a failed upload prints a warning in the Unity Console (Android) or the Xcode build log (iOS), and the build continues. Read the log of a release build once to see that the uploads ran.
+
+The Android upload logs lines that start with `Bugsee: uploading`. The iOS Run Script prints `Bugsee: uploading dSYM` for each dSYM, and a `warning:` line for each problem.
+
+## The build token and the launch token
+
+Symbols follow the token in `BUGSEE_APP_TOKEN` at build time. Crashes follow the token you pass to `Bugsee.Launch`. When the two name different apps, the symbols sit in another app than the crashes and nothing in the dashboard says so.
+
+To catch this, the build records a fingerprint of the token (the first 8 bytes of the SHA-256 of the trimmed token, as 16 hex characters, never the token itself):
+
+- On Android, the Editor adds it as the Resources asset `BugseeBuildTokenFingerprint` while the build runs and removes it afterwards, only when an Android symbol upload is on.
+- On iOS, the Run Script writes it as the key `BugseeBuildTokenFingerprint` of the built app's `Info.plist`.
+
+`Bugsee.Launch` in a player logs one warning, naming both fingerprints, when its token has a different fingerprint. It stays silent in the Editor and for a build that recorded none.
+
+Set `BUGSEE_NO_TOKEN_CHECK` for the build when you choose the token at run time, for example a staging app and a production app from one build. On iOS, set it in the Xcode environment. Setting it in the Unity Editor at export does nothing for the Run Script.
+
+## Where `bugsee-cli` comes from
+
+The Editor uploads run the [Bugsee CLI](/cli). A Unity Editor started from the Hub or the Finder does not have your shell's `PATH`, so the package looks for the CLI in this order:
+
+1. `BUGSEE_CLI_PATH`.
+2. The Editor's `PATH`.
+3. The directories the installers use: `/opt/homebrew/bin`, `/usr/local/bin`, `~/.local/bin`, `~/.cargo/bin`, `~/.bugsee/bin` and, on Windows, `%LOCALAPPDATA%\Bugsee\bin`.
+4. The package's download cache: `~/Library/Caches/Bugsee/cli` on macOS, `$XDG_CACHE_HOME/bugsee/cli` or `~/.cache/bugsee/cli` on Linux, `%LOCALAPPDATA%\Bugsee\cache\cli` on Windows, else `Library/Bugsee/cli` in the project.
+
+An installed CLI older than 0.8.1 is passed over. When none is found and `BUGSEE_APP_TOKEN` is set, the package downloads CLI 0.9.0 from `download.bugsee.com`, checks its SHA-256 and caches it. Set `BUGSEE_NO_CLI_DOWNLOAD` to turn the download off, or `BUGSEE_CLI_VERSION` to download another release (a value that is not a version, or is older than 0.8.1, is ignored with a warning). If nothing is found or downloaded, the build warns once and continues without uploading.
+
+The upload of managed-code mappings for Mono needs CLI 0.9.0 or newer. See [Symbolication: C# code](/sdk/unity/symbolication/managed-code#mono-on-android-release-builds).
+
+The iOS Run Script has its own lookup and never downloads. See [Symbolication: iOS](/sdk/unity/symbolication/ios#how-the-run-script-finds-bugsee-cli).
+
+## Version and build number
+
+Every upload carries a version and a build number, and Bugsee matches them to the app that reports the crash. The package reads them from Player Settings and the built app. Set `BUGSEE_VERSION` and `BUGSEE_BUILD` to override them for a build, for example in CI.
+
+## Which setting gives which result
+
+| You want | Do this |
+| --- | --- |
+| C# file and line for a crash or exception on Android IL2CPP | Create symbols.zip set to Debugging and the IL2CPP line map uploaded. See [Symbolication: Android](/sdk/unity/symbolication/android#public-and-debugging-symbols). |
+| C# file and line on Android Mono (Release) | `BUGSEE_APP_TOKEN` and CLI 0.9.0 or newer. See [Symbolication: C# code](/sdk/unity/symbolication/managed-code). |
+| C# file and line on iOS | A dSYM and the line map, uploaded by the Run Script. See [Symbolication: iOS](/sdk/unity/symbolication/ios). |
+| An upload from a CI job after the build | `bugsee-cli debug-files upload`. See [Uploading debug information files](/cli/debug-files). |
+| No uploads from a build | `BUGSEE_NO_SYMBOL_UPLOAD`, or leave `BUGSEE_APP_TOKEN` unset. |
+
+## Known issues in 7.0.0-beta.1
+
+- Handled managed exceptions in a Release IL2CPP build on Android without IL2CPP line information stay unsymbolicated (no file:line) when the symbols are Public (symbol table only). Use Debugging symbols plus the IL2CPP line map. Development builds send no addresses on Android, and Debugging symbols do not change that.
+- Switching the symbol level from Public to Debugging for the same `libil2cpp.so` build id may leave frames raw on the dashboard. This is open and under investigation ([issue 263](https://github.com/bugsee/bugsee-unity/issues/263)).
+
+Details are in [Symbolication: Android](/sdk/unity/symbolication/android#public-and-debugging-symbols) and [Symbolication: C# code](/sdk/unity/symbolication/managed-code).

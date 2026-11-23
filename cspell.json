@@ -278,6 +278,20 @@
         "RRGGBBAA",
         "Dalvik",
         "RSSI",
-        "Passpoint"
+        "Passpoint",
+        "elif",
+        "Mathf",
+        "screencapture",
+        "Readback",
+        "Dont",
+        "getenv",
+        "androidjni",
+        "jsonserialize",
+        "libunity",
+        "libmain",
+        "libmonobdwgc",
+        "libmono",
+        "dsymutil",
+        "readelf"
     ]
 }

@@ -1,6 +1,6 @@
 ---
 title: "Breadcrumbs"
-description: "TODO(writer-C): Breadcrumbs for the Bugsee Unity SDK 7.x."
+description: "Turn on breadcrumbs in the Bugsee Unity SDK 7.x, add your own with Bugsee.AddBreadcrumb, and filter them with SetBreadcrumbFilter."
 sidebar_position: 9
 slug: "/sdk/unity/breadcrumbs"
 ---
@@ -9,4 +9,99 @@ slug: "/sdk/unity/breadcrumbs"
 This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
 :::
 
-TODO(writer-C)
+Breadcrumbs are a compact trail of what happened before a report: the user opened a screen, a request failed, your code reached a checkpoint. The native SDKs collect system and user breadcrumbs for you once you turn them on, and you can add your own from C#.
+
+## Turn breadcrumbs on
+
+Breadcrumbs are **off by default** on both native SDKs. While they are off, `Bugsee.AddBreadcrumb` records nothing and the breadcrumb filter is never called. Set `CaptureBreadcrumbs = true` to use either.
+
+| Option | Platform | Type | Default | What it does |
+| --- | --- | --- | --- | --- |
+| `CaptureBreadcrumbs` | Both | `bool` | `false` | Record breadcrumbs. |
+| `CaptureBreadcrumbsExtras` | Both | `bool` | `false` | Attach extra data from system events to the automatic breadcrumbs that come from them. |
+
+The native SDKs decide which automatic breadcrumbs they record and how. See [Android breadcrumbs](/sdk/android/breadcrumbs) and [iOS breadcrumbs](/sdk/ios/breadcrumbs).
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+#if UNITY_ANDROID
+var options = new AndroidLaunchOptions { CaptureBreadcrumbs = true };
+#elif UNITY_IOS
+var options = new IOSLaunchOptions { CaptureBreadcrumbs = true };
+#endif
+
+BugseeSdk.Launch("<your_app_token>", options);
+```
+
+In the Unity Editor, and on platforms other than Android and iOS, breadcrumb calls do nothing.
+
+## Add your own breadcrumbs
+
+```csharp
+using BugseeSdk = Bugsee.Bugsee;
+
+BugseeSdk.AddBreadcrumb("checkout", "Coupon applied", "info");
+```
+
+`Bugsee.AddBreadcrumb(string category, string message, string levelName)` takes a category, a message and a level name. The level name is case-sensitive and must be one of these:
+
+| `levelName` | Notes |
+| --- | --- |
+| `"debug"` | |
+| `"info"` | |
+| `"warning"` | |
+| `"error"` | |
+| `"fatal"` | On iOS, `"fatal"` is recorded at the same level as `"error"`. |
+
+Any other value throws `ArgumentException`.
+
+On Android, the breadcrumb is created with the type `manual` and the current time. On iOS, a breadcrumb added before the launch completes is held and sent once it does.
+
+## Filter breadcrumbs
+
+`Bugsee.SetBreadcrumbFilter` installs a filter that sees each breadcrumb before it is recorded, both the ones you add and the automatic ones. Change the breadcrumb and return it to keep it, or return `null` to drop it. Pass `null` to remove the filter.
+
+```csharp
+using Bugsee.Contracts.Exchange;
+using BugseeSdk = Bugsee.Bugsee;
+
+BugseeSdk.SetBreadcrumbFilter(crumb =>
+{
+    // Drop one noisy category.
+    if (crumb.Category == "ui.scroll") return null;
+
+    // Redact a value.
+    if (crumb.Message != null) crumb.Message = crumb.Message.Replace("secret", "<redacted>");
+    return crumb;
+});
+```
+
+`IBreadcrumb` has these properties, all settable:
+
+| Property | Type |
+| --- | --- |
+| `Timestamp` | `long` |
+| `Category` | `string` |
+| `Message` | `string` |
+| `Type` | `string` |
+| `Level` | `LogLevel?` |
+| `Data` | `IDictionary<string, object>` |
+
+Keep these rules in mind:
+
+- **The filter is called only while `CaptureBreadcrumbs` is `true`.**
+- **Assign `Data` back.** On Android, `Data` returns a copy, so editing the returned dictionary in place does not change the breadcrumb. Assign the edited dictionary to `crumb.Data`.
+- **Do not keep the breadcrumb.** It is valid only inside the callback.
+- **A filter that throws drops the breadcrumb.**
+- **The filter runs on the Unity main thread.** On Android the SDK calls it on its own threads and the package hands each call to the main thread, which processes its queue in `Update`. While the app is in the background Unity's loop is paused, so the call waits until the app resumes.
+- **A filter that blocks forever blocks the main thread.** Keep it short.
+
+For privacy guidance, see [Privacy: breadcrumbs](/sdk/unity/privacy/breadcrumbs).
+
+## Related pages
+
+- [Console logs](/sdk/unity/logs)
+- [Custom events & traces](/sdk/unity/events-and-traces)
+- [Privacy: breadcrumbs](/sdk/unity/privacy/breadcrumbs)

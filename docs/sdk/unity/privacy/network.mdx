@@ -1,6 +1,6 @@
 ---
 title: "Privacy: Network"
-description: "TODO(writer-D): Privacy: Network for the Bugsee Unity SDK 7.x."
+description: "How to keep credentials and personal data out of the network traffic Bugsee Unity SDK 7.x records: turning capture off, body options, the built-in redaction, SetNetworkEventFilter and ApplyDefaultNetworkSanitizer."
 sidebar_position: 4
 slug: "/sdk/unity/privacy/network"
 ---
@@ -9,4 +9,130 @@ slug: "/sdk/unity/privacy/network"
 This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
 :::
 
-TODO(writer-D)
+Recorded network traffic is one of the most useful parts of a report, and one of the most sensitive: headers carry credentials, URLs carry tokens, and bodies carry whatever the user typed. See [Network events](/sdk/unity/network) for what is recorded. This page covers how to keep sensitive values out of it.
+
+The package does not add network capture of its own for Unity's `UnityWebRequest`. It records the events the native SDK captures, and the events you add with `Bugsee.AddNetworkEvent`. The options, the built-in redaction and the filter are the native SDKs'. For their lists and behavior, see [Android network privacy](/sdk/android/privacy/network) and [iOS network privacy](/sdk/ios/privacy/network).
+
+## Disabling network capture
+
+Set `CaptureNetwork` to `false` to record no network traffic. It is on by default on both platforms. The property is on `BugseeLaunchOptions`, so `AndroidLaunchOptions` and `IOSLaunchOptions` have it. On iOS, `CaptureWebSocket` (on `IOSLaunchOptions`, on by default) turns WebSocket traffic off on its own.
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+public static class BugseeStartup
+{
+    public static void Launch()
+    {
+#if UNITY_ANDROID
+        BugseeSdk.Launch("<your app token>", new AndroidLaunchOptions { CaptureNetwork = false });
+#elif UNITY_IOS
+        BugseeSdk.Launch("<your app token>", new IOSLaunchOptions { CaptureNetwork = false });
+#endif
+    }
+}
+```
+
+## Body options
+
+Three launch options on `BugseeLaunchOptions` limit which bodies are kept:
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `CaptureNetworkBodySizeLimit` | `20480` | The largest request or response body captured, in bytes. |
+| `CaptureNetworkBodyWithoutType` | `false` | Also keep bodies that declare no content type. Leave it off unless you need them. |
+| `CaptureNetworkUseDefaultSanitizer` | `true` | The built-in redaction, described below. |
+
+Neither of the first two removes headers or URL parameters. Use the built-in redaction and a network filter for those. See the native pages for how the body limit applies: [Android configuration](/sdk/android/configuration) and [iOS configuration](/sdk/ios/configuration).
+
+## The built-in redaction
+
+With `CaptureNetworkUseDefaultSanitizer` on, which is the default, the SDK replaces the values of known sensitive keys with `<redacted>` before it records an event: `Authorization` and `Cookie` headers, query values such as `token`, and body fields such as `password`. The lists differ between the platforms. For example, the Android redaction also removes `user:password@` credentials from URLs, and the iOS redaction does not. See the native pages for the lists: [Android](/sdk/android/privacy/network#a-filter-replaces-the-built-in-redaction) and [iOS](/sdk/ios/privacy/network#built-in-redaction).
+
+The built-in redaction knows nothing about your own API. A header such as `X-Session-Id` or a JSON field such as `otp` is recorded as it is unless your filter removes it.
+
+:::warning[A network filter turns the built-in redaction off]
+On Android and iOS, a filter set with `Bugsee.SetNetworkEventFilter` turns the SDK's built-in redaction off. On Android this includes a filter declared in the app manifest. Whatever your filter does not redact is recorded as it is. Call `Bugsee.ApplyDefaultNetworkSanitizer(event)` first in your filter to keep the built-in redaction, as shown below.
+:::
+
+## Redacting with a network filter
+
+`Bugsee.SetNetworkEventFilter(EventFilter<INetworkEvent> filter)` sees each network event before it is recorded: the captured traffic, and the events you add with `Bugsee.AddNetworkEvent`. Return the event, changed or not, to keep it, or `null` to drop it.
+
+An `INetworkEvent` exposes these fields:
+
+| Writable | Read-only |
+| --- | --- |
+| `Url`, `Body`, `Size`, `ResponseCode`, `StatusText`, `ErrorShortMessage`, `ErrorDescription`, `Headers`, `IsOverride` (Android only) | `Id`, `Mechanism`, `Method`, `Stage` |
+
+The error texts can quote a URL, so redact them too if your URLs carry secrets. `Headers` returns a copy: assign the dictionary back to `Headers` after you change it.
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using Bugsee.Contracts.Exchange;
+using BugseeSdk = Bugsee.Bugsee;
+
+public static class NetworkRedaction
+{
+    static readonly Regex SecretParameter =
+        new Regex(@"([?&](?:otp|code|session)=)[^&#]*", RegexOptions.IgnoreCase);
+
+    public static void Install()
+    {
+        BugseeSdk.SetNetworkEventFilter(e =>
+        {
+            // Keep the SDK's own redaction, in place. If it could not run, drop the event
+            // rather than record it unredacted.
+            if (!BugseeSdk.ApplyDefaultNetworkSanitizer(e)) return null;
+
+            // Drop the traffic of an endpoint that must never be recorded.
+            if (e.Url != null && e.Url.Contains("/v1/identity/")) return null;
+
+            // Your own redaction.
+            if (e.Url != null)
+                e.Url = SecretParameter.Replace(e.Url, "$1<redacted>");
+
+            IDictionary<string, string> headers = e.Headers;
+            if (headers != null && headers.ContainsKey("X-Session-Id"))
+            {
+                headers["X-Session-Id"] = "<redacted>";
+                e.Headers = headers;
+            }
+
+            return e;
+        });
+    }
+}
+```
+
+Call `Install()` before `Bugsee.Launch`.
+
+### `ApplyDefaultNetworkSanitizer`
+
+`Bugsee.ApplyDefaultNetworkSanitizer(INetworkEvent)` runs the SDK's built-in redaction on the event, in place, and returns `true` when it ran. It returns `false` in the Editor, for a null event, and when the sanitizer could not run. In a filter, a `false` means nothing was redacted: drop the event, as in the example.
+
+- Inside the filter, it needs nothing else, and it works on any thread.
+- On Android, an event you built yourself (with `Bugsee.GetExchangeFactory()`, or your own `INetworkEvent`) is redacted through a native copy that the SDK hands out only while it is launched with network capture on. Outside that, nothing is redacted and the call returns `false`. Check the result.
+- On iOS, the package copies the event into a native event, runs the SDK's sanitizer on it, and writes back only the fields that changed. It needs no launch.
+- The rules are each SDK's own. The iOS sanitizer does not remove `user:password@` credentials from a URL, which the Android one does. Do not rely on it for those. A failure inside the SDK is logged, and the call returns `false`.
+
+### What the filter guarantees
+
+- **A filter that throws drops the event.** The package does not record the event unfiltered.
+- **Use the event you are given.** The event is valid only inside the callback. Do not keep it. On Android, a copy you stored throws `ObjectDisposedException` after the callback.
+- **Passing `null` to `SetNetworkEventFilter` removes the filter.** Events are then recorded without your filter.
+- **The filter runs on the Unity main thread.** The SDK calls it on its own thread, and the package hands the call to the main thread. While the app is in the background, Unity's loop is paused, and the calls wait until it resumes. The package gives the network filter no timeout of its own. A filter that blocks forever blocks the main thread.
+
+### What the filter does not cover
+
+- **Traffic recorded before the filter is set.** Set the filter before `Bugsee.Launch`.
+- **Breadcrumbs.** The network filter does not reach breadcrumbs. If you turn breadcrumbs on, an HTTP request breadcrumb can carry the request URL. See [Privacy: Breadcrumbs](/sdk/unity/privacy/breadcrumbs).
+
+## Related pages
+
+- [Network events](/sdk/unity/network): what is recorded, `AddNetworkEvent`.
+- [Privacy: Breadcrumbs](/sdk/unity/privacy/breadcrumbs): redacting breadcrumbs.
+- [Privacy overview](/sdk/unity/privacy/overview): every privacy control.

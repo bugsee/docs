@@ -1,6 +1,6 @@
 ---
 title: "Symbolication: Android"
-description: "TODO(writer-E): Symbolication: Android for the Bugsee Unity SDK 7.x."
+description: "Set up native, IL2CPP, Mono and R8 symbol uploads for a Unity Android build with the Bugsee Unity SDK 7.x, and choose between Public and Debugging symbols."
 sidebar_position: 2
 slug: "/sdk/unity/symbolication/android"
 ---
@@ -9,4 +9,109 @@ slug: "/sdk/unity/symbolication/android"
 This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
 :::
 
-TODO(writer-E)
+After an Android build, the Bugsee package uploads the debug files of that build from the Unity Editor. This page lists what it uploads, how to choose the native symbol level, and how to upload by hand from CI or an exported project. For the overview and the build token, see [Symbolication overview](/sdk/unity/symbolication/overview).
+
+## What the Editor uploads
+
+When `BUGSEE_APP_TOKEN` is set in the Editor's environment and `BUGSEE_NO_SYMBOL_UPLOAD` is not, the package runs `bugsee-cli` after an APK or AAB build:
+
+| Step | What is uploaded | Type |
+| --- | --- | --- |
+| Native symbols | Unity's `symbols.zip`, with the unwind data added (see [Unwind data](#unwind-data-for-the-android-11-minidump-path)). Without a zip, the folders that hold `libil2cpp.so`. | `elf` |
+| Plugin libraries | The `.so` files of your own `Assets/Plugins/Android` folders and of merged AARs that still carry a symbol table or debug info and are not already in Unity's zip | `elf` |
+| R8 mapping | The `mapping.txt` of the build, when Minify is on and Gradle wrote one | `proguard` |
+| IL2CPP line map | `LineNumberMappings.json` with `MethodMap.tsv`, for an IL2CPP build | `il2cpp-linemap` |
+| C# mapping | Managed-code mapping, for a Mono Release build | `portable-pdb` |
+
+The last two are covered in [Symbolication: C# code](/sdk/unity/symbolication/managed-code). A library that carries only dynamic symbols is not uploaded. That includes the Bugsee SDK's own native libraries and most third-party AARs, so a frame inside such a library stays a module name and an offset.
+
+The upload never fails the build. A missing token, a missing CLI or a failed upload logs a warning and the build continues.
+
+## Public and Debugging symbols
+
+Unity's **Create symbols.zip** setting decides what the native symbols file holds. Unity 6 names the levels **None**, **SymbolTable** and **Full**, and has a separate format that must include **Zip**. Earlier Unity versions name them **Disabled**, **Public** and **Debugging**. This page uses Public for SymbolTable and Debugging for Full.
+
+| Level | What the zip holds | What a crash or exception frame resolves to |
+| --- | --- | --- |
+| Disabled (None) | No zip | No native symbols to upload |
+| Public (SymbolTable) | Symbol tables only | Function names, no file and line |
+| Debugging (Full) | Symbol tables and DWARF line information | Function names, files and lines |
+
+C# file and line from an IL2CPP build needs the **Debugging** level and the IL2CPP line map. With Public symbols, a Release IL2CPP build gets function names but no C# file and line for handled exceptions.
+
+When a token is set and the level is Public or Disabled (or Debugging without the Zip format), the build prints a warning that names the consequence. To change the level, either set Create symbols.zip to Debugging in Player Settings, or use the Bugsee opt-in below.
+
+### Use Debugging symbols for the upload only
+
+The opt-in builds with the Debugging level and a symbols zip for one build, then puts your Player Settings back:
+
+- In the Unity menu, choose **Bugsee > Android > Use Full Native Symbols (Debugging) For Symbol Upload**. The item is a toggle.
+- In CI, set `BUGSEE_ANDROID_FULL_SYMBOLS=1` in the Editor's environment.
+
+The opt-in does not change anything when the level is already Debugging with the Zip format. If you change the level yourself while the opt-in is on, the package keeps your setting and forgets its own saved state.
+
+The Debugging symbols file is larger than the Public one. The build warning mentions Google Play's size limits for the symbols file, so check yours before you ship with Debugging.
+
+### Known issues
+
+- Handled managed exceptions in a Release IL2CPP build on Android without IL2CPP line information stay unsymbolicated (no file and line) when the symbols are Public. Use Debugging symbols plus the IL2CPP line map. Development builds send no addresses on Android, and Debugging symbols do not change that.
+- Switching the symbol level from Public to Debugging for the same `libil2cpp.so` build id may leave frames raw on the dashboard. This is open and under investigation ([issue 263](https://github.com/bugsee/bugsee-unity/issues/263)). Choose the symbol level before the first upload of a build, or change the code so the build id changes.
+
+The server skips a symbol it already has for a build id, and the CLI replaces a symbol table with debug information for the same build id only from CLI 0.8.1. See [Uploading debug information files](/cli/debug-files#native-elf). The package never passes `--force`.
+
+## Unwind data for the Android 11 minidump path
+
+On Android 11 and older, native crashes are reported through a minidump, which needs unwind tables to walk the stack. Unity's `symbols.zip` keeps the symbol table and the build id of `libunity.so`, `libil2cpp.so` and `libmain.so`, but not their unwind sections.
+
+Before the upload, the Editor opens the built APK or AAB and copies the `.eh_frame` and `.eh_frame_hdr` sections of each library from the copy in the app into a temporary copy of the zip. The copy is accepted only when the ABI, the file name, the build id and the section address and size match. The upload then carries names and unwind data in one file, and the temporary copy is deleted afterwards. When the unwind data cannot be added, the Editor uploads Unity's zip as written.
+
+Limits:
+
+- It needs an APK or AAB. An Export Project has none, so no unwind data is added.
+- It applies to the Editor's upload. The Bugsee Gradle plugin's own native symbol upload in an exported project sends the Android Gradle plugin's `native-debug-symbols.zip` as it is.
+
+## The Gradle plugin and your Unity version
+
+The package patches the generated Gradle project; you do not add a Gradle template.
+
+| Unity and Android Gradle plugin (AGP) | What the package does |
+| --- | --- |
+| Unity 6 with AGP 8.6 or newer | Applies the Bugsee Gradle plugin 4.1.1 with `ndk { enabled = true }`. |
+| AGP below 8.6, for example Unity 2021.3 and 2022.3 | Does not apply the plugin, which needs AGP 8.6 or newer. On AGP 7.4.x and 8.0 to 8.5 it adds a small build-id block to the launcher instead. |
+
+In a build the Editor runs itself, the Gradle plugin finds no app token (the app gets its token from `Bugsee.Launch`), so its own uploads skip. The Editor's uploads in the table above do the work for every Unity version. See [Android build setup](/sdk/unity/build-setup/android) for the Player Settings checklist and the Gradle file layouts the patching understands.
+
+Both paths key the R8 mapping by the build id the built app reports. The Editor reads it from the APK or AAB (`assets/bugsee_build_id.properties`). When the app carries none, the SDK derives its own id from the app token, the version name and the version code, and the Editor uses that id with a warning.
+
+## Export Project
+
+Unity does not run Gradle for an Export Project, so the Editor has no APK, AAB, `mapping.txt` or merged native libraries to upload. Build the exported project with Gradle:
+
+- With AGP 8.6 or newer, the exported project carries the Bugsee Gradle plugin. It uploads the R8 mapping and the native symbols when `BUGSEE_APP_TOKEN` is set in the environment of that Gradle build. The package writes no token into the project. `BUGSEE_ENDPOINT`, `BUGSEE_CLI_PATH` and `BUGSEE_NO_SYMBOL_UPLOAD` are read from the same environment.
+- With an older AGP, or when the launcher already has a `bugsee { }` block of its own, upload by hand after the Gradle build. The build log says which case applies.
+
+The Editor logs a warning for a Minify build that has no mapping to upload, and names the command below.
+
+## Upload by hand
+
+Use these commands from CI or after an Export Project. Set `BUGSEE_APP_TOKEN` first, and pass the version name and version code of the build. The [CLI page](/cli/debug-files) has every option.
+
+```bash
+export BUGSEE_APP_TOKEN="your-app-token"
+
+# R8 mapping
+bugsee-cli debug-files upload <mapping.txt> --type proguard \
+  --version <version name> --build <version code>
+
+# Native symbols (the --uuid is required for elf)
+bugsee-cli debug-files upload <symbols.zip> --type elf \
+  --version <version name> --build <version code> --uuid <build id>
+```
+
+For an app built with the Gradle plugin, the build id is in `assets/bugsee_build_id.properties` (`bugsee.build_id`) inside the APK. Pass the same id to the mapping upload with `--uuid` so it matches the app. For an exported project, the plugin's own upload covers both files when it has a token.
+
+To upload the IL2CPP line map from a later job, keep the folder `<output>_BackUpThisFolder_ButDontShipItWithYourGame/il2cppOutput/Symbols/`. See [Symbolication: C# code](/sdk/unity/symbolication/managed-code#upload-the-il2cpp-line-map-from-ci).
+
+## Mono
+
+IL2CPP is the supported scripting backend for fully symbolicated native crashes. With Mono, native frames inside the Mono runtime (`libmonobdwgc-2.0.so`, `libmono-native.so`, `libMonoPosixHelper.so`) cannot be symbolicated: Unity 2021.3 has no Mono ARM64 build, and those libraries have no GNU build id. Frames in `libunity.so` and `libmain.so` still resolve. A Mono Android build prints a one-time warning at build time and is never failed. For C# frames on Mono, see [Symbolication: C# code](/sdk/unity/symbolication/managed-code#mono-on-android-release-builds).

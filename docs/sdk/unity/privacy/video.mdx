@@ -1,6 +1,6 @@
 ---
 title: "Privacy: Video"
-description: "TODO(writer-D): Privacy: Video for the Bugsee Unity SDK 7.x."
+description: "How to keep sensitive content out of Bugsee Unity SDK 7.x video and screenshots: turning capture off, secure rectangles for Unity content, WebView secure views, and blackout."
 sidebar_position: 2
 slug: "/sdk/unity/privacy/video"
 ---
@@ -9,4 +9,220 @@ slug: "/sdk/unity/privacy/video"
 This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
 :::
 
-TODO(writer-D)
+Bugsee records the screen as video, attaches a screenshot to the report, and records touches. A secure rectangle hides a region in the video and in the report screenshot. This page covers what the Unity package exposes. The native SDKs do the masking: see [Android video privacy](/sdk/android/privacy/video) and [iOS video privacy](/sdk/ios/privacy/video) for what they hide on their own.
+
+## Disabling video
+
+Set `CaptureVideo` to `false` to record no video. The report screenshot is a separate option: set `CaptureScreenshot` to `false` to attach none. Both default to `true` on both platforms. Both properties are on `BugseeLaunchOptions`, so `AndroidLaunchOptions` and `IOSLaunchOptions` have them.
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+public static class BugseeStartup
+{
+    public static void Launch()
+    {
+#if UNITY_ANDROID
+        var options = new AndroidLaunchOptions { CaptureVideo = false, CaptureScreenshot = false };
+        BugseeSdk.Launch("<your app token>", options);
+#elif UNITY_IOS
+        var options = new IOSLaunchOptions { CaptureVideo = false, CaptureScreenshot = false };
+        BugseeSdk.Launch("<your app token>", options);
+#endif
+    }
+}
+```
+
+See [Configuration](/sdk/unity/configuration) and [Video capture](/sdk/unity/video-capture) for the other video options.
+
+## What the package can hide
+
+The package has no call that marks a `GameObject` or a uGUI element secure. The native secure-view calls (`addSecureView` and its Android equivalents) are not exposed. Unity draws your content itself, so you hide it by its screen coordinates:
+
+| To hide | Use |
+| --- | --- |
+| A region of Unity content, in Unity screen coordinates | [`AddSecureScreenRectangle`](#unity-screen-coordinates) |
+| A region you already measured in native pixels | [`AddSecureRectangle`](#native-pixel-coordinates) |
+| A native WebView from a WebView plugin | [`AddSecureWebView`](#webview-secure-views) |
+| Everything, for a period | [`StartBlackout`](#blackout) |
+
+Treat a text field, a password field or a balance label that Unity draws as unprotected until you register a rectangle for it.
+
+A rectangle hides the area in the video and in the report screenshot. A rectangle does not delete anything from the device, and it does not change what is in the log, the network events or the breadcrumbs. Use the other privacy pages for those.
+
+### Unity screen coordinates
+
+`Bugsee.AddSecureScreenRectangle(Rect unityScreenRect, int displayId = 0)` takes what Unity's screen space gives you: pixels of `Screen.width` by `Screen.height` with the origin at the **bottom-left**. `Input.mousePosition` is in that space, and so are the world corners of a `RectTransform` on a Screen Space - Overlay canvas. The package converts the rectangle for you: it flips the y axis, scales it from Unity's render size to the native surface (Android Resolution Scaling, `Screen.SetResolution`, the iOS render scale) and offsets it by where Unity's surface sits on the screen. The result is rounded outwards.
+
+```csharp
+using UnityEngine;
+using BugseeSdk = Bugsee.Bugsee;
+
+public class SecureElement : MonoBehaviour
+{
+    [SerializeField] RectTransform element; // on a Screen Space - Overlay canvas
+
+    Rect hidden;
+
+    void Start()
+    {
+        Canvas.ForceUpdateCanvases(); // the corners are valid only after the layout ran
+        var corners = new Vector3[4];
+        element.GetWorldCorners(corners); // bottom-left, top-left, top-right, bottom-right
+        hidden = Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
+        BugseeSdk.AddSecureScreenRectangle(hidden);
+    }
+
+    void OnDestroy()
+    {
+        BugseeSdk.RemoveSecureScreenRectangle(hidden);
+    }
+}
+```
+
+How it behaves:
+
+- The package remembers the rectangle as a **fraction of the screen it was added for** and converts it again, within a frame, when the screen size or the position of the surface changes. It follows Resolution Scaling, a moving surface and any layout that scales with the screen.
+- It does **not** know your layout. After a rotation, or any change that does not scale proportionally (fixed-size or anchored UI), call `RemoveSecureScreenRectangle` with the rectangle you added, and add the new one.
+- Remove a rectangle with exactly the values you added. A rectangle recomputed from floats can differ in the last bit and then removes nothing.
+- Adding the same rectangle twice needs two removals.
+- The call is queued to Unity's main thread and takes effect on the next frame, in call order with the other screen-space calls and with `RemoveAllSecureRectangles()`.
+- A `NaN` value is ignored with a warning. A rectangle that is entirely off screen hides nothing.
+- `displayId` 0 is the main display. For another id, the rectangle is in the rendering space of `Display.displays[displayId]` and is converted with that display's system size and no offset. A display that does not exist registers nothing and logs a warning. A negative id throws `ArgumentOutOfRangeException`.
+- If the package cannot read the surface, it uses the last surface it read, or the full size of the display if it has read none yet. It logs a warning once per change of state.
+
+### Native pixel coordinates
+
+`Bugsee.AddSecureRectangle(RectInt pixelRect)` passes the rectangle to the native SDKs as given. It takes screen pixels with the origin at the **top-left**, y growing downward. It is not flipped from Unity's bottom-left space. On Android the pixels are display pixels. On iOS the package divides by the screen scale to get points.
+
+Convert a Unity screen rectangle before you add it:
+
+```csharp
+using UnityEngine;
+using BugseeSdk = Bugsee.Bugsee;
+
+public static class SecureRects
+{
+    // Unity screen rect (bottom-left origin) -> rect for AddSecureRectangle (top-left origin).
+    public static RectInt ToSecureRect(Rect unityScreenRect)
+    {
+        int x = Mathf.FloorToInt(unityScreenRect.xMin);
+        int y = Mathf.FloorToInt(Screen.height - unityScreenRect.yMax);
+        int w = Mathf.CeilToInt(unityScreenRect.xMax) - x;
+        int h = Mathf.CeilToInt(Screen.height - unityScreenRect.yMin) - y;
+        return new RectInt(x, y, w, h);
+    }
+
+    public static void Hide(Rect unityScreenRect)
+    {
+        BugseeSdk.AddSecureRectangle(ToSecureRect(unityScreenRect));
+    }
+}
+```
+
+Limits of this call:
+
+- The rectangle must already be in the coordinate space of the native display. The package does no scaling or offsetting for it, beyond the iOS conversion to points. With Android Resolution Scaling, `Screen.SetResolution`, or a Unity view that does not fill the screen (a status bar or notch offset), `Screen.height` and the pixels differ from native pixels. Scale or offset the rectangle yourself, or use `AddSecureScreenRectangle`, which does it for you.
+- On iOS the division by `UIScreen.scale` is wrong if the render size differs from the screen's points times its scale.
+- Rectangles are not scaled, flipped or moved on rotation or resize. They are keyed by their exact left, top, right and bottom values. When the screen size changes, remove the old rectangle, or call `RemoveAllSecureRectangles()`, before you add the new one.
+- Adding the same rectangle twice needs two removals.
+
+Remove a rectangle with `Bugsee.RemoveSecureRectangle(RectInt)`, passing the same top-left rectangle you added. `Bugsee.RemoveAllSecureRectangles()` removes every rectangle added with `AddSecureRectangle` at once, and every rectangle added with `AddSecureScreenRectangle` on the next frame.
+
+`Bugsee.GetAllSecureRectangles()` returns a `RectInt[]` with the rectangles added with `AddSecureRectangle` that are not removed yet, in the top-left pixels they were added with, in no particular order. Each distinct rectangle is listed once, and one added several times is listed until it is removed as often as it was added. It is empty when there are none. It does not list rectangles added with `AddSecureScreenRectangle`. The package answers from its own list, because it gives the native SDKs its rectangles through its own provider.
+
+### Rectangles and the Unity scene tree
+
+The [view hierarchy](/sdk/unity/view-hierarchy) of a report is the Unity scene tree. A node of that tree whose box overlaps a secure rectangle loses its name and its component list. The node keeps its class name and its bounds. A node whose bounds cannot be placed counts as covered while any rectangle is registered. The tree never contains the text of a label or an input field.
+
+## WebView secure views
+
+If your app embeds a native WebView through a WebView plugin, mark it with `Bugsee.AddSecureWebView` so that its area is hidden in the video. Pass the native handle of the WebView, which the plugin must expose: an `AndroidJavaObject` holding the `android.webkit.WebView` on Android, and an `IntPtr` to the `WKWebView` on iOS. The call returns `false` for a null or zero handle, for an object that is not a WebView, and in the Editor.
+
+```csharp
+using System;
+using UnityEngine;
+using BugseeSdk = Bugsee.Bugsee;
+
+public static class SecureWebViews
+{
+    public static bool Hide(AndroidJavaObject androidWebView) => BugseeSdk.AddSecureWebView(androidWebView);
+
+    public static bool Hide(IntPtr wkWebViewPointer) => BugseeSdk.AddSecureWebView(wkWebViewPointer);
+
+    public static bool Show(AndroidJavaObject androidWebView) => BugseeSdk.RemoveSecureWebView(androidWebView);
+
+    public static bool Show(IntPtr wkWebViewPointer) => BugseeSdk.RemoveSecureWebView(wkWebViewPointer);
+}
+```
+
+- **Android.** The call runs on the Android UI thread and waits for it. A request that the UI thread does not reach within 3 seconds is dropped, logged, and returns `false`: call it again. The SDK buffers a registration made before launch. It does not survive `Stop()`, so register again after a relaunch.
+- **iOS.** The native `addSecureWebView:` alone does not hide the web view. It protects secure areas inside the page. The package therefore also calls `addSecureView:`, which masks the view in the video. The SDK masks a view only while it is launched: a call made before the launch finished has no effect on the video, so call it after `Bugsee.IsLaunched` is `true`. `RemoveSecureWebView` calls `removeSecureView:`, which also lifts a mask that your own code set on the same view. The pointer must be a live Objective-C object. A pointer to another class is refused, and a stale or non-object pointer is undefined.
+
+Limits:
+
+- It marks a native view. It does nothing for a page that a plugin draws into a Unity texture. Use a secure rectangle for that.
+- It does nothing while the experimental Android Unity frame pusher (`VideoMode.DirectBuffers`) is the capture source, because that capture does not know native views. See [Video capture](/sdk/unity/video-capture).
+
+For what the native SDKs hide inside a page, see [Android WebView](/sdk/android/webview) and the WebView section of [iOS video privacy](/sdk/ios/privacy/video#webview-elements).
+
+## Android windows marked `FLAG_SECURE`
+
+On Android, the SDK blanks a window that carries the system `FLAG_SECURE` flag, without any Bugsee call. The `CaptureRespectFlagSecure` option controls this on `AndroidLaunchOptions`. It is on by default. Set it to `false` if your app marks windows `FLAG_SECURE` broadly and you want them recorded. See [Android video privacy](/sdk/android/privacy/video).
+
+## Blackout
+
+Blackout blanks the capture for as long as you need it. The calls forward to the native SDKs.
+
+```csharp
+using BugseeSdk = Bugsee.Bugsee;
+
+public static class SensitiveFlow
+{
+    public static void Run()
+    {
+        BugseeSdk.StartBlackout();
+        try
+        {
+            // The sensitive flow.
+        }
+        finally
+        {
+            BugseeSdk.EndBlackout();
+        }
+    }
+
+    public static bool IsHidden => BugseeSdk.IsBlackout; // a property
+}
+```
+
+- `Bugsee.StartBlackout()`, `Bugsee.EndBlackout()` and the `Bugsee.IsBlackout` property are the API. `Bugsee.Pause()` and `Bugsee.Resume()` still exist as obsolete aliases of the first two.
+- The transitions raise the lifecycle events `LifecycleEvents.BlackoutStarted` and `LifecycleEvents.BlackoutEnded`. See [Lifecycle](/sdk/unity/lifecycle).
+- What a blackout suppresses, and how long it lasts across `Stop` and relaunch, is the native SDK's behavior. See [Android video privacy](/sdk/android/privacy/video) and the [iOS blackout section](/sdk/ios/privacy/video#blackout).
+
+## Recording less detail
+
+`CaptureVideoScale` and `CaptureScreenshotScale` are float options on `BugseeLaunchOptions` that scale the recorded video and the screenshot down. Both default to `1.0` on both platforms, which leaves the picture as it is. A lower value reduces the detail of what is recorded. The accepted ranges and the exact effect are the native SDKs': see [Android configuration](/sdk/android/configuration) and [iOS configuration](/sdk/ios/configuration).
+
+## Native video options on iOS
+
+These options are on `IOSLaunchOptions` and are off by default. Each records content that your Unity views do not draw:
+
+| Option | What it records |
+| --- | --- |
+| `CaptureAVPlayer` | Video rendered onto a native `AVPlayerLayer`. It does not apply to Unity's `VideoPlayer`. |
+| `CaptureSampleBufferDisplayLayer` | Video rendered onto an `AVSampleBufferDisplayLayer`, as used by WebRTC and custom players. |
+| `CaptureCameraPreview` | The live image of a native `AVCaptureVideoPreviewLayer`. It does not apply to Unity's `WebCamTexture`. |
+
+:::warning[Camera preview records what the camera sees]
+With `CaptureCameraPreview` on, a report contains whatever the lens is pointed at. It also makes Bugsee take part in your capture session. Do not enable it unless your users know and agree.
+:::
+
+`CaptureVideoPrivacyBlur` (iOS, on by default) blurs the video frames recorded while protected views move. With it off, the video freezes for the transition instead. The transition is never recorded unprotected.
+
+## Related pages
+
+- [Video capture](/sdk/unity/video-capture): the video options and modes.
+- [View hierarchy](/sdk/unity/view-hierarchy): the Unity scene tree in a report.
+- [Privacy overview](/sdk/unity/privacy/overview): every privacy control.

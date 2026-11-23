@@ -1,6 +1,6 @@
 ---
 title: "Configuration"
-description: "TODO(writer-A): Configuration for the Bugsee Unity SDK 7.x."
+description: "Set the Bugsee Unity SDK 7.x launch options per platform with typed launch options, OptionsBuilder or raw keys, and read the defaults for every option."
 sidebar_position: 4
 slug: "/sdk/unity/configuration"
 ---
@@ -9,4 +9,307 @@ slug: "/sdk/unity/configuration"
 This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
 :::
 
-TODO(writer-A)
+You configure the SDK with launch options, the second argument of `Bugsee.Launch`. The options are the same `com.bugsee.option.*` keys the native [Android](/sdk/android/configuration) and [iOS](/sdk/ios/configuration) SDKs read. This page lists every option the Unity package exposes as a C# property, with its type, default and key.
+
+:::warning[Defaults changed in 7.x]
+Shake-to-report is off on both platforms, and the notification-bar trigger is off on Android. Both were on in earlier versions. To keep them, set `ReportingTriggerByShake = true` (both platforms) and `ReportingTriggerByNotification = true` (Android).
+:::
+
+## How launch options work
+
+`Bugsee.Launch(string appToken, Dictionary<string, object> options = null)` takes one options argument. You build it in one of three ways, and each converts to the dictionary implicitly:
+
+| Type | Use it for |
+| --- | --- |
+| `AndroidLaunchOptions` | Typed properties for Android: the shared options plus the Android-only ones. |
+| `IOSLaunchOptions` | Typed properties for iOS: the shared options plus the iOS-only ones. |
+| `OptionsBuilder` | A fluent builder over raw keys, for shared code or keys that have no property. |
+
+All three live in the `Bugsee.Contracts.Options` namespace.
+
+- **Unset options keep the SDK default.** The typed properties are write-only. An option you do not set is not sent, and the native SDK applies its own default.
+- **An option the other platform does not know is dropped.** Setting an Android-only option on an iOS launch has no effect, and the reverse. The package removes these keys before the native SDK sees them.
+- **`SetCustomOption(key, value)`** sets any key on a typed options object. `Clear()` removes everything you set. `ToDictionary()` returns the current map.
+- **`Options` holds the key constants**, for example `Options.CaptureNetwork`. Each key is `com.bugsee.option.` plus the suffix shown in the tables below.
+
+:::note[Name clash]
+The package namespace and its static class are both named `Bugsee`. In code outside the `Bugsee` namespace, `Bugsee.Launch(...)` does not compile, because `Bugsee` resolves to the namespace. Add `using BugseeSdk = Bugsee.Bugsee;` and call `BugseeSdk.Launch(...)`, or write `Bugsee.Bugsee.Launch(...)`. The examples on this site use the alias.
+:::
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+public static class BugseeSetup
+{
+    public static void Start()
+    {
+#if UNITY_ANDROID
+        var options = new AndroidLaunchOptions
+        {
+            ReportingTriggerByShake = true,
+            ReportingTriggerByNotification = true,
+            DetectAndReportHang = true,
+            CaptureVideoMode = VideoMode.V2,
+        };
+        BugseeSdk.Launch("<your Android app token>", options);
+#elif UNITY_IOS
+        var options = new IOSLaunchOptions
+        {
+            ReportingTriggerByShake = true,
+            DetectAndReportHang = true,
+            CrashHandlerType = CrashHandlerType.MachAndBSD,
+        };
+        BugseeSdk.Launch("<your iOS app token>", options);
+#endif
+    }
+}
+```
+
+The `OptionsBuilder` form works on both platforms from one code path. Its `Set` overloads take a key and a `bool`, `int`, `float` or `string`, and it has helpers for enum options (`SetVideoMode`, `SetVideoQuality`, `SetFrameRate`, `SetLogLevel`, `SetDefaultCrashPriority`, `SetDefaultErrorPriority`, `SetDefaultBugPriority`, `SetCrashHandlerType`, `SetCrashSignals`, `SetReportingUIStyle`) and for common switches (`Duration`, `CaptureVideo`, `CaptureNetwork`, `CaptureLogs`, `DetectAndReportCrash`, `CaptureManagedExceptions`, `CaptureUnobservedTaskExceptions`, `DetectAndReportHang`, `DetectAndReportExitNotResponding`, `DetectAndReportExitLowMemory`).
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+public static class BugseeBuilderSetup
+{
+    public static void Start(string appToken)
+    {
+        var builder = new OptionsBuilder()
+            .CaptureNetwork(false)
+            .SetLogLevel(LogLevel.Warning)
+            .Set(Options.ReportingTriggerByShake, true);
+
+        BugseeSdk.Launch(appToken, builder);
+    }
+}
+```
+
+Read what the SDK runs with after launch: `Bugsee.GetLaunchOptions()` returns the effective options (the defaults with yours merged over them), and `Bugsee.GetHostLaunchOptions()` returns only the options your app passed. `GetLaunchOptions()` is `null` while the SDK is not launched. The keys are the native SDK's own and differ between Android and iOS. On iOS an option you set to its default value can be missing from `GetHostLaunchOptions()`, because the iOS SDK drops host options equal to their default.
+
+A [`Relaunch`](/sdk/unity/lifecycle) replaces the whole option set rather than merging into it. Pass the full set again.
+
+## Shared options
+
+Every property below is available on both `AndroidLaunchOptions` and `IOSLaunchOptions`. The Platform column says where the native SDK reads it.
+
+Defaults come from the option manifests of the pinned native SDKs (Android SDK 7.6.0, iOS SDK 7.1.0), except the three Unity-specific options, which the package defines. For what each option does in depth, see the native configuration pages: [Android](/sdk/android/configuration) and [iOS](/sdk/ios/configuration).
+
+### Session and storage
+
+| Property | Platform | Type | Default | Key suffix | What it does |
+|---|---|---|---|---|---|
+| `Duration` | Both | `int` | `60` | `config.duration` | Length in seconds of the rolling capture buffer. Older data rolls off. |
+| `WifiOnlyUpload` | Both | `bool` | `false` | `config.wifi-only-upload` | Defer report uploads until the device is on Wi-Fi. |
+| `MaxDataSize` | Both | `int` | `150` | `config.max-data-size` | Disk space in MB that reports waiting to be sent may use. A value below 10 is raised to 10. Over the limit, whole pending reports are deleted, oldest first, never the newest crash. |
+| `MaxPendingReports` | Both | `int` | `30` | `config.max-pending-reports` | Number of reports that may wait to be sent. A value below 1 is raised to 1. Eviction follows the same order as `MaxDataSize`. |
+| `MaxPendingReportAge` | Both | `int` | `30` | `config.max-pending-report-age` | Age in days after which a waiting report is deleted. `0` or a negative value turns aging off. |
+| `NotifyFlushDelay` | Both | `int` | `0` | `config.notify-flush-delay` | Milliseconds the [notification relay](/sdk/unity/notification-relay) waits before it drains its queue. `0` posts as soon as an item is on disk. |
+| `ReportHandlerCallbackTimeout` | Android | `int` | `30` | `config.report-handler-callback-timeout` | Seconds to wait for a report handler to finish before the SDK continues without it. The iOS launch drops this option. |
+
+### Issue detection
+
+| Property | Platform | Type | Default | Key suffix | What it does |
+|---|---|---|---|---|---|
+| `DetectAndReportCrash` | Both | `bool` | `true` | `detect.crash` | Report native crashes (process death). |
+| `CrashSignals` | Both | `CrashSignals` | `CrashSignals.Default` | `capture.crash-signals` | The fatal signals the native crash reporter intercepts. See [CrashSignals](#crashsignals). |
+| `DetectAndReportEarlyCrash` | Both | `bool` | `true` | `detect.early-crash` | Protect against startup crash loops: reports from a launch that ended before the app became active are sent synchronously at the next launch, which blocks the main thread while they upload. |
+| `DetectAndReportHang` | Both | `bool` | `false` | `detect.hang` | Report a main-thread hang. |
+| `DetectAndReportHangFairLevel` | Both | `int` | `3000` | `detect.hang.level.fair` | Milliseconds of main-thread block that count as a Fair hang. |
+| `DetectAndReportHangMediumLevel` | Both | `int` | `5000` | `detect.hang.level.medium` | Milliseconds of main-thread block that count as a Medium hang. |
+| `DetectAndReportHangSevereLevel` | Both | `int` | `10000` | `detect.hang.level.severe` | Milliseconds of main-thread block that count as a Severe hang. |
+| `DetectAndReportHttpErrors` | Both | `bool` | `false` | `detect.http-errors` | Report HTTP 5xx responses as errors. |
+| `DetectAndReportAnomaly` | Both | `bool` | `false` | `detect.anomaly` | Report statistical performance anomalies. |
+| `DetectFrustration` | Both | `bool` | `false` | `detect.frustration` | Report user-frustration patterns such as rage taps. |
+
+### Unity managed exceptions
+
+| Property | Platform | Type | Default | Key suffix | What it does |
+|---|---|---|---|---|---|
+| `CaptureManagedExceptions` | Both | `bool` | `true` | `unity.capture-managed-exceptions` | Report managed Unity exceptions. Independent of `DetectAndReportCrash`. |
+| `CaptureUnobservedTaskExceptions` | Both | `bool` | `true` | `unity.capture-unobserved-task-exceptions` | Report `TaskScheduler.UnobservedTaskException` as a handled error. Needs `CaptureManagedExceptions`. Unity raises the event only after the faulted `Task` is garbage-collected, so the report arrives late. |
+| `TreatUnityLogExceptionsAsFatal` | Both | `bool` | `false` | `unity.treat-log-exceptions-as-fatal` | Report an exception that Unity routes through its log (`LogType.Exception`) as unhandled instead of handled. |
+
+### Capture
+
+| Property | Platform | Type | Default | Key suffix | What it does |
+|---|---|---|---|---|---|
+| `CaptureLogs` | Both | `bool` | `true` | `capture.logs` | Capture console logs. See [Console logs](/sdk/unity/logs). |
+| `CaptureLogsLevel` | Both | `LogLevel` | `Verbose` | `capture.logs.level` | Lowest `LogLevel` to capture. |
+| `CaptureScreenshot` | Both | `bool` | `true` | `capture.screenshot` | Take a screenshot when a report is created. |
+| `CaptureScreenshotScale` | Both | `float` | `1` | `capture.screenshot.scale` | Scale applied to screenshots, from 0.05 to 1.0 on Android. `1.0` leaves them unscaled. |
+| `CaptureNetwork` | Both | `bool` | `true` | `capture.network` | Capture network events. See [Network events](/sdk/unity/network). |
+| `CaptureNetworkBodySizeLimit` | Both | `int` | `20480` | `capture.network.body-size-limit` | Largest request or response body to keep, in bytes. |
+| `CaptureNetworkBodyWithoutType` | Both | `bool` | `false` | `capture.network.body-without-type` | Also keep bodies that declare no content type. |
+| `CaptureNetworkUseDefaultSanitizer` | Both | `bool` | `true` | `capture.network.default-sanitizer` | Redact known sensitive keys from captured network events when no network filter is set. |
+| `CaptureViewHierarchy` | Both | `bool` | `true` | `capture.view-hierarchy` | Capture the view hierarchy for reports. See [View hierarchy](/sdk/unity/view-hierarchy). |
+| `CaptureBreadcrumbs` | Both | `bool` | `false` | `capture.breadcrumbs` | Record breadcrumbs. While it is off, `Bugsee.AddBreadcrumb` records nothing and the breadcrumb filter is not called. |
+| `CaptureBreadcrumbsExtras` | Both | `bool` | `false` | `capture.breadcrumbs.extras` | Attach extra data to breadcrumbs. |
+| `CaptureVideo` | Both | `bool` | `true` | `capture.video` | Record screen video. See [Video capture](/sdk/unity/video-capture). |
+| `CaptureVideoQuality` | Both | `VideoQuality` | `Default` | `capture.video.quality` | Quality of the encoded video. |
+| `CaptureVideoFrameRate` | Both | `FrameRate` | `High` | `capture.video.frame-rate` | How often frames are captured. `Raw` exists on Android only. |
+| `CaptureVideoScale` | Both | `float` | `1` | `capture.video.scale` | Extra down-scaling of the recorded video, from 0.1 to 1.0 on Android. |
+
+### Reporting
+
+| Property | Platform | Type | Default | Key suffix | What it does |
+|---|---|---|---|---|---|
+| `ReportingTriggerByShake` | Both | `bool` | `false` | `reporting.triggers.shake` | Open the report dialog when the user shakes the device. |
+| `ReportingTriggerByScreenshot` | Both | `bool` | `false` | `reporting.triggers.screenshot` | Open the report dialog when the user takes a screenshot. |
+| `ReportingDefaultCrashPriority` | Both | `IssueSeverity` | `Blocker` | `reporting.defaults.crash-priority` | Severity given to crash reports. |
+| `ReportingDefaultErrorPriority` | Both | `IssueSeverity` | `High` | `reporting.defaults.error-priority` | Severity given to error reports. |
+| `ReportingDefaultBugPriority` | Both | `IssueSeverity` | `High` | `reporting.defaults.bug-priority` | Severity given to bug reports when your call passes none. |
+| `ReportingUISummaryRequired` | Both | `bool` | `false` | `reporting.ui.summary-required` | Make the summary field mandatory in the report dialog. |
+| `ReportingUIDescriptionRequired` | Both | `bool` | `false` | `reporting.ui.description-required` | Make the description field mandatory. |
+| `ReportingUIEmailRequired` | Both | `bool` | `false` | `reporting.ui.email-required` | Make the email field mandatory. |
+| `ReportingUILabelsEnabled` | Both | `bool` | `false` | `reporting.ui.labels-enabled` | Show the labels field. |
+| `ReportingUILabelsRequired` | Both | `bool` | `false` | `reporting.ui.labels-required` | Make the labels field mandatory. |
+| `ReportingUIPrioritySelectorEnabled` | Both | `bool` | `false` | `reporting.ui.priority-selector-enabled` | Let the user choose the severity. |
+
+### Performance
+
+| Property | Platform | Type | Default | Key suffix | What it does |
+|---|---|---|---|---|---|
+| `PerformanceMonitoring` | Both | `bool` | `true` | `performance.enabled` | Master switch for performance monitoring. |
+| `PerformanceSampleRate` | Both | `float` | `0.01` | `performance.sample-rate` | Share of transactions sampled for standalone upload, from 0 to 1. |
+| `PerformanceAdaptiveSampling` | Both | `bool` | `true` | `performance.adaptive-sampling` | Promote notable unsampled transactions on top of the sample rate. |
+| `PerformanceUploadMode` | Android | `string` | `"batched"` | `performance.upload-mode` | How standalone performance data is uploaded: `"batched"` or `"realtime"`. The iOS launch drops this option. |
+
+## Android options
+
+These properties exist on `AndroidLaunchOptions` only. An iOS launch drops the keys that the iOS SDK does not know.
+
+### Exit reasons and native crashes
+
+| Property | Platform | Type | Default | Key suffix | What it does |
+|---|---|---|---|---|---|
+| `ReportProcessingInProcess` | Android | `bool` | `true` | `config.report-processing-in-process` | Process and upload reports in the app process. When `false`, Android job scheduling does it. |
+| `DetectAndReportExit` | Android | `bool` | `true` | `detect.exit` | Master switch for application exit reports. The per-reason options below select which reasons are reported. |
+| `DetectAndReportExitLowMemory` | Android | `bool` | `true` | `detect.exit.low_memory` | Report exits where the OS reclaimed memory. |
+| `DetectAndReportExitLowMemoryBackgroundAsError` | Android | `bool` | `false` | `detect.exit.bg_low_memory_as_error` | Report a low-memory kill of a background process as a non-fatal error, not a crash. Needs `DetectAndReportExitLowMemory`. |
+| `DetectAndReportExitNotResponding` | Android | `bool` | `true` | `detect.exit.not_responding` | Report ANR exits. |
+| `DetectAndReportExitNotRespondingAsCrash` | Android | `bool` | `false` | `detect.exit.not_responding.as_crash` | Report ANR exits as crashes. Needs `DetectAndReportExitNotResponding`. |
+| `DetectAndReportExitExcessiveResourceUsage` | Android | `bool` | `false` | `detect.exit.excessive_resource_usage` | Report exits caused by excessive resource use. |
+| `DetectAndReportExitDependencyDied` | Android | `bool` | `false` | `detect.exit.dependency_died` | Report exits caused by a dependency process dying. |
+| `DetectAndReportExitUserRequested` | Android | `bool` | `false` | `detect.exit.user_requested` | Report exits the user requested. |
+| `DetectAndReportExitUserWasStopped` | Android | `bool` | `false` | `detect.exit.user_was_stopped` | Report exits where the system stopped the app. |
+| `DetectAndReportExitPermissionChanged` | Android | `bool` | `false` | `detect.exit.permission_changed` | Report exits caused by a permission change. |
+| `DetectAndReportExitPackageUpdated` | Android | `bool` | `false` | `detect.exit.package_updated` | Report exits caused by a package update. |
+| `DetectAndReportExitPackageStateChanged` | Android | `bool` | `false` | `detect.exit.package_state_changed` | Report exits caused by a package state change. |
+| `DetectAndReportExitOther` | Android | `bool` | `false` | `detect.exit.other` | Report exits the OS classifies as other. |
+| `DetectAndReportExitUnknown` | Android | `bool` | `false` | `detect.exit.unknown` | Report exits with an unknown reason. |
+| `DetectAndReportHangSampling` | Android | `bool` | `true` | `detect.hang.sampling` | Sample the main thread during a hang to name the blocking frames. Needs `DetectAndReportHang`. |
+| `DetectAndReportAnrSampling` | Android | `bool` | `true` | `detect.anr.sampling` | Sample the main thread during an ANR. Needs `DetectAndReportExitNotResponding`. |
+| `DetectAndReportCrashNdk` | Android | `bool` | `true` | `detect.crash-ndk` | Report native (NDK) crashes. Also off when `DetectAndReportCrash` is `false`. |
+| `CrashNdkIncludeTombstoneLogs` | Android | `bool` | `false` | `crash-ndk.tombstone-logs` | Add the OS tombstone log buffers to a native crash report. They skip Bugsee log filters and are uploaded unredacted. |
+| `DetectAndReportMainThreadMisuse` | Android | `bool` | `false` | `detect.main_thread_misuse` | Report file, network and database work on the main thread. The iOS SDK also reads this key. |
+
+### Capture
+
+| Property | Platform | Type | Default | Key suffix | What it does |
+|---|---|---|---|---|---|
+| `CaptureNetworkOnLaunch` | Android | `bool` | `false` | `capture.network.on-launch` | Subscribe to network capture during launch so requests made at startup are not missed. The iOS SDK also reads this key. |
+| `CaptureLogsUseAllSources` | Android | `bool` | `false` | `capture.logs.allsources` | Read all logcat buffers, not only the default ones. |
+| `CaptureRespectFlagSecure` | Android | `bool` | `true` | `capture.respect-flag-secure` | Blank windows that set `FLAG_SECURE` in video and screenshots. |
+| `AdvancedWebViewCapture` | Android | `bool` | `true` | `capture.webview.advanced` | Advanced WebView capture. The iOS SDK also reads this key. |
+| `WebViewDomainAllowlist` | Android | `string` | `""` | `capture.webview.domain-allowlist` | Domains the WebView capture may record. |
+| `WebViewReportTrigger` | Android | `bool` | `false` | `capture.webview.report-trigger` | Let WebView content trigger a report. The iOS SDK also reads this key. |
+| `CaptureVideoMode` | Android | `VideoMode` | `V2` | `capture.video.mode` | How the screen is captured. See [VideoMode](#enums). |
+| `CaptureVideoAdaptive` | Android | `bool` | `false` | `capture.video.adaptive` | Skip frames while nothing on screen changes. |
+| `CaptureVideoSecureScrolling` | Android | `bool` | `false` | `capture.video.secure-scrolling` | With `VideoMode.V1`, skip more frames while secure views are on screen. |
+| `CaptureVideoUsingCustomMuxer` | Android | `bool` | `false` | `capture.video.custom-muxer` | Use Bugsee's MP4 muxer instead of Android's `MediaMuxer`. |
+| `CaptureVideoFullscreenRememberUserDecision` | Android | `bool` | `true` | `capture.video.fullscreen-remember-decision` | With `VideoMode.Fullscreen`, remember the user's screen-capture consent across launches. |
+| `CaptureVideoFullscreenKeepRunning` | Android | `bool` | `true` | `capture.video.fullscreen-keep-running` | With `VideoMode.Fullscreen`, keep the capture session running in the background. |
+
+### Reporting triggers
+
+| Property | Platform | Type | Default | Key suffix | What it does |
+|---|---|---|---|---|---|
+| `ReportingTriggerByNotification` | Android | `bool` | `false` | `reporting.triggers.notification-bar` | Show a notification-bar entry that opens the report dialog. |
+| `ReportingTriggerByBroadcast` | Android | `bool` | `false` | `reporting.triggers.broadcast` | Allow a broadcast intent to trigger a report. |
+
+`DetectAndReportExit`, `DetectAndReportMainThreadMisuse`, `CaptureNetworkOnLaunch`, `AdvancedWebViewCapture` and `WebViewReportTrigger` have a typed property on `AndroidLaunchOptions` only, but the iOS SDK reads the same keys. On iOS, set them with `SetCustomOption` and the `Options` constants.
+
+The NDK options (`DetectAndReportCrashNdk`, `CrashNdkIncludeTombstoneLogs` and the Android side of `CrashSignals`) belong to the `bugsee-android-ndk` module, which the package declares in every Android build.
+
+:::warning[Tombstone logs are not redacted]
+`CrashNdkIncludeTombstoneLogs` uploads the OS tombstone's raw log buffers. They bypass Bugsee's log filters and can contain text that system or third-party libraries logged in your process. Leave it off unless you need them.
+:::
+
+## iOS options
+
+These properties exist on `IOSLaunchOptions` only. An Android launch drops the keys that the Android SDK does not know. The iOS SDK also drops a host option that equals its default, so `Bugsee.GetHostLaunchOptions()` can omit an option you set to its default; `Bugsee.GetLaunchOptions()` always shows the effective value.
+
+| Property | Platform | Type | Default | Key suffix | What it does |
+|---|---|---|---|---|---|
+| `CrashHandlerType` | iOS | `CrashHandlerType` | `MachAndBSD` | `capture.crash-handler-type` | How the crash reporter intercepts crashes. See [CrashHandlerType](#enums). |
+| `CaptureOnDeviceSymbolication` | iOS | `bool` | `false` | `capture.on-device-symbolication` | Symbolicate system frames on the device. |
+| `CrashSwiftAsyncStackTraces` | iOS | `bool` | `true` | `detect.crash.swift_async_stacktraces` | Stitch Swift async stacks into C++ throw stacks. |
+| `CrashFillEmptyExceptionStacks` | iOS | `bool` | `false` | `detect.crash.fill_empty_exception_stacks` | Fill the stack of an uncaught `NSException` that has none. Can change crash grouping. |
+| `CaptureWebSocket` | iOS | `bool` | `true` | `capture.websocket` | Capture WebSocket traffic. |
+| `CaptureAVPlayer` | iOS | `bool` | `false` | `capture.avplayer` | Capture video rendered on a native `AVPlayerLayer`. Unity's `VideoPlayer` is not covered. |
+| `CaptureSampleBufferDisplayLayer` | iOS | `bool` | `false` | `capture.sample-buffer-display-layer` | Capture video rendered on an `AVSampleBufferDisplayLayer`. |
+| `CaptureCameraPreview` | iOS | `bool` | `false` | `capture.camera-preview` | Record the image of a native `AVCaptureVideoPreviewLayer`. This puts what the camera sees into reports. Unity's `WebCamTexture` is not covered. |
+| `CaptureBluetoothStatus` | iOS | `bool` | `false` | `capture.bluetooth-status` | Report the Bluetooth status. The SDK reads it only if your app asked for and got Bluetooth permission. |
+| `CaptureDiskSpace` | iOS | `bool` | `false` | `capture.disk-space` | Report free and total disk space. Apple's stated reason for the API forbids sending it off the device, so use it in development builds only. |
+| `CaptureDeviceNetworkNames` | iOS | `bool` | `false` | `capture.device-network-names` | Send the device name and Wi-Fi network name. This is personal data. The Wi-Fi name also needs an Apple entitlement and location permission. |
+| `CaptureVideoPrivacyBlur` | iOS | `bool` | `true` | `capture.video.privacy-blur` | Blur transition frames in the video. Off, the video freezes during a transition instead. |
+| `CaptureVideoMinFrameRate` | iOS | `int` | `0` | `capture.video.min-frame-rate` | Minimum video frame rate. The SDK clamps it to 0..30 and drops it unless a maximum at or above it is set. `0` derives it from `CaptureVideoFrameRate`. |
+| `CaptureVideoMaxFrameRate` | iOS | `int` | `0` | `capture.video.max-frame-rate` | Maximum video frame rate. The SDK clamps it to 0..30. `0` derives it from `CaptureVideoFrameRate`. |
+| `BuildTarget` | iOS | `string` | none | `config.build-target` | The Xcode target name, reported with the session. |
+| `BuildType` | iOS | `string` | none | `config.build-type` | The build type (for example debug or release), reported with the session. |
+| `ReportingUIStyle` | iOS | `ReportingUIStyle` | `System` | `reporting.ui.style` | Look of the report screen. See [ReportingUIStyle](#enums). |
+Three iOS keys have no property: `capture.logs.oslog` (the iOS SDK accepts and ignores it), `capture.status-bar-info` (read only by a debug build of the iOS SDK) and `capture.mach-exceptions` (removed from the iOS SDK; use `CrashHandlerType`).
+
+:::warning[Privacy options]
+`CaptureCameraPreview` puts what the camera sees into reports. `CaptureDeviceNetworkNames` sends the device name and Wi-Fi network name, which are personal data. Turn them on only when your privacy policy covers it.
+:::
+
+## CrashSignals
+
+`CrashSignals` is a `[Flags]` enum that selects the fatal signals the native crash reporter intercepts. It is a shared option: it reaches both platforms, and on Android it is read by the `bugsee-android-ndk` module.
+
+| Value | Bit | Meaning |
+| --- | --- | --- |
+| `None` | `0` | No signal. |
+| `Abrt` | `1` | `SIGABRT`: `abort()`, failed assertions, uncaught exceptions. |
+| `Segv` | `2` | `SIGSEGV`: invalid memory access. |
+| `Bus` | `4` | `SIGBUS`: misaligned or otherwise invalid memory access. |
+| `Ill` | `8` | `SIGILL`: illegal instruction. |
+| `Fpe` | `16` | `SIGFPE`: arithmetic exception. |
+| `Trap` | `32` | `SIGTRAP`: breakpoint or trap instruction, including Swift runtime traps. |
+| `All` | `63` | Every signal above. |
+| `Default` | `128` | The SDK chooses: every signal. This is the default. |
+
+Keep the default. A real fault, such as a bad native pointer, ends the process with `SIGSEGV`, and with `Segv` and `Bus` left out that crash is not reported. Unity's IL2CPP raises a managed `NullReferenceException` from an explicit null check, not from a signal, so managed null references do not depend on these signals.
+
+How the two platforms read a value:
+
+- `Default` is honored only on its own. Combined with other bits, the value is used as given and the `Default` bit means nothing.
+- On Android, a nonzero value other than `Default` that selects none of the six signals (for example `64`) is taken as every signal. Bits above `Trap` are masked off first, so a nonzero value left with no signal also becomes every signal. `0` (`None`) stays no signal.
+- On iOS, any other value is used as given. Leaving out `Abrt` also stops uncaught Objective-C exceptions, which end in `abort()`, from being reported.
+
+A mask meant for iOS, such as `CrashSignals.None`, also narrows or switches off native signal capture on Android when the NDK module is present. Set it per platform, or leave it out of the Android options to keep every signal.
+
+## Enums
+
+| Enum | Values |
+| --- | --- |
+| `LogLevel` | `Error` (1), `Warning` (2), `Info` (3), `Debug` (4), `Verbose` (5) |
+| `VideoMode` (Android) | `None` (0), `V1` (1), `V2` (2), `Fullscreen` (20), `DirectBuffers` (21) |
+| `VideoQuality` | `Default` (0), `Medium` (1), `High` (2) |
+| `FrameRate` | `Low` (1), `Medium` (2), `High` (3), `Raw` (4, no cap, meaningful for `DirectBuffers` only; Android) |
+| `IssueSeverity` | `VeryLow` (1), `Medium` (2), `High` (3), `Critical` (4), `Blocker` (5) |
+| `CrashHandlerType` (iOS) | `BSD` (1), `Mach` (2), `MachAndBSD` (3, default) |
+| `ReportingUIStyle` (iOS) | `Light` (0), `Dusk` (1), `BasedOnStatusBar` (2), `System` (3, default) |
+
+`CrashHandlerType.BSD` installs BSD signal handlers. `Mach` installs a Mach exception handler plus a BSD handler for `SIGABRT`, so signals raised by software (`raise()`, `kill()`) are not reported. `MachAndBSD` reports both.
+
+## Related pages
+
+- [Lifecycle & status](/sdk/unity/lifecycle): `Launch`, `Relaunch`, `Stop` and the lifecycle callbacks.
+- [Installation](/sdk/unity/installation): add the package and make the first launch.
+- [Issue detection](/sdk/unity/issue-detection/overview): the detection options in context.
+- [Video capture](/sdk/unity/video-capture) and [Privacy overview](/sdk/unity/privacy/overview): what is recorded and how to limit it.
+- Native option reference: [Android](/sdk/android/configuration) and [iOS](/sdk/ios/configuration).

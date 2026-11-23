@@ -1,6 +1,6 @@
 ---
 title: "iOS build setup"
-description: "TODO(writer-A): iOS build setup for the Bugsee Unity SDK 7.x."
+description: "What the Bugsee Unity SDK 7.x Editor package changes in your exported Xcode project: the Swift package, the symbol upload Run Script, the crash extension and early launch."
 sidebar_position: 3
 slug: "/sdk/unity/build-setup/ios"
 ---
@@ -9,4 +9,99 @@ slug: "/sdk/unity/build-setup/ios"
 This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
 :::
 
-TODO(writer-A)
+You do not add the iOS SDK to Xcode yourself. When you build for iOS, the package edits the exported Xcode project. This page lists what it changes and the switches that control it.
+
+## What the package does to an iOS export
+
+| Step | What it does |
+| --- | --- |
+| Swift package | Adds the Bugsee Swift package, `https://github.com/bugsee/spm.git` at version 7.1.0, and links its `Bugsee` product to the app target and to `UnityFramework`. Bugsee 7.x on iOS is Swift Package Manager only. |
+| Deployment target | Raises `IPHONEOS_DEPLOYMENT_TARGET` to 15.0 on both targets when it is lower. |
+| Debug symbols | Sets `DEBUG_INFORMATION_FORMAT` to `dwarf-with-dsym` for every configuration on both targets, so Debug builds also produce a dSYM to upload. |
+| Run Script | Adds a build phase named **Bugsee Upload Symbols** that uploads dSYMs and the IL2CPP line map. See [Symbol upload Run Script](#symbol-upload-run-script). |
+| Crash extension | Can add a `BugseeCrashReport` extension target on Xcode 27 and later. See [Crash Report Extension](#crash-report-extension). |
+| Early launch | Can start the SDK natively at app launch. Off by default. See [Early launch](#early-launch). |
+
+The Swift package link is added once. An Append export into an existing Xcode project drops the link an earlier export added and writes it again, so you never end up with the package twice. The step also removes a build phase that Unity's own Append export lists twice, which would otherwise make `xcodebuild archive` fail with "Unexpected duplicate tasks".
+
+If the Swift package link cannot be written, the export fails with a `[Bugsee]` message instead of producing a project with no SDK.
+
+### Keep Debug on plain DWARF
+
+Forcing a dSYM on Debug configurations makes Debug builds slower for a large `UnityFramework`. To keep Unity's setting, do one of the following before you export:
+
+- Set the environment variable `BUGSEE_NO_DSYM_FORCE` (any value). Use this on CI.
+- Turn on **Bugsee > iOS > Keep Xcode Debug Info Format (skip dSYM force)**. It is a toggle saved per machine, for an Editor started from the Hub or the Finder, which does not see your shell variables.
+
+Debug builds then have no dSYM to upload.
+
+## Symbol upload Run Script
+
+The export writes `BugseeScripts/upload-symbols.sh` next to the Xcode project and adds a **Bugsee Upload Symbols** Run Script phase to the app target that runs it. The phase uploads the app's and `UnityFramework`'s dSYMs and the IL2CPP line map, so crash frames resolve to your code.
+
+- **Token.** The script reads `BUGSEE_APP_TOKEN` when Xcode builds, from the environment or from a user-defined build setting. The token is never written into the project. Without it, the build prints a warning and uploads nothing.
+- **Which builds.** The script runs for every Xcode configuration, Debug included, and on every build that has the token in its environment, not only archives. Set `BUGSEE_SKIP_UPLOAD_ON_DEBUG=1` to skip the Debug configuration, for example for local runs from Xcode.
+- **Opt out.** `BUGSEE_NO_SYMBOL_UPLOAD` set in the environment of the Xcode build makes the script print that it skips the upload and upload nothing.
+- **The CLI.** The script never downloads `bugsee-cli`. At export, on macOS with `BUGSEE_APP_TOKEN` set, the Editor looks for an installed CLI and writes its absolute path into the script. That path contains your home directory. If you commit the exported project, set `BUGSEE_NO_SYMBOL_UPLOAD` or unset `BUGSEE_APP_TOKEN` before you export, and nothing is baked. When no CLI is found, the script prints a warning that lists the paths it tried, and the build continues.
+- **Sandbox.** The export sets `ENABLE_USER_SCRIPT_SANDBOXING = NO` on the `Unity-iPhone` target. With the sandbox on, Xcode refuses to start the script and nothing is uploaded. A project-wide or command-line `ENABLE_USER_SCRIPT_SANDBOXING=YES` still wins over the target's setting.
+- **Failures.** A failing upload never fails the build.
+
+For what is uploaded and how to read the results, see [iOS symbolication](/sdk/unity/symbolication/ios) and [Environment variables](/sdk/unity/symbolication/environment-variables).
+
+## Crash Report Extension
+
+On iOS 27 and later, the iOS SDK can report exits that no in-process handler survives, such as out-of-memory kills, through a Crash Report Extension. The export can add that extension to your Xcode project as an ExtensionKit target named `BugseeCrashReport`, with the bundle id `<your app id>.BugseeCrashReport`, an iOS 27.0 deployment target on the extension only, and an App Group shared with the app.
+
+The target is added only when the build machine has **Xcode 27 or later**. The setting decides the rest:
+
+| Setting | Behavior |
+| --- | --- |
+| **Auto** (default) | Adds the extension in an interactive Editor build when Player Settings has **Automatically Sign** on and a team id. Never in batch mode. |
+| **On** | Adds it for any signing setup. Register the App Group on both App IDs yourself. |
+| **Off** | Never adds it. |
+
+Set it from the menu **Bugsee > iOS > Crash Report Extension** (Auto, On or Off), which is saved per machine, or from the environment with `BUGSEE_IOS_CRASH_EXTENSION=auto`, `1` or `0`, which wins over the menu. The App Group defaults to `group.<your bundle id>`. Override it with `BUGSEE_IOS_APP_GROUP=group.<your id>`.
+
+The extension's `CFBundleShortVersionString` and `CFBundleVersion` are set to the app's at export. If you change the app's version after export, change the extension's too.
+
+If you do not want the target, set the mode to Off. See [Crash Report Extension](/sdk/unity/issue-detection/crash-report-extension) for what it reports, its limits, the signing requirements and the Append export behavior.
+
+## Early launch
+
+By default, Bugsee starts when your C# code calls `Bugsee.Launch`. Early launch starts the iOS SDK natively, after Unity's own `didFinishLaunching` returns and before the first scene. The first `Bugsee.Launch` then adopts the running session instead of starting a second one. It is off by default.
+
+:::warning[Consent and privacy]
+With early launch on, the iOS SDK starts before any C# code runs, so before any consent check of yours, and even if your app never calls `Bugsee.Launch`. Do not turn it on if Bugsee must wait for user consent. The token is embedded in the app bundle's `Info.plist`.
+:::
+
+Turn it on for the export in one of two ways. The environment variables win over the menu.
+
+| Variable | Meaning |
+| --- | --- |
+| `BUGSEE_IOS_EARLY_LAUNCH` | `1`, `on`, `true` or `yes` turns it on. Anything else leaves it off. |
+| `BUGSEE_IOS_APP_TOKEN` | The iOS app token. Required: with it missing, early launch is not added and the build logs a warning. |
+| `BUGSEE_IOS_EARLY_LAUNCH_OPTIONS` | Optional JSON object of launch options, with the same keys as the C# options, for example `{"com.bugsee.option.detect.hang":true}`. |
+
+Or choose **Bugsee > iOS > Early Launch...**, a window with an enable toggle, the iOS app token and the options JSON. It is saved per machine.
+
+The export writes these values into the app's `Info.plist`. It writes `$` as `$` in the options, because Xcode would otherwise collapse `$$` in plist strings. A token that is not a single printable line of at most 256 characters means early launch is not added, with a warning in the build log. Options that are not a JSON object, or are longer than 16,384 characters, are ignored with a warning, and the SDK defaults are used. Nothing is written when early launch is off, and an Append export removes an earlier export's entry.
+
+How the first `Bugsee.Launch` behaves with early launch:
+
+- **No second launch.** It adopts the running session. The `Launching` and `Launched` lifecycle events arrive once.
+- **Options are launch-only.** Options passed to `Bugsee.Launch` that differ from the early options are logged as a warning and not applied. Put them in the early options, or call `Stop` and launch again.
+- **The build-time token wins.** A different token in `Bugsee.Launch` is logged, and the session keeps the build-time token.
+- **After `Stop`**, `Launch` works as without early launch.
+- **Not on the Simulator.** Early launch does nothing there.
+
+:::caution[Known issue]
+After an iOS launch that died before the app became active, the next launch may block the main thread for up to about 8 seconds while the crash report is uploaded. The fix is in the native iOS SDK and is not released yet. Unity launches that start at `Bugsee.Launch` do not hit it, because the SDK starts while the app is active. Early launch starts the SDK at app launch, before the app is active, so an app that uses it can hit this.
+:::
+
+## Related pages
+
+- [Installation](/sdk/unity/installation): add the package.
+- [iOS symbolication](/sdk/unity/symbolication/ios): dSYMs, the line map and the upload.
+- [Crash Report Extension](/sdk/unity/issue-detection/crash-report-extension): the iOS 27 extension in detail.
+- [Lifecycle & status](/sdk/unity/lifecycle): launch, stop and lifecycle events.
+- [iOS installation](/sdk/ios/installation): the native SDK's own installation page.

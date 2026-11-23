@@ -1,6 +1,6 @@
 ---
 title: "Appearance"
-description: "TODO(writer-B): Appearance for the Bugsee Unity SDK 7.x."
+description: "Change the colors and placeholder texts of the Bugsee report dialog and feedback chat in a Unity game with Bugsee.Appearance, and see which properties apply on Android and iOS."
 sidebar_position: 20
 slug: "/sdk/unity/appearance"
 ---
@@ -9,4 +9,120 @@ slug: "/sdk/unity/appearance"
 This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
 :::
 
-TODO(writer-B)
+`Bugsee.Appearance` changes the look of the report dialog and the feedback chat, so that they match your game. It is one surface for both platforms: each property is a string key that you set with `SetColor` or `SetString`.
+
+In 6.x you wrote `Bugsee.Appearance.Report.BackgroundColor = BugseeColor.Red`. In 7.x you call `SetColor` with a key constant and a `Color32`.
+
+## Set colors and texts
+
+`Bugsee.Appearance` is an `IAppearance`:
+
+```csharp
+IAppearance SetColor(string propertyName, Color32? color);
+Color32? GetColor(string propertyName);
+IAppearance SetString(string propertyName, string value);
+string GetString(string propertyName);
+IReadOnlyDictionary<string, object> ToMap();
+```
+
+The setters return the `IAppearance`, so you can chain them. Use the constants of `ReportAppearance` and `FeedbackAppearance` (namespace `Bugsee.Contracts.Appearance`) as keys, and do not type the strings by hand.
+
+```csharp
+using Bugsee.Contracts.Appearance;
+using UnityEngine;
+using BugseeSdk = Bugsee.Bugsee;
+
+BugseeSdk.Appearance
+    .SetColor(ReportAppearance.BackgroundColor, new Color32(16, 24, 40, 255))
+    .SetColor(ReportAppearance.TextColor, new Color32(255, 255, 255, 255))
+    .SetColor(ReportAppearance.ActionBarColor, new Color32(29, 41, 57, 255))
+    .SetString(ReportAppearance.SummaryPlaceholder, "What went wrong?");
+```
+
+Set the colors in your startup code, before a report dialog can open. In the Unity Editor the setters do nothing.
+
+## Report colors and texts
+
+Keys of `ReportAppearance`. A key that has no iOS equivalent is skipped on iOS: it changes nothing, reads back `null`, and the SDK logs `Appearance property ... has no iOS equivalent; skipped.` once per key.
+
+| Key | Type | Android | iOS | What it changes |
+| --- | --- | --- | --- | --- |
+| `ActionBarColor` | color | Yes | Yes | The action bar (Android) or navigation bar (iOS) background. |
+| `EditTextBackgroundColor` | color | Yes | Yes | The background of the input fields (Android) or table cells (iOS). |
+| `VersionColor` | color | Yes | Yes | The Bugsee version label. |
+| `TextColor` | color | Yes | Yes | The text color. |
+| `HintColor` | color | Yes | Yes | The hint (placeholder) text of the input fields. |
+| `BackgroundColor` | color | Yes | Yes | The dialog background. |
+| `ActionBarTextColor` | color | Yes | No | The action bar button text. |
+| `ActionBarButtonBackgroundClickedColor` | color | Yes | No | An action bar button while pressed. |
+| `SeverityLabelActiveColor` | color | Yes | No | The selected severity label. |
+| `SummaryPlaceholder` | string | Yes | Yes | The placeholder of the summary field. |
+| `DescriptionPlaceholder` | string | Yes | Yes | The placeholder of the description field. |
+| `LabelsPlaceholder` | string | Yes | Yes | The placeholder of the labels field. |
+| `EmailPlaceholder` | string | Yes | Yes | The placeholder of the email field. |
+
+On iOS, the look of the report screen as a whole (`Light`, `Dusk`, `BasedOnStatusBar` or `System`, the default) is the launch option `ReportingUIStyle` on `IOSLaunchOptions`. See [Bug reporting](/sdk/unity/manual/bug-reporting#report-form-options).
+
+### Android notification title
+
+On Android, the title of the notification-bar trigger is the string key `Notification::Title`. The package has no constant for it, and iOS has no equivalent. The trigger itself is off by default: see [Bug reporting](/sdk/unity/manual/bug-reporting#built-in-report-triggers).
+
+```csharp
+#if UNITY_ANDROID
+BugseeSdk.Appearance.SetString("Notification::Title", "Report a problem");
+#endif
+```
+
+## Feedback colors
+
+Keys of `FeedbackAppearance`. They affect only a [feedback chat](/sdk/unity/feedback) that is present, and are independent of the add-on switch.
+
+| Key | Android | iOS |
+| --- | --- | --- |
+| `ActionBarColor` | Yes | Yes |
+| `BackgroundColor` | Yes | Yes |
+| `IncomingBubbleColor` | Yes | Yes |
+| `OutgoingBubbleColor` | Yes | Yes |
+| `IncomingTextColor` | Yes | Yes |
+| `OutgoingTextColor` | Yes | Yes |
+| `TitleTextColor` | Yes | Yes |
+| `EmailSkipTextColor` | Yes | Yes |
+| `EmailBackgroundColor` | Yes | Yes |
+| `EmailContinueNotActiveColor` | Yes | Yes |
+| `EmailContinueActiveColor` | Yes | Yes |
+| `InputTextColor` | Yes | Yes |
+| `ActionBarButtonBackgroundClickedColor` | Yes | No |
+| `DateTextColor` | Yes | No |
+| `EmailSkipBackgroundClickedColor` | Yes | No |
+| `EmailContinueClickedColor` | Yes | No |
+| `InputTextHintColor` | Yes | No |
+| `BottomDelimiterColor` | Yes | No |
+| `LoadingBarBackgroundColor` | Yes | No |
+| `LoadingTextColor` | Yes | No |
+| `ErrorTextColor` | Yes | No |
+| `VersionChangedBackgroundColor` | Yes | No |
+| `VersionChangedTextColor` | Yes | No |
+
+```csharp
+BugseeSdk.Appearance
+    .SetColor(FeedbackAppearance.IncomingBubbleColor, new Color32(236, 239, 241, 255))
+    .SetColor(FeedbackAppearance.OutgoingBubbleColor, new Color32(30, 136, 229, 255))
+    .SetColor(FeedbackAppearance.OutgoingTextColor, new Color32(255, 255, 255, 255));
+```
+
+## Read values back
+
+`GetColor` returns a `Color32?` and `GetString` a `string`. They return `null` when nothing applies:
+
+- On iOS, a key with no iOS equivalent returns `null`. Other color keys return the current value of the iOS theme, including its default.
+- On Android, they return what the SDK holds for the key.
+
+`ToMap()` returns a read-only dictionary. On Android it holds what the SDK reports. On iOS it lists only the properties you set through the wrapper that the iOS theme applied.
+
+## Differences between platforms
+
+- On iOS, a `null` color is ignored: the theme colors cannot be reset to the default with `SetColor(key, null)`. On Android, `null` is passed to the SDK.
+- On iOS, `SetString(key, null)` restores the SDK's default text.
+- On iOS, a color key is applied by `SetColor` only, and a placeholder key by `SetString` only. The other call is ignored.
+
+For the native appearance APIs, see [Android appearance](/sdk/android/appearance) and [iOS appearance](/sdk/ios/appearance).
