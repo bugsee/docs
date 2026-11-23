@@ -94,21 +94,21 @@ Call `launch()` once, as early as you can: at the top of your entry module, befo
 ```ts title="main.ts"
 import { launch } from '@bugsee/bugsee';
 
-// Keep the promise: it does not block your imports
-export const bugseePromise = launch('<your_app_token>', {
+launch('<your_app_token>', {
   appVersion: '1.4.2',
   appBuild: '381',
 });
 ```
 
-In the browser `launch()` returns a `Promise` of the client. Capture starts without awaiting it, but keep the promise (as above) if you need the client later, for example in the verify step. Await it where you need it:
+In the browser `launch()` returns a `Promise` of the client, and capture starts without awaiting it. If you need the client elsewhere, which the verify step and the other guides do, keep it in a module of your own and import it:
 
-```ts
-import { bugseePromise } from './main';
+```ts title="bugsee.ts"
+import { launch } from '@bugsee/bugsee';
 
-const bugsee = await bugseePromise;
-bugsee.addBreadcrumb({ message: 'checkout started' });
+export const bugsee = await launch('<your_app_token>', { appVersion: '1.4.2' });
 ```
+
+This uses top-level `await`, which needs an ES module build with a target of ES2022 or newer (in Vite, `build.target: 'es2022'` or later). Importers of that module wait for `launch()` to settle. If your build cannot use top-level `await`, call `launch(...)` without it in your entry and `await` it where you need the client. On Node.js and Bun `launch()` returns the client directly, and `await` on it is harmless.
 
   </TabItem>
   <TabItem value="node" label="Node.js">
@@ -154,7 +154,7 @@ A Node.js or Bun script that exits right after an error can end before the repor
 
 ## 4. Verify the first report
 
-Report a handled error and check that it shows up. In the browser, get the client from the promise first (`const bugsee = await bugseePromise;`):
+Report a handled error and check that it shows up. Use the `bugsee` client from your own module (see above):
 
 ```ts
 const result = await bugsee.logException(new Error('Bugsee test error'));

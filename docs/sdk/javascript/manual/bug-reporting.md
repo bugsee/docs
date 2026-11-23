@@ -19,7 +19,7 @@ import { launch } from '@bugsee/bugsee';
 export const bugsee = await launch('<your_app_token>');
 ```
 
-`launch` returns a promise in the browser and the client itself on Node.js and Bun. `await` works for both.
+`launch` returns a promise in the browser and the client itself on Node.js and Bun. `await` works for both. Top-level `await` needs an ES module build targeting ES2022 or newer; see the [Quick start](/sdk/javascript/quick-start#3-launch-bugsee) for the alternative.
 
 ## Show the report dialog
 
