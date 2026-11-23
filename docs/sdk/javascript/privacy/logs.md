@@ -74,6 +74,8 @@ import { launch } from '@bugsee/bugsee';
 export const bugsee = await launch('<your_app_token>');
 ```
 
+Import this module first in your entry file, before your app bootstraps, not lazily. Capture covers only what runs after `launch()`, and code that runs earlier is not recorded.
+
 What to know:
 
 - **The filter fails closed.** If it throws, the line is dropped, and the error goes to the `onError` launch option.

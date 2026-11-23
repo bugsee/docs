@@ -117,8 +117,11 @@ A blackout stops visual and interaction capture until you end it: replay, input,
 import { bugsee } from './bugsee';
 
 bugsee.startBlackout();
-// ... show the sensitive screen ...
-bugsee.endBlackout();
+try {
+  // ... show the sensitive screen, and remove it when done ...
+} finally {
+  bugsee.endBlackout();
+}
 ```
 
 When the blackout ends, replay resumes with a fresh full snapshot taken from the live page. End the blackout only **after** the sensitive view has gone, or the snapshot contains it. To start dark from the first frame, set the `startInBlackout` launch option. See [Lifecycle](/sdk/javascript/lifecycle).

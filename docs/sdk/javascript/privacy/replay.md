@@ -145,8 +145,11 @@ async function showCardForm(): Promise<void> {
   try {
     await openCardForm(); // resolves when the user submits or cancels
   } finally {
-    closeCardForm(); // remove the form on success AND on failure, before the blackout ends
-    bugsee.endBlackout();
+    try {
+      closeCardForm(); // remove the form on success AND on failure, before the blackout ends
+    } finally {
+      bugsee.endBlackout(); // always runs, even if the teardown throws
+    }
   }
 }
 

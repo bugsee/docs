@@ -98,6 +98,8 @@ import { launch } from '@bugsee/bugsee';
 export const bugsee = await launch('<your_app_token>');
 ```
 
+Import this module first in your entry file, before your app bootstraps, not lazily. Capture covers only what runs after `launch()`, and code that runs earlier is not recorded.
+
 What to know:
 
 - **One call per stage.** A request produces a `before` event, then `complete`, `error` or `abort`, and so on, and your filter runs for each one. Return `null` for every stage of a request you want gone. Match on `event.url`, or remember `event.id`.

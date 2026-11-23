@@ -113,6 +113,8 @@ import { launch } from '@bugsee/bugsee';
 export const bugsee = await launch('<your_app_token>');
 ```
 
+Import this module first in your entry file, before your app bootstraps, not lazily. Capture covers only what runs after `launch()`, and code that runs earlier is not recorded.
+
 Clearing applies to reports created afterwards. A report that is already assembled and waiting in the queue, and the recovery record of an incident that has not been delivered, keep the identifier they were created with until they are uploaded or expire.
 
 ## Stop capture

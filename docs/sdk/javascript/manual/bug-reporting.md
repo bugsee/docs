@@ -19,6 +19,8 @@ import { launch } from '@bugsee/bugsee';
 export const bugsee = await launch('<your_app_token>');
 ```
 
+Import this module first in your entry file, before your app bootstraps, not lazily. Capture covers only what runs after `launch()`, and code that runs earlier is not recorded.
+
 `launch` returns a promise in the browser and the client itself on Node.js and Bun. `await` works for both. Top-level `await` needs an ES module build targeting ES2022 or newer; see the [Quick start](/sdk/javascript/quick-start#3-launch-bugsee) for the alternative.
 
 ## Show the report dialog

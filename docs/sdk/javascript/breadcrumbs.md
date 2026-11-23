@@ -19,6 +19,8 @@ import { launch } from '@bugsee/bugsee';
 export const bugsee = await launch('<your_app_token>');
 ```
 
+Import this module first in your entry file, before your app bootstraps, not lazily. Capture covers only what runs after `launch()`, and code that runs earlier is not recorded.
+
 ## Turning breadcrumbs on or off
 
 Breadcrumb capture is **on by default** in the JavaScript SDK. The mobile Bugsee SDKs default it to off, because web UI breadcrumbs are a core signal.

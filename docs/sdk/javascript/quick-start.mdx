@@ -111,6 +111,8 @@ export const bugsee = await launch('<your_app_token>', {
 });
 ```
 
+Import this module first in your entry file, before your app bootstraps, not lazily. Capture covers only what runs after `launch()`, and code that runs earlier is not recorded.
+
 This uses top-level `await`, which needs an ES module build with a target of ES2022 or newer (in Vite, `build.target: 'es2022'` or later). Importers of that module wait for `launch()` to settle. If your build cannot use top-level `await`, call `launch(...)` without it in your entry and `await` it where you need the client. On Node.js and Bun `launch()` returns the client directly, and `await` on it is harmless.
 
   </TabItem>

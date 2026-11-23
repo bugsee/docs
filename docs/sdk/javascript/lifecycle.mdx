@@ -97,8 +97,11 @@ A blackout suppresses visual and interaction capture while a sensitive view is o
 
 ```ts
 bugsee.startBlackout();
-// ... the user is on a screen that must not be recorded
-bugsee.endBlackout();
+try {
+  // ... the user is on a screen that must not be recorded; remove it when done
+} finally {
+  bugsee.endBlackout();
+}
 
 bugsee.isBlackout(); // true while a blackout is in force
 ```

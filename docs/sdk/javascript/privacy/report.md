@@ -64,6 +64,8 @@ import { launch } from '@bugsee/bugsee';
 export const bugsee = await launch('<your_app_token>');
 ```
 
+Import this module first in your entry file, before your app bootstraps, not lazily. Capture covers only what runs after `launch()`, and code that runs earlier is not recorded.
+
 ### What it cannot do
 
 - It cannot remove console logs, network events, breadcrumbs, replay or traces from the bundle. Control these where they are recorded, with the filters and options on the pages above.
