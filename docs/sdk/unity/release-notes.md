@@ -15,7 +15,7 @@ Each release lists the native SDKs it is built on. Their own changes are in the 
 
 ## 7.0.0-beta.1 (November 23, 2026)
 
-The first beta of the 7.x line, which continues the sequence from 6.x. It is a new package with a new C# API, ships with Bugsee Android SDK 7.6.0 and Bugsee iOS SDK 7.1.0. It is a beta: it can contain rough edges, and the API can change in later betas.
+The first beta of the 7.x line, which continues the sequence from 6.x. It is a new package with a new C# API. It ships with Bugsee Android SDK 7.6.0 and Bugsee iOS SDK 7.1.0. It is a beta: it can contain rough edges, and the API can change in later betas.
 
 **Highlights**
 
