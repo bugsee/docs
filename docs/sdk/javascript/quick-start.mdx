@@ -94,15 +94,19 @@ Call `launch()` once, as early as you can: at the top of your entry module, befo
 ```ts title="main.ts"
 import { launch } from '@bugsee/bugsee';
 
-export const bugsee = await launch('<your_app_token>', {
+// Keep the promise: it does not block your imports
+export const bugseePromise = launch('<your_app_token>', {
   appVersion: '1.4.2',
   appBuild: '381',
 });
 ```
 
-In the browser `launch()` returns a `Promise` of the client. Capture starts without awaiting it, but keep the client (as above) if you need it later, for example in the verify step. Use it like this:
+In the browser `launch()` returns a `Promise` of the client. Capture starts without awaiting it, but keep the promise (as above) if you need the client later, for example in the verify step. Await it where you need it:
 
 ```ts
+import { bugseePromise } from './main';
+
+const bugsee = await bugseePromise;
 bugsee.addBreadcrumb({ message: 'checkout started' });
 ```
 
@@ -150,7 +154,7 @@ A Node.js or Bun script that exits right after an error can end before the repor
 
 ## 4. Verify the first report
 
-Report a handled error and check that it shows up:
+Report a handled error and check that it shows up. In the browser, get the client from the promise first (`const bugsee = await bugseePromise;`):
 
 ```ts
 const result = await bugsee.logException(new Error('Bugsee test error'));

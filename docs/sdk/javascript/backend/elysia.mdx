@@ -83,7 +83,7 @@ setupElysia(app as unknown as ElysiaAppLike);
 
 On Bun, the full Elysia server works.
 
-On Node.js, Elysia's `.listen` is not supported. Use the app's fetch handler, `app.fetch`, instead.
+On Node.js, Elysia's default adapter has no `.listen`; the Node adapter provides one. This SDK is tested through the app's fetch handler, `app.fetch`, which works with either.
 
 ## What it does
 
