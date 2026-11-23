@@ -54,9 +54,9 @@ launch('<your_app_token>', {
 
 When it is on:
 
-- On Node.js and Bun, Bugsee patches `emit` on the `node:http` and `node:https` server prototypes. Every `request` event runs inside a context and a transaction.
-- On Bun, it also wraps `Bun.serve` when you pass it a `fetch` handler.
-- The transaction is named `<METHOD> <path>`, with the query string removed, until an adapter refines it to the route pattern, for example `/users/:id`.
+- On Node.js and Bun, Bugsee patches `emit` on the `node:http` and `node:https` server prototypes. Every `request` event runs inside a context and, when the performance extension is present, a transaction. `@bugsee/bun` has no performance extension, so there is a context but no transaction on Bun.
+- On Bun with `@bugsee/bun`, it also wraps `Bun.serve` when you pass it a `fetch` handler. The Node.js build that an adapter re-exports does not wrap `Bun.serve`.
+- Where there is a transaction, it is named `<METHOD> <path>`, with the query string removed, until an adapter refines it to the route pattern, for example `/users/:id`.
 - No headers and no bodies of the incoming request are captured by this layer.
 
 :::note

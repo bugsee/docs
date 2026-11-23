@@ -12,7 +12,7 @@ import TabItem from '@theme/TabItem';
 This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
 :::
 
-`@bugsee/elysia` adds a request context, an `http.server` transaction and error reporting to an Elysia app. It runs on Bun, and on Node.js through the app's fetch handler. Read the [backend overview](/sdk/javascript/backend/overview) first for how context and trace correlation work.
+`@bugsee/elysia` adds a request context, error reporting and, where the performance extension is present (Node.js, not `@bugsee/bun`), an `http.server` transaction to an Elysia app. It runs on Bun, and on Node.js through the app's fetch handler. Read the [backend overview](/sdk/javascript/backend/overview) first for how context and trace correlation work.
 
 You need an app token. Create a JavaScript application in Bugsee and choose **Elysia** as its target; see [Create your app](/sdk/javascript/installation#create-your-app).
 
@@ -48,6 +48,8 @@ bun add @bugsee/elysia
 
   </TabItem>
 </Tabs>
+
+On Bun, also install `@bugsee/bun` and import `launch` from it, as described in [Running on Bun](/sdk/javascript/backend/overview#running-on-bun). In that setup the request context and error reporting work, but there is no `http.server` transaction.
 
 The adapter declares no peer dependency. It only relies on the shape of your Elysia app. On Node.js it needs Node.js 18 or newer.
 

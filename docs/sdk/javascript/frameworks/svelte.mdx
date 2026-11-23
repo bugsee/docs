@@ -86,13 +86,17 @@ export const handleError = handleErrorWithBugsee();
 
 ### Route names
 
-Name the active navigation after the route id. Wire it once, after mount:
+Name the active navigation after the route id. Call it once, while the root layout initializes. It must run during component initialization, so it cannot go in a hooks file or in `onMount`. SvelteKit then runs it after mount and on each navigation:
 
-```ts
-import { afterNavigate } from '$app/navigation';
-import { instrumentSvelteKitNavigation } from '@bugsee/svelte';
+```svelte title="src/routes/+layout.svelte"
+<script lang="ts">
+  import { afterNavigate } from '$app/navigation';
+  import { instrumentSvelteKitNavigation } from '@bugsee/svelte';
 
-afterNavigate(instrumentSvelteKitNavigation());
+  afterNavigate(instrumentSvelteKitNavigation());
+</script>
+
+<slot />
 ```
 
 ## SvelteKit with server code
