@@ -131,7 +131,7 @@ public override void OnAfterReportCreated(IReport report, bool isTerminating, Ac
 {
     // Remove text a player typed into the form. On iOS, a dialog report holds it only in this callback.
     if (report.Description != null)
-        report.Description = System.Text.RegularExpressions.Regex.Replace(report.Description, @"\d{16}", "[CARD]");
+        report.Description = System.Text.RegularExpressions.Regex.Replace(report.Description, @"\b\d(?:[ -]?\d){12,18}\b", "[CARD]");
 
     completionCallback();
 }
