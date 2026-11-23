@@ -9,7 +9,7 @@ slug: "/sdk/flutter/privacy/network"
 This page documents Bugsee Flutter SDK **10.x**, which is in beta, is not published on pub.dev yet and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
 :::
 
-Recorded network traffic is one of the most useful parts of a report, and one of the most sensitive: request headers carry credentials, URLs carry tokens, and bodies carry whatever the user typed. [Network events](/sdk/flutter/network) explains what the plugin records; this page covers how to keep sensitive values out of it.
+Recorded network traffic is one of the most useful parts of a report, and one of the most sensitive: request headers carry credentials, URLs carry tokens, and bodies carry whatever the user typed. [Network capture](/sdk/flutter/network) explains what the plugin records; this page covers how to keep sensitive values out of it.
 
 ## The order things happen in
 

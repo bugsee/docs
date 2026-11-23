@@ -15,7 +15,9 @@ On iOS the chat is a SwiftUI screen, on Android a Jetpack Compose activity (Comp
 
 ## Installation
 
-Add both packages at the same version and nothing else:
+The package is a beta and is not on pub.dev yet, so the hosted constraint cannot resolve today. Depend on the repository: give `bugsee_flutter_feedback` a git entry (`path: packages/bugsee_flutter_feedback`, with the same `url` and `ref` as the core, see [Installation](/sdk/flutter/installation)), **and** a `dependency_overrides:` entry for `bugsee_flutter` with the same git source.
+
+Once the packages are published, add both at the same version and nothing else:
 
 ```yaml
 dependencies:
@@ -24,10 +26,6 @@ dependencies:
 ```
 
 The two are released together and pin the same native SDK versions: Android 7.6.0 and iOS 7.1.0. The feedback package accepts a core from the same version up to the next minor, and checks at run time that the core has the same major and minor version.
-
-:::note[Not on pub.dev yet]
-10.0.0-beta.1 is not published. Until it is, the hosted constraint above cannot resolve. Depend on the repository instead: give `bugsee_flutter_feedback` a git entry (`path: packages/bugsee_flutter_feedback`, with the same `url` and `ref` as the core, see [Installation](/sdk/flutter/installation)), **and** a `dependency_overrides:` entry for `bugsee_flutter` with the same git source.
-:::
 
 Everything [Installation](/sdk/flutter/installation) asks for applies unchanged: Flutter 3.50.0 or newer, the `com.bugsee.android.gradle` Gradle plugin applied in your app, iOS 15.0 or newer and Swift Package Manager for iOS.
 

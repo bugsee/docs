@@ -103,7 +103,7 @@ final taken = await Bugsee.addBreadcrumb(
 
 The `Future` completes with whether the SDK was handed the breadcrumb. `false` means it was not: capture is off, or the SDK is not launching or launched (before launch and after `stop`). `true` is not proof that it is recorded, because a native breadcrumb filter set by your app may still drop it. `captureBreadcrumbsExtras` (default `false`) adds the raw notification payload to automatically collected device-event breadcrumbs.
 
-The SDK also collects its own breadcrumbs when capture is on. On Android these include `http` breadcrumbs that keep the URL's query string as given; see [Network privacy](/sdk/flutter/privacy/network).
+The SDK also collects its own breadcrumbs when capture is on. On Android these include `http` breadcrumbs. In the maintainers' measurement Android kept the query of the `http` breadcrumb URL; the SDK option documentation says the default sanitizer also redacts it; this was not re-measured at Android 7.6.0. Redact the URL in the network filter, which runs first. See [Network privacy](/sdk/flutter/privacy/network#http-breadcrumbs).
 
 ## Notifications
 

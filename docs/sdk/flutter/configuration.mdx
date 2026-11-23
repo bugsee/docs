@@ -27,7 +27,7 @@ await Bugsee.launch(
 
 ## How options work
 
-`BugseeOptions` has a typed, documented field for every option the two native SDKs register, except the options of the leak module and the deprecated ones: 100 fields at the pinned SDK versions (Android 7.6.0, iOS 7.1.0). A field is named after its key: `capture.video.frame-rate` is `captureVideoFrameRate`. The fields are generated from the option manifests the two SDKs publish, so they cannot drift from the SDKs.
+`BugseeOptions` has a typed, documented field for every option the two native SDKs register, except the options of the leak module and most deprecated ones (`captureLogsOsLog` keeps its field, but the SDK accepts it and ignores it): 100 fields at the pinned SDK versions (Android 7.6.0, iOS 7.1.0). A field is named after its key: `capture.video.frame-rate` is `captureVideoFrameRate`. The fields are generated from the option manifests the two SDKs publish, so they cannot drift from the SDKs.
 
 - **A field you leave out keeps the SDK's own default.** Several defaults differ between Android and iOS; each field's documentation says which.
 - **One configuration for both platforms.** An option that exists on one platform only (the video mode is Android's, the AVPlayer capture is iOS's) is ignored on the other, with a warning printed in debug builds. The same holds for an enum constant that one platform lacks (`FrameRate.raw` on iOS).
@@ -89,7 +89,7 @@ The tables list every typed field. "Platform" says where the option exists: `bot
 | `captureLogs` | `bool` | `true` | both |
 | `captureLogsAllSources` | `bool` | `false` | Android |
 | `captureLogsLevel` | `LogLevel` | `LogLevel.verbose` | both |
-| `captureLogsOsLog` | `bool` | `false` | iOS |
+| `captureLogsOsLog` | `bool` | `false` | iOS (deprecated: accepted and ignored) |
 | `captureNetwork` | `bool` | `true` | both |
 | `captureNetworkBodySizeLimit` | `int` | `20480` | both |
 | `captureNetworkBodyWithoutType` | `bool` | `false` | both |

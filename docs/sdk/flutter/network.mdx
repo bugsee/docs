@@ -1,5 +1,5 @@
 ---
-title: "Network events"
+title: "Network capture"
 description: "How Bugsee Flutter SDK 10.x records dart:io network traffic: installNetworkCapture, what a request records, body limits, setNetworkFilter, and what is never captured."
 sidebar_position: 8
 slug: "/sdk/flutter/network"
@@ -88,7 +88,7 @@ Bodies follow the native SDK's own rules, which the plugin applies **before copy
 | `captureNetworkBodyWithoutType` | `false` | Without it, a body needs a `Content-Type` that is text (`text/*`, or a subtype containing `json`, `xml` or `x-www-form-urlencoded`). With it, the type check is skipped. |
 | `captureNetworkDefaultSanitizer` | `true` | The SDK's redaction; see [Privacy: Network](/sdk/flutter/privacy/network). |
 
-A body that is not recorded carries a reason (`NoBodyReason`): `sizeTooLarge`, `unsupportedContentType`, `noContentType` or `cantReadData`. A response that is still compressed (`autoUncompress` off), a charset other than UTF-8, Latin-1 or ASCII, and bytes that are not valid text are all `cantReadData`. With `autoUncompress` on (the default), `dart:io` decompresses the response and the body is the text.
+A body that is not recorded carries a reason (`NoBodyReason`): `noData`, `sizeTooLarge`, `unsupportedContentType`, `noContentType` or `cantReadData`. A response that is still compressed (`autoUncompress` off), a charset other than UTF-8, Latin-1 or ASCII, and bytes that are not valid text are all `cantReadData`. With `autoUncompress` on (the default), `dart:io` decompresses the response and the body is the text.
 
 Request and response bodies are governed by the same options: there is no separate switch for request bodies. To capture no body at all, set `captureNetwork` off, or the limit to `0`.
 

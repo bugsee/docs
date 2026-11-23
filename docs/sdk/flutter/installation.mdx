@@ -30,16 +30,7 @@ The Flutter floor is 3.50.0: the 10.x line builds on the release that ships Dire
 
 ## Add the package
 
-Add `bugsee_flutter` to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  bugsee_flutter: ^10.0.0-beta.1
-```
-
-Then run `flutter pub get`.
-
-The package is a beta and is not on pub.dev yet. Until it is, use the git dependency instead:
+The package is a beta and is not on pub.dev yet, so the git dependency is the only one that resolves today. Add `bugsee_flutter` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
@@ -47,6 +38,15 @@ dependencies:
     git:
       url: https://github.com/bugsee/bugsee-flutter.git
       ref: main
+```
+
+Then run `flutter pub get`.
+
+Once the package is published, depend on it from pub.dev instead:
+
+```yaml
+dependencies:
+  bugsee_flutter: ^10.0.0-beta.1
 ```
 
 The [feedback chat](/sdk/flutter/feedback) is a separate package, `bugsee_flutter_feedback`. While the core is unpublished, it needs its own git entry (`path: packages/bugsee_flutter_feedback`, with the same `url` and `ref`) and a `dependency_overrides:` entry for `bugsee_flutter` with the same git source, because its hosted constraint on the core cannot resolve yet.

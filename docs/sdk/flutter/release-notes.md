@@ -15,7 +15,7 @@ Each release lists the native SDKs it is built on. Their own changes are in the 
 
 ## 10.0.0-beta.1 (prerelease, not published yet)
 
-A rewrite for the Bugsee 7.x native SDKs (Android 7.6.0, iOS 7.1.0). **A prerelease, not published on pub.dev yet.** Existing 9.x apps should stay on 9.x: there is no compatibility layer, and whether one is offered has not been decided. See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+A rewrite for the Bugsee 7.x native SDKs (Android 7.6.0, iOS 7.1.0). **A prerelease, not published on pub.dev yet.** Existing 9.x apps should stay on 9.x: there is no compatibility layer: stay on 9.x or follow the migration guide. See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
 
 **Features**
 

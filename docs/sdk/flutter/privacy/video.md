@@ -95,8 +95,7 @@ try {
 
 - **There is no pause and no resume.** A blackout does not suspend the log or network capture.
 - **You can call `startBlackout` before `launch`** on both platforms. Capture then starts blacked out, and `isBlackout` reflects it at once.
-- **On Android a blackout lasts from launch to `stop`.** Stopping ends it, with a `BlackoutEnded` lifecycle event, and a later launch starts without one. A blackout requested while the SDK is stopping is handed to the next launch. On iOS the flag stays until `endBlackout`.
-- **On Android, `endBlackout` is ignored while the SDK is stopping**, because the stop ends the blackout.
+- **On Android a blackout lasts from launch to `stop`.** Stopping ends it, with a `BlackoutEnded` lifecycle event, and a later launch starts without one. A blackout requested while the SDK is stopping is handed to the next launch.
 - **Network events keep recording.** A blackout does not hide a request from the network capture; use the [network filter](/sdk/flutter/privacy/network) for that.
 
 ## Video and screenshot options

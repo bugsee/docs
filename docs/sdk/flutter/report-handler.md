@@ -102,11 +102,11 @@ Every operation on `ReportProxy` crosses to native, so it is asynchronous, and t
 
 ## The time window
 
-The SDK gives a handler a fixed budget and moves on when it runs out. The wrapper's window is that budget less a margin of a third (at most 10 seconds):
+The SDK gives a handler a fixed budget and moves on when it runs out. The SDK's budget is 30 seconds per handler on iOS and, on Android, the `configReportHandlerCallbackTimeout` option (default 30; 0 or below means the 20 second default). The wrapper's window is that budget less a third, with at most 10 seconds of margin, and never more than 20 seconds:
 
 | Situation | The SDK's budget | The window you get |
 | --- | --- | --- |
-| A live report (dialog, `upload`, error, a crash recovered after a normal session) | 30 seconds per handler | 20 seconds |
+| A live report (dialog, `upload`, error, a crash recovered after a normal session) | 30 seconds per handler by default | 20 seconds |
 | iOS recovery of a previous run's report | 3 seconds | 2 seconds |
 
 Do slow work **before** the edit calls and keep the callback short. The SDK's own limit for a whole chain of handlers is 60 seconds. The wrapper's pipeline never blocks the SDK: it completes the SDK's callback exactly once on every path (when you return, when the window ends, or at once when nothing is registered or Dart cannot run).
@@ -170,7 +170,7 @@ The SDK's own timer does not wait for a copy that is still running. An attachmen
 
 ## Limits
 
-- **Before the engine exists.** A report the SDK recovers before the Flutter engine is running cannot reach Dart (the SDK is completed at once). This is the iOS recovery path at launch, and the Android case of a second crash before the first `onResume`. Under Android auto-init (manifest launch) the same applies to reports recovered before Dart runs.
+- **Before the engine exists.** A report recovered while no Flutter engine is attached cannot reach Dart (this includes recovery at an early launch and Android auto-init). With an engine attached, iOS recovery gives Dart 2 seconds. Not verified on a device.
 - **Terminating.** Neither callback runs while the process is terminating, because Dart cannot run then. `isTerminating` is never passed to Dart.
 - **Android native crash recovered after a normal session.** The report is dispatched on the SDK's report handler thread with the live window; Dart runs and its attribute, label and file land in the recovered report (device-measured).
 - **A late edit can still be accepted.** The SDK starts its timer when it queues the handler, the wrapper's window starts when the handler is entered. The margin absorbs that wait; an edit after the SDK moved on is not always refused.

@@ -123,13 +123,13 @@ const config: Config = {
           { from: '/sdk/react-native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
           { from: '/sdk/react_native/v6', to: '/sdk/react_native/v6/installation/' },
           { from: '/sdk/react_native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
-          // Flutter 9.x pages moved under /sdk/flutter/v9/; old routes with no 10.x page keep their 9.x content.
+          // Flutter 9.x pages moved under /sdk/flutter/v9/; routes not carried over 1:1 go to the stable 9.x page.
           { from: '/sdk/flutter/v9', to: '/sdk/flutter/v9/installation/' },
           { from: '/sdk/flutter/v9/privacy', to: '/sdk/flutter/v9/privacy/overview/' },
           { from: '/sdk/flutter/appearance', to: '/sdk/flutter/v9/appearance/' },
           { from: '/sdk/flutter/custom', to: '/sdk/flutter/v9/custom/' },
           { from: '/sdk/flutter/manual', to: '/sdk/flutter/v9/manual/' },
-          { from: '/sdk/flutter/symbolication', to: '/sdk/flutter/symbolication/overview/' },
+          { from: '/sdk/flutter/symbolication', to: '/sdk/flutter/v9/symbolication/' },
         ],
         // Android 7.x and iOS 7.x lived under /sdk/<platform>/v7/ until they became the
         // default; every current Android and iOS page keeps answering at its old v7 address.

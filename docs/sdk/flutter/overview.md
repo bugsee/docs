@@ -13,7 +13,7 @@ The Bugsee Flutter SDK (`bugsee_flutter`) captures what happened before a bug: a
 
 The package wraps the native Bugsee 7.x SDKs for Android and iOS; it adds a Dart layer on top of them. A report from a Flutter app is the report a native app produces, plus what only Dart can see: the widget tree, `dart:io` network traffic, `print` output and Dart errors.
 
-10.x is a rewrite for the 7.x native SDKs and a breaking change from 9.x. Whether a 9.x compatibility layer is offered has not been decided. See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+10.x is a rewrite for the 7.x native SDKs and a breaking change from 9.x. There is no compatibility layer: stay on 9.x or follow the migration guide. See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
 
 ## What Bugsee records
 
@@ -77,22 +77,7 @@ This beta, `10.0.0-beta.1`, is built on these native SDKs:
 - The API works from the main isolate. A call from a background isolate is a `BugseeException`.
 - On web and desktop the calls do nothing, and `Bugsee.launch` throws a `BugseeLaunchException`.
 - The iOS simulator has no crash reporter and files no logged exceptions, so crash recovery and Dart error reports need a physical iPhone to try.
-- Verification so far is mostly on Android emulators and iOS simulators. Physical devices ran only part of the integration tests; see the known limitations in the [release notes](/sdk/flutter/release-notes#known-limitations).
 
 ## Get started
 
 Head to [Installation](/sdk/flutter/installation). From there, [Configuration](/sdk/flutter/configuration) covers the launch options, and [Privacy](/sdk/flutter/privacy/overview) covers redaction.
-
-## Related pages
-
-- [Installation](/sdk/flutter/installation): add the package and launch the SDK.
-- [Configuration](/sdk/flutter/configuration): launch options for both platforms.
-- [Lifecycle & status](/sdk/flutter/lifecycle): status, launch results and lifecycle events.
-- [Bug reporting](/sdk/flutter/manual/bug-reporting) and [Crash & error reporting](/sdk/flutter/manual/crash-error-reporting): reports you create from code.
-- [Dart errors](/sdk/flutter/dart-errors): capture errors nobody handled.
-- [Report handler](/sdk/flutter/report-handler): edit reports before they are sent.
-- [Network capture](/sdk/flutter/network), [Console logs](/sdk/flutter/logs) and [View hierarchy](/sdk/flutter/view-hierarchy): what the Dart side adds.
-- [Privacy](/sdk/flutter/privacy/overview): what is captured and the control for each.
-- [Feedback](/sdk/flutter/feedback): the in-app chat package.
-- [Symbolication](/sdk/flutter/symbolication/overview): readable stack traces in release builds.
-- [FAQ](/sdk/flutter/faq), [Migrating from 9.x to 10.x](/sdk/flutter/migration) and [Release notes](/sdk/flutter/release-notes).
