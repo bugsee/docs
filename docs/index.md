@@ -18,10 +18,7 @@ Using Bugsee on mobile devices requires installation of Bugsee lightweight SDK:
 * [Installing KMP SDK (Beta)](/sdk/kmp/installation/)
 * [Installing Xamarin SDK](/sdk/xamarin/installation/) — **deprecated**, use the [.NET SDK](/sdk/dotnet/installation/) for new projects
 
-Bugsee also has SDKs outside mobile. They are not covered on this site yet; see their repositories:
-
-* **JavaScript SDK (Beta)**: browsers, Node.js and other JavaScript runtimes, with session replay in the browser. Published on npm as [`@bugsee/bugsee`](https://www.npmjs.com/package/@bugsee/bugsee) and related `@bugsee/*` packages; source at [github.com/bugsee/bugsee-javascript](https://github.com/bugsee/bugsee-javascript).
-* **Rust SDK (Preview)**: a pre-release, not yet published to crates.io; source at [github.com/bugsee/bugsee-rust](https://github.com/bugsee/bugsee-rust).
+Bugsee also has a Rust SDK (Preview). It is a pre-release, not yet published to crates.io and not covered on this site yet; see its source at [github.com/bugsee/bugsee-rust](https://github.com/bugsee/bugsee-rust).
 
 
 ## Features
