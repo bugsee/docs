@@ -71,11 +71,16 @@ A framework that catches a thrown error and turns it into a 500 response hides i
 
 ```ts
 launch('<your_app_token>', {
-  tracePropagationTargets: ['https://billing.internal.example.com/', /^https:\/\/[^/]+\.internal\.example\.com(\/|$)/],
+  tracePropagationTargets: [
+    // One host, any port, path or query
+    /^https?:\/\/billing\.internal\.example\.com(?::\d+)?(?:[/?#]|$)/,
+    // Any subdomain of your internal domain
+    /^https?:\/\/[^/?#:@]+\.internal\.example\.com(?::\d+)?(?:[/?#]|$)/,
+  ],
 });
 ```
 
-Targets are tested against the full request URL, including the path. A string matches anywhere in the URL, so `'https://billing.internal.example.com/'` also matches `https://attacker.test/https://billing.internal.example.com/` and a bare host string without the trailing `/` also matches `https://billing.internal.example.com.attacker.test/`. For host targets, use a regular expression anchored at the start with the scheme and ended at the host boundary, as in the second entry above.
+A target is a string or a regular expression; functions are not accepted. Each is tested against the full request URL, including scheme, port, path and query. A string matches anywhere in the URL, so `'https://billing.internal.example.com'` also matches `https://billing.internal.example.com.attacker.test/` and `https://attacker.test/?u=https://billing.internal.example.com`. Use a string only for a complete URL prefix you control. For hosts, use regular expressions anchored with `^` that end at the host boundary, as above: the scheme is `http` or `https`, an optional port follows the host, and the next character must be `/`, `?`, `#` or the end of the URL.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |

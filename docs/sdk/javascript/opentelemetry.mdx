@@ -33,7 +33,7 @@ launch('<your_app_token>', {
 });
 ```
 
-In a browser, send to your own collector or proxy, which adds the key on the server. Put no credential in the page:
+In a browser, send to your own collector or proxy, which adds the key on the server. Put no credential in the page. A cross-origin export triggers a CORS preflight: the collector must answer it by allowing the page origin and the `content-type` header, otherwise the browser blocks the export, which is not retried:
 
 ```ts
 import { launch } from '@bugsee/bugsee';
