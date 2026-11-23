@@ -1,17 +1,12 @@
 ---
 title: "Privacy overview"
-description: "Overview of privacy considerations for Bugsee in Unity and links to controls for video, console logs, and network data collection."
-sidebar_position: 0
+description: "TODO(writer-D): Privacy overview for the Bugsee Unity SDK 7.x."
+sidebar_position: 1
 slug: "/sdk/unity/privacy/overview"
 ---
 
-Bugsee SDK does not continuously stream any personal data. The reports are stored locally on the phone in a cyclical buffer. Reports are being sent only when triggered by a crash, through a bug reporting UI or from an application's code.
-Data sent along with the reports may include video recording of screen, network and console logs. These may potentially contain personal data (usernames, passwords, emails, etc).
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
 
-It is the sole responsibility of the application developers to remove any such data from the reports before it leaves the users’ device.
-
-Bugsee provides the tools and means to either prevent some data from being collected or clean the data during the collection process:
-
-* [Video and Touch](/sdk/unity/privacy/video/)
-* [Console logs](/sdk/unity/privacy/logs/)
-* [Network logs](/sdk/unity/privacy/network/)
+TODO(writer-D)

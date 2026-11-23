@@ -2,8 +2,12 @@
 title: "Crash reports"
 description: "Configure Unity project settings for managed C# exception capture and native crash symbolication with Bugsee."
 sidebar_position: 8
-slug: "/sdk/unity/crashes"
+slug: "/sdk/unity/v6/crashes"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Unity SDK **6.x**, the current stable release. The new **7.x** SDK is in beta: see [Migrating from 6.x to 7.x](/sdk/unity/migration) to evaluate it, or the [7.x overview](/sdk/unity/overview) to start a new integration.
+:::
 
 ## Managed C# code crashes
 
@@ -42,5 +46,5 @@ were stripped afterwards. See [Unity Mono](/cli/debug-files/#unity-mono).
 Unity does not by default enable dSYM creation for its builds. Bugsee does not modify the build to enable it, it has to be done manually
 on the resulting Xcode project. It will not work, however, if **Script Debugging** is enabled, dSYM generation fails in this case.
 
-See iOS crash reporting [instructions](/sdk/ios/symbolication/) for information on setting dSYM auto uploading.
+See iOS crash reporting [instructions](/sdk/ios/v6/symbolication/) for information on setting dSYM auto uploading.
 

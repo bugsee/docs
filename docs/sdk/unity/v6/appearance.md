@@ -2,10 +2,14 @@
 title: "Appearance"
 description: "Customize colors and placeholder text for the Bugsee report and feedback UI in Unity on both iOS and Android."
 sidebar_position: 7
-slug: "/sdk/unity/appearance"
+slug: "/sdk/unity/v6/appearance"
 ---
 
-You can always change colors of the [Report](/sdk/unity/manual/) and [Feedback](/sdk/unity/feedback/) UI.
+:::caution[Previous version]
+This page documents Bugsee Unity SDK **6.x**, the current stable release. The new **7.x** SDK is in beta: see [Migrating from 6.x to 7.x](/sdk/unity/migration) to evaluate it, or the [7.x overview](/sdk/unity/overview) to start a new integration.
+:::
+
+You can always change colors of the [Report](/sdk/unity/v6/manual/) and [Feedback](/sdk/unity/v6/feedback/) UI.
 
 ```csharp
 // For example

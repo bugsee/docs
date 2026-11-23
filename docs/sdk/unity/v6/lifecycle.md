@@ -2,8 +2,12 @@
 title: "Lifecycle events"
 description: "Subscribe to Bugsee SDK lifecycle events in Unity to be notified when the SDK starts, stops, pauses, or uploads reports."
 sidebar_position: 9
-slug: "/sdk/unity/lifecycle"
+slug: "/sdk/unity/v6/lifecycle"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Unity SDK **6.x**, the current stable release. The new **7.x** SDK is in beta: see [Migrating from 6.x to 7.x](/sdk/unity/migration) to evaluate it, or the [7.x overview](/sdk/unity/overview) to start a new integration.
+:::
 
 Bugsee SDK silently works within your app, recording everything to assist you in debugging when something unexpected happens. Our SDK is designed as a black box, but there may be cases when you want to be notified about changes/events within Bugsee itself. Lifecycle events are designed exactly for that. Whenever internal state changes or some important event is raised, a lifecycle event is dispatched to the user code.
 

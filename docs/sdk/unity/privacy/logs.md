@@ -1,13 +1,12 @@
 ---
-title: "Privacy and console logs"
-description: "Disable console log collection in the Bugsee Unity SDK using the CaptureLogs launch option to protect sensitive information."
-sidebar_position: 2
+title: "Privacy: Console logs"
+description: "TODO(writer-D): Privacy: Console logs for the Bugsee Unity SDK 7.x."
+sidebar_position: 3
 slug: "/sdk/unity/privacy/logs"
 ---
 
-Bugsee automatically captures all standard application console logs. If those logs may contain PII data, the feature
-can be completely disabled.
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
 
-## Disabling log collection
-
-Console log collection can be disabled completely using **CaptureLogs** launch option. See [configuration](/sdk/unity/configuration/) for more info.
+TODO(writer-D)

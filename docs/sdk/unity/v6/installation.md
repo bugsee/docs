@@ -2,8 +2,12 @@
 title: "Installation"
 description: "Install the Bugsee Unity package, configure app tokens for iOS and Android, and set up the required scene GameObject."
 sidebar_position: 0
-slug: "/sdk/unity/installation"
+slug: "/sdk/unity/v6/installation"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Unity SDK **6.x**, the current stable release. The new **7.x** SDK is in beta: see [Migrating from 6.x to 7.x](/sdk/unity/migration) to evaluate it, or the [7.x overview](/sdk/unity/overview) to start a new integration.
+:::
 
 :::info[Agent-Assisted Setup]
 Ask your AI coding assistant:
@@ -17,7 +21,7 @@ Works with Claude Code, Cursor, Copilot, Codex, and more. [Learn more](/ai/agent
 
 ## Plugin Installation
 
-Download and install the latest [Bugsee.unitypackage](https://download.bugsee.com/sdk/unity/BugseeUnity-stable.unitypackage) (or see all available versions [here](/sdk/unity/versions/)) package and install it in your project. Note, that if an older version of Bugsee package was installed in your project, it is necessary to remove "Plugins\Bugsee" folder first.
+Download and install the latest [Bugsee.unitypackage](https://download.bugsee.com/sdk/unity/BugseeUnity-stable.unitypackage) (or see all available versions [here](/sdk/unity/v6/versions/)) package and install it in your project. Note, that if an older version of Bugsee package was installed in your project, it is necessary to remove "Plugins\Bugsee" folder first.
 This should install all the necessary files in the Assets folder of your project.
 
 Make sure the files were indeed added to your project and create a new empty object within a scene:

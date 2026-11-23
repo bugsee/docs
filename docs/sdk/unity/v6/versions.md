@@ -2,8 +2,12 @@
 title: "List of Bugsee Unity SDK releases"
 description: "Download links for all available Bugsee Unity SDK releases, including the latest stable version."
 sidebar_position: 11
-slug: "/sdk/unity/versions"
+slug: "/sdk/unity/v6/versions"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Unity SDK **6.x**, the current stable release. The new **7.x** SDK is in beta: see [Migrating from 6.x to 7.x](/sdk/unity/migration) to evaluate it, or the [7.x overview](/sdk/unity/overview) to start a new integration.
+:::
 
 ## Latest stable
 
