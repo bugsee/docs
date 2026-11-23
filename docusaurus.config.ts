@@ -222,7 +222,7 @@ const config: Config = {
             { label: 'Bugsee for Xamarin', to: '/sdk/xamarin/installation/' },
             { label: 'Bugsee for .NET/MAUI', to: '/sdk/dotnet/installation/' },
             { label: 'Bugsee for Flutter', to: '/sdk/flutter/installation/' },
-            { label: 'Bugsee for Unity', to: '/sdk/unity/installation/' },
+            { label: 'Bugsee for Unity', to: '/sdk/unity/v6/installation/' },
           ],
         },
         {
