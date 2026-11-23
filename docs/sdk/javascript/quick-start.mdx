@@ -100,12 +100,15 @@ launch('<your_app_token>', {
 });
 ```
 
-In the browser `launch()` returns a `Promise` of the client, and capture starts without awaiting it. If you need the client elsewhere, which the verify step and the other guides do, keep it in a module of your own and import it:
+In the browser `launch()` returns a `Promise` of the client, and capture starts without awaiting it. If you need the client elsewhere, which the verify step and the other guides do, launch **instead** from a module of your own (do not also call `launch()` in `main.ts`; a second call is ignored and reported) and import the client from it:
 
 ```ts title="bugsee.ts"
 import { launch } from '@bugsee/bugsee';
 
-export const bugsee = await launch('<your_app_token>', { appVersion: '1.4.2' });
+export const bugsee = await launch('<your_app_token>', {
+  appVersion: '1.4.2',
+  appBuild: '381',
+});
 ```
 
 This uses top-level `await`, which needs an ES module build with a target of ES2022 or newer (in Vite, `build.target: 'es2022'` or later). Importers of that module wait for `launch()` to settle. If your build cannot use top-level `await`, call `launch(...)` without it in your entry and `await` it where you need the client. On Node.js and Bun `launch()` returns the client directly, and `await` on it is harmless.
