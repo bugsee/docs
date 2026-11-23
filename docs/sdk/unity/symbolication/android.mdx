@@ -76,7 +76,7 @@ The package patches the generated Gradle project; you do not add a Gradle templa
 
 | Unity and Android Gradle plugin (AGP) | What the package does |
 | --- | --- |
-| Unity 6 with AGP 8.6 or newer | Applies the Bugsee Gradle plugin 4.1.1 with `ndk { enabled = true }`. |
+| Unity 6 with AGP 8.6 or newer | Applies the Bugsee Gradle plugin with `ndk { enabled = true }`. |
 | AGP below 8.6, for example Unity 2021.3 and 2022.3 | Does not apply the plugin, which needs AGP 8.6 or newer. On AGP 7.4.x and 8.0 to 8.5 it adds a small build-id block to a Groovy launcher file instead (none for a Kotlin DSL launcher). |
 
 In a build the Editor runs itself, the Gradle plugin finds no app token (the app gets its token from `Bugsee.Launch`), so its own uploads skip. The Editor's uploads in the table above do the work for every Unity version. See [Android build setup](/sdk/unity/build-setup/android) for the Player Settings checklist and the Gradle file layouts the patching understands.

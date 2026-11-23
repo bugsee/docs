@@ -15,7 +15,7 @@ You do not add the iOS SDK to Xcode yourself. When you build for iOS, the packag
 
 | Step | What it does |
 | --- | --- |
-| Swift package | Adds the Bugsee Swift package, `https://github.com/bugsee/spm.git` at version 7.1.0, and links its `Bugsee` product to the app target and to `UnityFramework`. Bugsee 7.x on iOS is Swift Package Manager only. |
+| Swift package | Adds the Bugsee Swift package, `https://github.com/bugsee/spm.git` at the version the package pins, and links its `Bugsee` product to the app target and to `UnityFramework`. Bugsee 7.x on iOS is Swift Package Manager only. |
 | Deployment target | Raises `IPHONEOS_DEPLOYMENT_TARGET` to 15.0 on both targets when it is lower. |
 | Debug symbols | Sets `DEBUG_INFORMATION_FORMAT` to `dwarf-with-dsym` for every configuration on both targets, so Debug builds also produce a dSYM to upload. |
 | Run Script | Adds a build phase named **Bugsee Upload Symbols** that uploads dSYMs and the IL2CPP line map. See [Symbol upload Run Script](#symbol-upload-run-script). |

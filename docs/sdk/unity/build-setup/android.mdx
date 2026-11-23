@@ -17,11 +17,11 @@ The package runs when Unity generates the Gradle project. It never needs a custo
 
 | Step | What it does |
 | --- | --- |
-| Native SDK | Declares `com.bugsee:bugsee-android` and `com.bugsee:bugsee-android-ndk`, both 7.6.0, in `unityLibrary/build.gradle`, between marker comments so a second run does not duplicate them. |
+| Native SDK | Declares `com.bugsee:bugsee-android` and `com.bugsee:bugsee-android-ndk`, at the version the package pins, in `unityLibrary/build.gradle`, between marker comments so a second run does not duplicate them. |
 | Repositories | Adds `mavenCentral()` to the project repositories if Unity's layout lacks it. A project that sets `FAIL_ON_PROJECT_REPOS` is never given project-level repositories. |
 | Manifest provider | Adds a content provider, `com.bugsee.unity.UnityWrapperProvider`, to the merged manifest. It registers the Bugsee extension modules that your app carries before `Application.onCreate`. |
 | R8 keep rules | Appends rules to `unityLibrary/proguard-unity.txt` so a Minify build keeps the wrapper classes that C# reaches over JNI. See [Minify and R8](#minify-and-r8). |
-| Gradle plugin | Applies the Bugsee Gradle plugin `4.1.1` when the generated project pins AGP 8.6 or later. See [Unity versions](#unity-versions). |
+| Gradle plugin | Applies the Bugsee Gradle plugin, at the version the package pins, when the generated project pins AGP 8.6 or later. See [Unity versions](#unity-versions). |
 | Symbols | Warns when the symbol settings cannot give file and line information, and can switch to full symbols for one build. See [Native symbols](#native-symbols). |
 
 If the project already declares the Bugsee Android SDK itself, through the External Dependency Manager (EDM4U), a custom `mainTemplate.gradle` or a local AAR, that declaration is kept and nothing is added next to it. The build log warns when its version differs from the one this package pins, or when the NDK artifact is missing.
@@ -42,9 +42,9 @@ The Bugsee Gradle plugin needs AGP 8.6 and Gradle 8.7 or later. The package read
 
 | Generated AGP | Typical Unity version | What the package applies |
 | --- | --- | --- |
-| 8.6 or later | Unity 6, for example 6000.0.84f1 with AGP 9.0.0 | The Gradle plugin `4.1.1` and `bugsee { ndk { enabled = true } }` in the launcher module. |
-| 7.4.x and 8.0 to 8.5 | Unity 2021.3 and 2022.3 (AGP 7.4.2, Gradle 7.5.1 in the releases checked) | No plugin. The package adds a small Gradle task to a Groovy launcher file that writes the build id asset, and the Editor uploads symbols itself. A Kotlin DSL launcher gets no task. |
-| Older than 7.4, or unreadable | The first Unity 2021.3 patch releases ship AGP 4.0.1 | No plugin and no build id task. The build logs an info line when it can read the AGP version, and a warning when it cannot. |
+| 8.6 or later | Unity 6 | The Bugsee Gradle plugin and `bugsee { ndk { enabled = true } }` in the launcher module. |
+| 7.4.x and 8.0 to 8.5 | Unity 2021.3 and 2022.3 (AGP 7.4.x) | No plugin. The package adds a small Gradle task to a Groovy launcher file that writes the build id asset, and the Editor uploads symbols itself. A Kotlin DSL launcher gets no task. |
+| Older than 7.4, or unreadable | Early Unity 2021.3 patch releases ship an older AGP | No plugin and no build id task. The build logs an info line when it can read the AGP version, and a warning when it cannot. |
 
 On the older AGPs, the plugin functions that the package recovers are these:
 

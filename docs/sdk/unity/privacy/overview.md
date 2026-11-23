@@ -13,7 +13,7 @@ Bugsee does not stream data continuously. The SDK keeps what it records in a rol
 
 The data in a report (screen video, touches, console logs, network traffic, breadcrumbs, attributes and the text a user types into the report dialog) can contain personal data. It is the responsibility of your application to keep sensitive data out of reports before they leave the device. Bugsee gives you a control at each point where data is recorded.
 
-The Unity package is a wrapper. It starts the native Android SDK (7.6.0) and iOS SDK (7.1.0), and the native SDKs do the recording and the redaction. Where a Unity API forwards to a native feature, the Unity pages say so and link to the native 7.x privacy page. On players other than Android and iOS, the Editor included, the package records nothing and the privacy calls do nothing.
+The Unity package is a wrapper. It starts the native Android and iOS SDKs, and the native SDKs do the recording and the redaction. Where a Unity API forwards to a native feature, the Unity pages say so and link to the native 7.x privacy page. On players other than Android and iOS, the Editor included, the package records nothing and the privacy calls do nothing.
 
 ## Where the controls are
 
@@ -40,7 +40,7 @@ You set every option below on the launch options you pass to `Bugsee.Launch`. Se
 | WebSocket traffic (iOS) | `CaptureWebSocket` | on | Set on `IOSLaunchOptions`. |
 | Breadcrumbs | `CaptureBreadcrumbs` | off | [Privacy: Breadcrumbs](/sdk/unity/privacy/breadcrumbs) |
 
-The defaults come from the option manifests of the two native SDK versions the package wraps. The data you add yourself is recorded as you pass it: [custom events and traces](/sdk/unity/events-and-traces), and the [user identifier and attributes](/sdk/unity/user-session-data).
+The defaults come from the option manifests of the native SDKs the package wraps, as shipped with this release. The data you add yourself is recorded as you pass it: [custom events and traces](/sdk/unity/events-and-traces), and the [user identifier and attributes](/sdk/unity/user-session-data).
 
 ## Options that record more
 

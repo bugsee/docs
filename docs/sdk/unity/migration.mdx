@@ -31,13 +31,13 @@ This guide compares Bugsee Unity SDK 6.0.x (the `.unitypackage`, namespace `Bugs
 | --- | --- | --- |
 | Distribution | `Bugsee.unitypackage`, imported into `Assets` | Unity Package Manager package `com.bugsee.unity`, from a git tag |
 | Where the files go | Three folders in `Assets`: `Assets/Plugins/Bugsee` (the scripts), `Assets/Plugins/iOS/Bugsee` (`Bugsee.a`, the headers, `BugseePlugin.m` and `BugseeAgent`) and `Assets/Plugins/Android/Bugsee-Unity.aar` | `Packages/`, read-only. The package bundles no native binaries. |
-| Native SDKs | Bundled in the plugin folder | Added at build time: Android SDK 7.6.0 through Gradle, iOS SDK 7.1.0 through Swift Package Manager |
+| Native SDKs | Bundled in the plugin folder | Added at build time: the Bugsee Android SDK through Gradle, the Bugsee iOS SDK through Swift Package Manager |
 | Launch | A `BugseeLauncher` component on an object in your first scene, or a call you make yourself | One call, `Launch`, from any script |
 | Namespace and class | `BugseePlugin`, class `Bugsee` (a `MonoBehaviour`) | Namespace `Bugsee`, static class `Bugsee` |
 
 Do these steps in order:
 
-1. Delete `Assets/Plugins/Bugsee` (the 6.x scripts), `Assets/Plugins/iOS/Bugsee` (the iOS library, headers and `BugseePlugin.m`) and `Assets/Plugins/Android/Bugsee-Unity.aar`. If the old AAR stays, it sits next to the Bugsee Android SDK 7.6.0 that 7.x adds through Maven.
+1. Delete `Assets/Plugins/Bugsee` (the 6.x scripts), `Assets/Plugins/iOS/Bugsee` (the iOS library, headers and `BugseePlugin.m`) and `Assets/Plugins/Android/Bugsee-Unity.aar`. If the old AAR stays, it sits next to the Bugsee Android SDK that 7.x adds through Maven.
 2. Remove the `BugseeLauncher` component from your scene, and the object you created for it, if it has no other use.
 3. Remove `gameObject.AddComponent<Bugsee>()` from any code that did a manual launch. In 6.x the `Bugsee` class was a component that had to be on a scene object, and the launcher gave that object the name `bgs_gameObject`. In 7.x `Bugsee` is a static class, so `AddComponent<Bugsee>()` does not compile, and nothing in your scene is required. The package creates its own helper object, `Bugsee.MainThreadDispatcher`, before the first scene loads.
 4. Remove the `BugseeEventsListener` component from your main camera if you added it for GPU information. The 7.x package has no such component.
@@ -278,7 +278,7 @@ BugseeSdk.Appearance
 
 ## 4. Launch options
 
-The tables list the 6.x property, its 7.x counterpart and both defaults. 6.x defaults are the values its `AndroidLaunchOptions` and `IOSLaunchOptions` set in their constructors, which `Launch(token)` sent for you. 7.x defaults are those of the native SDKs the package pins (Android SDK 7.6.0, iOS SDK 7.1.0). Every 7.x property is on `AndroidLaunchOptions` and `IOSLaunchOptions` unless the Platform column says otherwise. The full list is in [Configuration](/sdk/unity/configuration).
+The tables list the 6.x property, its 7.x counterpart and both defaults. 6.x defaults are the values its `AndroidLaunchOptions` and `IOSLaunchOptions` set in their constructors, which `Launch(token)` sent for you. 7.x defaults are those shipped with this release, from the native SDKs the package pins. Every 7.x property is on `AndroidLaunchOptions` and `IOSLaunchOptions` unless the Platform column says otherwise. The full list is in [Configuration](/sdk/unity/configuration).
 
 ### 4.1 Renamed options
 

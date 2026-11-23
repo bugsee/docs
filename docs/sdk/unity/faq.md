@@ -116,7 +116,7 @@ Always keep a `#tag` in the URL. Without one, Unity follows the repository's def
 
 **14. Which native SDK versions does this release use?**
 
-Bugsee Android SDK 7.6.0 (with the NDK module 7.6.0), Bugsee iOS SDK 7.1.0, Bugsee Gradle plugin 4.1.1 and `bugsee-cli` 0.9.0. The package adds the native SDKs to the generated Gradle and Xcode projects when you build. See [Overview](/sdk/unity/overview#versions).
+The package pins the Bugsee Android SDK (with its NDK module), the Bugsee iOS SDK, the Bugsee Gradle plugin and the default `bugsee-cli` version it was tested with. The [release notes](/sdk/unity/release-notes) list the versions of each release. The package adds the native SDKs to the generated Gradle and Xcode projects when you build. See [Overview](/sdk/unity/overview#versions).
 
 <br />
 

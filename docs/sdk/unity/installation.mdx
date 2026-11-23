@@ -83,8 +83,8 @@ The package depends on three built-in Unity modules, which Unity resolves for yo
 
 You do not add a scoped registry, a dependency-resolve step or custom Gradle templates. The package wires the native SDKs in when you build:
 
-- **Android**: every build declares `com.bugsee:bugsee-android` and `com.bugsee:bugsee-android-ndk`, version 7.6.0, in the Gradle project that Unity generates. It adds `mavenCentral()` to the project repositories if they lack it. See [Android build setup](/sdk/unity/build-setup/android).
-- **iOS**: every export adds the Bugsee Swift package (`https://github.com/bugsee/spm`, version 7.1.0) to the Xcode project. See [iOS build setup](/sdk/unity/build-setup/ios).
+- **Android**: every build declares `com.bugsee:bugsee-android` and `com.bugsee:bugsee-android-ndk` in the Gradle project that Unity generates. It adds `mavenCentral()` to the project repositories if they lack it. See [Android build setup](/sdk/unity/build-setup/android).
+- **iOS**: every export adds the Bugsee Swift package (`https://github.com/bugsee/spm`) to the Xcode project. See [iOS build setup](/sdk/unity/build-setup/ios).
 
 If your project already uses the External Dependency Manager (EDM4U) for other SDKs, it keeps working. If the project already declares `com.bugsee:bugsee-android` itself, through EDM4U, a custom `mainTemplate.gradle` or a local AAR, the package keeps that declaration and adds nothing next to it. The build log warns when its version differs from the one this package pins.
 

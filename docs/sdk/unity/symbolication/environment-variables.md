@@ -32,7 +32,7 @@ A Unity Editor started from the Hub or the Finder does not inherit your shell's 
 | Variable | Platform | Default | What it does |
 | --- | --- | --- | --- |
 | `BUGSEE_CLI_PATH` | Android, iOS | Unset | The `bugsee-cli` binary to use, as a path or a command name on `PATH`. The Editor, the iOS Run Script and the Gradle plugin of an exported project all read it. The Editor warns when the CLI it names is older than 0.8.1. |
-| `BUGSEE_CLI_VERSION` | Android, iOS | `0.9.0` | The CLI release to download. A leading `v` is ignored. A value that is not a release version, or is older than 0.8.1, is ignored with a warning. For the Mono step, a value below 0.9.0 is ignored. The Run Script looks for this release in the cache first. |
+| `BUGSEE_CLI_VERSION` | Android, iOS | The default CLI version the package downloads (see the release notes) | The CLI release to download. A leading `v` is ignored. A value that is not a release version, or is older than 0.8.1, is ignored with a warning. For the Mono step, a value below 0.9.0 is ignored. The Run Script looks for this release in the cache first. |
 | `BUGSEE_NO_CLI_DOWNLOAD` | Android | Unset | Flag. The Editor does not download a CLI. Without a token the Editor never downloads. |
 | `BUGSEE_CLI_BASE_URL` | Android | `https://download.bugsee.com/cli` | A mirror to download the CLI from. HTTPS only. |
 
