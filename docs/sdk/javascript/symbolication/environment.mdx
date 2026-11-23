@@ -72,7 +72,7 @@ The CI commit id comes from the first variable that is set in this list: `GITHUB
 - It happens even without a token. Set `disabled: true` to turn it off.
 - A constant that you define yourself is never overridden. If it is a plain string, such as `JSON.stringify('2.4.1')`, the upload is recorded with it too. If it is an expression the plugin cannot read, the upload uses only an explicit option or `BUGSEE_APP_*` variable, never a detected value, and the plugin warns until you pass one.
 
-**At run time**, on Node.js and Bun, the SDK looks for the version in this order: the `appVersion` option of `launch()`, the baked constant, the `BUGSEE_APP_VERSION` variable, then the nearest `package.json`. The build comes from the `appBuild` option, the baked constant, `BUGSEE_APP_BUILD`, then the CI commit variables above. In a browser it is the option or the baked constant.
+**At run time**, on Node.js and Bun, the SDK looks for the version in this order: the `appVersion` option of `launch()`, the baked constant, the `BUGSEE_APP_VERSION` variable, then the nearest `package.json`. The build comes from the `appBuild` option, the baked constant, `BUGSEE_APP_BUILD`, then the CI commit variables above. In a browser the order is the `appVersion` and `appBuild` options, then the baked constants (which you can also define yourself or set as globals), then the `bugsee:app-version` and `bugsee:app-build` meta tags in the page. A browser has no environment variables or `package.json` at run time.
 
 To keep the two sides identical, bake the value at build time and leave `appVersion` out of `launch()`.
 

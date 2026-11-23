@@ -113,7 +113,7 @@ Upload source maps for each release, with the same version and build you pass to
 
 **18. Reports show version `0.0.0`.**
 
-The SDK could not detect your app version. Pass `appVersion` to `launch()`; that works in every runtime. On Node.js and Bun the SDK also reads `BUGSEE_APP_VERSION` and the `package.json` version at run time. In a browser it uses a constant that the Vite or webpack plugin bakes in at build time. See [Quick start](/sdk/javascript/quick-start#app-version-and-build).
+The SDK could not detect your app version. Pass `appVersion` to `launch()`; that works in every runtime. On Node.js and Bun the SDK also reads `BUGSEE_APP_VERSION` and the `package.json` version at run time. In a browser it uses, in this order, a constant that the Vite or webpack plugin bakes in at build time (or that you define yourself), then `bugsee:app-version` and `bugsee:app-build` meta tags. See [Quick start](/sdk/javascript/quick-start#app-version-and-build).
 
 <br />
 
