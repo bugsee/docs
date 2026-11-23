@@ -123,9 +123,9 @@ const config: Config = {
           { from: '/sdk/react-native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
           { from: '/sdk/react_native/v6', to: '/sdk/react_native/v6/installation/' },
           { from: '/sdk/react_native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
-          // Unity 7.x has an Overview page; 6.x moved under /sdk/unity/v6/.
-          { from: '/sdk/unity', to: '/sdk/unity/overview/' },
-          { from: '/sdk/unity/privacy', to: '/sdk/unity/privacy/overview/' },
+          // 6.x moved under /sdk/unity/v6/. The bare Unity routes stay on 6.x until 7.x is GA.
+          { from: '/sdk/unity', to: '/sdk/unity/v6/installation/' },
+          { from: '/sdk/unity/privacy', to: '/sdk/unity/v6/privacy/overview/' },
           { from: '/sdk/unity/v6', to: '/sdk/unity/v6/installation/' },
           { from: '/sdk/unity/v6/privacy', to: '/sdk/unity/v6/privacy/overview/' },
           // Unity 6.x routes with no 7.x page at the same address keep their 6.x content during the beta.
