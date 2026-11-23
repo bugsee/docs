@@ -83,7 +83,7 @@ await relaunch({ captureNetworkBodies: false });
 ```
 
 - It returns a `Promise` of the new client on every runtime.
-- Like the mobile SDKs, a relaunch starts from the defaults: the options you pass are the new options, and omitted options go back to their default. A few settings are kept from the previous launch: your `endpoint`, `appId`, `appVersion` and `appBuild`, `appRoot`, `dataDir`, `onError`, and the network, log and breadcrumb filters, `urlSanitizer` and report handler you set. See [Configuration](/sdk/javascript/configuration#options-kept-by-relaunch).
+- Like the mobile SDKs, a relaunch starts from the defaults: the options you pass are the new options, and omitted options go back to their default. A few settings are kept from the previous launch: your `endpoint`, `appId`, `appVersion` and `appBuild`, `appRoot`, `dataDir`, `onError` and `urlSanitizer`. The network, log and breadcrumb filters and the report handler are not launch options but are installed on the client, so they are not kept: install them again on the client that `relaunch()` returns. See [Configuration](/sdk/javascript/configuration#options-kept-by-relaunch).
 - A launch that is still in progress is waited for first.
 - The previous client is drained for up to 5 seconds, so a stuck upload cannot hang the relaunch.
 - It rejects when nothing has been launched yet, because there is no token to reuse.
@@ -187,7 +187,7 @@ The SDK emits `RelaunchedAfterCrash` only when a launch finds evidence on storag
 
 ## Related pages
 
-- [Installation](/sdk/javascript/installation) — launch the SDK for the first time.
+- [Quick start](/sdk/javascript/quick-start) — launch the SDK for the first time.
 - [Configuration](/sdk/javascript/configuration) — every launch option.
 - [Report handler](/sdk/javascript/report-handler) — change or veto a report before it is assembled.
 - [Bug reporting](/sdk/javascript/manual/bug-reporting) — upload reports and show the report dialog.

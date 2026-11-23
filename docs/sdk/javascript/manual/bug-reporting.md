@@ -151,6 +151,9 @@ import { bugsee } from './bugsee';
 
 const cart = { items: 3, total: 42.5 };
 
+// Bytes of a real image, here fetched from your app. Use any PNG your app produces.
+const screenshot = new Uint8Array(await (await fetch('/debug/cart.png')).arrayBuffer());
+
 await bugsee.upload({
   summary: 'Wrong total in cart',
   attachments: [
@@ -160,7 +163,7 @@ await bugsee.upload({
       mimeType: 'application/json',
       fileName: 'cart.json',
     },
-    { name: 'Screenshot', data: new Uint8Array([137, 80, 78, 71]), mimeType: 'image/png' },
+    { name: 'Screenshot', data: screenshot, mimeType: 'image/png' },
   ],
 });
 ```

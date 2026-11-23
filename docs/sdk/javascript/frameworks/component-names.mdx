@@ -57,6 +57,17 @@ export default {
 };
 ```
 
+On SvelteKit 3 there is no `svelte.config.js`. Pass `preprocess` to the `sveltekit()` Vite plugin instead:
+
+```ts title="vite.config.ts"
+import { componentAnnotatePreprocessor } from '@bugsee/svelte-plugin-component-annotate';
+import { sveltekit } from '@sveltejs/kit/vite';
+
+export default {
+  plugins: [sveltekit({ preprocess: [componentAnnotatePreprocessor()] })],
+};
+```
+
 The name comes from the file name, so `UserCard.svelte` becomes `UserCard`. For `index.svelte` and SvelteKit route files, the folder name is used.
 
 | Option | Type | Default | Description |

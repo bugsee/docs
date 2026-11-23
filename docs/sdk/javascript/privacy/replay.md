@@ -143,13 +143,15 @@ import { bugsee } from './bugsee';
 async function showCardForm(): Promise<void> {
   bugsee.startBlackout();
   try {
-    await openCardForm(); // resolves when the form has been removed from the page
+    await openCardForm(); // resolves when the user submits or cancels
   } finally {
+    closeCardForm(); // remove the form on success AND on failure, before the blackout ends
     bugsee.endBlackout();
   }
 }
 
 declare function openCardForm(): Promise<void>;
+declare function closeCardForm(): void; // removes the form from the page; safe to call twice
 ```
 
 - A blackout is on or off. Calling `startBlackout()` twice and then `endBlackout()` once ends it.

@@ -36,7 +36,7 @@ The controls work in four places:
 | Network | Yes, with bodies up to 20 KB | Redacts sensitive headers, URL parameters, body keys and secret shapes. |
 | Breadcrumbs | Yes | None. Redact with a filter. |
 | Attributes, user identifier | Only what you set | None. |
-| Typed text | No | Input values are masked, and typed characters are not recorded as input events. |
+| Typed text | No | Input values are masked by default, and typed characters are not recorded as input events. `maskAllInputs: false` records ordinary input values. Sensitive fields stay masked. |
 
 ## Things to know
 

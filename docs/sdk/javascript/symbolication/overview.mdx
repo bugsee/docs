@@ -48,7 +48,7 @@ The plugins run the same CLI that you can run by hand. The CLI works on any fini
 ## Requirements and limits
 
 - **Composed maps.** If your build has several transform steps, such as a separate minifier after the bundler, the map you upload must map the shipped code straight to your original sources. The CLI uploads the map it finds on disk and does not compose layers itself.
-- **The stamp rewrites your bundles.** It appends bytes to each `.js`, `.cjs` and `.mjs` file. A build that pins script hashes with Subresource Integrity breaks if the hashes are computed before the stamp. The plugins detect this and refuse or warn instead of shipping a page that does not load.
+- **The stamp rewrites your bundles.** It appends bytes to each `.js`, `.cjs` and `.mjs` file. A build that pins script hashes with Subresource Integrity breaks if the hashes are computed before the stamp. When the plugin stamps after the build, it refuses to stamp a build that pins hashes. When the stamp happens inside the build (webpack), the plugin detects a hash that no longer matches but only warns by default: the emitted files are not restored and the build is not stopped, so the deployed scripts can be rejected by browsers. Compute integrity hashes after the stamp, or set `failOnError: true` to fail the build on a detected mismatch.
 - **Bytecode targets are not covered.** This SDK is for web, Node.js and Bun. It does not symbolicate JavaScript compiled to bytecode.
 - **Unbundled code.** Plain `tsc` or `tsx` output has no bundler hook, so use the CLI.
 

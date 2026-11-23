@@ -89,7 +89,7 @@ export default withBugsee((env) => env.BUGSEE_APP_TOKEN, {
 });
 ```
 
-Add the secret with `wrangler secret put BUGSEE_APP_TOKEN`.
+Add the secret with `wrangler secret put BUGSEE_APP_TOKEN`. For `wrangler dev`, put `BUGSEE_APP_TOKEN=<your_app_token>` in a `.dev.vars` file instead, because local development does not read the deployed secret.
 
 Each handler runs in its own Bugsee context. Errors are captured and rethrown, and the upload is flushed through that handler's `ctx.waitUntil`, so it survives the isolate freezing after the response. Each non-fetch trigger is labeled (cron, queue, email, tail), so a report says which trigger fired. Email addresses and message bodies are never captured. For `fetch`, the report includes Cloudflare's coarse geo and network metadata from `request.cf` (colo, country, city, timezone, ASN, TLS version).
 
@@ -100,6 +100,7 @@ Each handler runs in its own Bugsee context. Errors are captured and rethrown, a
 A Durable Object is bound separately from the module handlers, so wrap its export with `instrumentDurableObject`.
 
 ```ts title="src/counter.ts"
+import { DurableObject } from 'cloudflare:workers';
 import { instrumentDurableObject } from '@bugsee/cloudflare';
 
 class CounterBase extends DurableObject<Env> {
@@ -162,7 +163,7 @@ Upload source maps for your Worker bundle so stack traces are readable. See [Sym
 
 ## Verify
 
-1. Deploy the Worker (or run `wrangler dev`) with the secret set.
+1. Deploy the Worker with the secret set, or run `wrangler dev` with `BUGSEE_APP_TOKEN` in `.dev.vars`.
 2. Trigger an error in a handler:
 
 ```ts

@@ -21,7 +21,7 @@ Both directions need performance monitoring to stay on, which is the default.
 
 ## Export transactions to OTLP
 
-Set `otelExportUrl` to the OTLP/HTTP traces endpoint of your backend:
+Set `otelExportUrl` to the OTLP/HTTP traces endpoint of your backend. This example sends an ingest key, so it is for **server code only** (Node.js and Bun):
 
 ```ts
 import { launch } from '@bugsee/bugsee';
@@ -29,6 +29,17 @@ import { launch } from '@bugsee/bugsee';
 launch('<your_app_token>', {
   otelExportUrl: 'https://api.honeycomb.io/v1/traces',
   otelExportHeaders: { 'x-honeycomb-team': '<your_key>' },
+  otelExportResource: { 'service.name': 'api' },
+});
+```
+
+In a browser, send to your own collector or proxy, which adds the key on the server. Put no credential in the page:
+
+```ts
+import { launch } from '@bugsee/bugsee';
+
+await launch('<your_app_token>', {
+  otelExportUrl: 'https://collector.example.com/v1/traces',
   otelExportResource: { 'service.name': 'web' },
 });
 ```
@@ -36,7 +47,7 @@ launch('<your_app_token>', {
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `otelExportUrl` | `string \| URL` | none | The full OTLP/HTTP traces endpoint, for example `https://collector.example.com/v1/traces`. An empty value means no export. Any other type is reported through `onError` and also means no export. |
-| `otelExportHeaders` | `Record<string, string>` | none | Headers sent with each export, such as an API key. Use lowercase keys. |
+| `otelExportHeaders` | `Record<string, string>` | none | Headers sent with each export, such as an API key. Use lowercase keys. Headers set in a browser are visible to every user of the page, so do not put a credential there. |
 | `otelExportResource` | `Record<string, unknown>` | none | OTLP resource attributes, such as `service.name`. |
 
 How the export works:

@@ -112,12 +112,12 @@ The adapter does not change the launch options. These are the ones that matter m
 | Option | Default | Description |
 | --- | --- | --- |
 | `instrumentIncomingRequests` | `true` | Automatic per-request context and `http.server` transaction. See the [backend overview](/sdk/javascript/backend/overview#incoming-request-instrumentation). |
-| `captureLocalVariables` | `false` | Attach local variables to the stack frames of a reported error. See [Diagnostics](/sdk/javascript/issue-detection/diagnostics). |
+| `captureLocalVariables` | `false` | Attach local variables to the stack frames of a reported error. Always off on Bun. See [Diagnostics](/sdk/javascript/issue-detection/diagnostics). |
 | `captureSourceContext` | `false` | Attach the source lines around each stack frame. See [Diagnostics](/sdk/javascript/issue-detection/diagnostics). |
 | `detectHangs` | `true` | Report event-loop hangs. See [Hangs](/sdk/javascript/issue-detection/hangs). |
 | `profiling` | `false` | Attach a rolling CPU profile to reports. See [Diagnostics](/sdk/javascript/issue-detection/diagnostics). |
 
-`@bugsee/elysia` installs `@bugsee/bugsee` for you and re-exports everything from its Node entry, so `launch` and the SDK types come from this one package. You do not install or import `@bugsee/bugsee` separately. On Bun, see [Running on Bun](/sdk/javascript/backend/overview#running-on-bun).
+`@bugsee/elysia` installs `@bugsee/bugsee` for you and re-exports everything from its Node entry, so `launch` and the SDK types come from this one package. You do not install or import `@bugsee/bugsee` separately. On Bun, use `@bugsee/bun` for `launch()` and note that it has no `http.server` transaction; see [Running on Bun](/sdk/javascript/backend/overview#running-on-bun).
 
 ## Related pages
 

@@ -29,7 +29,7 @@ If your SvelteKit app has server-side code, use `@bugsee/sveltekit`.
 
 ### Install
 
-Install the umbrella, which provides `launch()`, next to the adapter.
+Install the adapter. It pulls in `@bugsee/bugsee` and re-exports it, so `launch()` comes from the adapter and you do not add `@bugsee/bugsee` yourself.
 
 <Tabs groupId="package-manager">
   <TabItem value="npm" label="npm" default>
@@ -72,10 +72,12 @@ import { launch } from '@bugsee/svelte';
 launch('<your_app_token>');
 ```
 
-In SvelteKit, wire the client error hook:
+That is the entry of a plain Svelte app. SvelteKit does not load `src/main.ts`. In a client-only SvelteKit app, launch and wire the error hook in `src/hooks.client.ts`, which SvelteKit runs when the app starts in the browser:
 
 ```ts title="src/hooks.client.ts"
-import { handleErrorWithBugsee } from '@bugsee/svelte';
+import { launch, handleErrorWithBugsee } from '@bugsee/svelte';
+
+launch('<your_app_token>');
 
 export const handleError = handleErrorWithBugsee();
 ```

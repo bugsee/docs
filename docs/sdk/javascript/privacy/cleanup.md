@@ -16,7 +16,7 @@ The JavaScript SDK has no call that deletes everything it has collected. What yo
 | Runtime | Rolling capture | Reports waiting for upload |
 | --- | --- | --- |
 | Browser | IndexedDB when the page has IndexedDB and Web Locks, otherwise memory. | IndexedDB, or memory when persistence is off. |
-| Node.js and Bun | Files under a data directory (default), or memory. | The same data directory. |
+| Node.js and Bun | Files under a data directory (default), or memory with `capturedDataStore: 'memory'`. | The same data directory. With `capturedDataStore: 'memory'` and no `dataDir`, memory. |
 | Edge runtimes and Cloudflare | Memory. | Memory. A report is sent when an incident happens. |
 
 Data in memory is gone when the page or process ends. Data on disk or in IndexedDB is kept so that a crash does not lose the recording that led to it. On the next launch the SDK finds what a previous run left behind, sends it, and deletes it.
@@ -35,7 +35,8 @@ await launch('<your_app_token>', { persist: false });
 ```ts
 import { launch } from '@bugsee/bugsee';
 
-// Node.js and Bun: no files, nothing survives a restart
+// Node.js and Bun: no files, nothing survives a restart.
+// Do not also set `dataDir`: with it, reports waiting for upload are still written there.
 launch('<your_app_token>', { capturedDataStore: 'memory' });
 ```
 
@@ -44,7 +45,7 @@ The cost is the same in both: if the page or process dies before a report is ass
 | Option | Runtime | Type | Default | Description |
 | --- | --- | --- | --- | --- |
 | `persist` | Browser | `boolean` | `true` where IndexedDB and Web Locks exist | Keep the capture window and report queue in IndexedDB. `false` keeps them in memory. |
-| `capturedDataStore` | Node.js, Bun | `'disk' \| 'memory'` | `'disk'` | Where the capture buffer lives. |
+| `capturedDataStore` | Node.js, Bun | `'disk' \| 'memory'` | `'disk'` | Where the capture buffer lives. `'memory'` without `dataDir` also keeps reports waiting for upload in memory. With a `dataDir`, those reports are still written there. |
 | `recover` | Browser, Node.js, Bun | `boolean` | `true` | Persist each report before upload and send those left by a previous run at the next launch. It needs a persistent location. |
 | `maxRecordingTime` | All | `number` | `60` | Seconds of history kept in the rolling window. |
 | `maxDataSize` | All | `number` | `20` in the browser (30 with IndexedDB), `50` on Node.js and Bun | The most captured data kept, in megabytes. |

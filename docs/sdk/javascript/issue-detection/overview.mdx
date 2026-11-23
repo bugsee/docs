@@ -28,7 +28,7 @@ Errors you catch and report yourself with `logException` go through the same pip
 
 - **Detectors are providers.** Each one watches a source: the `error` and `unhandledrejection` events of the window, the `uncaughtException` and `unhandledRejection` events of the process, a watchdog on the event loop, or the network capture.
 - **Errors you report yourself are rate limited.** `logException` drops the same thrown object when it is reported twice, and accepts at most 100 calls in any 60-second window. HTTP errors have their own limits, described on their page.
-- **Reports are delivered durably.** On Node.js and Bun, and in a browser with IndexedDB, a report is stored before it is uploaded. A report left behind by a process that was killed is uploaded on the next launch.
+- **Reports are delivered durably.** On Node.js and Bun, and in a browser with IndexedDB and Web Locks, a report is stored before it is uploaded (`recover`, on by default), and a report left behind by a process that was killed is uploaded on the next launch. With `persist: false` in a browser, or `capturedDataStore: 'memory'` without `dataDir` on Node.js and Bun, reports stay in memory and are not recovered. See [Cleanup](/sdk/javascript/privacy/cleanup).
 - **Stack traces are symbolicated.** Minified frames are mapped back to your source when you upload source maps. See [Symbolication](/sdk/javascript/symbolication/overview).
 
 ## Switches

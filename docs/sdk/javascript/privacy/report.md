@@ -41,9 +41,10 @@ import { bugsee } from './bugsee';
 bugsee.setReportHandler({
   before: (request) => {
     const { report } = request;
-    // Never send the stack text of a certain error
+    // Do not send a report about a certain error at all. Clearing the description
+    // would not help: the message and stack are also in the crash detail.
     if (report.summary?.includes('PaymentError')) {
-      report.description = undefined;
+      return null;
     }
     // Do not report on behalf of staff accounts
     if (report.email?.endsWith('@example.com')) {
@@ -85,7 +86,7 @@ An attachment is exactly what you pass. It is not redacted, masked or filtered. 
 
 ## Error messages
 
-The summary and description of an error report come from the error's message and stack. A message such as `User jane@example.com not found` ends up in the report. Keep personal data out of error messages, or redact them in the report handler.
+The summary and description of an error report come from the error's message and stack. A message such as `User jane@example.com not found` ends up in the report. Keep personal data out of error messages. The handler cannot remove the message or stack from the crash detail; veto the report with `return null` if it must not be sent.
 
 ## Related pages
 

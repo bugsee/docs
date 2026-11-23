@@ -17,7 +17,7 @@ On a server, Bugsee records what your process was doing around a failure and tie
 ## What Bugsee records
 
 - **Per-request context.** A request context holds an id, the trace of the request and, if you provide it, the end-user identity. Everything Bugsee captures while the request runs (logs, network calls, breadcrumbs) is tagged with it.
-- **An `http.server` transaction per request.** It is named after the route, carries the method and the response status, and continues the trace of the caller when the request has a `traceparent` header. See [Performance](/sdk/javascript/performance).
+- **An `http.server` transaction per request** (Node.js; not on Bun with `@bugsee/bun`, see [Running on Bun](#running-on-bun)). It is named after the route, carries the method and the response status, and continues the trace of the caller when the request has a `traceparent` header. See [Performance](/sdk/javascript/performance).
 - **Errors.** A framework adapter reports an error your route throws, with the request context merged into the report.
 - **Process-level signals.** Uncaught exceptions, unhandled rejections and event-loop hangs are detected for the whole process. See [Issue detection](/sdk/javascript/issue-detection/overview).
 
@@ -71,9 +71,11 @@ A framework that catches a thrown error and turns it into a 500 response hides i
 
 ```ts
 launch('<your_app_token>', {
-  tracePropagationTargets: ['https://billing.internal.example.com', /\.internal\.example\.com$/],
+  tracePropagationTargets: ['https://billing.internal.example.com/', /^https:\/\/[^/]+\.internal\.example\.com(\/|$)/],
 });
 ```
+
+Targets are tested against the full request URL, including the path. Anchor a regular expression at the start with the scheme and end it at the host boundary, as above. A bare host string such as `'https://billing.internal.example.com'` also matches `https://billing.internal.example.com.attacker.test/`, so end a string with `/`.
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -127,7 +129,7 @@ import { launch } from '@bugsee/bun';
 import { setupElysia } from '@bugsee/elysia';
 ```
 
-The adapter's setup function and the rest of its API are the same. See [Bun](/sdk/javascript/platforms/bun).
+The adapter's setup function and the rest of its API are the same, with two differences. `@bugsee/bun` does not include the performance extension, so there is no `http.server` transaction on Bun; the request context, error reporting and trace tagging still work. And `captureLocalVariables` is always off on Bun. See [Bun](/sdk/javascript/platforms/bun).
 
 ## Requirements
 

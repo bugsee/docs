@@ -69,6 +69,7 @@ BUGSEE_APP_TOKEN=<your_app_token> bugsee-cli debug-files upload ./dist \
 
 - **Build with external source maps.** For example `tsc --sourceMap`, `bun build --sourcemap=external` or `esbuild --sourcemap`.
 - **Run `inject` before you deploy.** The deployed bundle must carry the debug ID and the runtime stub that the SDK reads. Stamping is idempotent, so running it on every build is safe.
+- **Set the version and build.** `--version` and `--build` are required. Export `APP_VERSION` and `APP_BUILD` (the values your app launches with) before the build, so no recipe on this page sends an empty value.
 - **Export the token.** The CLI reads `BUGSEE_APP_TOKEN` from the environment. It does **not** read the `.env.bugsee-build-plugin` file that the plugins read.
 - **Delete the maps** from the folder you deploy, if you do not want them public. The plugins do it for you by default. A command such as `find dist -name "*.map" -delete` does it after a successful upload.
 
@@ -94,12 +95,12 @@ export default defineConfig({
   sourcemap: true,
   onSuccess:
     'bugsee-cli sourcemaps inject dist && ' +
-    'bugsee-cli debug-files upload dist --type sourcemaps ${APP_VERSION:+--version "$APP_VERSION"} ${APP_BUILD:+--build "$APP_BUILD"} && ' +
+    'bugsee-cli debug-files upload dist --type sourcemaps --version "${APP_VERSION:?set APP_VERSION}" --build "${APP_BUILD:?set APP_BUILD}" && ' +
     'find dist -name "*.map" -delete',
 });
 ```
 
-The `${VAR:+...}` parts leave a flag out when its variable is not set. Otherwise an empty `--version ""` would be sent. The same recipe applies to any tool that runs esbuild with `write: false`.
+`--version` and `--build` are required by the upload. The `${VAR:?...}` parts stop the build with a message when a variable is not set, instead of uploading with an empty value. The same recipe applies to any tool that runs esbuild with `write: false`.
 
 The shipped bundles keep their `//# sourceMappingURL` comment, which then points at a file that is no longer there. This is harmless.
 
@@ -141,6 +142,10 @@ bugsee-cli debug-files upload ./dist --type sourcemaps \
 ```
 
 File, line and column still resolve. Reports then show no source lines. The maps on disk are not changed.
+
+:::caution
+Stripping can fail open. If the CLI cannot process a map, it logs a warning and uploads the map unstripped, and the upload still succeeds (CLI 0.8.0 and later; see the [CLI release notes](/cli/release-notes)). If your policy forbids uploading source code, read the CLI output in CI, or strip the maps and check that `sourcesContent` is gone before you upload.
+:::
 
 ## Check the result
 

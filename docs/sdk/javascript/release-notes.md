@@ -32,7 +32,7 @@ A fix for stack traces of thrown values that are not `Error` objects.
 
 ## 0.1.0-beta.1 to 0.1.0-beta.6
 
-The initial public beta line. These releases introduced the SDK across browsers, Node.js, Bun, Electron, Cloudflare Workers, Vercel Edge and Web and Service Workers, with the framework, meta-framework and backend adapters, session replay, performance monitoring, OpenTelemetry interop and the source-map tooling. Per-release details are not listed here.
+The initial public beta line. These releases introduced the SDK across browsers, Node.js, Bun, Electron, Cloudflare Workers, Vercel Edge and Web and Service Workers, with the framework, meta-framework and backend adapters, session replay, performance monitoring, OpenTelemetry interop and the source-map tooling. Changes before beta.7 are not itemized here.
 
 ## Compatibility
 
@@ -43,10 +43,10 @@ The initial public beta line. These releases introduced the SDK across browsers,
 | Module formats | ESM and CommonJS |
 | Language level | ES2022 |
 
-Upgrading between betas: update every `@bugsee/*` package together, and check these notes for behavior changes. Betas can change between releases.
+Upgrading between betas: update every `@bugsee/*` package together, and check these notes for behavior changes. Notes before beta.7 are not itemized, so if you upgrade from one of those betas, re-test your launch, privacy filters and upload setup. Betas can change between releases.
 
 ## Related pages
 
-- [Installation](/sdk/javascript/installation) — add the package and launch the SDK.
+- [Quick start](/sdk/javascript/quick-start) — add the package, launch the SDK and send a first report.
 - [Packages](/sdk/javascript/packages) — which packages to install.
 - [FAQ](/sdk/javascript/faq) — practical questions and answers.

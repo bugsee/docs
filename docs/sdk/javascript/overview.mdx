@@ -39,7 +39,7 @@ The SDK turns problems into reports automatically:
 ## How it works
 
 - **One package, the right build.** `@bugsee/bugsee` resolves to the browser, Node.js, Bun, Cloudflare, Vercel Edge or worker build through package `exports` conditions, so the same import works everywhere.
-- **Launch once, early.** `launch(appToken, options)` starts the SDK; see [Installation](/sdk/javascript/installation) and [Lifecycle & status](/sdk/javascript/lifecycle). In the browser it returns a `Promise` of the client; on servers, edge and workers it returns the client directly.
+- **Launch once, early.** `launch(appToken, options)` starts the SDK; see [Quick start](/sdk/javascript/quick-start) and [Lifecycle & status](/sdk/javascript/lifecycle). In the browser it returns a `Promise` of the client; on servers, edge and workers it returns the client directly.
 - **Adapters for your framework.** Frontend adapters report render errors and name routes, meta-framework adapters cover the server and the browser in one install, and backend adapters add per-request context and trace correlation. Each has its own page: [Platforms](/sdk/javascript/platforms/browser), [Frameworks](/sdk/javascript/frameworks/react) and [Backend](/sdk/javascript/backend/overview).
 - **Privacy at capture time.** Replay masks text and inputs by default, network data is redacted by default, and you can filter or drop network, log and breadcrumb data before it is recorded; see [Privacy](/sdk/javascript/privacy/overview).
 - **Readable production stack traces.** The Vite and webpack plugins, or the `bugsee-cli` tool, stamp debug IDs into your bundles and upload source maps; see [Symbolication](/sdk/javascript/symbolication/overview).
@@ -63,11 +63,12 @@ Some features need a capability the runtime may lack. Persistence across reloads
 
 ## Get started
 
-Head to [Installation](/sdk/javascript/installation) to add the package, get an app token and send a first report. [Configuration](/sdk/javascript/configuration) lists every launch option.
+Head to the [Quick start](/sdk/javascript/quick-start) to add the package, get an app token and send a first report, or to [Installation](/sdk/javascript/installation) to choose the package for your runtime or framework. [Configuration](/sdk/javascript/configuration) lists every launch option.
 
 ## Related pages
 
-- [Installation](/sdk/javascript/installation) — add the package, launch the SDK and verify a report.
+- [Quick start](/sdk/javascript/quick-start) — add the package, launch the SDK and verify a report.
+- [Installation](/sdk/javascript/installation) — choose the package for your runtime or framework.
 - [Configuration](/sdk/javascript/configuration) — launch options for every runtime.
 - [Lifecycle & status](/sdk/javascript/lifecycle) — launch, stop, relaunch and lifecycle events.
 - [Packages](/sdk/javascript/packages) — which packages to install and which are internal.

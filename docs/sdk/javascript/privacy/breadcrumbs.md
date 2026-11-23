@@ -51,7 +51,7 @@ During a [blackout](/sdk/javascript/privacy/replay#blackout) these breadcrumbs a
 
 `setBreadcrumbFilter` sees every breadcrumb before it is recorded: yours, the automatic ones and the adapters'. Return the breadcrumb, redacted, to keep it, or `null` to drop it.
 
-The example scrubs every string in a breadcrumb, whatever its category:
+The example redacts the values of keys that look like secrets (`token`, `password` and similar) and scrubs every other string in a breadcrumb, whatever its category:
 
 ```ts
 import { bugsee } from './bugsee';
@@ -63,7 +63,10 @@ function scrub(text: string): string {
   return text.replace(SECRET_PARAMS, '$1<redacted>').replace(EMAIL, '<email>');
 }
 
-// Scrubs every string in a breadcrumb's data, at any depth
+// Matches keys that usually hold a secret
+const SECRET_KEY = /pass|secret|token|auth|key|cookie/i;
+
+// Redacts values under a secret-looking key, and scrubs every other string, at any depth
 function scrubValue(value: unknown): unknown {
   if (typeof value === 'string') {
     return scrub(value);
@@ -74,7 +77,7 @@ function scrubValue(value: unknown): unknown {
   if (value !== null && typeof value === 'object') {
     const out: Record<string, unknown> = {};
     for (const [key, item] of Object.entries(value)) {
-      out[key] = scrubValue(item);
+      out[key] = SECRET_KEY.test(key) ? '<redacted>' : scrubValue(item);
     }
     return out;
   }

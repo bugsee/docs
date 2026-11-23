@@ -53,7 +53,7 @@ Since Node.js 15, an unhandled rejection ends the process. A passive listener wo
 | --- | --- |
 | `'preserve'` (default) | Reports the rejection, prints it, flushes, and then ends the process the way Node.js would. If you run with `--unhandled-rejections=warn` or `none`, the process stays alive. |
 | `'warn'` | Reports and prints the rejection, and keeps the process alive. |
-| `'none'` | Installs no listener. Node.js behaves as if Bugsee were absent, and rejections are not reported. |
+| `'none'` | Installs no rejection listener. In Node.js's default mode an unhandled rejection is then raised as an uncaught exception, which the `uncaughtException` listener (installed while `detectCrashes` is on) can still report as a crash. Turn `detectCrashes` off as well for Node.js to behave as if Bugsee were absent. |
 
 `exitOnUncaught` does not affect rejections. Use `unhandledRejections` for them.
 

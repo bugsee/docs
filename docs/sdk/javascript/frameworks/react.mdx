@@ -23,7 +23,7 @@ Using Next.js or Remix? Use [`@bugsee/nextjs`](/sdk/javascript/frameworks/nextjs
 
 ## Install
 
-Install the umbrella, which provides `launch()`, next to the adapter.
+Install the adapter. It pulls in `@bugsee/bugsee` and re-exports it, so `launch()` comes from the adapter and you do not add `@bugsee/bugsee` yourself.
 
 <Tabs groupId="package-manager">
   <TabItem value="npm" label="npm" default>
@@ -131,7 +131,7 @@ module.exports = {
 };
 ```
 
-The plugin adds `data-bugsee-component` attributes. See [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins).
+The plugin adds `data-bugsee-component` attributes. See [Component names](/sdk/javascript/frameworks/component-names) for how to add it to your Babel or Vite config.
 
 ### Preact
 

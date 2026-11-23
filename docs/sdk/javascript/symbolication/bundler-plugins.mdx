@@ -132,7 +132,7 @@ All options are optional. A token is needed to upload, and it may come from the 
 | `appBuild` | `string` | `BUGSEE_APP_BUILD`, then the commit id of your CI, else `0` | The build recorded with the upload. A real value is also baked into the bundle for the SDK. |
 | `endpoint` | `string` | `BUGSEE_ENDPOINT`, else `https://api.bugsee.com` | The API endpoint. |
 | `deleteMaps` | `boolean` | `true` | Delete the `.map` files from the output after a successful upload. |
-| `stripSourcesContent` | `boolean` | `false` | Upload the maps without the embedded source code. Positions still resolve, but reports show no source lines. The maps on disk are not changed. |
+| `stripSourcesContent` | `boolean` | `false` | Upload the maps without the embedded source code. Positions still resolve, but reports show no source lines. The maps on disk are not changed. Stripping can fail open: a map the CLI cannot process is uploaded unstripped with a warning. For a strict no-source policy, strip and verify the maps before upload. |
 | `dryRun` | `boolean` | `false` | Run the CLI in dry-run mode: nothing is uploaded or deleted, and the notices say what was captured. |
 | `disabled` | `boolean` | `false` | Turn the plugin off, for example in development builds. |
 | `failOnError` | `boolean` | `false` | Fail the build when the upload fails. By default a failed upload only warns, so a telemetry problem never breaks a deploy. |

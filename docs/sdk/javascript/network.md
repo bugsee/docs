@@ -71,7 +71,7 @@ Card numbers in free text are not redacted by shape. A card field is redacted by
 `setNetworkEventFilter(filter)` installs a function that sees each event before it is recorded. Return the event, changed or not, to keep it, or `null` to drop it. Pass `null` to remove the filter.
 
 ```ts
-import { launch } from '@bugsee/bugsee';
+import { getDefaultNetworkSanitizer, launch } from '@bugsee/bugsee';
 
 const bugsee = await launch('<your_app_token>');
 
@@ -80,12 +80,13 @@ bugsee.setNetworkEventFilter((event) => {
   if (event.url.includes('/health')) {
     return null;
   }
-  return event;
+  // Keep the built-in redaction (see below)
+  return getDefaultNetworkSanitizer().sanitize(event);
 });
 ```
 
 :::caution
-A network filter **replaces** the built-in redaction. It does not run on top of it. From the moment a filter is set, URLs, headers, bodies and error text are recorded exactly as they are unless your filter redacts them. The example above ships `Authorization` headers.
+A network filter **replaces** the built-in redaction. It does not run on top of it. From the moment a filter is set, URLs, headers, bodies and error text are recorded exactly as they are unless your filter redacts them. The example above calls `getDefaultNetworkSanitizer().sanitize(event)` for that reason. A filter that returns the event as it is would record `Authorization` headers.
 :::
 
 ### Keep the built-in redaction and add rules

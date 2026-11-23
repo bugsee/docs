@@ -322,11 +322,11 @@ Both return a plain object keyed by the canonical option identifier, `com.bugsee
 
 ## Options kept by `relaunch()`
 
-`relaunch(options)` starts from defaults, as the mobile SDKs do: the options you pass replace the previous ones, and omitted options go back to their default. Identity and integration settings are kept from the previous launch: `endpoint`, `appId`, `appVersion`, `appBuild`, `appRoot`, `dataDir`, `onError`, and the network, log and breadcrumb filters and `urlSanitizer` you set. See [Lifecycle & status](/sdk/javascript/lifecycle#relaunch).
+`relaunch(options)` starts from defaults, as the mobile SDKs do: the options you pass replace the previous ones, and omitted options go back to their default. Identity and integration settings are kept from the previous launch: `endpoint`, `appId`, `appVersion`, `appBuild`, `appRoot`, `dataDir`, `onError` and `urlSanitizer`. The network, log and breadcrumb filters and the report handler are installed on the client, not passed as options, so they are not kept: install them again on the client that `relaunch()` returns. See [Lifecycle & status](/sdk/javascript/lifecycle#relaunch).
 
 ## Related pages
 
-- [Installation](/sdk/javascript/installation) — add the package and launch the SDK.
+- [Quick start](/sdk/javascript/quick-start) — add the package, launch the SDK and send a first report.
 - [Lifecycle & status](/sdk/javascript/lifecycle) — launch, stop, relaunch and events.
 - [Privacy](/sdk/javascript/privacy/overview) — masking and redaction options.
 - [Diagnostics](/sdk/javascript/issue-detection/diagnostics) — profiling, local variables and source context.
