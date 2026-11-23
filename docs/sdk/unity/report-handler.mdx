@@ -94,7 +94,9 @@ BugseeSdk.Launch("<your Android app token>", options);
 
 ### If your handler throws
 
-An exception thrown from a callback is logged with `Debug.LogException`, and the report continues. On Android, the edits you made before the exception stay. On iOS, edits other than screenshots travel in the callback's result and are dropped.
+An exception thrown from a callback is logged with `Debug.LogException`, and the report continues. On Android, the edits you made before the exception stay, and later edits are blocked. On iOS, edits other than screenshots travel in the callback's result and are dropped. A handler that throws before its first edit therefore uploads the report unredacted on both platforms: make the edits inside `try` and call the completion in `finally`. See [bugsee-unity#293](https://github.com/bugsee/bugsee-unity/issues/293).
+
+An `async void` handler is not covered. An exception thrown after an `await` is not caught by the package, the completion never runs, and the report waits for the abandon timeout (about 31 seconds with the default timeout) before it continues unchanged.
 
 ## What you can change
 

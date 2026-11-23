@@ -18,10 +18,8 @@ The extension needs Xcode 27 or later to build, and a device on iOS 27 or later 
 :::
 
 :::caution[Unity and iOS 27]
-Building with Xcode 27 links the iOS 27 SDK, which requires the UIScene lifecycle. Unity versions without UIScene support can fail to launch on iOS 27 when built with Xcode 27. This is a maintainer note that is being re-verified per Unity version, so check the Unity version of your project in Unity's release notes. The extension only helps in a player that runs on iOS 27.
+Apps built with Xcode 27 must use the UIScene lifecycle, or they abort at launch on iOS 27. This is not specific to Bugsee, and some Unity versions are affected. See [Unity and iOS 27](/sdk/unity/build-setup/ios#crash-report-extension) for the verified versions and your options.
 :::
-
-{/* TODO(lead): replace with the verified per-version statement from the UIScene investigation */}
 
 ## What is reported
 
