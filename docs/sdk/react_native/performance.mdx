@@ -116,7 +116,7 @@ Call `finish` on these objects too: it releases the resources they hold.
 | `finished` | `boolean` | Whether the span has finished. |
 | `attributes` | object | The attributes. |
 | `name` | `string` | Transaction only: the transaction name. |
-| `sampled` | `boolean` | Transaction only: whether the transaction won the sample-rate draw when it started (see [Sampling](#sampling)). In this beta the value has no effect, because the standalone upload is not active. It is read once at start and never updated: a transaction that adaptive sampling promotes when it finishes still reads `false`. |
+| `sampled` | `boolean` | Transaction only: whether the transaction won the sample-rate draw when it started (see [Sampling](#sampling)). It is read once at start and never updated: on iOS, a transaction that adaptive sampling promotes when it finishes still reads `false`. That promotion has no effect in this beta, because the standalone upload is not active; on Android, adaptive sampling does not run while the upload is inactive. |
 
 The properties are read when the object is created and then follow the changes you make through it. They are not read again.
 
@@ -214,7 +214,7 @@ options.setCustomOption('com.bugsee.option.performance.sample-rate', 0.1);
 Bugsee.launch('<your app token>', options);
 ```
 
-Performance data reaches Bugsee **with reports**: the captured transactions are written into every report. In this beta, transactions are not sent on their own, on either platform: the standalone APM upload that the sampling options are meant for is not active. The sample rate therefore changes nothing that is sent today; only `com.bugsee.option.performance.enabled` does.
+Performance data reaches Bugsee **with reports**: the captured transactions are written into every report. In this beta, transactions are not sent on their own, on either platform: the standalone APM upload that the sampling options are meant for is not active. The sample rate therefore does not change which transactions are captured or sent; only `com.bugsee.option.performance.enabled` does. On Android, each report records whether its transactions were sampled.
 
 ## Related pages
 

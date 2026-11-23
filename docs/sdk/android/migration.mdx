@@ -865,10 +865,10 @@ try {
   </TabItem>
 </Tabs>
 
-APM is enabled by default. Tune it via `Options.PerformanceMonitoring`, `Options.PerformanceSampleRate`, and `Options.PerformanceUploadMode`.
+APM is enabled by default. Turn it off with `Options.PerformanceMonitoring`.
 
 :::note
-Sampling only gates the **standalone APM upload pipeline**. Every transaction is always recorded into the capture buffer used for issue reports.
+`Options.PerformanceSampleRate`, `Options.PerformanceAdaptiveSampling`, and `Options.PerformanceUploadMode` are reserved for a standalone APM upload that is not active yet; they do not change which transactions are captured or sent. Every transaction is recorded into the capture buffer used for issue reports. See [Where performance data goes](/sdk/android/performance#where-performance-data-goes).
 :::
 
 ### 9.4 Custom network events (`addNetworkEvent`)

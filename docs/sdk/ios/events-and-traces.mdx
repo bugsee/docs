@@ -108,6 +108,33 @@ Bugsee.captureViewHierarchy()
   this call.
 - Each snapshot adds to the size of the report, more so for deep hierarchies.
 
+## System traces
+
+Besides your own traces, every report carries traces that the SDK records on its own while it
+runs. They need no code.
+
+| Recorded by default | What it shows |
+| --- | --- |
+| CPU | The app's CPU usage. |
+| Memory | The app's resident, virtual and footprint memory, the memory still available to it, the device's total memory, and whether the system reports memory pressure. |
+| Queue latency | Latency of the main queue and of the high, default, low and background global queues. |
+| Power and thermal | Battery level and charging state, Low Power Mode, and the thermal state. |
+| Network | Network reachability, connection type and radio technology. With `BugseeOptionCaptureDeviceAndNetworkNames`, also the Wi-Fi SSID or the carrier name with MCC and MNC. |
+| Cellular | For each SIM: the radio technology and whether it has a data connection. Bugsee does not link CoreTelephony; unless your app links it, the trace reports cellular as unavailable. The carrier name, MCC and MNC are recorded only with `BugseeOptionCaptureDeviceAndNetworkNames`. From iOS 16.4, iOS returns no carrier name, MCC or MNC, so these stay empty. |
+| App and screen | Foreground or background, the current view controller, orientation and screen brightness, the connected displays, and the frame rate. |
+| Accessibility | Whether VoiceOver or Switch Control is running. |
+| NFC | Whether the device can read NFC tags. Recorded only if your app links CoreNFC. |
+| Capture | Whether recording is active or in a blackout. With `BugseeOptionCaptureDiskSpace` on, also the low and no disk space states; see [Disk space](/sdk/ios/configuration#disk-space). |
+| Fold state | Fold state and hinge angle, on devices that report them. |
+
+These are recorded only when you turn on their option:
+
+| Trace | Option | Notes |
+| --- | --- | --- |
+| Disk space | `BugseeOptionCaptureDiskSpace` | Free and total disk space. See [Disk space](/sdk/ios/configuration#disk-space). |
+| Bluetooth | `BugseeOptionCaptureBluetoothStatus` | Bluetooth state. Your `Info.plist` must contain `NSBluetoothAlwaysUsageDescription`, and the app must already have Bluetooth permission: Bugsee never asks for it. Without the permission, the trace records the state as unknown or unauthorized. |
+| Wi-Fi | `BugseeOptionCaptureDeviceAndNetworkNames` | The Wi-Fi network name (SSID) and BSSID. iOS returns them only when the app meets Apple's requirements; see [Device and network names](/sdk/ios/configuration#device-and-network-names). |
+
 ## Related pages
 
 - [Breadcrumbs](/sdk/ios/breadcrumbs)

@@ -18,6 +18,8 @@ Using Bugsee on mobile devices requires installation of Bugsee lightweight SDK:
 * [Installing KMP SDK (Beta)](/sdk/kmp/installation/)
 * [Installing Xamarin SDK](/sdk/xamarin/installation/) — **deprecated**, use the [.NET SDK](/sdk/dotnet/installation/) for new projects
 
+Bugsee also has a Rust SDK (Preview). It is a pre-release, not yet published to crates.io and not covered on this site yet; see its source at [github.com/bugsee/bugsee-rust](https://github.com/bugsee/bugsee-rust).
+
 
 ## Features
 
