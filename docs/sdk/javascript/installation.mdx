@@ -27,7 +27,7 @@ The guides below follow the same targets, so choose the guide that matches the t
 ## Before you start
 
 - Use Node.js 18 or later for tooling and servers. Deno is not supported.
-- Install with the `beta` tag, for example `npm install @bugsee/bugsee@beta`. For now the `latest` and `beta` tags point at the same version.
+- The install commands on these pages have no version or tag. While the SDK is in beta, the npm `latest` tag points at the current beta.
 
 ## Runtimes and platforms
 
@@ -43,15 +43,15 @@ The guides below follow the same targets, so choose the guide that matches the t
 
 ## Frontend frameworks
 
-Install `@bugsee/bugsee` and the adapter for your framework. The adapter re-exports the SDK and adds the error boundary, router and error-handler hooks.
+Install the adapter for your framework. It pulls in `@bugsee/bugsee` and re-exports it, so one package and one import give you `launch` plus the error boundary, router and error-handler hooks.
 
 | Framework | Install | Guide |
 | --- | --- | --- |
-| React | `@bugsee/bugsee` and `@bugsee/react` | [React](/sdk/javascript/frameworks/react) |
-| Vue | `@bugsee/bugsee` and `@bugsee/vue` | [Vue](/sdk/javascript/frameworks/vue) |
-| Angular | `@bugsee/bugsee` and `@bugsee/angular` | [Angular](/sdk/javascript/frameworks/angular) |
-| Svelte | `@bugsee/bugsee` and `@bugsee/svelte` | [Svelte and SvelteKit](/sdk/javascript/frameworks/svelte) |
-| Solid | `@bugsee/bugsee` and `@bugsee/solid` | [Solid](/sdk/javascript/frameworks/solid) |
+| React | `@bugsee/react` | [React](/sdk/javascript/frameworks/react) |
+| Vue | `@bugsee/vue` | [Vue](/sdk/javascript/frameworks/vue) |
+| Angular | `@bugsee/angular` | [Angular](/sdk/javascript/frameworks/angular) |
+| Svelte | `@bugsee/svelte` | [Svelte and SvelteKit](/sdk/javascript/frameworks/svelte) |
+| Solid | `@bugsee/solid` | [Solid](/sdk/javascript/frameworks/solid) |
 
 ## Meta-frameworks
 
@@ -67,17 +67,17 @@ These cover the client and the server of the framework in one package.
 
 ## Backend frameworks
 
-Install `@bugsee/bugsee` and the adapter for your server framework. See the [Backend overview](/sdk/javascript/backend/overview) for request context and incoming-request instrumentation.
+Install the adapter for your server framework. It pulls in `@bugsee/bugsee` and re-exports it, so `launch` and the setup function come from one package. See the [Backend overview](/sdk/javascript/backend/overview) for request context and incoming-request instrumentation.
 
 | Framework | Install | Guide |
 | --- | --- | --- |
-| Express | `@bugsee/bugsee` and `@bugsee/express` | [Express](/sdk/javascript/backend/express) |
-| Fastify | `@bugsee/bugsee` and `@bugsee/fastify` | [Fastify](/sdk/javascript/backend/fastify) |
-| NestJS | `@bugsee/bugsee` and `@bugsee/nestjs` | [NestJS](/sdk/javascript/backend/nestjs) |
-| Hono | `@bugsee/bugsee` and `@bugsee/hono` | [Hono](/sdk/javascript/backend/hono) |
-| Koa | `@bugsee/bugsee` and `@bugsee/koa` | [Koa](/sdk/javascript/backend/koa) |
-| hapi | `@bugsee/bugsee` and `@bugsee/hapi` | [hapi](/sdk/javascript/backend/hapi) |
-| Elysia | `@bugsee/bugsee` and `@bugsee/elysia` | [Elysia](/sdk/javascript/backend/elysia) |
+| Express | `@bugsee/express` | [Express](/sdk/javascript/backend/express) |
+| Fastify | `@bugsee/fastify` | [Fastify](/sdk/javascript/backend/fastify) |
+| NestJS | `@bugsee/nestjs` | [NestJS](/sdk/javascript/backend/nestjs) |
+| Hono | `@bugsee/hono` | [Hono](/sdk/javascript/backend/hono) |
+| Koa | `@bugsee/koa` | [Koa](/sdk/javascript/backend/koa) |
+| hapi | `@bugsee/hapi` | [hapi](/sdk/javascript/backend/hapi) |
+| Elysia | `@bugsee/elysia` | [Elysia](/sdk/javascript/backend/elysia) |
 
 ## Readable stack traces
 

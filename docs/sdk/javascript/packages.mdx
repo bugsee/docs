@@ -11,7 +11,7 @@ This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can 
 
 The SDK is published as 49 npm packages under the `@bugsee` scope. You install only a few of them. The rest are building blocks that the packages you install depend on, and their APIs can change without notice.
 
-All packages share one version (currently 0.1.0-beta.8), ship ESM and CommonJS builds, and target ES2022. Keep every `@bugsee/*` package in your project at the same version. Install with the `beta` tag, for example `npm install @bugsee/bugsee@beta`.
+All packages share one version (currently 0.1.0-beta.8), ship ESM and CommonJS builds, and target ES2022. Keep every `@bugsee/*` package in your project at the same version. Install without a tag, for example `npm install @bugsee/bugsee`; the npm `latest` tag currently points at the current beta.
 
 ## Which packages do I install?
 
@@ -23,10 +23,9 @@ All packages share one version (currently 0.1.0-beta.8), ship ESM and CommonJS b
 | Cloudflare Workers | `@bugsee/cloudflare` | `@bugsee/cloudflare` |
 | Vercel Edge | `@bugsee/vercel-edge` | `@bugsee/vercel-edge` |
 | Web Worker, Service Worker | `@bugsee/webworker` | `@bugsee/webworker` |
-| React | `@bugsee/bugsee` and `@bugsee/react` | `@bugsee/bugsee` |
-| Vue, Angular, Svelte, Solid | `@bugsee/bugsee` and the matching adapter | `@bugsee/bugsee` |
+| React, Vue, Angular, Svelte, Solid | the matching adapter alone | the adapter package |
 | Next.js, Nuxt, Remix, SvelteKit, Astro | the matching adapter alone | the adapter package |
-| Express, Fastify, NestJS, Hono, Koa, hapi, Elysia | `@bugsee/bugsee` and the matching adapter | `@bugsee/bugsee` |
+| Express, Fastify, NestJS, Hono, Koa, hapi, Elysia | the matching adapter alone (on Bun, add `@bugsee/bun`) | the adapter package (on Bun, `@bugsee/bun`) |
 
 See [Installation](/sdk/javascript/installation) for the steps.
 
@@ -45,7 +44,7 @@ See [Installation](/sdk/javascript/installation) for the steps.
 
 ### Frontend adapters
 
-Install these next to `@bugsee/bugsee`. Each re-exports the umbrella's launch API, and requires the framework as a peer dependency.
+Install the adapter on its own. It depends on `@bugsee/bugsee` and re-exports it, so `launch` and the adapter's API come from one package. Each requires the framework as a peer dependency.
 
 | Package | Framework | Page |
 | --- | --- | --- |
@@ -69,7 +68,7 @@ Each is a single install. It wires the browser client and the server (and the ed
 
 ### Backend adapters
 
-Install these next to `@bugsee/bugsee` on Node.js 18 or later (or Bun). Each adds per-request context, an `http.server` transaction, and error reporting for its framework.
+Install the adapter on its own on Node.js 18 or later (or Bun, see [Running on Bun](/sdk/javascript/backend/overview#running-on-bun)). It depends on `@bugsee/bugsee` and re-exports its Node entry, so `launch` comes from the same package. Each adds per-request context, an `http.server` transaction, and error reporting for its framework.
 
 | Package | Framework | Page |
 | --- | --- | --- |

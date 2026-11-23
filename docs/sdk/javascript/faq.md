@@ -17,7 +17,7 @@ Browsers, Node.js 18 or later, and Bun 1.1.13 or later are the main targets. Ele
 
 **2. Which package do I install?**
 
-For a browser app or a Node.js server, `@bugsee/bugsee`. For Bun, Electron, Cloudflare, Vercel Edge and workers, the package named for the runtime. Frameworks add an adapter. The table in [Quick start](/sdk/javascript/quick-start#1-add-the-package) lists them all, and [Packages](/sdk/javascript/packages) explains the rest.
+For a browser app or a Node.js server, `@bugsee/bugsee`. For Bun, Electron, Cloudflare, Vercel Edge and workers, the package named for the runtime. Frameworks use their adapter package alone, which includes `@bugsee/bugsee`. The table in [Quick start](/sdk/javascript/quick-start#1-add-the-package) lists them all, and [Packages](/sdk/javascript/packages) explains the rest.
 
 <br />
 
@@ -35,7 +35,7 @@ React Native has its own SDK; see the [React Native documentation](/sdk/react_na
 
 **5. What do the npm `latest` and `beta` tags mean?**
 
-For now both point at the current beta, so installing with or without `@beta` gets the same version. Use `@beta` to keep following betas once a stable release exists, and keep all `@bugsee/*` packages at the same version. See [Release notes](/sdk/javascript/release-notes).
+For now both point at the current beta, so the install commands in these docs need no tag. Add `@beta` yourself if you want to keep following betas once a stable release exists, and keep all `@bugsee/*` packages at the same version. See [Release notes](/sdk/javascript/release-notes).
 
 <br />
 

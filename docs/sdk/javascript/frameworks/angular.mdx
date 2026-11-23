@@ -27,28 +27,28 @@ Install the umbrella, which provides `launch()`, next to the adapter.
   <TabItem value="npm" label="npm" default>
 
 ```bash
-npm install @bugsee/bugsee@beta @bugsee/angular@beta
+npm install @bugsee/angular
 ```
 
   </TabItem>
   <TabItem value="pnpm" label="pnpm">
 
 ```bash
-pnpm add @bugsee/bugsee@beta @bugsee/angular@beta
+pnpm add @bugsee/angular
 ```
 
   </TabItem>
   <TabItem value="yarn" label="yarn">
 
 ```bash
-yarn add @bugsee/bugsee@beta @bugsee/angular@beta
+yarn add @bugsee/angular
 ```
 
   </TabItem>
   <TabItem value="bun" label="bun">
 
 ```bash
-bun add @bugsee/bugsee@beta @bugsee/angular@beta
+bun add @bugsee/angular
 ```
 
   </TabItem>
@@ -59,7 +59,7 @@ bun add @bugsee/bugsee@beta @bugsee/angular@beta
 Launch Bugsee as early as possible, at the top of your entry module. In the browser `launch()` returns a `Promise` of the client. Await it only if you need the client right away.
 
 ```ts title="main.ts"
-import { launch } from '@bugsee/bugsee';
+import { launch } from '@bugsee/angular';
 
 launch('<your_app_token>');
 ```
@@ -109,7 +109,7 @@ constructor(router: Router) {
 
 ## API
 
-`@bugsee/angular` also re-exports everything from `@bugsee/bugsee`.
+`@bugsee/angular` installs `@bugsee/bugsee` for you and re-exports everything from it, so `launch`, the client types and the rest of the SDK API come from this one package. You do not install or import `@bugsee/bugsee` separately.
 
 | Export | Description |
 | --- | --- |

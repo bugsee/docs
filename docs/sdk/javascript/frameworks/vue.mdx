@@ -29,28 +29,28 @@ Install the umbrella, which provides `launch()`, next to the adapter.
   <TabItem value="npm" label="npm" default>
 
 ```bash
-npm install @bugsee/bugsee@beta @bugsee/vue@beta
+npm install @bugsee/vue
 ```
 
   </TabItem>
   <TabItem value="pnpm" label="pnpm">
 
 ```bash
-pnpm add @bugsee/bugsee@beta @bugsee/vue@beta
+pnpm add @bugsee/vue
 ```
 
   </TabItem>
   <TabItem value="yarn" label="yarn">
 
 ```bash
-yarn add @bugsee/bugsee@beta @bugsee/vue@beta
+yarn add @bugsee/vue
 ```
 
   </TabItem>
   <TabItem value="bun" label="bun">
 
 ```bash
-bun add @bugsee/bugsee@beta @bugsee/vue@beta
+bun add @bugsee/vue
 ```
 
   </TabItem>
@@ -59,7 +59,7 @@ bun add @bugsee/bugsee@beta @bugsee/vue@beta
 ## Set up
 
 ```ts title="main.ts"
-import { launch } from '@bugsee/bugsee';
+import { launch } from '@bugsee/vue';
 import { installBugseeErrorHandler } from '@bugsee/vue';
 import { createApp } from 'vue';
 import App from './App.vue';
@@ -101,7 +101,7 @@ app.mixin(createBugseeVueComponentMixin());
 
 ## API
 
-`@bugsee/vue` also re-exports everything from `@bugsee/bugsee`.
+`@bugsee/vue` installs `@bugsee/bugsee` for you and re-exports everything from it, so `launch`, the client types and the rest of the SDK API come from this one package. You do not install or import `@bugsee/bugsee` separately.
 
 | Export | Description |
 | --- | --- |

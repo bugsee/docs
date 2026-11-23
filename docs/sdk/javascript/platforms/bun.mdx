@@ -25,34 +25,34 @@ This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can 
   <TabItem value="npm" label="npm" default>
 
 ```bash
-npm install @bugsee/bun@beta
+npm install @bugsee/bun
 ```
 
   </TabItem>
   <TabItem value="pnpm" label="pnpm">
 
 ```bash
-pnpm add @bugsee/bun@beta
+pnpm add @bugsee/bun
 ```
 
   </TabItem>
   <TabItem value="yarn" label="yarn">
 
 ```bash
-yarn add @bugsee/bun@beta
+yarn add @bugsee/bun
 ```
 
   </TabItem>
   <TabItem value="bun" label="bun">
 
 ```bash
-bun add @bugsee/bun@beta
+bun add @bugsee/bun
 ```
 
   </TabItem>
 </Tabs>
 
-Install `@bugsee/bun` instead of `@bugsee/bugsee` in a Bun project. It does not include the umbrella's extensions (performance monitoring and OpenTelemetry).
+Install `@bugsee/bun` in a Bun project. It does not include the umbrella's extensions (performance monitoring and OpenTelemetry). If you also use a backend framework adapter, install `@bugsee/bun` next to it and import `launch` from `@bugsee/bun`; see [Running on Bun](/sdk/javascript/backend/overview#running-on-bun).
 
 ## Launch
 

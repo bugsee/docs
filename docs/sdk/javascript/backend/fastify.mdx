@@ -22,28 +22,28 @@ You need an app token. Create a JavaScript application in Bugsee and choose **Fa
   <TabItem value="npm" label="npm">
 
 ```bash
-npm install @bugsee/bugsee@beta @bugsee/fastify@beta
+npm install @bugsee/fastify
 ```
 
   </TabItem>
   <TabItem value="pnpm" label="pnpm">
 
 ```bash
-pnpm add @bugsee/bugsee@beta @bugsee/fastify@beta
+pnpm add @bugsee/fastify
 ```
 
   </TabItem>
   <TabItem value="yarn" label="yarn">
 
 ```bash
-yarn add @bugsee/bugsee@beta @bugsee/fastify@beta
+yarn add @bugsee/fastify
 ```
 
   </TabItem>
   <TabItem value="bun" label="bun">
 
 ```bash
-bun add @bugsee/bugsee@beta @bugsee/fastify@beta
+bun add @bugsee/fastify
 ```
 
   </TabItem>
@@ -56,8 +56,7 @@ The adapter declares no peer dependency. It only relies on the shape of your Fas
 Call `launch()` at the top of your server entry, then pass the root Fastify instance to `setupFastify`:
 
 ```ts title="server.ts"
-import { launch } from '@bugsee/bugsee';
-import { setupFastify } from '@bugsee/fastify';
+import { launch, setupFastify } from '@bugsee/fastify';
 import Fastify from 'fastify';
 
 launch('<your_app_token>');
@@ -109,7 +108,7 @@ The adapter does not change the launch options. These are the ones that matter m
 | `detectHangs` | `true` | Report event-loop hangs. See [Hangs](/sdk/javascript/issue-detection/hangs). |
 | `profiling` | `false` | Attach a rolling CPU profile to reports. See [Diagnostics](/sdk/javascript/issue-detection/diagnostics). |
 
-`@bugsee/fastify` also re-exports everything from the Node entry of `@bugsee/bugsee`.
+`@bugsee/fastify` installs `@bugsee/bugsee` for you and re-exports everything from its Node entry, so `launch` and the SDK types come from this one package. You do not install or import `@bugsee/bugsee` separately. On Bun, see [Running on Bun](/sdk/javascript/backend/overview#running-on-bun).
 
 ## Related pages
 

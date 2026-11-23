@@ -11,7 +11,7 @@ This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can 
 
 Release history for the Bugsee JavaScript SDK. All packages (`@bugsee/bugsee`, the platform packages, the framework adapters, the bundler plugins and the internal packages) are released together and share one version number. See [Packages](/sdk/javascript/packages) for the list.
 
-The npm `latest` and `beta` tags both point at the newest beta, so `npm install @bugsee/bugsee` and `npm install @bugsee/bugsee@beta` install the same version. Keep every `@bugsee/*` package you use at the same version.
+The npm `latest` and `beta` tags both point at the newest beta, so `npm install @bugsee/bugsee` and `npm install @bugsee/bugsee@beta` install the same version, and the install commands in these docs need no tag. Keep every `@bugsee/*` package you use at the same version.
 
 ## 0.1.0-beta.8 (November 20 2026)
 

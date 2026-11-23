@@ -45,7 +45,7 @@ You do not create or enter a context yourself. The incoming-request instrumentat
 `instrumentIncomingRequests` is `true` by default. Set it to `false` to turn it off.
 
 ```ts
-import { launch } from '@bugsee/bugsee';
+import { launch } from '@bugsee/express'; // or the adapter for your framework
 
 launch('<your_app_token>', {
   instrumentIncomingRequests: false,
@@ -86,7 +86,7 @@ launch('<your_app_token>', {
 
 ## Framework adapters
 
-Install the adapter next to the `@bugsee/bugsee` package. The adapter re-exports the Node entry of `@bugsee/bugsee`, so you can import `launch` from either package.
+Install only the adapter for your framework. It installs `@bugsee/bugsee` for you and re-exports the Node entry of it, so you import `launch` and the adapter's setup function from the same package.
 
 | Framework | Package | Setup call | Page |
 | --- | --- | --- | --- |
@@ -114,10 +114,25 @@ The default `shouldReport` reports an error that has no HTTP status or a status 
 
 An adapter never throws into your request pipeline.
 
+## Running on Bun
+
+The `launch` that an adapter re-exports is the Node.js build. On Bun it works, but reports name the runtime `node`, and `Bun.serve` requests are not instrumented. On Bun, install `@bugsee/bun` next to the adapter and import `launch` from it:
+
+```bash
+bun add @bugsee/elysia @bugsee/bun
+```
+
+```ts
+import { launch } from '@bugsee/bun';
+import { setupElysia } from '@bugsee/elysia';
+```
+
+The adapter's setup function and the rest of its API are the same. See [Bun](/sdk/javascript/platforms/bun).
+
 ## Requirements
 
 - Node.js 18 or newer, or Bun 1.1.13 or newer.
-- The `@bugsee/bugsee` package. On a server, `launch()` returns the client directly and does not return a promise.
+- The adapter package for your framework. It brings `@bugsee/bugsee` with it. On a server, `launch()` returns the client directly and does not return a promise.
 
 ## Install
 
@@ -125,28 +140,28 @@ An adapter never throws into your request pipeline.
   <TabItem value="npm" label="npm">
 
 ```bash
-npm install @bugsee/bugsee@beta @bugsee/express@beta
+npm install @bugsee/express
 ```
 
   </TabItem>
   <TabItem value="pnpm" label="pnpm">
 
 ```bash
-pnpm add @bugsee/bugsee@beta @bugsee/express@beta
+pnpm add @bugsee/express
 ```
 
   </TabItem>
   <TabItem value="yarn" label="yarn">
 
 ```bash
-yarn add @bugsee/bugsee@beta @bugsee/express@beta
+yarn add @bugsee/express
 ```
 
   </TabItem>
   <TabItem value="bun" label="bun">
 
 ```bash
-bun add @bugsee/bugsee@beta @bugsee/express@beta
+bun add @bugsee/express
 ```
 
   </TabItem>

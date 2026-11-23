@@ -27,28 +27,28 @@ Install the umbrella, which provides `launch()`, next to the adapter.
   <TabItem value="npm" label="npm" default>
 
 ```bash
-npm install @bugsee/bugsee@beta @bugsee/solid@beta
+npm install @bugsee/solid
 ```
 
   </TabItem>
   <TabItem value="pnpm" label="pnpm">
 
 ```bash
-pnpm add @bugsee/bugsee@beta @bugsee/solid@beta
+pnpm add @bugsee/solid
 ```
 
   </TabItem>
   <TabItem value="yarn" label="yarn">
 
 ```bash
-yarn add @bugsee/bugsee@beta @bugsee/solid@beta
+yarn add @bugsee/solid
 ```
 
   </TabItem>
   <TabItem value="bun" label="bun">
 
 ```bash
-bun add @bugsee/bugsee@beta @bugsee/solid@beta
+bun add @bugsee/solid
 ```
 
   </TabItem>
@@ -59,7 +59,7 @@ bun add @bugsee/bugsee@beta @bugsee/solid@beta
 Launch Bugsee as early as possible, at the top of your entry module. In the browser `launch()` returns a `Promise` of the client. Await it only if you need the client right away.
 
 ```tsx title="index.tsx"
-import { launch } from '@bugsee/bugsee';
+import { launch } from '@bugsee/solid';
 
 launch('<your_app_token>');
 ```
@@ -117,7 +117,7 @@ See [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins).
 
 ## API
 
-`@bugsee/solid` also re-exports everything from `@bugsee/bugsee`.
+`@bugsee/solid` installs `@bugsee/bugsee` for you and re-exports everything from it, so `launch`, the client types and the rest of the SDK API come from this one package. You do not install or import `@bugsee/bugsee` separately.
 
 | Export | Description |
 | --- | --- |

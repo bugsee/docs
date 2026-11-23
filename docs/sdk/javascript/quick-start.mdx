@@ -37,9 +37,9 @@ Pick the package for where your code runs. Browsers and Node.js use `@bugsee/bug
 | Cloudflare Workers | `@bugsee/cloudflare` |
 | Vercel Edge | `@bugsee/vercel-edge` |
 | Web Worker, Service Worker | `@bugsee/webworker` |
-| React, Vue, Angular, Svelte, Solid | `@bugsee/bugsee` plus the matching adapter |
+| React, Vue, Angular, Svelte, Solid | The matching adapter alone (it includes `@bugsee/bugsee`) |
 | Next.js, Nuxt, Remix, SvelteKit, Astro | The matching adapter alone |
-| Express, Fastify, NestJS, Hono, Koa, hapi, Elysia | `@bugsee/bugsee` plus the matching adapter |
+| Express, Fastify, NestJS, Hono, Koa, hapi, Elysia | The matching adapter alone (it includes `@bugsee/bugsee`) |
 
 For the common case:
 
@@ -47,36 +47,36 @@ For the common case:
   <TabItem value="npm" label="npm">
 
 ```bash
-npm install @bugsee/bugsee@beta
+npm install @bugsee/bugsee
 ```
 
   </TabItem>
   <TabItem value="pnpm" label="pnpm">
 
 ```bash
-pnpm add @bugsee/bugsee@beta
+pnpm add @bugsee/bugsee
 ```
 
   </TabItem>
   <TabItem value="yarn" label="yarn">
 
 ```bash
-yarn add @bugsee/bugsee@beta
+yarn add @bugsee/bugsee
 ```
 
   </TabItem>
   <TabItem value="bun" label="bun">
 
 ```bash
-bun add @bugsee/bugsee@beta
+bun add @bugsee/bugsee
 ```
 
   </TabItem>
 </Tabs>
 
-For now the npm `latest` and `beta` tags both point at the current beta, so installing without `@beta` gets the same version. The `@beta` form keeps following betas once a stable release exists.
+For now the npm `latest` and `beta` tags both point at the current beta, so the commands above need no tag. Add `@beta` yourself if you want to keep following betas once a stable release exists.
 
-If your code runs on the Bun runtime, install `@bugsee/bun` instead (`bun add @bugsee/bun@beta`). Using Bun only as your package manager or bundler for a browser or Node.js app needs `@bugsee/bugsee`.
+If your code runs on the Bun runtime, install `@bugsee/bun` instead (`bun add @bugsee/bun`). Using Bun only as your package manager or bundler for a browser or Node.js app needs `@bugsee/bugsee`.
 
 ## 2. Get your app token
 

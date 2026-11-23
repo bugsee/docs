@@ -29,28 +29,28 @@ Install the umbrella, which provides `launch()`, next to the adapter.
   <TabItem value="npm" label="npm" default>
 
 ```bash
-npm install @bugsee/bugsee@beta @bugsee/react@beta
+npm install @bugsee/react
 ```
 
   </TabItem>
   <TabItem value="pnpm" label="pnpm">
 
 ```bash
-pnpm add @bugsee/bugsee@beta @bugsee/react@beta
+pnpm add @bugsee/react
 ```
 
   </TabItem>
   <TabItem value="yarn" label="yarn">
 
 ```bash
-yarn add @bugsee/bugsee@beta @bugsee/react@beta
+yarn add @bugsee/react
 ```
 
   </TabItem>
   <TabItem value="bun" label="bun">
 
 ```bash
-bun add @bugsee/bugsee@beta @bugsee/react@beta
+bun add @bugsee/react
 ```
 
   </TabItem>
@@ -61,7 +61,7 @@ bun add @bugsee/bugsee@beta @bugsee/react@beta
 Launch Bugsee as early as possible, at the top of your entry module. In the browser `launch()` returns a `Promise` of the client. Await it only if you need the client right away.
 
 ```tsx title="main.tsx"
-import { launch } from '@bugsee/bugsee';
+import { launch } from '@bugsee/react';
 
 launch('<your_app_token>');
 ```
@@ -137,7 +137,7 @@ Preact 10 and newer works through this package via `preact/compat`. Alias `react
 
 ## API
 
-`@bugsee/react` also re-exports everything from `@bugsee/bugsee`, so you can import `launch` from either package.
+`@bugsee/react` installs `@bugsee/bugsee` for you and re-exports everything from it, so `launch`, the client types and the rest of the SDK API come from this one package. You do not install or import `@bugsee/bugsee` separately.
 
 | Export | Description |
 | --- | --- |
