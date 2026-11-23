@@ -138,7 +138,7 @@ Properties of the filter:
 - **The timeout** is the `timeout` argument of `setNetworkFilter`: 10 seconds by default, which is the SDK's own filter timeout. It must be positive and at most 5 minutes, or `setNetworkFilter` throws a `BugseeArgumentException`.
 - **It runs on the isolate that made the request** (normally the UI isolate), one event at a time and in order, never inside the HTTP call. A slow synchronous filter takes UI time, so keep it fast. It may return a `Future`.
 - **It gets a copy.** Changing the event cannot reach what the capture still holds.
-- **The SDK still runs afterwards.** Every event is submitted with filtering required, so the native SDK's default sanitizer runs on what your filter returns. See [Privacy: Network](/sdk/flutter/privacy/network).
+- **The SDK still runs afterwards.** Every event is submitted with filtering required, so the native pipeline runs on what your filter returns: the app's native network filter if there is one, otherwise the SDK's default sanitizer. A native filter replaces the sanitizer. See [Privacy: Network](/sdk/flutter/privacy/network).
 
 ## What is never recorded
 

@@ -198,7 +198,8 @@ The mapping is by meaning: the 9.x names against the 10.x field documentation. `
 | iOS `monitorDiskSpace`, `monitorBluetoothStatus`, `captureAVPlayer` | `captureDiskSpace`, `captureBluetoothStatus`, `captureAvPlayer` |
 | Android `videoMode` / `videoQuality` | `captureVideoMode` (`VideoMode`) / `captureVideoQuality` (`VideoQuality`) |
 | Android `notificationBarTrigger` | `reportingTriggersNotificationBar`. **Off by default since Android 7.6.0**: pass `true` to keep the report notification. |
-| iOS `screenshotToReport`, `killDetection`; Android `serviceMode` | No one-to-one typed field verified. Search `BugseeOptions` for the 7.x option, or pass it in `BugseeOptions.custom`. |
+| iOS `screenshotToReport` | `reportingTriggersScreenshot`. **Off by default in 10.x** (`screenshotToReport` was on by default in 9.x): pass `true` to keep reporting when the user takes a screenshot. |
+| iOS `killDetection`; Android `serviceMode` | No one-to-one typed field verified. Search `BugseeOptions` for the 7.x option, or pass it in `BugseeOptions.custom`. |
 | `setCustomOption(key, value)` | `BugseeOptions(custom: {key: value})`. An unknown key is an `ArgumentError`, not silently dropped. |
 | `BugseeFrameRate`, `BugseeVideoQuality`, `BugseeVideoMode` | `FrameRate`, `VideoQuality`, `VideoMode`. Enums carry the SDK's internal value. |
 | `BugseeNetworkEventStage`, `BugseeNetworkEventNoBodyReason` | `NetworkStage`, `NoBodyReason` |
@@ -231,7 +232,7 @@ The Dart symbols upload for `--split-debug-info` and `--obfuscate` is unchanged:
 3. iOS: raise the deployment target to 15.0 and enable Swift Package Manager. Remove CocoaPods usage of Bugsee.
 4. Replace `launch(..., appRunCallback:, launchOptions:)` with `await Bugsee.launch(token, options: BugseeOptions(...))`, then `runApp`.
 5. Move your launch options to `BugseeOptions` using the table in 4.8.
-6. Call `installNetworkCapture`, `installLogCapture` and `installErrorHandlers` where you relied on the 9.x behavior.
+6. Call `installNetworkCapture`, `installLogCapture` and `installErrorHandlers` where you relied on the 9.x behavior. `print` is recorded only inside a zone that carries the hook, so run startup (the bindings, `launch` and `runApp`) inside `Bugsee.runWithLogCapture` or `Bugsee.runGuarded`; see [Console logs](/sdk/flutter/logs).
 7. Rename `setEmail` to `setUserIdentifier` and review the value rules for attributes, events and traces.
 8. Replace the attachments callback with a report handler, and the lifecycle callback with `lifecycleEvents`.
 9. Replace `pause` and `resume` with blackout, and remove `addSecureRect` calls in favor of `BugseeSecureView`.

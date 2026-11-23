@@ -19,7 +19,7 @@ The package wraps the native Bugsee 7.x SDKs for Android and iOS; it adds a Dart
 
 Every report carries a synchronized timeline of the session that led up to it:
 
-- **Video**: a rolling recording of the screen. Wrap anything that must never be recorded in `BugseeSecureView`; see [Privacy: Video](/sdk/flutter/privacy/video).
+- **Video**: a rolling recording of the screen. Wrap anything that must never be recorded in `BugseeSecureView`, and keep the secure view mounted before sensitive content appears: the first frame of a newly appearing region can still be recorded (use blackout before showing it). See [Privacy: Video](/sdk/flutter/privacy/video).
 - **Network**: the native SDKs cannot see `dart:io` (`package:http`, the default adapter of `dio`, `Image.network`, a plain `HttpClient`), so the plugin records it in Dart and hands the events to the SDK. This is opt-in; see [Network capture](/sdk/flutter/network).
 - **Console logs**: `print` and `debugPrint` output, opt-in, and lines from your own logger through `forwardLog`; see [Console logs](/sdk/flutter/logs). Lines you send with `Bugsee.log` are recorded once the SDK has launched, with no opt-in.
 - **Widget tree**: the Flutter widget tree, as boxes and widget type names only (no text, field values, keys or route names); see [View hierarchy](/sdk/flutter/view-hierarchy).

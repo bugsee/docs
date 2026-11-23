@@ -63,7 +63,7 @@ They are dropped before `launch` and after `stop`. Nothing is queued. Attributes
 
 **9. Why is nothing captured from `dart:io`, `print` or Dart errors?**
 
-Those are opt-in in 10.x and `launch` does not turn them on. Call `Bugsee.installNetworkCapture()`, `Bugsee.installLogCapture()` and `Bugsee.installErrorHandlers()`. See [Network](/sdk/flutter/network), [Console logs](/sdk/flutter/logs) and [Dart errors](/sdk/flutter/dart-errors).
+Those are opt-in in 10.x and `launch` does not turn them on. Call `Bugsee.installNetworkCapture()`, `Bugsee.installLogCapture()` and `Bugsee.installErrorHandlers()`. `print` is recorded only inside a zone that carries the hook, so run startup (the bindings, `launch` and `runApp`) inside `Bugsee.runWithLogCapture` or `Bugsee.runGuarded`. See [Network](/sdk/flutter/network), [Console logs](/sdk/flutter/logs) and [Dart errors](/sdk/flutter/dart-errors).
 
 <br />
 

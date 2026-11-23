@@ -105,7 +105,7 @@ try {
 | `captureVideo` | `true` | Both | Record video. |
 | `captureScreenshot` | `true` | Both | Take the report screenshot. |
 | `captureVideoScale` | `1.0` | Both | Additional down-scaling of the recorded video, between `0.1` and `1.0`. `0.5` halves the width and the height. |
-| `captureScreenshotScale` | `1.0` | Both | Scales the screenshot down and back up before it is stored, which destroys fine detail such as text while keeping the layout. Clamped to `0.05` to `1.0`; `1.0` turns the effect off. |
+| `captureScreenshotScale` | `1.0` | Both | Scales the screenshot down and back up before it is stored, which blurs fine detail while keeping the layout. **It is not a redaction control**: large, high-contrast text can stay readable. Use a secure view or blackout for anything sensitive. Clamped to `0.05` to `1.0`; `1.0` turns the effect off. |
 | `captureViewHierarchy` | `true` | Both | Capture the view hierarchy. See [View hierarchy](/sdk/flutter/view-hierarchy). |
 | `captureRespectFlagSecure` | `true` | Android | Treat a window with `FLAG_SECURE` as a full-display blackout. Independent of `startBlackout`. |
 | `captureVideoPrivacyBlur` | `true` | iOS | Blur transition frames instead of skipping them. Off, the video freezes for the transition and never records it unprotected. |

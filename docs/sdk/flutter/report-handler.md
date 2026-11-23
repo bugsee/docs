@@ -59,7 +59,7 @@ Each callback receives a `ReportProxy` and may be async (`FutureOr<void>`).
 | `createReport` on Android | Inside `createReport()`. | At the created report's `upload()`. |
 | `createReport` on iOS | At `upload()`. | At `upload()`. Both run after the created report's fields are applied, so a handler's `replaceLabels` replaces the labels you set. |
 
-To act on what a user typed into the dialog, such as redacting it, use `onAfterReportCreated`.
+To act on what a user typed into the dialog, such as redacting it, use `onAfterReportCreated`. Redaction in a handler is best-effort: if the callback throws or runs past its time window, the SDK sends the report as it is. Where redaction must be guaranteed, sanitize the text before it is submitted.
 
 ## The report object
 

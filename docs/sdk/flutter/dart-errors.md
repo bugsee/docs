@@ -15,15 +15,18 @@ This page documents Bugsee Flutter SDK **10.x**, which is in beta, is not publis
 import 'package:bugsee_flutter/bugsee_flutter.dart';
 import 'package:flutter/material.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Bugsee.launch('<your app token>');
+void main() {
+  // The bindings and runApp share the guarded zone, so Flutter finds no zone mismatch.
+  Bugsee.runGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    await Bugsee.launch('<your app token>');
 
-  // Opt in to the errors nobody handled. Chained: your handlers still run.
-  Bugsee.installErrorHandlers();
-  assert(Bugsee.errorHandlersActive); // false when another tool replaced them
+    // Opt in to the errors nobody handled. Chained: your handlers still run.
+    Bugsee.installErrorHandlers();
+    assert(Bugsee.errorHandlersActive); // false when another tool replaced them
 
-  Bugsee.runGuarded(() => runApp(const MyApp()));
+    runApp(const MyApp());
+  });
 }
 ```
 

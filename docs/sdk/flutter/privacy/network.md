@@ -40,9 +40,9 @@ await Bugsee.launch(
 | Option | Default | Effect |
 | --- | --- | --- |
 | `captureNetworkBodySizeLimit` | `20480` | Largest body kept, in bytes. A body over the limit is dropped, not cut. `0` keeps no body. The plugin caps the value at 2 MiB. |
-| `captureNetworkBodyWithoutType` | `false` | Also keep bodies that declare no content type. Leave it off unless you need them. |
+| `captureNetworkBodyWithoutType` | `false` | Skips the content-type check, so bodies with no type, and bodies with any declared type (binary included, when they are readable text), are kept. Leave it off unless you need them. |
 
-Only **text** bodies are recorded: `text/*`, and types containing `json`, `xml` or `x-www-form-urlencoded`. A binary body is counted and never copied. Request bodies and response bodies follow the same options; there is no separate switch for request bodies.
+By default only **text** bodies are recorded: `text/*`, and types containing `json`, `xml` or `x-www-form-urlencoded`; with `captureNetworkBodyWithoutType` on, the type check is skipped. A binary body is counted and never copied. Request bodies and response bodies follow the same options; there is no separate switch for request bodies.
 
 Neither option removes headers or URL parameters. Use the [Dart filter](#redacting-with-a-dart-filter) and the SDK sanitizer for those.
 

@@ -29,20 +29,22 @@ flutter build apk --release --obfuscate --split-debug-info=build/symbols
 
 The upload is manual. Nothing in a Flutter build calls the Bugsee uploader, the plugin ships none, and `bugsee-cli` has no Flutter type yet (its `--type elf` is for native libraries).
 
-The script the 9.x plugin used still produces the upload the backend accepts. Run it after the build, in the project folder, pinned to a fixed commit and checked against its checksum:
+The script the 9.x plugin used still produces the upload the backend accepts. The script needs Python 3 with the `requests` package (`python3 -m pip install requests`); without it the command stops with `ModuleNotFoundError` before uploading. Run it after the build, in the project folder, pinned to a fixed commit and checked against its checksum:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/bugsee/bugsee-flutter/9bc0f8645755114491235dc68fec84fdc5671755/scripts/symbols.py -o symbols.py \
   && echo "ef2ed4c25b87da764fd5b70238a41d776f6aa88b5e3174faa4e33de2f08453f7  symbols.py" | shasum -a 256 -c - \
-  && python3 symbols.py --token <APP_TOKEN> --symdir build/symbols
+  && python3 symbols.py -t <APP_TOKEN> -d build/symbols
 ```
 
 | Option | Meaning |
 | --- | --- |
-| `--token` | The app token of the platform you built. |
-| `--version` | Optional. The app version. Defaults to the `version:` of the `pubspec.yaml` in the folder you run it from. |
-| `--symdir` | The folder you gave to `--split-debug-info`. |
-| `--endpoint` | Optional. Defaults to `https://api.bugsee.com/v2/`. |
+| `-t` | The app token of the platform you built. |
+| `-v` | Optional. The app version. Defaults to the `version:` of the `pubspec.yaml` in the folder you run it from. |
+| `-d` | The folder you gave to `--split-debug-info`. |
+| `-e` | Optional. Defaults to `https://api.bugsee.com/v2/`. |
+
+Use the short options. The script also accepts the long spellings, but it reads only the short ones, so `--token` and `--symdir` are silently ignored and nothing is uploaded.
 
 The script zips the `.symbols` files with a manifest and uploads the archive to Bugsee. Run it for each build you ship, and for each platform.
 
