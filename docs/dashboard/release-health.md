@@ -27,7 +27,7 @@ Both are computed per day and rounded to one decimal place. A result below zero 
 
 Handled errors and bug reports have their own charts (**Handled errors** and **Bugs**) and never count as crashes.
 
-A report of any kind (crash, handled error or bug report) can also add one session and one user to its own day. It does so when the device's record in Bugsee was last updated on a different day; opening a session and sending a report both update that record. So handled errors and bug reports can raise the session and user counts, and with them the crash-free numbers.
+A report of any kind (crash, handled error or bug report) can also add one session and one user to its own day. It does so when the device's record in Bugsee was last updated on a different day; opening a session and sending a report both update that record. So handled errors and bug reports can raise the session and user counts, and with them the crash-free numbers. Reports from simulators and review devices do this too.
 
 ## Versions and builds
 
@@ -36,7 +36,7 @@ Bugsee groups the numbers by the app version and build that the SDK reports: `CF
 - **All versions** (the default) shows the whole app.
 - Pick a version to see only that version. With a version selected, pick a build to narrow it further, or keep **All builds**.
 
-Versions are listed newest first. When every version consists of one to three numeric parts (such as `2`, `2.1` or `2.1.3`), they are ordered by version number. A single version with a suffix (`1.0.0-beta`) or a fourth part (`1.2.3.4`) switches the whole list to the order in which the versions first appeared.
+Versions are listed newest first. When every version consists of one to three numeric parts (such as `2`, `2.1` or `2.1.3`), they are ordered by version number. A single version with a suffix (`1.0.0-beta`) or a fourth part (`1.2.3.4`) switches the whole list to first-appearance order, most recent first; versions with no first-seen record are listed at the top.
 
 With **All versions** selected, the user counts are the app's daily totals. A device that updates during a day counts toward both versions, so per-version user counts can add up to more than the total.
 
@@ -44,7 +44,7 @@ The **Version adoption** chart shows each version's share of the day's users.
 
 ## Time range and days
 
-Choose **Last 7 days**, **Last 30 days**, **Year**, **All** or **Custom period**. The charts need at least 3 days; a shorter custom period shows no statistics.
+Choose **Last 7 days**, **Last 30 days**, **Year**, **All** or **Custom period**. The charts need at least 3 days of data: a shorter custom period, or an app with less than 3 days of data, shows *No statistics found*.
 
 Days start at midnight in the app's time zone, shown under the filters (for example, *Days start at midnight (GMT+2)*). Set it in the app's settings, under **General** → **Timezone**. The time zone is a fixed offset from GMT with no daylight saving time, so in a region that observes daylight saving time, days start an hour away from local midnight for part of the year.
 
@@ -52,7 +52,7 @@ Bugsee fixes the day of each entry when it receives it: a session counts on the 
 
 ## Sharing the Overview page
 
-An organization admin can make an app's Overview page visible to people without a Bugsee account. In the app's settings, under **Sharing**, turn on **Overview sharing** and copy the **Shared overview URL**.
+An organization admin can make an app's Overview page visible to people without a Bugsee account. In the app's settings, under **Sharing**, turn on **Overview sharing**, save, and copy the **Shared overview URL** that then appears.
 
 ## All apps at once
 

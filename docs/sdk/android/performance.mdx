@@ -176,14 +176,14 @@ Set the terminal status via `finish(SpanStatus)` (or `setStatus` before calling 
 
 ## Sampling and upload modes
 
-Four options control APM:
+Four options are defined; in 7.6.0 only `PerformanceMonitoring` has an effect:
 
 | Option | Default | Purpose |
 | --- | --- | --- |
 | `PerformanceMonitoring` | `true` | Master switch. When `false`, `startTransaction`/`startSpan` return no-op instances and no provider runs. |
-| `PerformanceSampleRate` | `0.01` | Probability (0.0–1.0) that a transaction is sampled for a standalone APM upload, which is not active yet. It does **not** affect whether transactions appear in issue reports: every transaction is captured either way. |
-| `PerformanceAdaptiveSampling` | `true` | Lets the standalone upload also keep transactions that lost the random draw but look interesting, scored at finish time on status, duration outlier-ness, and span-tree complexity. Not active yet either: while the upload is off, the SDK does not score transactions. _New in 7.0.0._ |
-| `PerformanceUploadMode` | `"batched"` | How the standalone upload would send sampled transactions: `"batched"` on a 30-second interval, `"realtime"` as soon as a transaction finishes. Accepted, but not active yet. |
+| `PerformanceSampleRate` | `0.01` | Reserved for the standalone APM upload: the probability (0.0–1.0) that a transaction is sampled for it. It does **not** affect whether transactions appear in issue reports: every transaction is captured either way. |
+| `PerformanceAdaptiveSampling` | `true` | Reserved for the standalone APM upload: would let it also keep transactions that lost the random draw but look interesting, scored at finish time on status, duration outlier-ness, and span-tree complexity. While the upload is off, the SDK does not score transactions. _New in 7.0.0._ |
+| `PerformanceUploadMode` | `"batched"` | Reserved for the standalone APM upload: how it would send sampled transactions, `"batched"` on a 30-second interval or `"realtime"` as soon as a transaction finishes. |
 
 All four options can be set programmatically via the `Bugsee.launch(...)` options map or via manifest metadata. See [Configuration](/sdk/android/configuration) for the mapping between `Options.*` constants and `com.bugsee.option.performance.*` manifest keys.
 
@@ -191,4 +191,4 @@ All four options can be set programmatically via the `Bugsee.launch(...)` option
 
 Performance data reaches Bugsee **with reports**. Every transaction is recorded into the capture buffer used for issue reports, regardless of `PerformanceSampleRate`.
 
-Transactions are not sent on their own. The standalone APM upload that `PerformanceSampleRate`, `PerformanceAdaptiveSampling`, and `PerformanceUploadMode` are meant for is not active yet (as of 7.6.0): the SDK accepts the three options, but they do not change which transactions are captured or sent. `Transaction.isSampled()` reports the result of the random draw made when the transaction started. Each transaction in a report also records that result and the sample rate, as the `bugsee.sampled` and `bugsee.sample_rate` attributes of its root span.
+Transactions are not sent on their own. The standalone APM upload that `PerformanceSampleRate`, `PerformanceAdaptiveSampling`, and `PerformanceUploadMode` are meant for is not active yet: the SDK accepts the three options, but they do not change which transactions are captured or sent. `Transaction.isSampled()` reports the result of the random draw made when the transaction started. Each report records whether its transactions were sampled.

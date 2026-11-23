@@ -93,15 +93,15 @@ Besides your own traces, every report carries traces that the SDK records on its
 | Memory | JVM and native heap (total, free, used), the process's native, Dalvik, other and total memory, the device's total, available and advertised memory, and the low-memory state. | All |
 | Power | Battery level, charging state and source, and power saving. | All |
 | Connectivity | The active connection type (Wi-Fi, cellular, Ethernet, Bluetooth and others). | All |
-| Wi-Fi | Whether Wi-Fi is on, RSSI and signal level, link speed and bandwidth, frequency, Passpoint provider names, the local IP address and the MAC address, and the network name (SSID) and BSSID, each when Android returns it to the app. The Wi-Fi standard and maximum link speeds need Android 11 (API 30), the security type Android 13 (API 33). No option turns these fields off. | All |
-| Cellular | For each SIM: network type, data connection state, operator name, MCC and MNC, roaming state and signal strength. | All |
+| Wi-Fi | Whether Wi-Fi is on, RSSI and signal level, link speed and bandwidth, frequency, Passpoint provider names, the local IP address and the MAC address, and the network name (SSID) and BSSID. Recorded only if your app holds `ACCESS_WIFI_STATE`, which the SDK does not request. SSID and BSSID also need location permission; Passpoint names need Android 13 (API 33). The Wi-Fi standard and maximum link speeds need Android 11 (API 30), the security type Android 13 (API 33). No option turns these fields off. | All |
+| Cellular | Per SIM on Android 10 (API 29) and later: network type, data connection state, operator name, MCC and MNC, roaming state and signal strength. | All |
 | Bluetooth, NFC | Bluetooth and NFC state. | All |
 | App and screen | Foreground or background, the current activity, orientation, screen brightness, the connected displays, and accessibility state. | All |
-| Sound volume | Volume level of each audio stream. | All |
-| Capture | Whether recording is active, in a blackout, or in a partial blackout. | All |
+| Sound volume | Volume levels of six audio streams: media, voice call, system, ring, alarm and notification. | All |
+| Capture | Whether recording is active, in a blackout, or in a partial blackout (some displays blacked out). | All |
 | Frame rate, fold state | Frame rate; fold state on foldable devices. | 7.0 (API 24) and later |
 | Hinge angle | The hinge angle, on foldable devices with a hinge-angle sensor. | 11 (API 30) and later |
 | Thermal state | The device's thermal status. | 10 (API 29) and later |
 | Disk space, thermal headroom | Free and total storage; thermal headroom. | 11 (API 30) and later |
 | Game mode | The Android Game Mode the system applies to the app (`unsupported` for apps the system does not treat as games). | 12 (API 31) and later |
-| Satellite | Whether the satellite modem is on. Needs a phone-state permission that the SDK does not request; without one the trace reports it as unavailable. | 16 (API 36) and later |
+| Satellite | Whether the satellite modem is on. Needs a phone-state permission that the SDK does not request; without one the trace reports it as unavailable. Reads unknown until the modem state first changes. | 16 (API 36) and later |
