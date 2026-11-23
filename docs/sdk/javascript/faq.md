@@ -11,7 +11,7 @@ This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can 
 
 **1. Which runtimes does the SDK support?**
 
-Browsers, Node.js 18 or later, and Bun 1.1.13 or later are the main targets. Electron, Cloudflare Workers, Vercel Edge, and Web and Service Workers are supported through their own packages. Deno is not supported. See [Overview](/sdk/javascript/overview#requirements).
+Browsers, Node.js 18 or later, and Bun 1.1.13 or later are the main targets. Electron, Cloudflare Workers, Vercel Edge, and Web and Service Workers are supported through their own packages. See [Overview](/sdk/javascript/overview#requirements).
 
 <br />
 
