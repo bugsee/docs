@@ -1,0 +1,207 @@
+---
+title: "Installation"
+description: "Installing Bugsee Flutter SDK 10.x: the pubspec entry, the Android Gradle plugin and JDK, iOS Swift Package Manager, and the first launch from Dart."
+sidebar_position: 1
+slug: "/sdk/flutter/installation"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents Bugsee Flutter SDK **10.x**, which is in beta, is not published on pub.dev yet and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+:::
+
+:::caution[Replacing 9.x]
+10.x is a rewrite for the 7.x native SDKs with a different API, not an upgrade in place. [Migrating from 9.x to 10.x](/sdk/flutter/migration) lists the API changes.
+:::
+
+## Requirements
+
+| | |
+| --- | --- |
+| Flutter / Dart | 3.50.0 or later / 3.14 or later |
+| Android | `minSdk` 21; JDK 17 or 21 for the build; the Bugsee Gradle plugin **4.1.1** (mandatory, see [Android](#android)) |
+| iOS | 15.0 or later; Swift Package Manager only (no CocoaPods: Bugsee publishes no pod and the plugin has no podspec) |
+| Native SDKs | Android 7.6.0, iOS 7.1.0 |
+| Not covered | web, desktop (the calls do nothing there), tvOS, visionOS |
+
+The Flutter floor is 3.50.0: the 10.x line builds on the release that ships Direct Interop, Android Gradle Plugin 9 and `material_ui`. The plugin is also Swift Package Manager only, so `flutter pub get` fails on Linux and Windows before Flutter 3.41.0.
+
+## Add the package
+
+Add `bugsee_flutter` to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  bugsee_flutter: ^10.0.0-beta.1
+```
+
+Then run `flutter pub get`.
+
+The package is a beta and is not on pub.dev yet. Until it is, use the git dependency instead:
+
+```yaml
+dependencies:
+  bugsee_flutter:
+    git:
+      url: https://github.com/bugsee/bugsee-flutter.git
+      ref: main
+```
+
+The [feedback chat](/sdk/flutter/feedback) is a separate package, `bugsee_flutter_feedback`. While the core is unpublished, it needs its own git entry (`path: packages/bugsee_flutter_feedback`, with the same `url` and `ref`) and a `dependency_overrides:` entry for `bugsee_flutter` with the same git source, because its hosted constraint on the core cannot resolve yet.
+
+## Android
+
+<Tabs groupId="gradle-dsl">
+  <TabItem value="kotlin" label="Kotlin DSL">
+
+1. **Apply the Bugsee Gradle plugin.** It is mandatory for the 7.x SDK, and a Flutter plugin cannot apply it for you, so your app does. In `android/settings.gradle.kts`, next to the other plugins:
+
+   ```kotlin
+   plugins {
+       id("dev.flutter.flutter-plugin-loader") version "1.0.0"
+       id("com.android.application") version "9.1.1" apply false   // Flutter 3.50 requires AGP 9
+       id("com.bugsee.android.gradle") version "4.1.1" apply false
+   }
+   ```
+
+   In `android/app/build.gradle.kts`, after the Android and Flutter plugins:
+
+   ```kotlin
+   plugins {
+       id("com.android.application")
+       id("dev.flutter.flutter-gradle-plugin")
+       id("com.bugsee.android.gradle")
+   }
+   ```
+
+2. **Turn on the native symbol upload**, in `android/app/build.gradle.kts`:
+
+   ```kotlin
+   bugsee {
+       ndk { enabled.set(true) }
+   }
+   ```
+
+  </TabItem>
+  <TabItem value="groovy" label="Groovy DSL">
+
+1. **Apply the Bugsee Gradle plugin.** It is mandatory for the 7.x SDK, and a Flutter plugin cannot apply it for you, so your app does. In `android/settings.gradle`, with the other plugins (use the Android Gradle Plugin version your Flutter template declares; Flutter 3.50 requires AGP 9):
+
+   ```groovy
+   id 'com.bugsee.android.gradle' version '4.1.1' apply false
+   ```
+
+   In `android/app/build.gradle`, after the Android and Flutter plugins:
+
+   ```groovy
+   id 'com.bugsee.android.gradle'
+   ```
+
+2. **Turn on the native symbol upload**, in `android/app/build.gradle`:
+
+   ```groovy
+   bugsee {
+       ndk { enabled.set(true) }
+   }
+   ```
+
+  </TabItem>
+</Tabs>
+
+3. **Build with JDK 17 or 21.** Set `JAVA_HOME`, and `org.gradle.java.home` in `gradle.properties` to pin it. JDK 25 is not part of the supported set. An error that Gradle cannot parse the JDK version means the JDK is newer than the Gradle in use understands.
+
+Use Bugsee Gradle plugin 4.1.1. On an older plugin the build can fail Gradle task validation on `injectBugsee<Variant>BuildId`, and plugins older than 4.0.7 strip the extension providers, so extensions such as the feedback chat never register.
+
+About the native symbol upload: the native crash detector is always present (the package depends on the `bugsee-android-ndk` artefact), but a crash in `libflutter.so` or any other `.so` is readable (function and file:line) only when the backend has that build's native symbols. With `ndk.enabled`, the plugin uploads the unstripped libraries of every non-debuggable build, using the app token (see [Symbolication: Android](/sdk/flutter/symbolication/android)). The R8 mapping upload needs no setting.
+
+The plugin also registers the Flutter wrapper from a content provider that runs before the SDK can launch, and the package ships consumer ProGuard rules. You add nothing for either. Do not add a provider of your own named `Bugsee<Anything>InitProvider`: the Gradle plugin deletes such a provider from the APK.
+
+:::info[The first seconds of a session are not recorded on Android]
+The SDK's startup hold is on: capture is blacked out from process start until the first Flutter frame is up and the secure views have been published, about one second after the frame. Time caps bound the hold (10 seconds after the last engine that attached before a frame, 20 seconds with none, 60 seconds at most). A cap is a safety limit, not a privacy guarantee. See [Privacy: Video](/sdk/flutter/privacy/video).
+:::
+
+Other Bugsee Android modules (`bugsee-android-okhttp`, `-ktor-2`, `-ktor-3`, `-cronet`, `-compose`, `-leak`) are not added: they instrument native UI and HTTP stacks that a Flutter UI and `dart:io` capture do not use. If your app has native code that uses one of them, declare the dependency yourself and the plugin wires it.
+
+## iOS
+
+The iOS side is distributed through Swift Package Manager only. Where it is not on by default, run once:
+
+```sh
+flutter config --enable-swift-package-manager
+```
+
+Raise the app's **iOS deployment target to 15.0**: in Xcode, Runner target, General, Minimum Deployments, or `IPHONEOS_DEPLOYMENT_TARGET = 15.0` in `ios/Runner.xcodeproj`. Older Flutter app templates default to a lower one. No `Info.plist` keys are required.
+
+## Launch
+
+Call `Bugsee.launch` early, with the app token from the Bugsee dashboard:
+
+```dart
+import 'package:bugsee_flutter/bugsee_flutter.dart';
+import 'package:flutter/widgets.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final result = await Bugsee.launch(
+    'YOUR_APP_TOKEN',
+    options: const BugseeOptions(
+      captureVideo: true,
+      captureLogsLevel: LogLevel.info,
+      configDuration: 45,
+      detectHang: true,
+      reportingDefaultsCrashPriority: ReportSeverity.critical,
+    ),
+  );
+  // launched, alreadyRunning and deferred are all "not a failure".
+
+  runApp(const MyApp());
+}
+```
+
+`options` is optional. See [Configuration](/sdk/flutter/configuration) for the option fields.
+
+`Bugsee.launch` completes when the SDK answers, with a `LaunchResult`:
+
+| Result | Meaning |
+| --- | --- |
+| `launched` | Capture started. |
+| `alreadyRunning` | The SDK was already launching or launched. Your options were **not applied**. See [Launching twice](#launching-twice-and-auto-init). |
+| `deferred` | iOS only: the app is not active yet, so the SDK starts later. |
+
+A launch that did not happen throws a `BugseeLaunchException` whose `reason` is a `LaunchFailure`: a blank token (`invalidToken`), a stop still in progress (`stopping`), a refusal (`rejected`), an exception on the native side (`nativeError`), or a platform without an SDK (`unsupportedPlatform`). See [Lifecycle & status](/sdk/flutter/lifecycle) for waiting until capture is up.
+
+Before `launch`, most calls do nothing and nothing is queued. Attributes, the user identifier and blackout work before launch. See [Lifecycle & status](/sdk/flutter/lifecycle#before-launch).
+
+## Launching twice and auto-init
+
+- On **Android** the SDK launches itself before any Dart code runs when the manifest declares `com.bugsee.app-token` meta-data. A later `Bugsee.launch` is then `alreadyRunning` and its options are not applied. To launch from Dart, leave the token out of the manifest, or add `<meta-data android:name="com.bugsee.auto-init" android:value="false"/>`. Lifecycle events from before the first call into the plugin are delivered when it attaches, and the latest status is replayed.
+- **iOS** has no auto-init.
+- A second `launch` while the SDK is running starts nothing and returns `alreadyRunning`. To change options, call `await Bugsee.stop()` and then `Bugsee.launch` again.
+- A launch while a stop is still in progress is refused with `LaunchFailure.stopping`: await `Bugsee.stop()` first.
+
+## Stop
+
+```dart
+await Bugsee.stop();   // completes when the SDK has stopped
+```
+
+`stop` completes at once if the SDK was not running. The next `launch` applies the options it is given.
+
+## Check that it works
+
+Launch the app and wait until the status is `launched`, then trigger a report, for example with `Bugsee.upload('Test', 'Hello from Flutter')`, and open the dashboard. Reports upload in the background.
+
+```dart
+Bugsee.statusChanges.listen(print);   // launching, launched, stopping, stopped
+print(await Bugsee.getStatus());
+```
+
+## Next steps
+
+- [Configuration](/sdk/flutter/configuration): the launch options.
+- [Lifecycle & status](/sdk/flutter/lifecycle): status, waiting for a launch, lifecycle events.
+- [Privacy](/sdk/flutter/privacy/overview): decide what must not be recorded.
+- [Symbolication](/sdk/flutter/symbolication/overview): readable stack traces in release builds.

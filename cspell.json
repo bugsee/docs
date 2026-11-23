@@ -278,6 +278,16 @@
         "RRGGBBAA",
         "Dalvik",
         "RSSI",
-        "Passpoint"
+        "Passpoint",
+        "libflutter",
+        "SIGEMT",
+        "appbundle",
+        "symdir",
+        "symbolizer",
+        "ttfb",
+        "cupertino",
+        "userinfo",
+        "Userinfo",
+        "referer"
     ]
 }

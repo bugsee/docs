@@ -1,0 +1,182 @@
+---
+title: "Network events"
+description: "How Bugsee Flutter SDK 10.x records dart:io network traffic: installNetworkCapture, what a request records, body limits, setNetworkFilter, and what is never captured."
+sidebar_position: 8
+slug: "/sdk/flutter/network"
+---
+
+:::warning[Beta]
+This page documents Bugsee Flutter SDK **10.x**, which is in beta, is not published on pub.dev yet and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+:::
+
+Bugsee records the HTTP requests your app makes, with their headers, bodies and status codes, and shows them on the report timeline next to the video and logs.
+
+Dart does not use the platform's networking stack. `dart:io`'s `HttpClient` is what `package:http`, the default adapter of `dio`, `Image.network` and the WebSocket handshake are built on, and neither native SDK sees it. The plugin therefore records it in Dart, through `HttpOverrides`, and hands each event to the native SDK, which applies its network options and privacy rules as it does to the traffic it intercepts itself.
+
+This capture is **opt-in**: `launch` never turns it on.
+
+## Enabling capture
+
+Call `Bugsee.installNetworkCapture()` once, early in `main`, before the app makes a request:
+
+```dart
+import 'package:bugsee_flutter/bugsee_flutter.dart';
+import 'package:flutter/widgets.dart';
+
+void main() {
+  Bugsee.installNetworkCapture();
+  runApp(const MyApp());
+}
+
+// Later: Bugsee.launch(...). Nothing is recorded before the SDK is launched.
+```
+
+| Member | Description |
+| --- | --- |
+| `Bugsee.installNetworkCapture()` | Starts the capture. Returns whether it is in effect (`false` on a platform with no SDK, such as web and desktop). Idempotent. |
+| `Bugsee.uninstallNetworkCapture()` | Stops it. |
+| `Bugsee.networkCaptureInstalled` | Whether `installNetworkCapture` was called and not undone. |
+| `Bugsee.setNetworkFilter(filter, {timeout})` | Sets the [filter](#filtering-events). `null` removes it. |
+| `Bugsee.networkFilter` | The filter that is set, or `null`. |
+| `Bugsee.networkCaptureStats` | Counters for diagnosis: [`NetworkCaptureStats`](#diagnosing-capture). |
+
+Things to know about installing:
+
+- **Call it from the root isolate.** A call from a background isolate throws a `BugseeException`.
+- **Install it after your own `HttpOverrides`.** The capture puts its overrides in front of `HttpOverrides.current` and chains to them: clients, `badCertificateCallback`, proxy settings and `findProxy` stay yours. If you set `HttpOverrides.global` afterwards without chaining, you replace the capture; call `installNetworkCapture` again to put it back in front.
+- **Do not call it inside a zone that scopes its own overrides** (`HttpOverrides.runZoned`). It throws a `BugseeException` instead of making that scope global.
+- **Hot restart** starts clean: the new isolate's `main` calls `installNetworkCapture()` again.
+- **The capture never changes what your app sees.** Every call is forwarded to the real client unchanged, a response chunk reaches your code in the same turn it arrives, and a failure inside the capture is never thrown into your code. The app's request path pays for a queue insert; filtering and the bridge call happen in a later turn of the event loop.
+
+## What is recorded
+
+An exchange is recorded as several entries that share an id:
+
+| Stage | When | Carries |
+| --- | --- | --- |
+| `before` | The request is closed with `request.close()`. | Method, URL, request headers, request body, size. |
+| `redirect` | One per hop that `dart:io` followed. Android only. | The URL that answered and its status. |
+| `complete` | The response body ended. | Status, response headers, body, size, `redirectedFrom` when redirected. |
+| `error` | The request failed: no connection, certificate refusal, connection timeout, connection closed while the body was arriving. | Short and long error text. |
+| `abort` | The app cancelled the response subscription or called `request.abort()`. | Size so far. |
+
+Any HTTP status is a `complete`, 4xx and 5xx included; `error` is for failures that never produced a response.
+
+- A request is recorded when it is closed, not when it is opened. A request your app never closes is never recorded.
+- A response completes when its body stream ends. A response your app never listens to never completes.
+- Header names are lower-case, and a header sent more than once is one entry joined with `, `.
+- The headers of `before` are the ones `dart:io` holds when the request is closed: yours, plus the ones `dart:io` sets itself (`host`, `user-agent`, `accept-encoding`, `content-length` or `transfer-encoding`). Cookies added through `request.cookies` are not part of them.
+- A redirect your app follows itself (`followRedirects = false`, then `response.redirect()`) is a new exchange for each response.
+
+### Differences between the platforms
+
+| | Android | iOS |
+| --- | --- | --- |
+| `redirect` stage | Recorded for each hop. | None. The final `complete` carries the original URL in `redirectedFrom`. |
+| `timings` (`ttfb`, `download`, `total`, in milliseconds) | Recorded. | Not available. |
+| Reason phrase (`statusText`) | Recorded. | Not available. |
+| Error text | Short and long. | One text. |
+
+### Bodies
+
+Bodies follow the native SDK's own rules, which the plugin applies **before copying anything**, so memory stays bounded by the limit and a binary body is counted but never copied.
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `captureNetwork` | `true` | `false` captures and sends nothing. |
+| `captureNetworkBodySizeLimit` | `20480` | Largest body kept, in bytes. A body over the limit is **dropped, not cut**; its size is still reported. A limit of `0` keeps no body. The plugin caps this value at 2 MiB: above that, a body over 2 MiB is dropped as if it exceeded the limit. |
+| `captureNetworkBodyWithoutType` | `false` | Without it, a body needs a `Content-Type` that is text (`text/*`, or a subtype containing `json`, `xml` or `x-www-form-urlencoded`). With it, the type check is skipped. |
+| `captureNetworkDefaultSanitizer` | `true` | The SDK's redaction; see [Privacy: Network](/sdk/flutter/privacy/network). |
+
+A body that is not recorded carries a reason (`NoBodyReason`): `sizeTooLarge`, `unsupportedContentType`, `noContentType` or `cantReadData`. A response that is still compressed (`autoUncompress` off), a charset other than UTF-8, Latin-1 or ASCII, and bytes that are not valid text are all `cantReadData`. With `autoUncompress` on (the default), `dart:io` decompresses the response and the body is the text.
+
+Request and response bodies are governed by the same options: there is no separate switch for request bodies. To capture no body at all, set `captureNetwork` off, or the limit to `0`.
+
+```dart
+await Bugsee.launch(
+  'YOUR_APP_TOKEN',
+  options: const BugseeOptions(
+    captureNetworkBodySizeLimit: 8192,
+  ),
+);
+```
+
+## Filtering events
+
+`Bugsee.setNetworkFilter` sets a Dart function that every event passes through before anything is handed to the SDK. Return the event (changed in place, or a copy) to record it, or `null` to drop it:
+
+```dart
+Bugsee.setNetworkFilter((event) {
+  if (Uri.parse(event.url).host == 'internal.example.com') return null; // not recorded
+  event.headers.remove('x-session');                                    // redact in place
+  return event;
+});
+```
+
+The filter receives a `BugseeNetworkEvent`:
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | `String` | Shared by every stage of one request. Read-only. |
+| `stage` | `NetworkStage` | `before`, `redirect`, `complete`, `error` or `abort`. Read-only. |
+| `method` | `String` | Read-only. |
+| `statusCode` | `int` | `0` for a stage with no response. Read-only. |
+| `size` | `int` | Body bytes seen, whether or not they were kept. Read-only. |
+| `url` | `String` | The full URL, query included. A filter that blanks it drops the event. |
+| `headers` | `Map<String, String>` | Request headers for `before`, response headers for the stages that have a response. |
+| `body` | `String?` | Text only, within the size limit. |
+| `noBodyReason` | `NoBodyReason?` | Why `body` is `null`. |
+| `statusText`, `error`, `errorDescription`, `redirectedFrom` | `String?` | As described above. |
+| `timings` | `Map<String, double>?` | Android only. |
+
+`id`, `stage`, `method`, `statusCode` and `size` describe what happened. If a filter changes them, the change is ignored, so a filter cannot break the pairing of the stages of one exchange.
+
+Properties of the filter:
+
+- **It runs in Dart, so it cannot be bypassed.** There is no path to the SDK that does not go through it. It sees the raw event: headers, the URL with its query, and the body.
+- **It fails closed.** A filter that throws, returns something other than a `BugseeNetworkEvent` or `null`, or returns a `Future` that does not complete within its timeout drops that event. A debug build prints a warning once, and `networkCaptureStats.filterFailures` counts them. A filter that never answers drops one event per timeout while the queue fills, so capture degrades to nothing, never to unfiltered.
+- **The timeout** is the `timeout` argument of `setNetworkFilter`: 10 seconds by default, which is the SDK's own filter timeout. It must be positive and at most 5 minutes, or `setNetworkFilter` throws a `BugseeArgumentException`.
+- **It runs on the isolate that made the request** (normally the UI isolate), one event at a time and in order, never inside the HTTP call. A slow synchronous filter takes UI time, so keep it fast. It may return a `Future`.
+- **It gets a copy.** Changing the event cannot reach what the capture still holds.
+- **The SDK still runs afterwards.** Every event is submitted with filtering required, so the native SDK's default sanitizer runs on what your filter returns. See [Privacy: Network](/sdk/flutter/privacy/network).
+
+## What is never recorded
+
+- Anything while the SDK is not `launched`, after `stop`, or with `captureNetwork` off. A request that began before the launch is never recorded; one that began while launched is recorded to its end.
+- **Bugsee's own traffic**: any host `bugsee.com` or below, and the host of the configured `endpoint`.
+- WebSocket frames. The handshake is recorded as a normal exchange (`101`, no body). The frames are not; record them yourself with `Bugsee.event` or `Bugsee.trace` if you need them.
+- Requests made in another isolate. `HttpOverrides.global` is per isolate and a background isolate has no channel to the SDK. Make the request in the root isolate.
+- Requests made through a stack that is not `dart:io`.
+- Requests from a client that was created before `installNetworkCapture` by code that keeps it (a `static final HttpClient`, an app-wide singleton), and the first `WebSocket` if it was used before the install. Install first, in `main`.
+- Requests while another `HttpOverrides` replaced the capture without chaining, or inside a zone with its own overrides.
+
+Native networking stacks (`cronet_http`, `cupertino_http`, `native_dio_adapter`, a WebView, a platform channel) go through the native SDKs' own interception, not this capture. An app that uses both sees each request once, from its own stack.
+
+## Limits
+
+- The capture queue holds 512 events or 8 MiB, and hands the SDK batches of at most 32 events or 512 KiB, one batch at a time. If the native side cannot keep up, the **newest** events are dropped and counted in `networkCaptureStats.droppedQueueFull`; a debug build prints a warning once.
+- A body near the 2 MiB cap weighs about twice that in the queue, so a second large body queued before the first one drains can be dropped as `droppedQueueFull`.
+- The app's own timeout (`Future.timeout` on `close()`) does not cancel the request, so the exchange completes when the server answers. `request.abort()` records an `abort`.
+- `uninstallNetworkCapture` stops recording at once, including an exchange in flight. Events that were already captured and filtered are still submitted, unless the SDK is no longer launched.
+- Each event carries its age, so the timeline shows when the request happened, not when the event was handed over.
+
+## Diagnosing capture
+
+`Bugsee.networkCaptureStats` returns a `NetworkCaptureStats`:
+
+| Counter | Counts |
+| --- | --- |
+| `captured` | Events the capture produced and the queue took. |
+| `submittedToSdk` | Events the native side submitted to the SDK. This is not "recorded": the SDK can still drop an event silently if its provider is stopped. |
+| `droppedQueueFull` | Events dropped because native could not keep up. |
+| `droppedNotAccepting` | Events dropped because the SDK stopped accepting them (a stop, or `captureNetwork` off) before they were handed over. |
+| `droppedByFilter` | Events your filter answered `null` for. |
+| `filterFailures` | Events dropped because the filter threw, returned an unusable value or timed out. |
+| `refusedByNative` | Events handed to native and not taken by the SDK. |
+| `sendFailures` | Events lost with a batch the bridge failed to deliver. |
+
+## Related pages
+
+- [Privacy: Network](/sdk/flutter/privacy/network): what the SDK redacts, what your filter should remove, and where the URL can still leak.
+- [Configuration](/sdk/flutter/configuration): the full option list.
+- [Lifecycle](/sdk/flutter/lifecycle): launch and stop.

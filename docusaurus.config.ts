@@ -3,7 +3,7 @@ import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 // Wrapper SDKs share one layout: an installation page and a privacy section.
-const wrapperSdks = ['cordova', 'dotnet', 'kmp', 'react_native', 'unity', 'xamarin'];
+const wrapperSdks = ['cordova', 'dotnet', 'flutter', 'kmp', 'react_native', 'unity', 'xamarin'];
 
 const config: Config = {
   title: 'Bugsee',
@@ -123,26 +123,13 @@ const config: Config = {
           { from: '/sdk/react-native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
           { from: '/sdk/react_native/v6', to: '/sdk/react_native/v6/installation/' },
           { from: '/sdk/react_native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
-          // Flutter 9.x pages moved under /sdk/flutter/v9/; the 10.x pages are not published yet, so every old route answers with its 9.x page.
-          { from: '/sdk/flutter', to: '/sdk/flutter/v9/installation/' },
-          { from: '/sdk/flutter/privacy', to: '/sdk/flutter/v9/privacy/overview/' },
+          // Flutter 9.x pages moved under /sdk/flutter/v9/; old routes with no 10.x page keep their 9.x content.
           { from: '/sdk/flutter/v9', to: '/sdk/flutter/v9/installation/' },
           { from: '/sdk/flutter/v9/privacy', to: '/sdk/flutter/v9/privacy/overview/' },
           { from: '/sdk/flutter/appearance', to: '/sdk/flutter/v9/appearance/' },
-          { from: '/sdk/flutter/configuration', to: '/sdk/flutter/v9/configuration/' },
           { from: '/sdk/flutter/custom', to: '/sdk/flutter/v9/custom/' },
-          { from: '/sdk/flutter/feedback', to: '/sdk/flutter/v9/feedback/' },
-          { from: '/sdk/flutter/installation', to: '/sdk/flutter/v9/installation/' },
-          { from: '/sdk/flutter/lifecycle', to: '/sdk/flutter/v9/lifecycle/' },
-          { from: '/sdk/flutter/logs', to: '/sdk/flutter/v9/logs/' },
           { from: '/sdk/flutter/manual', to: '/sdk/flutter/v9/manual/' },
-          { from: '/sdk/flutter/network', to: '/sdk/flutter/v9/network/' },
-          { from: '/sdk/flutter/release-notes', to: '/sdk/flutter/v9/release-notes/' },
-          { from: '/sdk/flutter/symbolication', to: '/sdk/flutter/v9/symbolication/' },
-          { from: '/sdk/flutter/privacy/overview', to: '/sdk/flutter/v9/privacy/overview/' },
-          { from: '/sdk/flutter/privacy/video', to: '/sdk/flutter/v9/privacy/video/' },
-          { from: '/sdk/flutter/privacy/logs', to: '/sdk/flutter/v9/privacy/logs/' },
-          { from: '/sdk/flutter/privacy/network', to: '/sdk/flutter/v9/privacy/network/' },
+          { from: '/sdk/flutter/symbolication', to: '/sdk/flutter/symbolication/overview/' },
         ],
         // Android 7.x and iOS 7.x lived under /sdk/<platform>/v7/ until they became the
         // default; every current Android and iOS page keeps answering at its old v7 address.
