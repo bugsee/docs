@@ -25,7 +25,7 @@ A fix for stack traces of thrown values that are not `Error` objects.
 
 **Changes**
 
-- **`launch()` with a missing token no longer throws.** A missing, empty or non-string token returns a disabled client and reports one error through `onError` (or `console.warn` when you gave none). Nothing is captured or uploaded and every method is safe to call. See [Installation](/sdk/javascript/installation#2-get-your-app-token).
+- **`launch()` with a missing token no longer throws.** A missing, empty or non-string token returns a disabled client and reports one error through `onError` (or `console.warn` when you gave none). Nothing is captured or uploaded and every method is safe to call. See [Quick start](/sdk/javascript/quick-start#2-get-your-app-token).
 - **Bundler plugins read `.env.bugsee-build-plugin`.** The plugins depend on `@bugsee/cli` and read `BUGSEE_APP_TOKEN`, `BUGSEE_APP_VERSION` and `BUGSEE_APP_BUILD` from a `.env.bugsee-build-plugin` file. Real environment variables take precedence. See [Symbolication environment](/sdk/javascript/symbolication/environment).
 - **Hang reports carry the blocking stack.** An `AppHang` report on Node.js and Bun includes a `crash.json` with the stack that blocked the event loop. See [Hangs](/sdk/javascript/issue-detection/hangs).
 - **Angular builds.** A fix in `@bugsee/rrweb` for Angular's esbuild builder: the inlined replay worker no longer ends with a stray `sourceMappingURL` line that broke the build.

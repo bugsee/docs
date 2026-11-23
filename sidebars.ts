@@ -972,6 +972,7 @@ const sidebars: SidebarsConfig = {
           id: "sdk/javascript/installation",
           label: "Installation",
         },
+        { type: "doc", id: "sdk/javascript/quick-start", label: "Quick start" },
         {
           type: "category",
           label: "Platforms",

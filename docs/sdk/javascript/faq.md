@@ -17,7 +17,7 @@ Browsers, Node.js 18 or later, and Bun 1.1.13 or later are the main targets. Ele
 
 **2. Which package do I install?**
 
-For a browser app or a Node.js server, `@bugsee/bugsee`. For Bun, Electron, Cloudflare, Vercel Edge and workers, the package named for the runtime. Frameworks add an adapter. The table in [Installation](/sdk/javascript/installation#1-add-the-package) lists them all, and [Packages](/sdk/javascript/packages) explains the rest.
+For a browser app or a Node.js server, `@bugsee/bugsee`. For Bun, Electron, Cloudflare, Vercel Edge and workers, the package named for the runtime. Frameworks add an adapter. The table in [Quick start](/sdk/javascript/quick-start#1-add-the-package) lists them all, and [Packages](/sdk/javascript/packages) explains the rest.
 
 <br />
 
@@ -41,7 +41,7 @@ For now both point at the current beta, so installing with or without `@beta` ge
 
 **6. `launch()` does not throw, but nothing is captured.**
 
-A missing, empty or non-string token returns a disabled client and reports one message through `onError` (or `console.warn` when you gave none). Check that the token reaches your code at runtime; an environment variable that is not set, or that your bundler does not expose to browser code, is the usual cause. See [Installation](/sdk/javascript/installation#troubleshooting).
+A missing, empty or non-string token returns a disabled client and reports one message through `onError` (or `console.warn` when you gave none). Check that the token reaches your code at runtime; an environment variable that is not set, or that your bundler does not expose to browser code, is the usual cause. See [Quick start](/sdk/javascript/quick-start#troubleshooting).
 
 <br />
 
@@ -113,7 +113,7 @@ Upload source maps for each release, with the same version and build you pass to
 
 **18. Reports show version `0.0.0`.**
 
-The SDK could not detect your app version. Pass `appVersion` to `launch()`, set `BUGSEE_APP_VERSION`, or give your `package.json` a version. See [Installation](/sdk/javascript/installation#app-version-and-build).
+The SDK could not detect your app version. Pass `appVersion` to `launch()`, set `BUGSEE_APP_VERSION`, or give your `package.json` a version. See [Quick start](/sdk/javascript/quick-start#app-version-and-build).
 
 <br />
 
