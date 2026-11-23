@@ -2,12 +2,16 @@
 title: "Privacy and console logs"
 description: "How to disable console log collection or sanitize log content in Flutter to remove personally identifiable information before it is recorded."
 sidebar_position: 2
-slug: "/sdk/flutter/privacy/logs"
+slug: "/sdk/flutter/v9/privacy/logs"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Flutter SDK **9.x** (`bugsee_flutter` 9.x), the current stable release. The new **10.x** SDK is a rewrite for the Bugsee 7.x native SDKs and is in beta, not yet published to pub.dev.
+:::
 
 ## Disabling log collection
 
-Console log collection can be disabled completely using **captureLogs** launch option. See [configuration](/sdk/flutter/configuration/) for more info.
+Console log collection can be disabled completely using **captureLogs** launch option. See [configuration](/sdk/flutter/v9/configuration/) for more info.
 
 ## Sanitizing console logs
 

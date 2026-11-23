@@ -2,8 +2,12 @@
 title: "Release notes"
 description: "Changelog for the Bugsee Flutter SDK listing new features, bug fixes, and breaking changes for each released version."
 sidebar_position: 11
-slug: "/sdk/flutter/release-notes"
+slug: "/sdk/flutter/v9/release-notes"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Flutter SDK **9.x** (`bugsee_flutter` 9.x), the current stable release. The new **10.x** SDK is a rewrite for the Bugsee 7.x native SDKs and is in beta, not yet published to pub.dev.
+:::
 
 ## 9.0.4 (August 18 2026)
 - Feat: Updated native SDKs to their latest versions (Android: [6.0.4](/sdk/android/v6/release-notes/#604-june-22-2026), iOS: [6.3.1](/sdk/ios/v6/release-notes/#631-july-31-2026))

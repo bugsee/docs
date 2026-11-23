@@ -2,8 +2,12 @@
 title: "Feedback"
 description: "How to show the in-app feedback messenger, receive new message notifications, and set a default greeting in the Bugsee Flutter SDK."
 sidebar_position: 6
-slug: "/sdk/flutter/feedback"
+slug: "/sdk/flutter/v9/feedback"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Flutter SDK **9.x** (`bugsee_flutter` 9.x), the current stable release. The new **10.x** SDK is a rewrite for the Bugsee 7.x native SDKs and is in beta, not yet published to pub.dev.
+:::
 
 Bugsee implements a built-in single-threaded messenger to allow your users to communicate with your support and developers.
 

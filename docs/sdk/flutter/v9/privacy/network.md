@@ -2,12 +2,16 @@
 title: "Privacy and Network traffic"
 description: "How to disable network monitoring or filter sensitive data from captured network requests and responses in Flutter using a callback handler."
 sidebar_position: 3
-slug: "/sdk/flutter/privacy/network"
+slug: "/sdk/flutter/v9/privacy/network"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Flutter SDK **9.x** (`bugsee_flutter` 9.x), the current stable release. The new **10.x** SDK is a rewrite for the Bugsee 7.x native SDKs and is in beta, not yet published to pub.dev.
+:::
 
 ## Disabling network traffic collection
 
-Network traffic collection can be disabled completely using the **monitorNetwork** launch option. This covers both Dart and native platform traffic — with `monitorNetwork` set to `false`, nothing is captured even if the HTTP overrides handler below is installed. See [configuration](/sdk/flutter/configuration/) for more info.
+Network traffic collection can be disabled completely using the **monitorNetwork** launch option. This covers both Dart and native platform traffic — with `monitorNetwork` set to `false`, nothing is captured even if the HTTP overrides handler below is installed. See [configuration](/sdk/flutter/v9/configuration/) for more info.
 
 ## Initializing
 In order to let Bugsee intercept network traffic, the following needs to be added to the launch code of your app.

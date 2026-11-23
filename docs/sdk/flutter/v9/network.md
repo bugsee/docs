@@ -2,12 +2,16 @@
 title: "Network capture"
 description: "How to enable Bugsee network traffic interception in Flutter by installing the custom HTTP overrides handler."
 sidebar_position: 8
-slug: "/sdk/flutter/network"
+slug: "/sdk/flutter/v9/network"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Flutter SDK **9.x** (`bugsee_flutter` 9.x), the current stable release. The new **10.x** SDK is a rewrite for the Bugsee 7.x native SDKs and is in beta, not yet published to pub.dev.
+:::
 
 Flutter implements its own network stack and does not use the underlying iOS or Android ones. Capturing Dart traffic therefore takes **two** things, and both are required:
 
-1. The **`monitorNetwork`** launch option must be enabled. It is `true` by default — see [configuration](/sdk/flutter/configuration/).
+1. The **`monitorNetwork`** launch option must be enabled. It is `true` by default — see [configuration](/sdk/flutter/v9/configuration/).
 2. The Bugsee HTTP overrides handler must be **installed explicitly**. There is no default for this one:
 
 ```dart

@@ -2,8 +2,12 @@
 title: "Adding custom data"
 description: "How to attach user email, session attributes, custom traces, events, and file attachments to Bugsee reports in the Flutter SDK."
 sidebar_position: 3
-slug: "/sdk/flutter/custom"
+slug: "/sdk/flutter/v9/custom"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Flutter SDK **9.x** (`bugsee_flutter` 9.x), the current stable release. The new **10.x** SDK is a rewrite for the Bugsee 7.x native SDKs and is in beta, not yet published to pub.dev.
+:::
 
 ## User email
 
