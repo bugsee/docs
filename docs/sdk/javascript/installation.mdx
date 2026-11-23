@@ -13,9 +13,19 @@ The Bugsee JavaScript SDK is a family of npm packages under the `@bugsee` scope.
 
 New to the SDK? [Quick start](/sdk/javascript/quick-start) walks through the common case end to end: install, app token, launch and a first verified report.
 
+## Create your app
+
+You get the app token by creating an application in Bugsee:
+
+1. Create a new application and choose **JavaScript application** as its type.
+2. Choose the target you are integrating Bugsee into. The targets are grouped as **Frontend frameworks** (React, Vue, Angular, Svelte, SolidJS, Preact), **Full-stack frameworks** (Next.js, Nuxt, Remix, SvelteKit, Astro), **Backend frameworks** (Express, Fastify, NestJS, Hono, Koa, hapi, Elysia) and **Runtimes & environments** (Browser, Node.js, Bun, Electron, Cloudflare Workers, Vercel Edge, Web Worker, Service Worker). The target is set once, when the application is created.
+3. Give the application a name and finish creating it.
+4. Bugsee then shows the setup steps for your target: **Installation** (the npm command) and **Configure & launch** (the code to add), with your app token already filled into the snippets. Bugsee waits for your first report in a **Validation** step.
+
+The guides below follow the same targets, so choose the guide that matches the target you picked. Wherever a guide shows `<your_app_token>`, use the token of your application.
+
 ## Before you start
 
-- Create a JavaScript app in the Bugsee dashboard to get its **app token**. Every page below uses it as `<your_app_token>`.
 - Use Node.js 18 or later for tooling and servers. Deno is not supported.
 - Install with the `beta` tag, for example `npm install @bugsee/bugsee@beta`. For now the `latest` and `beta` tags point at the same version.
 

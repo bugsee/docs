@@ -80,7 +80,7 @@ If your code runs on the Bun runtime, install `@bugsee/bun` instead (`bun add @b
 
 ## 2. Get your app token
 
-Create a JavaScript app in the Bugsee dashboard. The dashboard shows its app token. Pass it to `launch()` as the first argument.
+Create a JavaScript application in Bugsee: choose **JavaScript application** as the type, then choose your target (for example **Browser**, **Node.js** or a framework). When the application is created, Bugsee shows the setup steps with your app token already filled into the snippets; see [Create your app](/sdk/javascript/installation#create-your-app). Pass the token to `launch()` as the first argument.
 
 Treat the token as configuration: read it from an environment variable or your build settings instead of committing it. A browser app ships the token to every visitor, as with any client-side SDK key.
 

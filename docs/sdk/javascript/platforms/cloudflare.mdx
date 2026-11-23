@@ -20,7 +20,7 @@ Edge isolates run only Web APIs, so capture is incident-driven. Data is buffered
 
 - A Cloudflare Worker (`workerd`).
 - The `nodejs_compat` compatibility flag. The SDK imports `node:async_hooks` for per-request context, and without the flag your Worker fails to start.
-- An application token, stored as a Worker secret.
+- An app token. Create a JavaScript application in Bugsee and choose **Cloudflare Workers** as its target; see [Create your app](/sdk/javascript/installation#create-your-app). Store it as a Worker secret.
 
 ## Install
 

@@ -19,7 +19,7 @@ The main process owns the session and uploads reports. Renderers stream their ca
 ## Requirements
 
 - Electron with Node.js 18 or newer in the main process.
-- An application token from the Bugsee dashboard.
+- An app token. Create a JavaScript application in Bugsee and choose **Electron** as its target; see [Create your app](/sdk/javascript/installation#create-your-app).
 - A preload script in every window that should be recorded.
 
 The package has no dependency on `electron`. You pass Electron objects in, so it works with whichever Electron version you use.
