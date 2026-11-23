@@ -223,7 +223,7 @@ When you bundle a server application, keep the SDK launch in the entry that runs
 
 **A second `launch()` seems to do nothing.** That is by design: one client per process. Use `relaunch(options)` to change options. Options of a relaunch start from the defaults; they are not merged with the previous launch. See [Lifecycle & status](/sdk/javascript/lifecycle#relaunch).
 
-**Reports show version `0.0.0`.** The SDK could not find a version. Pass `appVersion`, set `BUGSEE_APP_VERSION`, or give your `package.json` a version.
+**Reports show version `0.0.0`.** The SDK could not find a version. Pass `appVersion`; that works in every runtime. On Node.js and Bun the SDK also reads `BUGSEE_APP_VERSION` and the `package.json` version. In a browser it needs a build-time constant from the Vite or webpack plugin, or a `bugsee:app-version` meta tag. See [App version and build](#app-version-and-build).
 
 **Cloudflare Worker fails to start.** The SDK needs the `nodejs_compat` compatibility flag. See [Cloudflare](/sdk/javascript/platforms/cloudflare).
 

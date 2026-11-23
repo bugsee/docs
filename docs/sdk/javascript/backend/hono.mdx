@@ -1,6 +1,6 @@
 ---
 title: "Hono"
-description: "Report errors and trace requests in a Hono app on Node.js with the Bugsee JavaScript SDK: per-request context, http.server transactions and error capture."
+description: "Report errors and trace requests in a Hono app on Node.js or Bun with the Bugsee JavaScript SDK: per-request context, http.server transactions and error capture."
 sidebar_position: 5
 slug: "/sdk/javascript/backend/hono"
 ---
@@ -12,7 +12,7 @@ import TabItem from '@theme/TabItem';
 This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
 :::
 
-`@bugsee/hono` adds a request context, an `http.server` transaction and error reporting to a Hono app on Node.js. Read the [backend overview](/sdk/javascript/backend/overview) first for how context and trace correlation work.
+`@bugsee/hono` adds a request context, an `http.server` transaction and error reporting to a Hono app hosted on Node.js or Bun. On Bun, see [Running on Bun](/sdk/javascript/backend/overview#running-on-bun) for the `launch` import and the missing `http.server` transaction. Read the [backend overview](/sdk/javascript/backend/overview) first for how context and trace correlation work.
 
 For Hono on an edge runtime, use the edge platform packages instead: [Cloudflare](/sdk/javascript/platforms/cloudflare) or [Vercel Edge](/sdk/javascript/platforms/vercel-edge).
 
