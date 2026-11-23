@@ -1,0 +1,132 @@
+---
+title: "Astro"
+description: "Set up the Bugsee JavaScript SDK in an Astro app with the @bugsee/astro integration: browser launch on every page, server middleware, edge runtime and island hydration errors."
+sidebar_position: 9
+slug: "/sdk/javascript/frameworks/astro"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/astro` is an Astro integration. It launches the browser client on every page and adds a server middleware that launches the server SDK, reports request errors and injects the trace. It is a single install: it bundles the browser, Node.js and Edge SDKs.
+
+## Requirements
+
+- Astro with the integration API (`integrations` in `astro.config.mjs`).
+- Node.js 18 or newer for server code.
+- An application token.
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/astro@beta
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/astro@beta
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/astro@beta
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/astro@beta
+```
+
+  </TabItem>
+</Tabs>
+
+## Set up
+
+Add the integration to your Astro config. There is nothing else to wire.
+
+```js title="astro.config.mjs"
+import { defineConfig } from 'astro/config';
+import { bugsee } from '@bugsee/astro';
+
+export default defineConfig({
+  integrations: [bugsee({ appToken: process.env.BUGSEE_TOKEN, runtime: 'node' })],
+});
+```
+
+Use `runtime: 'edge'` for Vercel or Cloudflare edge deployments. The default is the Node.js runtime.
+
+The token is inlined into the client script so the browser can launch. An application token is not a secret.
+
+## Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `appToken` | `string` | required | Your Bugsee application token. |
+| `runtime` | `'node'` \| `'edge'` | `'node'` | The server runtime. Use `'edge'` for Vercel or Cloudflare edge deployments. |
+| `client` | object | `{}` | Extra browser launch options, for example `{ replay: false }` or `{ maxRecordingTime: 30 }`. |
+| `server` | object | `{}` | Extra server launch options, for example `{ captureLocalVariables: true }`. |
+
+```js title="astro.config.mjs"
+bugsee({
+  appToken: process.env.BUGSEE_TOKEN,
+  client: { captureNetwork: true },
+  server: { instrumentIncomingRequests: true },
+});
+```
+
+`client` takes the [browser options](/sdk/javascript/platforms/browser#browser-options). `server` takes the [Node.js options](/sdk/javascript/platforms/node#node-options), or the [Vercel Edge options](/sdk/javascript/platforms/vercel-edge#options) with `runtime: 'edge'`. `client` and `server` are serialized into the generated code, so pass plain values, not functions.
+
+## Entry points
+
+| Entry | Description |
+| --- | --- |
+| `@bugsee/astro` | The integration: `bugsee` (also the default export). |
+| `@bugsee/astro/client` | `registerClient(appToken, options?)`, `relaunch`. |
+| `@bugsee/astro/server` | `registerServer(appToken, options?)` for Node.js. |
+| `@bugsee/astro/edge` | `registerServerEdge`, `createEdgeMiddleware`. |
+| `@bugsee/astro/middleware` | `createBugseeMiddleware(options?)` and the generated `onRequest`. |
+
+You normally use only the integration.
+
+## Island hydration errors
+
+Astro catches an island's hydration failure itself and re-dispatches it as a cancelable `astro:hydration-error` event, plus a `console.error`. Nothing is rethrown, so the page's error handlers never see it. The browser launch listens for that event and reports the error without cancelling the event, so Astro's own console output is unchanged.
+
+For component errors during rendering, also add the adapter for your island framework: [React](/sdk/javascript/frameworks/react), [Vue](/sdk/javascript/frameworks/vue), [Svelte](/sdk/javascript/frameworks/svelte) or [Solid](/sdk/javascript/frameworks/solid).
+
+## Notes
+
+- **Source maps.** Astro builds with Vite. See [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins).
+- **Backend context.** Each server request gets a context so logs and errors tie to it. See [Backend](/sdk/javascript/backend/overview).
+
+## Verify
+
+Throw from a server-rendered page:
+
+```html title="src/pages/test.astro"
+---
+throw new Error('Bugsee test error');
+---
+```
+
+Open `/test`. The error shows up in the Bugsee dashboard.
+
+## Related pages
+
+- [Browser](/sdk/javascript/platforms/browser) — client launch options
+- [Node.js](/sdk/javascript/platforms/node) — server launch options
+- [Vercel Edge](/sdk/javascript/platforms/vercel-edge) — the edge runtime build
+- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — upload source maps from Vite

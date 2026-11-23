@@ -1,0 +1,170 @@
+---
+title: "Next.js"
+description: "Set up the Bugsee JavaScript SDK in a Next.js app with @bugsee/nextjs: instrumentation.ts for Node.js and Edge, instrumentation-client.ts, middleware errors and trace correlation."
+sidebar_position: 6
+slug: "/sdk/javascript/frameworks/nextjs"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/nextjs` reports server errors through `instrumentation.ts` (Node.js and Edge runtimes), captures the browser through `instrumentation-client.ts`, and reports errors thrown in middleware. It is a single install: it bundles the browser, Node.js and Edge SDKs and re-exports the React adapter from `@bugsee/nextjs/client`.
+
+## Requirements
+
+- Next.js with `instrumentation.ts`. The client file `instrumentation-client.ts` needs Next.js 15.3 or newer.
+- Node.js 18 or newer for server code.
+- `react` 18 or newer (optional peer dependency).
+- An application token.
+
+For the automatic OpenTelemetry bridge, `@opentelemetry/api` plus your OpenTelemetry SDK are optional peer dependencies: `@opentelemetry/sdk-trace-base` (OTel JS 1.x and 2.x) or `@opentelemetry/sdk-trace` (OTel JS 2.9 or newer, required on 3.x).
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/nextjs@beta
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/nextjs@beta
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/nextjs@beta
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/nextjs@beta
+```
+
+  </TabItem>
+</Tabs>
+
+## Set up
+
+### Server
+
+`register()` picks the Node.js or Edge SDK by runtime. Re-export `onRequestError` so Next.js reports server errors.
+
+```ts title="instrumentation.ts"
+import { register as bugsee } from '@bugsee/nextjs';
+
+export function register() {
+  return bugsee(process.env.BUGSEE_TOKEN!);
+}
+
+export { onRequestError } from '@bugsee/nextjs';
+```
+
+### Client
+
+Next.js 15.3 and later load `instrumentation-client.ts` in the browser before your app code. Export `onRouterTransitionStart` to record a breadcrumb for each client-side navigation.
+
+```ts title="instrumentation-client.ts"
+import { registerClient } from '@bugsee/nextjs/client';
+
+registerClient(process.env.NEXT_PUBLIC_BUGSEE_TOKEN!);
+
+export { onRouterTransitionStart } from '@bugsee/nextjs/client';
+```
+
+`registerClient` returns a `Promise` of the client. An application token is not a secret, so it is fine in a `NEXT_PUBLIC_` variable.
+
+`@bugsee/nextjs/client` also re-exports the React adapter, so you can import `BugseeErrorBoundary` from there. See [React](/sdk/javascript/frameworks/react).
+
+### Middleware (optional)
+
+Errors thrown in Next.js middleware are not delivered to `onRequestError`. Wrap your middleware to capture them:
+
+```ts title="middleware.ts"
+import { withBugseeMiddleware } from '@bugsee/nextjs/middleware';
+
+export const middleware = withBugseeMiddleware((request, event) => {
+  // ...
+});
+```
+
+### One trace for server and browser (optional)
+
+`getBugseeTraceData()` returns the active server request's trace. Spread it into `generateMetadata()` so Next.js renders a `<meta name="traceparent">` tag. The browser client reads it on page load, so the server request and the initial page session become one trace.
+
+```ts title="app/layout.tsx"
+import { getBugseeTraceData } from '@bugsee/nextjs';
+
+export function generateMetadata() {
+  return { other: getBugseeTraceData() };
+}
+```
+
+It returns `{}` when no trace is active.
+
+## Entry points
+
+| Entry | Exports |
+| --- | --- |
+| `@bugsee/nextjs` | `register`, `onRequestError`, `createOnRequestError`, `getBugseeTraceData` |
+| `@bugsee/nextjs/client` | `registerClient`, `onRouterTransitionStart`, plus the React adapter |
+| `@bugsee/nextjs/middleware` | `withBugseeMiddleware` |
+| `@bugsee/nextjs/server` | `registerServer` and the shared client exports. The Node.js composition that `register()` loads for you. |
+| `@bugsee/nextjs/edge` | `registerEdge` and the shared client exports. The Edge composition that `register()` loads for you. |
+
+## Options
+
+`register(appToken, options)` and `registerClient(appToken, options)` accept the SDK launch options. The most relevant:
+
+| Where | Option | Default | Description |
+| --- | --- | --- | --- |
+| Server | `instrumentIncomingRequests` | `true` | Instrument incoming requests. |
+| Server | `captureLocalVariables` | `false` | Capture local variables on errors. |
+| Server | `detectHangs` | `true` | Event-loop hang detection. |
+| Server | `setupOtelProvider` | `true` | Install Bugsee's OpenTelemetry provider. Set `false` if you manage OpenTelemetry yourself. |
+| Client | `captureLogs`, `captureNetwork` | `true` | Console and network capture. |
+| Client | `maxRecordingTime` | `60` | Seconds of recording to keep. |
+| Client | `replay` | `true` | Session replay. Pass `false` to turn it off. |
+
+See [Browser](/sdk/javascript/platforms/browser#browser-options) and [Node.js](/sdk/javascript/platforms/node#node-options) for the full lists.
+
+## Navigation breadcrumbs
+
+`onRouterTransitionStart` writes one `navigation` breadcrumb per soft navigation. The address in it is sanitized first, so values such as `?code=...`, `?state=...` and `#access_token=...` never reach the report. Ids, emails and other values in a path segment are not redacted.
+
+## Notes
+
+- **Edge runtime.** `register()` picks the Edge SDK there. Edge capture is incident-driven: it uploads only when something goes wrong. See [Vercel Edge](/sdk/javascript/platforms/vercel-edge).
+- **Source maps.** Next.js on webpack uses the webpack plugin. See [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins).
+- **Backend context.** Each server request gets a context so logs and errors tie to it. See [Backend](/sdk/javascript/backend/overview).
+
+## Verify
+
+Throw from a route handler or server component:
+
+```ts title="app/api/test/route.ts"
+export function GET() {
+  throw new Error('Bugsee test error');
+}
+```
+
+Request `/api/test`. The error shows up in the Bugsee dashboard.
+
+## Related pages
+
+- [React](/sdk/javascript/frameworks/react) — the error boundary and route naming
+- [Vercel Edge](/sdk/javascript/platforms/vercel-edge) — the Edge runtime build
+- [Backend](/sdk/javascript/backend/overview) — request context and trace correlation
+- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — upload source maps from webpack

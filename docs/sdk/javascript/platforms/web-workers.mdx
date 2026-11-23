@@ -1,0 +1,140 @@
+---
+title: "Web and Service Workers"
+description: "Set up the Bugsee JavaScript SDK inside Web Workers and Service Workers with @bugsee/webworker: launch, withBugseeEvent, persistence and what a worker can capture."
+sidebar_position: 7
+slug: "/sdk/javascript/platforms/web-workers"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/webworker` is the SDK for Web Workers (dedicated and shared) and Service Workers. It captures console output, network traffic, and global error and unhandled-rejection events in a worker context that has no DOM.
+
+A worker is a separate JavaScript context, so it needs its own launch. Your page code keeps using `@bugsee/bugsee`; call `@bugsee/webworker` from inside the worker script.
+
+## Requirements
+
+- A browser with worker support. Service Workers also need a secure context.
+- An application token.
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/webworker@beta
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/webworker@beta
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/webworker@beta
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/webworker@beta
+```
+
+  </TabItem>
+</Tabs>
+
+## Web Worker
+
+`launch()` returns the client directly, not a `Promise`.
+
+```ts title="worker.ts"
+import { launch } from '@bugsee/webworker';
+
+const bugsee = launch('<your_app_token>');
+```
+
+The SDK captures console output, `fetch` and `WebSocket` traffic (also `XMLHttpRequest` in dedicated workers), and global `error` and `unhandledrejection` events on the worker.
+
+A worker has no DOM, so these are not captured: clicks, key presses, navigation, the view hierarchy and session replay.
+
+## Service Worker
+
+A Service Worker is stopped when idle, so wrap event handlers with `withBugseeEvent`. It hands the upload to `event.waitUntil`, so the worker stays alive until a report is sent.
+
+```ts title="sw.ts"
+import { launch, withBugseeEvent } from '@bugsee/webworker';
+
+const bugsee = launch('<your_app_token>', { platformType: 'service-worker' });
+
+self.addEventListener(
+  'fetch',
+  withBugseeEvent(bugsee, (event) => {
+    event.respondWith(fetch(event.request));
+  }),
+);
+```
+
+The SDK detects a Service Worker from its runtime, so `platformType` is only needed to override the detection.
+
+`withBugseeEvent` never changes your handler's outcome: your own error is rethrown, and SDK failures go to an optional third argument:
+
+```ts
+withBugseeEvent(bugsee, handler, (error) => console.debug(error));
+```
+
+## What is exported
+
+| Export | Description |
+| --- | --- |
+| `launch(appToken, options?)` | Starts the SDK and returns the client synchronously. |
+| `withBugseeEvent(client, handler, onError?)` | Wraps an event handler so the upload runs inside `event.waitUntil`. |
+| `relaunch` | Restarts the SDK. |
+| `getStatus`, `BugseeStatus`, `LifecycleEvents`, `addReportAttachment`, `getDefaultNetworkSanitizer` | The shared client exports. |
+
+## Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `platformType` | `'web-worker'` \| `'service-worker'` | detected | Which kind of worker this is. It also decides the `persist` default. |
+| `persist` | `boolean` | `true` for Service Workers, `false` for Web Workers | Keep assembled report bundles in IndexedDB and re-upload any that a stopped worker left behind. |
+| `recover` | `boolean` | `true` | Re-upload bundles that a previous activation left behind, on the next launch. |
+| `appVersion`, `appBuild`, `appId` | `string` | resolved | Identify your release in reports. |
+| `captureLogs`, `captureNetwork` | `boolean` | `true` | Capture streams. |
+
+See [Configuration](/sdk/javascript/configuration) for the shared options.
+
+## App version and build
+
+Pass `appVersion` and `appBuild` to `launch`. The Vite and webpack plugins can also inject `__BUGSEE_APP_VERSION__` and `__BUGSEE_APP_BUILD__` at build time, or you can set them as globals on `self` before launching. If none is found, the SDK logs one warning and reports version `0.0.0` and build `0`.
+
+## Source maps
+
+Workers are separate bundles, so make sure your bundler plugin covers the worker entry. See [Symbolication](/sdk/javascript/symbolication/overview).
+
+## Verify
+
+1. Launch the SDK in the worker script.
+2. Report a test error from the worker:
+
+```ts
+bugsee.logException(new Error('Bugsee test error'));
+```
+
+3. Open the Bugsee dashboard. The report appears with the worker's console and network data.
+
+## Related pages
+
+- [Browser](/sdk/javascript/platforms/browser) — the SDK for page code
+- [Configuration](/sdk/javascript/configuration) — all launch options
+- [Symbolication](/sdk/javascript/symbolication/overview) — source maps and debug IDs

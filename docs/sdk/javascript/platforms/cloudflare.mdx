@@ -1,0 +1,185 @@
+---
+title: "Cloudflare Workers"
+description: "Set up the Bugsee JavaScript SDK in a Cloudflare Worker with @bugsee/cloudflare: withBugsee, Durable Objects, the nodejs_compat flag and incident-driven uploads."
+sidebar_position: 5
+slug: "/sdk/javascript/platforms/cloudflare"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/cloudflare` captures errors, logs and network calls inside your Worker, Durable Objects, and Cron, Queue, Email and Tail handlers, and uploads a report when something goes wrong.
+
+Edge isolates run only Web APIs, so capture is incident-driven. Data is buffered in memory and uploaded only when an incident happens: a handled `logException`, a thrown handler error, or an unhandled rejection. A clean request uploads nothing.
+
+## Requirements
+
+- A Cloudflare Worker (`workerd`).
+- The `nodejs_compat` compatibility flag. The SDK imports `node:async_hooks` for per-request context, and without the flag your Worker fails to start.
+- An application token, stored as a Worker secret.
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/cloudflare@beta
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/cloudflare@beta
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/cloudflare@beta
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/cloudflare@beta
+```
+
+  </TabItem>
+</Tabs>
+
+Install `@bugsee/cloudflare` directly. It builds on `@bugsee/vercel-edge`, which you do not install separately.
+
+## Enable Node.js compatibility
+
+```toml title="wrangler.toml"
+compatibility_flags = ["nodejs_compat"]
+```
+
+If your project uses `wrangler.jsonc`, set `"compatibility_flags": ["nodejs_compat"]` there instead.
+
+## Wrap your handlers
+
+Wrap everything your Worker exports with `withBugsee`. The first argument is a function that receives `env`, because Cloudflare exposes secrets only inside handlers. The client launches on the first invocation and is cached for the isolate's lifetime.
+
+```ts title="src/index.ts"
+import { withBugsee } from '@bugsee/cloudflare';
+
+export default withBugsee((env) => env.BUGSEE_APP_TOKEN, {
+  fetch: async (request, env, ctx) => new Response('ok'),
+  scheduled: async (controller, env, ctx) => {
+    /* Cron */
+  },
+  queue: async (batch, env, ctx) => {
+    /* Queue consumer */
+  },
+  email: async (message, env, ctx) => {
+    /* Email */
+  },
+  tail: async (events, env, ctx) => {
+    /* Tail Worker */
+  },
+});
+```
+
+Add the secret with `wrangler secret put BUGSEE_APP_TOKEN`.
+
+Each handler runs in its own Bugsee context. Errors are captured and rethrown, and the upload is flushed through that handler's `ctx.waitUntil`, so it survives the isolate freezing after the response. Each non-fetch trigger is labeled (cron, queue, email, tail), so a report says which trigger fired. Email addresses and message bodies are never captured. For `fetch`, the report includes Cloudflare's coarse geo and network metadata from `request.cf` (colo, country, city, timezone, ASN, TLS version).
+
+`withBugsee` also accepts a `WorkerEntrypoint` class. Pass `{ instrumentRpcMethods: true }` to wrap its RPC methods too.
+
+## Durable Objects
+
+A Durable Object is bound separately from the module handlers, so wrap its export with `instrumentDurableObject`.
+
+```ts title="src/counter.ts"
+import { instrumentDurableObject } from '@bugsee/cloudflare';
+
+class CounterBase extends DurableObject<Env> {
+  async fetch(request: Request) {
+    /* ... */
+  }
+  async alarm() {
+    /* ... */
+  }
+}
+
+export const Counter = instrumentDurableObject((env) => env.BUGSEE_APP_TOKEN, CounterBase, {
+  instrumentRpcMethods: true, // optional, also wraps RPC methods (default off)
+});
+```
+
+## Options
+
+Instead of a token string, the callback passed to `withBugsee` or `instrumentDurableObject` may return an options object that includes `appToken`:
+
+```ts
+export default withBugsee(
+  (env) => ({ appToken: env.BUGSEE_APP_TOKEN, appVersion: '1.4.2' }),
+  { fetch: async () => new Response('ok') },
+);
+```
+
+The options are the same as for `launch(appToken, options)`.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `appVersion`, `appBuild`, `appId` | `string` | resolved | Identify your release in reports. |
+| `captureLogs`, `captureNetwork`, `captureNetworkBodies` | `boolean` | `true` | Capture streams. |
+| `maxDataSize` | `number` | 10 MB | Size of the in-memory buffer, divided across the partitions below. |
+| `partitionCaptureByTenant` | `boolean` | `true` on Cloudflare | Keep each Durable Object's capture in its own partition, so an incident uploads only the faulting tenant's data. Setting `false` turns that isolation off and logs a warning. |
+| `maxTenantPartitions` | `number` | `8` | Number of tenant partitions. The `maxDataSize` budget is divided across `maxTenantPartitions + 1` buffers. Lower it if your Workers host few tenants. |
+
+See [Configuration](/sdk/javascript/configuration) for the shared options.
+
+## What is exported
+
+`@bugsee/cloudflare` re-exports everything from `@bugsee/vercel-edge` and adds the following:
+
+| Export | Description |
+| --- | --- |
+| `withBugsee(config, handlers)` | Instruments a handler object or a `WorkerEntrypoint` class. |
+| `instrumentDurableObject(config, Class, options?)` | Instruments a Durable Object class. |
+| `launch(appToken, options?)` | Launches the client directly, with the platform identity set to Cloudflare. Returns the client synchronously. |
+| `relaunch` | Restarts the SDK. |
+| `cfAttributes`, `cloudflareRequestAttributes` | Read Cloudflare's `request.cf` metadata into report attributes. |
+| `getStatus`, `BugseeStatus`, `LifecycleEvents`, `addReportAttachment`, `getDefaultNetworkSanitizer` | The shared client exports. |
+
+## App version and build
+
+Pass `appVersion` and `appBuild` in the options. The Vite and webpack plugins can also inject `__BUGSEE_APP_VERSION__` and `__BUGSEE_APP_BUILD__` at build time, and the `BUGSEE_APP_VERSION` and `BUGSEE_APP_BUILD` environment variables apply below those constants. If none is found, reports show version `0.0.0` and build `0`.
+
+## Source maps
+
+Upload source maps for your Worker bundle so stack traces are readable. See [Symbolication](/sdk/javascript/symbolication/overview).
+
+## Verify
+
+1. Deploy the Worker (or run `wrangler dev`) with the secret set.
+2. Trigger an error in a handler:
+
+```ts
+export default withBugsee((env) => env.BUGSEE_APP_TOKEN, {
+  fetch: async () => {
+    throw new Error('Bugsee test error');
+  },
+});
+```
+
+3. Open the Bugsee dashboard. The report appears with the request, logs and `request.cf` metadata.
+
+If the Worker fails to start, check that `nodejs_compat` is set.
+
+## Related pages
+
+- [Vercel Edge](/sdk/javascript/platforms/vercel-edge) — the edge build that this package wraps
+- [Configuration](/sdk/javascript/configuration) — all launch options
+- [Manual crash and error reporting](/sdk/javascript/manual/crash-error-reporting) — `logException` for handled errors
+- [Symbolication](/sdk/javascript/symbolication/overview) — source maps and debug IDs

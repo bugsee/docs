@@ -1,0 +1,333 @@
+---
+title: "Configuration"
+description: "Launch options of the Bugsee JavaScript SDK: shared options, then browser, Node.js and Bun, Electron, edge and worker options, extension options, invalid-value rules and reading options back."
+sidebar_position: 2
+slug: "/sdk/javascript/configuration"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+You configure the SDK with the options object you pass as the second argument of `launch(appToken, options)`. Every option is optional. Option names are plain camelCase names, such as `captureNetwork`. The same names work on every runtime that has the option.
+
+<Tabs groupId="lang">
+  <TabItem value="ts" label="TypeScript">
+
+```ts
+import { launch } from '@bugsee/bugsee';
+
+launch('<your_app_token>', {
+  appVersion: '1.4.2',
+  appBuild: '381',
+  captureNetworkBodies: false,
+  maxRecordingTime: 30,
+  onError: (error) => console.error(error),
+});
+```
+
+  </TabItem>
+  <TabItem value="js" label="JavaScript">
+
+```js
+import { launch } from '@bugsee/bugsee';
+
+launch('<your_app_token>', {
+  appVersion: '1.4.2',
+  appBuild: '381',
+  captureNetworkBodies: false,
+  maxRecordingTime: 30,
+  onError: (error) => console.error(error),
+});
+```
+
+  </TabItem>
+</Tabs>
+
+Which options exist depends on the runtime. This page has a section for each:
+
+- [Shared options](#shared-options): every runtime.
+- [Browser](#browser).
+- [Node.js and Bun](#nodejs-and-bun).
+- [Electron](#electron).
+- [Edge and workers](#edge-and-workers): Cloudflare Workers, Vercel Edge, Web and Service Workers.
+- [Extension options](#extension-options): performance, trace propagation and OpenTelemetry, from the umbrella package.
+
+The TypeScript types are the exact reference for your version: `BugseeLaunchOptionsWithPerformance` in the browser and `BugseeNodeLaunchOptions` on Node.js, both exported from `@bugsee/bugsee`.
+
+## Invalid values
+
+The SDK checks every option it reads. An invalid value never throws. It is reported through `onError`, and the option takes a safe value:
+
+- **On-by-default capture options turn off.** `captureLogs`, `captureNetwork`, `captureNetworkBodies`, `captureSystemTraces`, `captureSystemEvents` and `captureBreadcrumbs` are on by default. A value that is not `true` or `false` (`0`, `null`, `''`, `'false'`) turns the option off, so a mistake never leaves capture running.
+- **Options that collect more data stay off.** Only `true` (or an options object, where one is accepted) turns on an option that defaults to off, such as `captureLocalVariables`, `captureSourceContext` and `captureUserIdle`.
+- **Other options keep their default.** For instance `detectCrashes` and `captureNetworkDefaultSanitizer` keep their default, which is on.
+- **Protective options stay protective.** `startInBlackout` and `diskProtection` treat any value other than `false` as on.
+
+Pass `onError` while you integrate, so you see these messages.
+
+## Shared options
+
+These options exist on every runtime. Where a default differs by runtime, the table says so.
+
+### App identity
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `endpoint` | `string` | `https://api.bugsee.com` | API origin, without a trailing slash. |
+| `appId` | `string` | none | Package or bundle identifier of your app. |
+| `appVersion` | `string` | detected | Version of your app. Detected from build-time constants, then the environment, then `package.json` (servers) or meta tags (browser). Falls back to `0.0.0`. See [Installation](/sdk/javascript/installation#app-version-and-build). |
+| `appBuild` | `string` | detected | Build of your app, detected the same way. |
+| `sdkVersion` | `string` | package version | SDK version reported in the environment. You rarely need to set it. |
+
+### Capture
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `captureLogs` | `boolean` | `true` | Capture console output as logs. See [Console logs](/sdk/javascript/logs). |
+| `captureLogsLevel` | `'error' \| 'warning' \| 'info' \| 'debug' \| 'verbose'` or `1`-`5` | `'verbose'` | Lowest log level to capture. |
+| `captureNetwork` | `boolean` | `true` | Capture network requests. See [Network events](/sdk/javascript/network). |
+| `captureNetworkBodies` | `boolean` | `true` | Capture request and response bodies. |
+| `maxNetworkBodySize` | `number` | `20480` | Largest body to capture, in bytes. |
+| `captureNetworkBodyWithoutType` | `boolean` | `false` | Capture a body even when its `Content-Type` is missing or blank. |
+| `captureNetworkDefaultSanitizer` | `boolean` | `true` | Apply the built-in redaction to URLs, headers, bodies and error text. A network filter you set replaces it; see [Privacy: Network](/sdk/javascript/privacy/network). |
+| `captureBreadcrumbs` | `boolean` | `true` | Capture breadcrumbs. Mobile Bugsee SDKs default this to off; JavaScript keeps it on. See [Breadcrumbs](/sdk/javascript/breadcrumbs). |
+| `captureSystemTraces` | `boolean` | `true` | Capture periodic system traces (memory, CPU, event-loop lag and so on, depending on the runtime). |
+| `captureSystemEvents` | `boolean` | `true` | Capture system events (process or page lifecycle and similar). |
+| `maxRecordingTime` | `number` | `60` | Rolling recording window, in seconds. |
+| `maxDataSize` | `number` | `50` Node.js and Bun and Electron main, `20` browser (`30` with the IndexedDB store), `10` edge and workers | Size of the rolling capture buffer, in megabytes. |
+
+### Detection and reporting
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `detectCrashes` | `boolean` | `true` | Detect uncaught errors and unhandled promise rejections. See [Errors & crashes](/sdk/javascript/issue-detection/errors-and-crashes). |
+| `detectHttpErrors` | `boolean` | `false` | Report HTTP 5xx responses as `error` reports, once per session for each method, templated URL and status. 4xx responses, transport failures and aborted requests are not reported. See [HTTP errors](/sdk/javascript/issue-detection/http-errors). |
+| `reportDefaultCrashPriority` | priority | `'blocker'` | Severity a crash report starts with. |
+| `reportDefaultErrorPriority` | priority | `'high'` | Severity an error report starts with. |
+| `reportDefaultBugPriority` | priority | `'high'` | Severity a bug report starts with when none is given. The browser report dialog pre-selects it. |
+| `notifyFlushDelay` | `number` | `0` | `notify()` batching window, in milliseconds. `0` sends as soon as the current tick ends. |
+
+A priority is one of `'verylow'`, `'low'`, `'medium'`, `'high'`, `'critical'` or `'blocker'`.
+
+### Callbacks
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `onError` | `(error: unknown) => void` | no-op | Receives internal SDK problems: invalid options, a failed provider, a repeated `launch()`, a missing token. |
+| `lifecycleEventsListener` | `(eventType: string, data?: unknown) => void` | none | Observes launch, stop, blackout and report events, from the very first `Launching` event. See [Lifecycle & status](/sdk/javascript/lifecycle#lifecycle-events). |
+
+## Browser
+
+These options apply to the browser build, and so also to the browser side of the framework adapters and to Electron renderers.
+
+### Capture and persistence
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `captureInteractions` | `boolean` | `true` | Capture user interactions: presses become entries of the SDK's input stream, and changes, submits and focus become UI breadcrumbs. |
+| `captureViewHierarchy` | `boolean` | `true` | Capture the DOM view hierarchy when a report is made. |
+| `captureUrl` | `boolean` | `true` | Record the page address, sanitized, as the `url` system trace. Needs `captureSystemTraces`. |
+| `urlSanitizer` | `(url: string) => string \| null` | none | Your own sanitizer for the `url` trace. It runs after the default one and gets its result. Return `null` to record nothing for that URL. A throw records nothing. |
+| `captureAsyncOrigins` | `boolean` | `true` | Record where asynchronous platform calls (such as `video.play()`) were made, so a rejection with no stack still has a call site. Only `false` opts out. |
+| `captureEnvironmentHints` | `boolean` | `true` | Observe hints such as a private-browsing heuristic, reported as a system event. |
+| `captureUserIdle` | `boolean` | `false` | Record the `user_idle_state` trace. Only works when the page's idle-detection permission is already granted; the SDK never asks for it. |
+| `persistUserIdentifier` | `boolean` | `false` | Keep the user identifier set with `setUserIdentifier` in `localStorage`, so it survives a reload. Off by default because the identifier is often personal data and a browser can be shared. Call `clearUserIdentifier()` on logout. |
+| `startInBlackout` | `boolean` | `false` | Launch with a blackout already in force, so visual and interaction capture stays off until `endBlackout()`. See [Lifecycle & status](/sdk/javascript/lifecycle#blackout). |
+| `persist` | `boolean` | on when the page has IndexedDB and Web Locks | Keep the capture window and the report queue in IndexedDB so they survive a reload. `true` forces it, `false` keeps everything in memory. |
+| `recover` | `boolean` | `true` | Re-upload a report left behind by an earlier reload or crash. Needs a persistent store. |
+| `captureDiskSpace` | `boolean` | `false` | Add low-storage states to the `capture` trace. Needs a durable store. |
+| `diskProtection` | `boolean` | `true` | Stop persisting replay, log and network data when the browser's storage quota runs low. Only `false` opts out. |
+
+### Session replay
+
+`replay` is on by default and masks aggressively. Pass `false` to turn it off, or an object to tune it. See [Session replay](/sdk/javascript/session-replay) and [Privacy: Session replay](/sdk/javascript/privacy/replay).
+
+```ts
+launch('<your_app_token>', {
+  replay: {
+    maskTextSelector: '.account-balance',
+    blockSelector: '.secret-panel',
+    canvas: { fps: 2, quality: 0.6 },
+  },
+});
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `replay` | `boolean \| object` | `true` | `false` disables replay. An invalid value (`null`, `0`, a string, an array) turns it off and is reported. |
+| `replay.maskAllText` | `boolean` | `true` | Mask every text node. |
+| `replay.maskAllInputs` | `boolean` | `true` | Mask every input value. |
+| `replay.blockAllMedia` | `boolean` | `true` | Block all media and iframes. |
+| `replay.blockAllCanvas` | `boolean` | `false` | Block every canvas except those marked to show. |
+| `replay.maskTextSelector` | `string` | none | CSS selector of extra elements whose text to mask. |
+| `replay.blockSelector` | `string` | none | CSS selector of extra elements to block. |
+| `replay.ignoreSelector` | `string` | none | CSS selector of elements whose input events to ignore. |
+| `replay.checkoutEveryNms` | `number` | `60000` | Interval, in milliseconds, between full snapshots. It bounds the retained window. |
+| `replay.canvas` | `boolean \| { fps?, quality?, imageType? }` | off | Opt-in canvas recording. Defaults when on: `fps` 2, `quality` 0.6, `imageType` `'image/webp'`. It records pixels without masking, so use it only for canvases without sensitive content. |
+
+Replay needs a DOM. In a DOM-less host, such as a server-side render pass, nothing is recorded whatever this option says.
+
+### Report dialog
+
+These options shape the dialog that `showReportDialog()` shows; see [Bug reporting](/sdk/javascript/manual/bug-reporting).
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `reportSummaryRequired` | `boolean` | `false` | The summary must be filled in before Send. |
+| `reportDescriptionRequired` | `boolean` | `false` | The description must be filled in. |
+| `reportEmailRequired` | `boolean` | `false` | The reporter's email must be filled in. |
+| `reportLabelsEnabled` | `boolean` | `false` | Show the labels field. |
+| `reportLabelsRequired` | `boolean` | `false` | At least one label is required. Only with `reportLabelsEnabled`. |
+| `reportPrioritySelectorEnabled` | `boolean` | `false` | Show the severity picker. |
+
+## Node.js and Bun
+
+These options apply to `@bugsee/bugsee` on Node.js, to `@bugsee/bun`, and to the main process of Electron. Bun takes the same options as Node.js, with the exceptions noted.
+
+### Process and capture buffer
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `appRoot` | `string` | `process.cwd()` | Application root, used to turn stack-frame paths into relative ones. Pass `''` to keep absolute paths. |
+| `deviceId` | `string` | none | Device identifier. The SDK never generates or stores one on a server. |
+| `appIdentitySource` | `() => { version?, build? } \| undefined` | none | An extra place to look for the version and build, consulted after build-time constants and before the environment and `package.json`. |
+| `unhandledRejections` | `'preserve' \| 'warn' \| 'none'` | `'preserve'` | `'preserve'` captures the rejection, then reproduces Node.js's own outcome (print and exit with code 1). `'warn'` captures and prints but keeps the process alive. `'none'` installs no listener. |
+| `exitOnUncaught` | `boolean` | `true` | Flush the crash report, then exit with code 1 after an uncaught exception. Does not affect rejections. |
+| `shutdownTimeoutMs` | `number` | `3000` | Time budget, in milliseconds, to flush the crash report before exiting. |
+| `recover` | `boolean` | `true` | Store each report durably before upload and re-upload any left behind by a crashed or killed run on the next launch. Needs the on-disk store. |
+| `capturedDataStore` | `'disk' \| 'memory'` | `'disk'` | Where the rolling capture buffer lives. `'memory'` gives up durable capture and crash recovery. |
+| `dataDir` | `string` | `<os tmpdir>/bugsee/...` | Directory for on-disk data. Several processes can share one directory safely; each uses its own subdirectory. |
+| `dataRootBase` | `string` | `os.tmpdir()` | Base for the default data directory. Ignored when `dataDir` is set. |
+| `captureWriter` | `'inline' \| 'worker'` | `'inline'` | `'worker'` writes capture data from a worker thread, so a slow disk never blocks your code. |
+| `captureDiskSpace` | `boolean` | `false` | Report free and total disk space of the data volume as system traces. |
+| `diskProtection` | `boolean` | `true` | Below 50 MiB free the on-disk store stops persisting replay, log and network data; below 10 MiB it persists nothing. The in-memory window is kept either way. Only `false` opts out. |
+
+### Diagnostics
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `detectHangs` | `boolean` | `true` | Detect a blocked event loop and report an `AppHang`. See [Hangs](/sdk/javascript/issue-detection/hangs). |
+| `hangFairMs` | `number` | `3000` | Block duration, in milliseconds, reported as `AppHang::Fair`. |
+| `hangMediumMs` | `number` | `5000` | Block duration reported as `AppHang::Medium`. |
+| `hangSevereMs` | `number` | `10000` | Block duration reported as `AppHang::Severe`. |
+| `profiling` | `boolean` | `false` | Attach a rolling V8 CPU profile (`profile.json`) to reports. Costs some overhead. |
+| `profilingSamplingIntervalMicros` | `number` | `1000` | CPU profiler sampling interval, in microseconds. |
+| `captureLocalVariables` | `boolean \| object` | `false` | Capture the local variables in scope at a throw, onto the stack frames. Always off on Bun. |
+| `captureSourceContext` | `boolean \| object` | `false` | Attach the source lines around each throwing application frame. It uploads your source code, so it is opt-in. |
+
+`captureLocalVariables` costs about 3% steady-state because it enables the V8 debugger, and pausing on caught exceptions costs more on every throw. Variable names that look sensitive are redacted and values are truncated, but a variable can still hold personal data. Pass an object to tune it:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `includeCaught` | `boolean` | `false` | Also capture at caught exceptions, not only uncaught ones. Costly in code that uses exceptions for control flow. |
+| `maxFrames` | `number` | `5` | Frames to capture. |
+| `maxVariables` | `number` | `20` | Variables per frame. |
+| `maxValueLength` | `number` | `120` | Longest captured value, in characters. |
+| `maxCaughtPerSecond` | `number` | `50` | Rate limit for caught exceptions. Uncaught exceptions are never limited. |
+
+`captureSourceContext` takes an object with these keys:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `contextLines` | `number` | `5` | Lines before and after the throwing line. |
+| `maxFrames` | `number` | `5` | Frames to attach source to. |
+| `maxLineLength` | `number` | `200` | Longest line kept, in characters. |
+
+See [Diagnostics](/sdk/javascript/issue-detection/diagnostics).
+
+### Incoming requests and trace propagation
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `instrumentIncomingRequests` | `boolean` | `true` | Instrument incoming requests on `node:http` servers and `Bun.serve`: a per-request context and an `http.server` transaction. Only `false` opts out; an invalid value is treated as off and reported. See [Backend overview](/sdk/javascript/backend/overview). |
+| `propagateTrace` | `boolean` | `true` | Add the W3C `traceparent` header and a `bugsee` trace state to outgoing requests. Nothing is added unless the URL matches `tracePropagationTargets`. |
+| `tracePropagationTargets` | `Array<string \| RegExp>` | none | Which outgoing URLs may receive trace headers (substring or regular expression). List your own services only. |
+| `traceResponse` | `{ traceresponse?, serverTiming?, timingAllowOrigin? }` | off | Add trace context to incoming responses so a browser frontend can adopt the backend's span. |
+
+## Electron
+
+`launchMain(appToken, options)` in the main process takes every Node.js option above, plus:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `ipcMain` | Electron `ipcMain` | required | Used to receive capture from renderers and to control them. |
+| `app` | Electron `app` | none | Reports `app.getVersion()` as the app version, process metrics, and renderer-gone events. |
+| `powerMonitor` | Electron `powerMonitor` | none | Enables power and thermal events and traces. |
+| `screen` | Electron `screen` | none | Enables display events and the `displays` trace. Pass it after the app is ready. |
+| `BrowserWindow` | Electron `BrowserWindow` | none | Tracks windows that already exist. |
+| `gpuInfoType` | `'basic' \| 'complete'` | `'basic'` | Detail level of the GPU information read from `app.getGPUInfo`. |
+| `captureWindowEvents` | `boolean` | `true` | Window focus, show and hide events and renderer responsiveness. Needs `app`. |
+| `crashReporter` | Electron `crashReporter` | none | Enables native crash collection. |
+| `crashReporterExtra` | `Record<string, string>` | none | Extra fields sent with native crashes. |
+| `video` | `{ source, ... }` | off | Opt-in pixel video next to the default DOM replay. |
+
+`launchRenderer(appToken, options)` takes the browser options above. Replay is on and streams to the main process. See [Electron](/sdk/javascript/platforms/electron).
+
+## Edge and workers
+
+Cloudflare Workers, Vercel Edge and Web or Service Workers take the shared options above, with these changes: `maxDataSize` defaults to `10` and there are no options for disk, hangs or profiling. Edge runtimes buffer in memory and upload only when an incident happens.
+
+| Option | Applies to | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `partitionCaptureByTenant` | Cloudflare, Vercel Edge | `boolean` | `true` on Cloudflare, `false` on Vercel Edge | Keep a separate capture buffer for each tenant so one isolate serving several tenants never mixes their data. |
+| `maxTenantPartitions` | Cloudflare, Vercel Edge | `number` | `8` | Tenant buffers kept. The `maxDataSize` budget is divided across them. |
+| `asyncLocalStorage` | Cloudflare, Vercel Edge | object | probed from `globalThis` | The async store for per-request context. Supply it where the runtime does not expose one. |
+| `platformType` | Vercel Edge, Cloudflare, Web and Service Workers | string | Vercel Edge `'edge-light'`, Cloudflare `'workers'`; workers are detected (`'service-worker'` inside a Service Worker, else `'web-worker'`) | Runtime identity reported with a report. Set `'service-worker'` explicitly if detection fails. |
+| `persist` | Web Workers, Service Workers | `boolean` | `true` for Service Workers, `false` for Web Workers | Keep report bundles in IndexedDB and re-upload any a stopped worker left behind. |
+| `recover` | Web Workers, Service Workers | `boolean` | `true` | Re-upload a bundle left behind by an earlier activation. |
+
+See [Cloudflare](/sdk/javascript/platforms/cloudflare), [Vercel Edge](/sdk/javascript/platforms/vercel-edge) and [Web Workers](/sdk/javascript/platforms/web-workers).
+
+## Extension options
+
+`@bugsee/bugsee` adds performance monitoring and OpenTelemetry on top of the platform build, and these options on top of the platform options. The bare platform packages do not have them.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `performanceMonitoring` | `boolean` | `true` | Master switch for web vitals and performance transactions. |
+| `performanceSampleRate` | `number` | `1` | Fraction of transactions to keep, from 0 to 1. Errors are never sampled. |
+| `performanceUploadMode` | `'batched' \| 'realtime'` | `'batched'` | Upload on an interval, or per transaction. |
+| `performanceFlushIntervalMs` | `number` | `30000` | Interval for batched uploads, in milliseconds. |
+| `pageName` | `string` | current path, or `pageload` | Name of the page-load transaction (browser). |
+| `traceNavigations` | `boolean` | `true` | Open a `navigation` transaction for each single-page route change (browser). |
+| `traceInteractions` | `boolean` | `true` | Open a `ui.interaction` transaction for slow user interactions (browser). |
+| `propagateTrace` | `boolean` | browser `false`, server `true` | Add `traceparent` and trace state to outgoing requests. In the browser, same-origin requests propagate and other origins need `tracePropagationTargets`. |
+| `tracePropagationTargets` | `Array<string \| RegExp>` | none | URLs allowed to receive trace headers. |
+| `tracePropagationOrigin` | `string` | `location.origin` | Browser: the origin treated as same-origin. |
+| `appStartTimeMs` | `number` | process start time | Server: start time used for the startup transaction. |
+| `otelExportUrl` | `string \| URL` | none | OTLP/HTTP JSON traces endpoint. When set, finished transactions are also exported there, and Bugsee still receives them. |
+| `otelExportHeaders` | `Record<string, string>` | none | Headers for the OTLP export, lowercase keys. |
+| `otelExportResource` | `Record<string, unknown>` | none | OTLP resource attributes. |
+| `otelConsume` | `boolean` | `false` | Turn your OpenTelemetry spans into Bugsee transactions. |
+| `onOtelSpanProcessor` | `(processor) => void` | none | Receives the span processor to register on your `TracerProvider`. |
+
+The performance and propagation options need `performanceMonitoring` on. See [Performance](/sdk/javascript/performance) and [OpenTelemetry](/sdk/javascript/opentelemetry).
+
+## Reading options back
+
+The client reports what is in effect:
+
+```ts
+const bugsee = await launch('<your_app_token>', { maxRecordingTime: 30 });
+
+bugsee.getLaunchOptions();      // effective options, defaults applied
+bugsee.getHostLaunchOptions();  // only the options you passed
+```
+
+Both return a plain object keyed by the canonical option identifier, `com.bugsee.option.*` (for example `com.bugsee.option.capture.network`), the names shared by the Bugsee SDKs on every platform. Option objects such as `replay` or `captureLocalVariables` appear as `true`.
+
+## Options kept by `relaunch()`
+
+`relaunch(options)` starts from defaults, as the mobile SDKs do: the options you pass replace the previous ones, and omitted options go back to their default. Identity and integration settings are kept from the previous launch: `endpoint`, `appId`, `appVersion`, `appBuild`, `appRoot`, `dataDir`, `onError`, and the network, log and breadcrumb filters and `urlSanitizer` you set. See [Lifecycle & status](/sdk/javascript/lifecycle#relaunch).
+
+## Related pages
+
+- [Installation](/sdk/javascript/installation) — add the package and launch the SDK.
+- [Lifecycle & status](/sdk/javascript/lifecycle) — launch, stop, relaunch and events.
+- [Privacy](/sdk/javascript/privacy/overview) — masking and redaction options.
+- [Diagnostics](/sdk/javascript/issue-detection/diagnostics) — profiling, local variables and source context.
+- [Packages](/sdk/javascript/packages) — which package takes which options.

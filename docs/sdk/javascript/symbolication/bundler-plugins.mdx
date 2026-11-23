@@ -1,0 +1,231 @@
+---
+title: "Bundler plugins"
+description: "Upload source maps from your build with the Bugsee plugins for Vite, webpack, Rollup, esbuild and Rspack, and label components with the annotate plugins. All options explained."
+sidebar_position: 2
+slug: "/sdk/javascript/symbolication/bundler-plugins"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+A bundler plugin does the whole [symbolication](/sdk/javascript/symbolication/overview) job at the end of the build: it stamps the bundles and maps with a debug ID, uploads the maps, and deletes the local `.map` files so they are not deployed. The plugins run the Bugsee CLI, which is installed with them. See [Source maps](/cli/sourcemaps) for what the CLI does.
+
+Without an app token, a plugin does nothing, so local builds are unaffected.
+
+## Set up
+
+Turn on source maps in your bundler, add the plugin and give it your app token.
+
+<Tabs groupId="bundler">
+  <TabItem value="vite" label="Vite">
+
+```bash
+npm install --save-dev @bugsee/vite-plugin
+```
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import { bugseeVitePlugin } from '@bugsee/vite-plugin';
+
+export default defineConfig({
+  build: { sourcemap: true },
+  plugins: [bugseeVitePlugin({ appToken: process.env.BUGSEE_APP_TOKEN })],
+});
+```
+
+Use this plugin for frameworks that build on Vite as well.
+
+  </TabItem>
+  <TabItem value="webpack" label="webpack">
+
+```bash
+npm install --save-dev @bugsee/webpack-plugin
+```
+
+```js title="webpack.config.js"
+const { bugseeWebpackPlugin } = require('@bugsee/webpack-plugin');
+
+module.exports = {
+  devtool: 'source-map',
+  plugins: [bugseeWebpackPlugin({ appToken: process.env.BUGSEE_APP_TOKEN })],
+};
+```
+
+With ES modules, use `import { bugseeWebpackPlugin } from '@bugsee/webpack-plugin';`. Next.js on webpack uses this plugin.
+
+  </TabItem>
+  <TabItem value="rollup" label="Rollup">
+
+The Rollup, esbuild and Rspack plugins have no package of their own. Install `@bugsee/bundler-plugin-core` and import them from it. They are less exercised than the Vite and webpack plugins.
+
+```bash
+npm install --save-dev @bugsee/bundler-plugin-core
+```
+
+```js title="rollup.config.js"
+import { bugseeRollupPlugin } from '@bugsee/bundler-plugin-core';
+
+export default {
+  input: 'src/index.js',
+  output: { dir: 'dist', sourcemap: true },
+  plugins: [bugseeRollupPlugin({ appToken: process.env.BUGSEE_APP_TOKEN })],
+};
+```
+
+The plugin runs at `writeBundle`.
+
+  </TabItem>
+  <TabItem value="esbuild" label="esbuild">
+
+```bash
+npm install --save-dev @bugsee/bundler-plugin-core
+```
+
+```js title="build.mjs"
+import { build } from 'esbuild';
+import { bugseeEsbuildPlugin } from '@bugsee/bundler-plugin-core';
+
+await build({
+  entryPoints: ['src/index.ts'],
+  bundle: true,
+  outdir: 'dist',
+  sourcemap: 'external',
+  plugins: [bugseeEsbuildPlugin({ appToken: process.env.BUGSEE_APP_TOKEN })],
+});
+```
+
+The plugin runs when the build ends and hands the CLI the files that this build wrote. See [esbuild notes](#esbuild-notes).
+
+  </TabItem>
+  <TabItem value="rspack" label="Rspack">
+
+```bash
+npm install --save-dev @bugsee/bundler-plugin-core
+```
+
+```js title="rspack.config.js"
+const { bugseeRspackPlugin } = require('@bugsee/bundler-plugin-core');
+
+module.exports = {
+  devtool: 'source-map',
+  plugins: [bugseeRspackPlugin({ appToken: process.env.BUGSEE_APP_TOKEN })],
+};
+```
+
+Rspack emits no source maps by default in production (`devtool: false`), so the plugin finds nothing to upload and says so. Set `devtool`.
+
+  </TabItem>
+</Tabs>
+
+## Options
+
+All options are optional. A token is needed to upload, and it may come from the environment. See [Environment and variables](/sdk/javascript/symbolication/environment) for the lookup order and the `.env.bugsee-build-plugin` file.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `appToken` | `string` | `BUGSEE_APP_TOKEN` | Your app token. Without one, the plugin does nothing. |
+| `appVersion` | `string` | `BUGSEE_APP_VERSION`, then the `version` of the nearest `package.json`, else `0.0.0` | The version recorded with the upload. A real value is also baked into the bundle for the SDK. |
+| `appBuild` | `string` | `BUGSEE_APP_BUILD`, then the commit id of your CI, else `0` | The build recorded with the upload. A real value is also baked into the bundle for the SDK. |
+| `endpoint` | `string` | `BUGSEE_ENDPOINT`, else `https://api.bugsee.com` | The API endpoint. |
+| `deleteMaps` | `boolean` | `true` | Delete the `.map` files from the output after a successful upload. |
+| `stripSourcesContent` | `boolean` | `false` | Upload the maps without the embedded source code. Positions still resolve, but reports show no source lines. The maps on disk are not changed. |
+| `dryRun` | `boolean` | `false` | Run the CLI in dry-run mode: nothing is uploaded or deleted, and the notices say what was captured. |
+| `disabled` | `boolean` | `false` | Turn the plugin off, for example in development builds. |
+| `failOnError` | `boolean` | `false` | Fail the build when the upload fails. By default a failed upload only warns, so a telemetry problem never breaks a deploy. |
+| `registerBuild` | `'release' \| 'always' \| false` | `BUGSEE_REGISTER_BUILD`, else `'release'` | Which builds are registered with Bugsee. See [Build registration](#build-registration). |
+| `packageId` | `string` | the `name` of the nearest `package.json`, scope included | The package id of the registered build. |
+| `vcs` | `boolean` | `true` | Capture the commit, branch and repository of the build. `false` records nothing, even an explicit `commit`. |
+| `commit` | `string` | `BUGSEE_BUILD_COMMIT`, else detected | The commit SHA of the build, 7 to 64 hexadecimal characters. An explicit value skips the dirty-tree check. |
+| `allowDirtyCommit` | `boolean` | `false` | Record the commit even when tracked files have uncommitted changes. |
+| `projectRoot` | `string` | the working directory | The repository root that commit detection inspects. It does not change where the version is read from. |
+| `uploadInDevelopment` | `boolean` | `false` | esbuild and Rspack only. Upload from builds the bundler calls development. |
+| `onError` | `(error) => void` | a console warning | Receives a failure that was contained. |
+| `onNotice` | `(message) => void` | `console.warn` | Receives notices about configuration, such as a skipped upload or a dropped commit. Notices are strings, not errors. |
+
+The version and build are also baked into your bundle as `__BUGSEE_APP_VERSION__` and `__BUGSEE_APP_BUILD__`, so the SDK reports the same release without you passing `appVersion` to `launch()`. This happens even without a token. `disabled: true` turns it off. See [Environment and variables](/sdk/javascript/symbolication/environment#version-and-build).
+
+## Build registration
+
+At the end of a production build, the plugin also registers the build with Bugsee. Registration records the build only. No files are uploaded with it.
+
+| `registerBuild` | Registers |
+| --- | --- |
+| `'release'` | A build that the bundler calls production: the resolved production flag in Vite, `mode: 'production'` or an unset `mode` in webpack, otherwise `NODE_ENV=production`. |
+| `'always'` | Every build. |
+| `false` | No build. |
+
+A failed registration never fails the build unless `failOnError` is set. Registration happens once for each output folder, so a build that writes two folders registers two builds.
+
+## Commit information
+
+With `vcs` on, the plugin asks the CLI for the commit SHA, branch and repository of the build, reading your CI environment and falling back to `git`. It never fails a build: with no `git`, no repository or no commits, nothing is recorded.
+
+If tracked files have uncommitted changes, the SHA no longer describes what was built, so it is dropped and the reason is printed. The check runs after the build wrote its output and covers the whole repository. A repository that commits generated files, or has an unrelated dirty package in a monorepo, can look dirty on every build. Pass `allowDirtyCommit: true`, or commit the generated files before building.
+
+For a build made from an artifact, with no working tree, pass `commit` or set `BUGSEE_BUILD_COMMIT`.
+
+## Behavior to know
+
+- **Development builds.** The Vite, webpack and Rollup plugins upload every build they run. Set `disabled` for builds you do not want uploaded. The esbuild and Rspack plugins skip builds that the bundler calls development, and leave the local maps alone, unless you set `uploadInDevelopment: true`. esbuild states no mode, so only `NODE_ENV=development` marks a development build there.
+- **Subresource Integrity.** The stamp rewrites each bundle, which would invalidate script hashes in your HTML. When the stamp happens inside the build, as in webpack, the plugin checks for hashes that no longer match and warns. When it runs after the output is written, it refuses to stamp a build whose HTML pins a hash of a script. The page stays as the bundler emitted it, and the maps are not uploaded.
+- **Source maps are deleted** after a fully successful upload, which is why the browser no longer finds them. Set `deleteMaps: false` to keep them. A dry run deletes nothing.
+- **Watch mode.** The plugins keep no state between rebuilds, and builds that share an output folder do not wait for each other.
+
+### esbuild notes
+
+- If you did not set `sourcemap`, the plugin sets it to `'external'`. An explicit value is kept. With `sourcemap: false` there is nothing to upload, and the plugin says so.
+- The plugin asks esbuild for its metafile and uploads only the bundles and maps of this build. It never walks the output folder, so it never deletes a file it did not upload.
+- It works with any tool that takes esbuild plugins and lets esbuild write the files. **tsup is not covered**: tsup tells esbuild not to write, and writes the files itself afterwards, so nothing is on disk when the plugin runs. Use the [CLI recipe](/sdk/javascript/symbolication/manual#tsup) instead.
+- A build with `sourcemap: 'inline'` has no map files. With `failOnError`, it fails. Otherwise the plugin only says so.
+
+### What the plugins do not cover
+
+- **Angular.** Its builder does not accept esbuild plugins. Use the [CLI recipe](/sdk/javascript/symbolication/manual#angular).
+- **Bun's bundler, `tsc` and `swc`.** They have no hook. Use the [CLI recipe](/sdk/javascript/symbolication/manual).
+
+## Annotate plugins
+
+These optional plugins label the DOM elements that a component renders with the component's name, in a `data-bugsee-component` attribute. Bugsee reads it to attribute clicks and errors to a component even when minification mangled the names. Without them, everything is still captured.
+
+| Framework | Package | How |
+| --- | --- | --- |
+| React, Preact, Solid | `@bugsee/babel-plugin-component-annotate` | A Babel plugin with no options. Needs `@babel/core` 7. |
+| Svelte, SvelteKit | `@bugsee/svelte-plugin-component-annotate` | A Svelte preprocessor. Needs `svelte` 4 or newer. |
+| Vue | `@bugsee/vue` | A runtime mixin instead of a build plugin. See [Vue](/sdk/javascript/frameworks/vue). |
+
+```bash
+npm install --save-dev @bugsee/babel-plugin-component-annotate
+```
+
+```js title="babel.config.js"
+module.exports = {
+  plugins: [['@bugsee/babel-plugin-component-annotate']],
+};
+```
+
+The Babel plugin adds `data-bugsee-component="<ComponentName>"` to each host element, such as a `<button>` or `<div>`, that a PascalCase function or class component renders. It does not annotate component elements.
+
+```js title="svelte.config.js"
+import { componentAnnotatePreprocessor } from '@bugsee/svelte-plugin-component-annotate';
+
+export default {
+  preprocess: [componentAnnotatePreprocessor()],
+};
+```
+
+The name comes from the file name, so `UserCard.svelte` becomes `UserCard`. For `index.svelte` and SvelteKit route files, the folder name is used.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `renderSpans` | `boolean` | `false` | Also record a render span for each component's initialization in your performance data. Needs `@bugsee/svelte`. |
+
+## Related pages
+
+- [Symbolication overview](/sdk/javascript/symbolication/overview) — how debug IDs work
+- [Manual upload with the CLI](/sdk/javascript/symbolication/manual) — tsup, `tsc`, Bun and Angular
+- [Environment and variables](/sdk/javascript/symbolication/environment) — tokens, versions and the `.env.bugsee-build-plugin` file
+- [Source maps (CLI)](/cli/sourcemaps) — the commands that the plugins run

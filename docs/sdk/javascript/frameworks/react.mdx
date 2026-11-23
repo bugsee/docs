@@ -1,0 +1,192 @@
+---
+title: "React"
+description: "Set up the Bugsee JavaScript SDK in a React or Preact app with @bugsee/react: error boundary, React 19 root error handlers, react-router route names and component names."
+sidebar_position: 1
+slug: "/sdk/javascript/frameworks/react"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/react` adds React-specific error reporting to the [browser SDK](/sdk/javascript/platforms/browser): an error boundary that reports render errors with the React component stack, root error handlers for React 19, a render profiler, and route naming for react-router.
+
+Using Next.js or Remix? Use [`@bugsee/nextjs`](/sdk/javascript/frameworks/nextjs) or [`@bugsee/remix`](/sdk/javascript/frameworks/remix) instead. They include this adapter.
+
+## Requirements
+
+- React 18 or newer (peer dependency), or Preact 10 or newer through `preact/compat`.
+- An application token.
+
+## Install
+
+Install the umbrella, which provides `launch()`, next to the adapter.
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/bugsee@beta @bugsee/react@beta
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/bugsee@beta @bugsee/react@beta
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/bugsee@beta @bugsee/react@beta
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/bugsee@beta @bugsee/react@beta
+```
+
+  </TabItem>
+</Tabs>
+
+## Set up
+
+Launch Bugsee as early as possible, at the top of your entry module. In the browser `launch()` returns a `Promise` of the client. Await it only if you need the client right away.
+
+```tsx title="main.tsx"
+import { launch } from '@bugsee/bugsee';
+
+launch('<your_app_token>');
+```
+
+Wrap your app in the error boundary. A render error is reported with the React component stack, and the fallback is shown.
+
+```tsx title="App.tsx"
+import { BugseeErrorBoundary } from '@bugsee/react';
+
+export function Root() {
+  return (
+    <BugseeErrorBoundary fallback={<Crashed />}>
+      <App />
+    </BugseeErrorBoundary>
+  );
+}
+```
+
+A higher-order component does the same:
+
+```tsx
+import { withBugseeErrorBoundary } from '@bugsee/react';
+
+export default withBugseeErrorBoundary(App, { fallback: <Crashed /> });
+```
+
+### React 19 root handlers
+
+React 19 reports errors through callbacks on the root. Pass Bugsee's handlers to `createRoot` or `hydrateRoot`:
+
+```tsx
+import { createRoot } from 'react-dom/client';
+import { createBugseeErrorHandlers } from '@bugsee/react';
+
+createRoot(document.getElementById('root')!, createBugseeErrorHandlers()).render(<App />);
+```
+
+The handlers cover both `onUncaughtError` and `onCaughtError`.
+
+### Route names (react-router)
+
+Name the active navigation after the matched route pattern (`/users/:id`) instead of the concrete URL. With a data router, wire it once:
+
+```tsx
+import { createBrowserRouter } from 'react-router-dom';
+import { instrumentReactRouter } from '@bugsee/react';
+
+const router = createBrowserRouter(routes);
+instrumentReactRouter(router);
+```
+
+With a declarative router, call `instrumentRouterMatches(matchRoutes(routes, location))` on each navigation.
+
+### Component names in minified builds
+
+Install the Babel plugin so clicks and errors are attributed to the component that rendered them, even after minification.
+
+```bash
+npm install --save-dev @bugsee/babel-plugin-component-annotate
+```
+
+```js title="babel.config.js"
+module.exports = {
+  plugins: [['@bugsee/babel-plugin-component-annotate']],
+};
+```
+
+The plugin adds `data-bugsee-component` attributes. See [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins).
+
+### Preact
+
+Preact 10 and newer works through this package via `preact/compat`. Alias `react` and `react-dom` to `preact/compat` in your bundler, as a Preact app already does, and use `@bugsee/react` as is. Under Preact the report carries the error but no React component stack.
+
+## API
+
+`@bugsee/react` also re-exports everything from `@bugsee/bugsee`, so you can import `launch` from either package.
+
+| Export | Description |
+| --- | --- |
+| `BugseeErrorBoundary` | Error boundary component. Props: `fallback` (a node, or a function of the error), `onError(error, componentStack)`, `getClient`, `children`. |
+| `withBugseeErrorBoundary(Component, props?)` | Higher-order component version of the boundary. |
+| `createBugseeErrorHandlers(options?)` | Returns `{ onUncaughtError, onCaughtError }` for React 19 `createRoot` and `hydrateRoot`. |
+| `instrumentReactRouter(router)` | Names navigations after the matched route of a react-router data router. |
+| `instrumentRouterMatches(matches)` | The same for a declarative router; call it on each navigation. |
+| `BugseeProfiler` | A React `<Profiler>` that records `ui.render` spans. Takes an `id` prop. |
+| `withBugseeProfiler(Component, id?, options?)` | Higher-order component version of the profiler. |
+| `reportReactError(error, options?)` | Reports an error you caught yourself, linking the component stack when you pass it. |
+
+## Launch options
+
+`launch(appToken, options)` accepts all [browser options](/sdk/javascript/platforms/browser#browser-options). The most relevant:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `captureLogs` | `boolean` | `true` | Capture console output. |
+| `captureNetwork` | `boolean` | `true` | Capture network requests. |
+| `maxRecordingTime` | `number` | `60` | Seconds of recording to keep. |
+| `replay` | `boolean` or object | `true` | Session replay settings, or `false` to turn replay off. |
+| `captureInteractions` | `boolean` | `true` | Capture user interactions. |
+
+## Notes
+
+- **Server rendering.** `launch()` is browser code. Call it only on the client (for example in the client entry), never during server rendering.
+- **Source maps.** Upload source maps so React stacks are readable. See [Symbolication](/sdk/javascript/symbolication/overview).
+- **Sensitive content.** Session replay masks text and inputs by default. See [Privacy](/sdk/javascript/privacy/overview).
+
+## Verify
+
+Add a component that throws on render inside the boundary:
+
+```tsx
+function Bomb(): never {
+  throw new Error('Bugsee test error');
+}
+
+<BugseeErrorBoundary fallback={<p>Something went wrong.</p>}>
+  <Bomb />
+</BugseeErrorBoundary>;
+```
+
+Load the page. The fallback appears, and the error shows up in the Bugsee dashboard with the component stack.
+
+## Related pages
+
+- [Browser](/sdk/javascript/platforms/browser) — launch options, persistence and replay
+- [Next.js](/sdk/javascript/frameworks/nextjs) — React with server rendering
+- [Remix and React Router](/sdk/javascript/frameworks/remix) — framework mode apps
+- [Symbolication](/sdk/javascript/symbolication/overview) — source maps and debug IDs

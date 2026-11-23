@@ -1,6 +1,6 @@
 ---
 title: "Overview"
-description: "Overview of Bugsee SDK installation links and a feature comparison table across iOS, Android, React Native, Flutter, Unity, .NET, and Cordova."
+description: "Overview of Bugsee SDK installation links and a feature comparison table across iOS, Android, React Native, Flutter, Unity, .NET, and Cordova (plus installation links for the JavaScript SDK)."
 sidebar_position: 0
 slug: "/"
 ---
@@ -14,6 +14,7 @@ Using Bugsee on mobile devices requires installation of Bugsee lightweight SDK:
 * [Installing Cordova SDK](/sdk/cordova/installation/)
 * [Installing React Native SDK](/sdk/react_native/v6/installation/)
 * [Installing Flutter SDK](/sdk/flutter/installation/)
+* [Installing JavaScript SDK (Beta)](/sdk/javascript/installation/) — browsers, Node.js, Bun, Electron, edge runtimes and web frameworks
 * [Installing Unity SDK](/sdk/unity/installation/)
 * [Installing KMP SDK (Beta)](/sdk/kmp/installation/)
 * [Installing Xamarin SDK](/sdk/xamarin/installation/) — **deprecated**, use the [.NET SDK](/sdk/dotnet/installation/) for new projects

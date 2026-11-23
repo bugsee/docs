@@ -1,0 +1,131 @@
+---
+title: "Vercel Edge"
+description: "Set up the Bugsee JavaScript SDK in Vercel Edge Functions and other edge isolates with @bugsee/vercel-edge: withBugseeFetch, incident-driven uploads and options."
+sidebar_position: 6
+slug: "/sdk/javascript/platforms/vercel-edge"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/vercel-edge` is the SDK for Vercel Edge Functions and other edge isolate runtimes that offer only Web APIs (`fetch`, `Request`, `Response`, `crypto.subtle`, no `node:*`).
+
+Capture is incident-driven. Data is buffered in memory and uploaded only when an incident happens: a handled `logException`, a thrown handler error, or an unhandled rejection. A clean request uploads nothing.
+
+Pick the package that matches your platform:
+
+- Standalone Vercel Edge function or another edge isolate: this page.
+- Cloudflare Workers: [`@bugsee/cloudflare`](/sdk/javascript/platforms/cloudflare), which builds on this package.
+- Next.js: [`@bugsee/nextjs`](/sdk/javascript/frameworks/nextjs), which uses this package on the Edge runtime for you.
+
+## Requirements
+
+- An edge runtime with Web APIs.
+- An application token.
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/vercel-edge@beta
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/vercel-edge@beta
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/vercel-edge@beta
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/vercel-edge@beta
+```
+
+  </TabItem>
+</Tabs>
+
+## Launch
+
+```ts title="api/edge.ts"
+import { launch, withBugseeFetch } from '@bugsee/vercel-edge';
+
+const bugsee = launch(process.env.BUGSEE_APP_TOKEN!);
+
+export default {
+  fetch: withBugseeFetch(bugsee, async (request: Request) => {
+    // ... your handler ...
+    return new Response('ok');
+  }),
+};
+```
+
+`launch()` returns the client directly, not a `Promise`. `withBugseeFetch` runs each request in its own Bugsee context, captures any error your handler throws and rethrows it (the platform still produces its error response), and flushes the upload through `waitUntil`, because an edge isolate freezes as soon as the response is returned. On Vercel Edge `waitUntil` is found automatically. Elsewhere it is read from the `ctx` argument.
+
+## What is exported
+
+| Export | Description |
+| --- | --- |
+| `launch(appToken, options?)` | Starts the SDK and returns the client synchronously. |
+| `relaunch` | Restarts the SDK. |
+| `withBugseeFetch(client, handler)` | Wraps a `fetch` handler so each request has its own context and errors are reported. |
+| `runInEdgeContext` | Runs your own function in a Bugsee request context. |
+| `getStatus`, `BugseeStatus`, `LifecycleEvents`, `addReportAttachment`, `getDefaultNetworkSanitizer` | The shared client exports. |
+
+## Options
+
+`launch(appToken, options)` accepts, among others:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `appVersion`, `appBuild`, `appId` | `string` | resolved | Identify your release in reports. |
+| `captureLogs`, `captureNetwork`, `captureNetworkBodies` | `boolean` | `true` | Capture streams. |
+| `maxDataSize` | `number` | 10 MB | Size of the in-memory buffer, in megabytes. |
+| `maxTenantPartitions` | `number` | `8` | Number of per-tenant capture partitions, used when one isolate serves several tenants. |
+| `partitionCaptureByTenant` | `boolean` | `false` | Keep each tenant's capture separate. |
+| `asyncLocalStorage` | async store | probed | The store behind per-request context. Supply it on runtimes where `globalThis.AsyncLocalStorage` is missing. |
+
+See [Configuration](/sdk/javascript/configuration) for the shared options.
+
+## App version and build
+
+Pass `appVersion` and `appBuild` to `launch`. The Vite and webpack plugins can also inject `__BUGSEE_APP_VERSION__` and `__BUGSEE_APP_BUILD__` at build time, and the `BUGSEE_APP_VERSION` and `BUGSEE_APP_BUILD` environment variables apply below those constants. On Vercel, if no build is given by an option, a build-time constant or `BUGSEE_APP_BUILD`, the deployed commit (`VERCEL_GIT_COMMIT_SHA`) is used as the build. If no version is found, reports show `0.0.0`.
+
+## Source maps
+
+Upload source maps for your function bundle so stack traces are readable. See [Symbolication](/sdk/javascript/symbolication/overview).
+
+## Verify
+
+1. Deploy the function (or run it locally) with the token set.
+2. Trigger an error in the handler:
+
+```ts
+fetch: withBugseeFetch(bugsee, async () => {
+  throw new Error('Bugsee test error');
+}),
+```
+
+3. Open the Bugsee dashboard. The report appears with the request context and the captured logs.
+
+## Related pages
+
+- [Cloudflare Workers](/sdk/javascript/platforms/cloudflare) — Workers, Durable Objects and `nodejs_compat`
+- [Next.js](/sdk/javascript/frameworks/nextjs) — Edge runtime support inside Next.js
+- [Configuration](/sdk/javascript/configuration) — all launch options
+- [Symbolication](/sdk/javascript/symbolication/overview) — source maps and debug IDs

@@ -1,0 +1,96 @@
+---
+title: "OpenTelemetry"
+description: "Export Bugsee performance transactions to your own OpenTelemetry backend as OTLP, and feed your OpenTelemetry spans into Bugsee, from the JavaScript SDK."
+sidebar_position: 21
+slug: "/sdk/javascript/opentelemetry"
+---
+
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+Bugsee works with OpenTelemetry in two directions:
+
+- **Export.** Finished Bugsee [performance transactions](/sdk/javascript/performance) are also sent to your OTLP endpoint.
+- **Consume.** Spans recorded by your own OpenTelemetry SDK become Bugsee transactions.
+
+Both run in browsers and in Node.js. You do not install a Bugsee package for them: `@bugsee/opentelemetry` is a dependency of `@bugsee/bugsee`, and `launch()` wires it in when you set the options below.
+
+Both directions need performance monitoring to stay on, which is the default.
+
+## Export transactions to OTLP
+
+Set `otelExportUrl` to the OTLP/HTTP traces endpoint of your backend:
+
+```ts
+import { launch } from '@bugsee/bugsee';
+
+launch('<your_app_token>', {
+  otelExportUrl: 'https://api.honeycomb.io/v1/traces',
+  otelExportHeaders: { 'x-honeycomb-team': '<your_key>' },
+  otelExportResource: { 'service.name': 'web' },
+});
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `otelExportUrl` | `string \| URL` | none | The full OTLP/HTTP traces endpoint, for example `https://collector.example.com/v1/traces`. An empty value means no export. Any other type is reported through `onError` and also means no export. |
+| `otelExportHeaders` | `Record<string, string>` | none | Headers sent with each export, such as an API key. Use lowercase keys. |
+| `otelExportResource` | `Record<string, unknown>` | none | OTLP resource attributes, such as `service.name`. |
+
+How the export works:
+
+- It is a copy. Bugsee still receives the transactions.
+- Transactions go to your endpoint in the same batches as the Bugsee upload. See `performanceUploadMode` and `performanceFlushIntervalMs` on the [performance page](/sdk/javascript/performance#upload).
+- The body is OTLP JSON, posted with the content type `application/json`.
+- Delivery is best effort. A failed export is reported through `onError` and the batch is not retried.
+- Sampling applies. A transaction that is not sampled is not exported.
+- Durations are derived from the start and end times, so sub-millisecond precision is lost.
+- The Bugsee device id is added to the resource as `device_id`, unless your resource already names one.
+
+## Consume OpenTelemetry spans
+
+Register the span processor that Bugsee gives you on your own `TracerProvider`. Set `otelConsume` and receive the processor in `onOtelSpanProcessor`:
+
+```ts
+import { launch, type BugseeSpanProcessor } from '@bugsee/bugsee';
+
+await launch('<your_app_token>', {
+  otelConsume: true,
+  onOtelSpanProcessor: (processor: BugseeSpanProcessor) => {
+    // Register `processor` on your OpenTelemetry TracerProvider.
+  },
+});
+```
+
+How you register the processor depends on your OpenTelemetry SDK version. For example, pass it in the `spanProcessors` option of the provider's constructor.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `otelConsume` | `boolean` | `false` | Turn on span consumption. Needs `onOtelSpanProcessor`. |
+| `onOtelSpanProcessor` | `(processor: BugseeSpanProcessor) => void` | none | Receives the span processor to register on your provider. |
+
+The OpenTelemetry SDK itself is your own dependency. Install the packages for your version, as shown below.
+
+| Your OpenTelemetry JS | Install |
+| --- | --- |
+| 1.x or 2.x | `@opentelemetry/api` and `@opentelemetry/sdk-trace-base` |
+| 3.x (Node.js 22.15 or newer) | `@opentelemetry/api` and `@opentelemetry/sdk-trace`. Version 3 removed `sdk-trace-base`. `sdk-trace` also exists on 2.9 and later. |
+
+How consumption works:
+
+- Spans arrive one at a time, children usually first. Bugsee collects them by trace and creates one transaction when the root span of the trace ends. A child that ends after its root is not part of the transaction.
+- A trace whose root never ends is dropped after a time limit, and the number of traces held at once is capped.
+- Consumed transactions ride the same upload as native ones, and the same export if you set `otelExportUrl`.
+- Span filters apply, and consumed spans are the main reason to have one. An instrumentation can attach raw SQL or request bodies to its spans. Use `setSpanFilter` to scrub or drop them. See [Performance](/sdk/javascript/performance#filter-or-drop-spans).
+
+## Trace propagation
+
+Bugsee propagates the W3C `traceparent` header on its own, without OpenTelemetry. `propagateTrace` and `tracePropagationTargets` are described on the [performance page](/sdk/javascript/performance#link-frontend-and-backend-traces) and the [backend overview](/sdk/javascript/backend/overview#trace-correlation).
+
+## Related pages
+
+- [Performance](/sdk/javascript/performance) — the transactions that are exported
+- [Backend overview](/sdk/javascript/backend/overview) — trace continuation on a server
+- [Privacy](/sdk/javascript/privacy/overview) — redaction and filters

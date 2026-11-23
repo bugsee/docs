@@ -1,0 +1,60 @@
+---
+title: "Issue detection overview"
+description: "What the Bugsee JavaScript SDK detects on its own: uncaught errors and crashes, unhandled promise rejections, event-loop hangs and failing HTTP requests."
+sidebar_position: 1
+slug: "/sdk/javascript/issue-detection/overview"
+---
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+Issue detection files a report without any code from you. When a detector fires, Bugsee assembles a bundle of the recent logs, network calls, breadcrumbs and (in a browser) the session replay, and uploads it.
+
+## What it detects
+
+| Detector | Runtime | Default | Report type | Page |
+| --- | --- | --- | --- | --- |
+| Uncaught error or exception | Browser, Node.js, Bun | On | Crash | [Errors and crashes](/sdk/javascript/issue-detection/errors-and-crashes) |
+| Unhandled promise rejection | Browser, Node.js, Bun | On | Error | [Errors and crashes](/sdk/javascript/issue-detection/errors-and-crashes) |
+| Event-loop hang | Node.js, Bun | On | Error | [Hangs](/sdk/javascript/issue-detection/hangs) |
+| HTTP 5xx response | Browser, Node.js, Bun and the edge and worker runtimes | Off | Error | [HTTP errors](/sdk/javascript/issue-detection/http-errors) |
+
+A **crash** is something that ended or would have ended the process or page. An **error** is a problem the app survived. The two have separate default priorities: `reportDefaultCrashPriority` is `blocker` and `reportDefaultErrorPriority` is `high`.
+
+Errors you catch and report yourself with `logException` go through the same pipeline. See [Crash and error reporting](/sdk/javascript/manual/crash-error-reporting).
+
+## How it works
+
+- **Detectors are providers.** Each one watches a source: the `error` and `unhandledrejection` events of the window, the `uncaughtException` and `unhandledRejection` events of the process, a watchdog on the event loop, or the network capture.
+- **Errors you report yourself are rate limited.** `logException` drops the same thrown object when it is reported twice, and accepts at most 100 calls in any 60-second window. HTTP errors have their own limits, described on their page.
+- **Reports are delivered durably.** On Node.js and Bun, and in a browser with IndexedDB, a report is stored before it is uploaded. A report left behind by a process that was killed is uploaded on the next launch.
+- **Stack traces are symbolicated.** Minified frames are mapped back to your source when you upload source maps. See [Symbolication](/sdk/javascript/symbolication/overview).
+
+## Switches
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `detectCrashes` | `boolean` | `true` | Detect uncaught errors and unhandled rejections. |
+| `detectHangs` | `boolean` | `true` | Detect event-loop hangs. Node.js and Bun only. |
+| `detectHttpErrors` | `boolean` | `false` | Report HTTP 5xx responses. |
+
+```ts
+import { launch } from '@bugsee/bugsee';
+
+launch('<your_app_token>', {
+  detectCrashes: true,
+  detectHangs: true,
+  detectHttpErrors: true,
+});
+```
+
+On a server, the [diagnostics](/sdk/javascript/issue-detection/diagnostics) options add local variables, source lines and a CPU profile to what these detectors report.
+
+## Related pages
+
+- [Errors and crashes](/sdk/javascript/issue-detection/errors-and-crashes) — uncaught errors and unhandled rejections
+- [Hangs](/sdk/javascript/issue-detection/hangs) — Node.js and Bun event-loop hangs
+- [HTTP errors](/sdk/javascript/issue-detection/http-errors) — report failing backend calls
+- [Diagnostics](/sdk/javascript/issue-detection/diagnostics) — profiling, local variables and source context
+- [Backend overview](/sdk/javascript/backend/overview) — per-request context for server errors

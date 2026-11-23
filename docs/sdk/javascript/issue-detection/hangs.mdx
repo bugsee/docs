@@ -1,0 +1,88 @@
+---
+title: "Hangs"
+description: "Detect event-loop hangs in Node.js and Bun services with the Bugsee JavaScript SDK: escalating thresholds, the AppHang report and how to get the blocking stack."
+sidebar_position: 3
+slug: "/sdk/javascript/issue-detection/hangs"
+---
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+A hang is a stretch of time in which the event loop is blocked. A synchronous loop, a huge `JSON.parse` or a blocking call keeps every request of the process waiting, and nothing is thrown, so no crash detector can see it. Bugsee detects it with a watchdog and reports it as an error.
+
+Hang detection runs on Node.js and Bun. It is on by default.
+
+## How it works
+
+The main thread writes a heartbeat into a shared buffer about once a second. A separate watchdog worker thread reads that buffer. A blocked event loop cannot write, so the heartbeat goes stale, and the worker notices.
+
+The worker is `unref`'d, so it never keeps a process alive. It uses about 12 MB of memory on Node.js and about 5 MB on Bun in our measurements, with negligible CPU.
+
+## Thresholds and levels
+
+A hang escalates through three levels as it gets longer. Each level reports once per hang. When the loop recovers, the detector re-arms, so a service that hangs again later reports again.
+
+| Level | Option | Default | Domain |
+| --- | --- | --- | --- |
+| Fair | `hangFairMs` | `3000` | `AppHang::Fair` |
+| Medium | `hangMediumMs` | `5000` | `AppHang::Medium` |
+| Severe | `hangSevereMs` | `10000` | `AppHang::Severe` |
+
+The thresholds must be positive and strictly increasing. If they are not, Bugsee falls back to the defaults for all three.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `detectHangs` | `boolean` | `true` | Turn hang detection on or off. |
+| `hangFairMs` | `number` | `3000` | Stall length of the first level, in milliseconds. |
+| `hangMediumMs` | `number` | `5000` | Stall length of the second level. |
+| `hangSevereMs` | `number` | `10000` | Stall length of the third level. |
+
+```ts
+import { launch } from '@bugsee/bugsee';
+
+launch('<your_app_token>', {
+  hangFairMs: 1000,
+  hangMediumMs: 3000,
+  hangSevereMs: 8000,
+});
+```
+
+## The report
+
+| Field | Value |
+| --- | --- |
+| Type | Error, with the error priority (`reportDefaultErrorPriority`) |
+| Summary | `Main thread hang detected` |
+| Description | `Event loop blocked for <n>ms (AppHang::Fair)`, with the level of the report |
+| Label | The domain, for example `AppHang::Fair` |
+
+## Get the blocking stack
+
+Nothing throws during a hang, so the report has no stack of its own. V8 keeps sampling while the loop is blocked, so the CPU profile of the stall shows where the code was stuck.
+
+Turn on `profiling` to use it:
+
+```ts
+launch('<your_app_token>', {
+  profiling: true,
+});
+```
+
+With profiling on, Bugsee takes the hottest stack of the stall window from the profile and attaches it to the hang report as its stack frames. Hangs are then grouped by where they block, and the report carries a `profile.json` as well. The profile is rolling, covers the last `maxRecordingTime` seconds, and opens in Chrome DevTools or speedscope.
+
+If the profile is not ready within five seconds, the report goes out without frames.
+
+Without `profiling`, every hang of a given level has the same signature, such as `AppHang::Fair`, and they are all grouped together. See [Diagnostics](/sdk/javascript/issue-detection/diagnostics) for the profiler options and their cost.
+
+## Not covered
+
+- Browsers have no hang detector in this SDK.
+- Cloudflare, Vercel Edge and worker runtimes do not run the watchdog.
+
+## Related pages
+
+- [Issue detection overview](/sdk/javascript/issue-detection/overview) — all detectors and their defaults
+- [Diagnostics](/sdk/javascript/issue-detection/diagnostics) — CPU profiling
+- [Node.js platform](/sdk/javascript/platforms/node) — Node.js launch options
+- [Bun platform](/sdk/javascript/platforms/bun) — Bun launch options

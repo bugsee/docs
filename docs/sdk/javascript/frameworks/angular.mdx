@@ -1,0 +1,164 @@
+---
+title: "Angular"
+description: "Set up the Bugsee JavaScript SDK in an Angular app with @bugsee/angular: the ErrorHandler, Router route names, and uploading source maps with the CLI."
+sidebar_position: 3
+slug: "/sdk/javascript/frameworks/angular"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/angular` adds Angular-specific error reporting to the [browser SDK](/sdk/javascript/platforms/browser): an `ErrorHandler` that reports uncaught errors, and route naming from the Angular Router.
+
+## Requirements
+
+- Angular 16 or newer: `@angular/core` and `@angular/router` are peer dependencies.
+- An application token.
+
+## Install
+
+Install the umbrella, which provides `launch()`, next to the adapter.
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/bugsee@beta @bugsee/angular@beta
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/bugsee@beta @bugsee/angular@beta
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/bugsee@beta @bugsee/angular@beta
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/bugsee@beta @bugsee/angular@beta
+```
+
+  </TabItem>
+</Tabs>
+
+## Set up
+
+Launch Bugsee as early as possible, at the top of your entry module. In the browser `launch()` returns a `Promise` of the client. Await it only if you need the client right away.
+
+```ts title="main.ts"
+import { launch } from '@bugsee/bugsee';
+
+launch('<your_app_token>');
+```
+
+Register the Bugsee error handler in place of Angular's default `ErrorHandler`:
+
+```ts title="app.config.ts"
+import { ErrorHandler } from '@angular/core';
+import { BugseeErrorHandler } from '@bugsee/angular';
+
+bootstrapApplication(AppComponent, {
+  providers: [{ provide: ErrorHandler, useClass: BugseeErrorHandler }],
+});
+```
+
+`BugseeErrorHandler` reports the error to Bugsee, then runs Angular's default handler so the console output stays. It unwraps Angular's own error wrapper where one exists, so the report shows the real error.
+
+To chain a handler of your own instead, build one with `createAngularErrorHandler`:
+
+```ts
+import { ErrorHandler } from '@angular/core';
+import { createAngularErrorHandler } from '@bugsee/angular';
+
+providers: [
+  {
+    provide: ErrorHandler,
+    useFactory: () => createAngularErrorHandler({ delegate: myHandler }),
+  },
+];
+```
+
+### Route names (Angular Router)
+
+Name the active navigation after the matched route pattern. Call `setRouteNameFromRouter(router)` on each `NavigationEnd` event:
+
+```ts
+import { NavigationEnd, Router } from '@angular/router';
+import { setRouteNameFromRouter } from '@bugsee/angular';
+import { filter } from 'rxjs';
+
+constructor(router: Router) {
+  router.events
+    .pipe(filter((event) => event instanceof NavigationEnd))
+    .subscribe(() => setRouteNameFromRouter(router));
+}
+```
+
+## API
+
+`@bugsee/angular` also re-exports everything from `@bugsee/bugsee`.
+
+| Export | Description |
+| --- | --- |
+| `BugseeErrorHandler` | `ErrorHandler` class that reports, then runs Angular's default handler. |
+| `createAngularErrorHandler(options?)` | Builds an `ErrorHandler`-shaped object. The `delegate` option is the handler to run after reporting. |
+| `reportAngularError(error, options?)` | Reports an error you caught yourself. |
+| `setRouteNameFromRouter(router)` | Names the active navigation after the matched route. |
+| `createBugseeRenderTracker()` | Records render timing for performance monitoring. |
+
+## Launch options
+
+`launch(appToken, options)` accepts all [browser options](/sdk/javascript/platforms/browser#browser-options). The most relevant:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `captureLogs` | `boolean` | `true` | Capture console output. |
+| `captureNetwork` | `boolean` | `true` | Capture network requests. |
+| `maxRecordingTime` | `number` | `60` | Seconds of recording to keep. |
+| `replay` | `boolean` or object | `true` | Session replay settings, or `false` to turn replay off. |
+| `captureInteractions` | `boolean` | `true` | Capture user interactions. |
+
+## Source maps
+
+The Angular builder does not accept bundler plugins, so there is no plugin for it. Add the Bugsee CLI as a step after `ng build`: it injects debug IDs into the built files and uploads the source maps.
+
+```bash
+ng build --source-map
+export BUGSEE_APP_TOKEN=<your_app_token>
+bugsee-cli sourcemaps inject dist/<project>/browser
+bugsee-cli debug-files upload dist/<project>/browser --type sourcemaps --version "$APP_VERSION" --build "$APP_BUILD"
+```
+
+Run `inject` before you deploy. If you turn on `"subresourceIntegrity": true`, `inject` refuses to run unless you pass `--allow-sri`; see [Manual source map upload](/sdk/javascript/symbolication/manual) for details.
+
+## Verify
+
+Throw from a click handler or a component:
+
+```ts
+onClick() {
+  throw new Error('Bugsee test error');
+}
+```
+
+Trigger it. The error shows up in the Bugsee dashboard.
+
+## Related pages
+
+- [Browser](/sdk/javascript/platforms/browser) — launch options, persistence and replay
+- [Manual source map upload](/sdk/javascript/symbolication/manual) — the CLI recipe for Angular
+- [Symbolication](/sdk/javascript/symbolication/overview) — source maps and debug IDs
+- [Privacy](/sdk/javascript/privacy/overview) — what replay masks

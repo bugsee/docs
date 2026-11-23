@@ -1,0 +1,148 @@
+---
+title: "Remix and React Router"
+description: "Set up the Bugsee JavaScript SDK in a Remix or React Router v7 and v8 framework mode app with @bugsee/remix: entry.server handleError, entry.client onError and Remix v2."
+sidebar_position: 8
+slug: "/sdk/javascript/frameworks/remix"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/remix` is the adapter for Remix and for React Router v7 and v8 in framework mode. It reports server errors through `handleError` in `entry.server`, and captures the browser through `entry.client`. It is a single install: it bundles the browser and Node.js SDKs and re-exports the React adapter from `@bugsee/remix/client`.
+
+## Requirements
+
+- Remix, or React Router v7 or v8 in framework mode.
+- Node.js 18 or newer for server code.
+- `react` 18 or newer (optional peer dependency).
+- An application token.
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/remix@beta
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/remix@beta
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/remix@beta
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/remix@beta
+```
+
+  </TabItem>
+</Tabs>
+
+## Set up
+
+### Server
+
+Launch Bugsee on the server and export `handleError` so unhandled server errors are reported.
+
+```tsx title="app/entry.server.tsx"
+import { registerServer } from '@bugsee/remix/server';
+
+registerServer(process.env.BUGSEE_TOKEN!);
+
+export { handleError } from '@bugsee/remix';
+```
+
+`registerServer` returns the started client directly.
+
+### Client
+
+Launch the browser SDK at the top of `entry.client` and pass `bugseeOnError` to the router, so React errors are reported with their component stack.
+
+```tsx title="app/entry.client.tsx"
+import { registerClient, bugseeOnError } from '@bugsee/remix/client';
+
+registerClient(import.meta.env.VITE_BUGSEE_TOKEN);
+
+hydrateRoot(document, <HydratedRouter onError={bugseeOnError} />);
+```
+
+`registerClient` returns a `Promise` of the client. An application token is not a secret, so it is fine in a `VITE_` variable.
+
+### Remix v2
+
+Remix v2 has no `onError` prop. Call `captureRemixErrorBoundaryError` from your root `ErrorBoundary`. Expected control flow, such as 404s, redirects and thrown responses, is skipped.
+
+```tsx title="app/root.tsx"
+import { captureRemixErrorBoundaryError } from '@bugsee/remix/client';
+import { useRouteError } from '@remix-run/react';
+
+export function ErrorBoundary() {
+  captureRemixErrorBoundaryError(useRouteError());
+  return <RootError />;
+}
+```
+
+## Entry points
+
+| Entry | Exports |
+| --- | --- |
+| `@bugsee/remix` | `handleError`, `createHandleError(options?)`, `getBugseeTraceMetaTags(options?)` |
+| `@bugsee/remix/server` | `registerServer`, `getBugseeMetaTagTransformer`, the shared client exports and `relaunch` |
+| `@bugsee/remix/client` | `registerClient`, `bugseeOnError`, `captureRemixErrorBoundaryError`, plus the React adapter |
+
+`getBugseeTraceMetaTags()` renders a `<meta name="traceparent">` tag for the active server request. The browser client reads it on page load, so the server request and the initial page session become one trace.
+
+## Options
+
+`registerServer(appToken, options)` and `registerClient(appToken, options)` accept the SDK launch options. The most relevant:
+
+| Where | Option | Default | Description |
+| --- | --- | --- | --- |
+| Server | `instrumentIncomingRequests` | `true` | Instrument incoming requests. |
+| Server | `captureLocalVariables` | `false` | Capture local variables on errors. |
+| Server | `detectHangs` | `true` | Event-loop hang detection. |
+| Client | `captureLogs`, `captureNetwork` | `true` | Console and network capture. |
+| Client | `maxRecordingTime` | `60` | Seconds of recording to keep. |
+| Client | `replay` | `true` | Session replay. Pass `false` to turn it off. |
+
+See [Browser](/sdk/javascript/platforms/browser#browser-options) and [Node.js](/sdk/javascript/platforms/node#node-options) for the full lists.
+
+## Notes
+
+- **Source maps.** The Vite plugin uploads them as part of the build. See [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins).
+- **Backend context.** Each server request gets a context so logs and errors tie to it. See [Backend](/sdk/javascript/backend/overview).
+
+## Verify
+
+Throw from a loader:
+
+```ts title="app/routes/test.tsx"
+export function loader() {
+  throw new Error('Bugsee test error');
+}
+```
+
+Open `/test`. The error shows up in the Bugsee dashboard.
+
+## Related pages
+
+- [React](/sdk/javascript/frameworks/react) — the error boundary and route naming
+- [Browser](/sdk/javascript/platforms/browser) — client launch options
+- [Node.js](/sdk/javascript/platforms/node) — server launch options
+- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — upload source maps from Vite

@@ -963,6 +963,315 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: "category",
+      label: "JavaScript SDK (Beta)",
+      collapsed: true,
+      items: [
+        { type: "doc", id: "sdk/javascript/overview", label: "Overview" },
+        {
+          type: "doc",
+          id: "sdk/javascript/installation",
+          label: "Installation",
+        },
+        {
+          type: "category",
+          label: "Platforms",
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              id: "sdk/javascript/platforms/browser",
+              label: "Browser",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/platforms/node",
+              label: "Node.js",
+            },
+            { type: "doc", id: "sdk/javascript/platforms/bun", label: "Bun" },
+            {
+              type: "doc",
+              id: "sdk/javascript/platforms/electron",
+              label: "Electron",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/platforms/cloudflare",
+              label: "Cloudflare Workers",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/platforms/vercel-edge",
+              label: "Vercel Edge",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/platforms/web-workers",
+              label: "Web & Service Workers",
+            },
+          ],
+        },
+        {
+          type: "category",
+          label: "Frameworks",
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              id: "sdk/javascript/frameworks/react",
+              label: "React",
+            },
+            { type: "doc", id: "sdk/javascript/frameworks/vue", label: "Vue" },
+            {
+              type: "doc",
+              id: "sdk/javascript/frameworks/angular",
+              label: "Angular",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/frameworks/svelte",
+              label: "Svelte & SvelteKit",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/frameworks/solid",
+              label: "Solid",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/frameworks/nextjs",
+              label: "Next.js",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/frameworks/nuxt",
+              label: "Nuxt",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/frameworks/remix",
+              label: "Remix",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/frameworks/astro",
+              label: "Astro",
+            },
+          ],
+        },
+        {
+          type: "category",
+          label: "Backend frameworks",
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              id: "sdk/javascript/backend/overview",
+              label: "Overview",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/backend/express",
+              label: "Express",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/backend/fastify",
+              label: "Fastify",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/backend/nestjs",
+              label: "NestJS",
+            },
+            { type: "doc", id: "sdk/javascript/backend/hono", label: "Hono" },
+            { type: "doc", id: "sdk/javascript/backend/koa", label: "Koa" },
+            { type: "doc", id: "sdk/javascript/backend/hapi", label: "hapi" },
+            {
+              type: "doc",
+              id: "sdk/javascript/backend/elysia",
+              label: "Elysia",
+            },
+          ],
+        },
+        {
+          type: "doc",
+          id: "sdk/javascript/configuration",
+          label: "Configuration",
+        },
+        {
+          type: "doc",
+          id: "sdk/javascript/lifecycle",
+          label: "Lifecycle & status",
+        },
+        {
+          type: "category",
+          label: "Manual reporting",
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              id: "sdk/javascript/manual/bug-reporting",
+              label: "Bug reporting",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/manual/crash-error-reporting",
+              label: "Error reporting",
+            },
+          ],
+        },
+        {
+          type: "doc",
+          id: "sdk/javascript/report-handler",
+          label: "Report handler",
+        },
+        {
+          type: "category",
+          label: "Data capture",
+          collapsed: true,
+          items: [
+            { type: "doc", id: "sdk/javascript/network", label: "Network" },
+            { type: "doc", id: "sdk/javascript/logs", label: "Console logs" },
+            {
+              type: "doc",
+              id: "sdk/javascript/breadcrumbs",
+              label: "Breadcrumbs",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/events-and-traces",
+              label: "Events & traces",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/user-session-data",
+              label: "User & session data",
+            },
+          ],
+        },
+        {
+          type: "doc",
+          id: "sdk/javascript/session-replay",
+          label: "Session replay",
+        },
+        {
+          type: "category",
+          label: "Privacy",
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              id: "sdk/javascript/privacy/overview",
+              label: "Overview",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/privacy/replay",
+              label: "Replay",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/privacy/logs",
+              label: "Console logs",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/privacy/network",
+              label: "Network",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/privacy/breadcrumbs",
+              label: "Breadcrumbs",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/privacy/report",
+              label: "Report",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/privacy/cleanup",
+              label: "Cleanup",
+            },
+          ],
+        },
+        {
+          type: "category",
+          label: "Issue detection",
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              id: "sdk/javascript/issue-detection/overview",
+              label: "Overview",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/issue-detection/errors-and-crashes",
+              label: "Errors & crashes",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/issue-detection/hangs",
+              label: "Hangs",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/issue-detection/http-errors",
+              label: "HTTP errors",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/issue-detection/diagnostics",
+              label: "Diagnostics",
+            },
+          ],
+        },
+        { type: "doc", id: "sdk/javascript/performance", label: "Performance" },
+        {
+          type: "doc",
+          id: "sdk/javascript/opentelemetry",
+          label: "OpenTelemetry",
+        },
+        {
+          type: "category",
+          label: "Source maps",
+          collapsed: true,
+          items: [
+            {
+              type: "doc",
+              id: "sdk/javascript/symbolication/overview",
+              label: "Overview",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/symbolication/bundler-plugins",
+              label: "Bundler plugins",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/symbolication/manual",
+              label: "Manual upload",
+            },
+            {
+              type: "doc",
+              id: "sdk/javascript/symbolication/environment",
+              label: "Environment",
+            },
+          ],
+        },
+        { type: "doc", id: "sdk/javascript/packages", label: "Packages" },
+        {
+          type: "doc",
+          id: "sdk/javascript/release-notes",
+          label: "Release notes",
+        },
+        { type: "doc", id: "sdk/javascript/faq", label: "FAQ" },
+      ],
+    },
+    {
+      type: "category",
       label: "Unity SDK",
       collapsed: true,
       items: [

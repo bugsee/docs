@@ -1,0 +1,63 @@
+---
+title: "HTTP errors"
+description: "Report failing backend calls as errors with the Bugsee JavaScript SDK: 5xx responses from fetch, XHR and node:http, deduplicated per endpoint and status."
+sidebar_position: 4
+slug: "/sdk/javascript/issue-detection/http-errors"
+---
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+Network capture already records every request in the bundle of any report. With HTTP error detection, a request that comes back with a server error also files a report of its own.
+
+HTTP error detection is off by default.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `detectHttpErrors` | `boolean` | `false` | Report HTTP responses with a status from 500 to 599. |
+
+```ts
+import { launch } from '@bugsee/bugsee';
+
+launch('<your_app_token>', {
+  detectHttpErrors: true,
+});
+```
+
+It needs network capture (`captureNetwork`, on by default). It watches the requests made by the app: `fetch` and XHR in a browser, `fetch` and `node:http` on a server.
+
+## What is reported
+
+| Response | Reported |
+| --- | --- |
+| 500 to 599 | Yes |
+| 4xx | No. Validation errors, auth challenges and conditional requests are expected. |
+| A failed or aborted request with no HTTP status | No |
+| WebSocket, server-sent events, WebTransport and beacons | No |
+
+## Deduplication
+
+Each combination of method, endpoint and status is reported once per session, so a retry loop or a polling request does not file the same report again. The endpoint is the URL without its query, fragment and credentials, and path segments that look like identifiers or tokens (numeric ids, UUIDs, long hexadecimal strings, e-mail addresses and similar) are replaced by a placeholder. So `/orders/1` and `/orders/2` count as one endpoint.
+
+As a backstop, at most 20 reports are filed in any 60-second window, and at most 1000 distinct combinations are remembered per session.
+
+## The report
+
+| Field | Value |
+| --- | --- |
+| Type | Error, with the priority `high` |
+| Summary | `HTTP <status> <status text>`, for example `HTTP 503 Service Unavailable` |
+| Domain | `HttpError::Server` |
+| Grouping | One synthetic stack frame, `<METHOD> <url> <status>`, so reports group by endpoint and exact status |
+| Attributes | `http_status_code`, `http_method`, `http_url` and, when present, `http_status_text` |
+
+The priority is fixed. `reportDefaultErrorPriority` does not change it.
+
+The URL in the report has its query removed and goes through the default URL redaction.
+
+## Related pages
+
+- [Issue detection overview](/sdk/javascript/issue-detection/overview) — all detectors and their defaults
+- [Network capture](/sdk/javascript/network) — what is recorded for each request
+- [Backend overview](/sdk/javascript/backend/overview) — errors your own server returns

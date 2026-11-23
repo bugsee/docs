@@ -86,6 +86,8 @@ const config: Config = {
           { from: '/sdk/android/privacy', to: '/sdk/android/privacy/overview/' },
           { from: '/sdk/android/v6', to: '/sdk/android/v6/installation/' },
           { from: '/sdk/android/v6/privacy', to: '/sdk/android/v6/privacy/overview/' },
+          { from: '/sdk/javascript', to: '/sdk/javascript/overview/' },
+          { from: '/sdk/javascript/privacy', to: '/sdk/javascript/privacy/overview/' },
           ...wrapperSdks.flatMap((sdk) => [
             { from: `/sdk/${sdk}`, to: `/sdk/${sdk}/installation/` },
             { from: `/sdk/${sdk}/privacy`, to: `/sdk/${sdk}/privacy/overview/` },

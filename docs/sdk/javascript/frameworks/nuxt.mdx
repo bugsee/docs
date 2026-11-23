@@ -1,0 +1,131 @@
+---
+title: "Nuxt"
+description: "Set up the Bugsee JavaScript SDK in a Nuxt 3 app with the @bugsee/nuxt module: one nuxt.config.ts entry wires the browser client, the Vue error handler and the Nitro server."
+sidebar_position: 7
+slug: "/sdk/javascript/frameworks/nuxt"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/nuxt` is a Nuxt module that wires the browser client (with the Vue error handler) and the Nitro server from one entry in `nuxt.config.ts`. It is a single install: it bundles the browser, Node.js and Edge SDKs and the Vue adapter.
+
+## Requirements
+
+- Nuxt 3 or newer. `nuxt`, `@nuxt/kit` (3 or newer) and `nitropack` (2 or newer) are optional peer dependencies, normally already present in a Nuxt app.
+- Node.js 18 or newer for server code.
+- An application token.
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/nuxt@beta
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/nuxt@beta
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/nuxt@beta
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/nuxt@beta
+```
+
+  </TabItem>
+</Tabs>
+
+## Set up
+
+Register the module and pass your token in the `bugsee` block. There is nothing else to wire.
+
+```ts title="nuxt.config.ts"
+export default defineNuxtConfig({
+  modules: ['@bugsee/nuxt'],
+  bugsee: {
+    appToken: process.env.BUGSEE_TOKEN,
+  },
+});
+```
+
+The module adds a client plugin that launches the browser SDK and installs the Vue error handler, and a Nitro server plugin that launches the server SDK and reports Nitro errors. On an edge Nitro preset (for example Cloudflare or Vercel Edge) it ships the edge SDK instead of the Node.js one.
+
+The token is written to Nuxt's public runtime config so the browser can launch. An application token is not a secret.
+
+## Options
+
+The `bugsee` block takes:
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `appToken` | `string` | Your Bugsee application token (required). |
+| `client` | object | Extra browser launch options, for example `{ replay: false }` or `{ maxRecordingTime: 30 }`. |
+| `server` | object | Extra Nitro (server) launch options, for example `{ captureLocalVariables: true }`. |
+
+```ts title="nuxt.config.ts"
+export default defineNuxtConfig({
+  modules: ['@bugsee/nuxt'],
+  bugsee: {
+    appToken: process.env.BUGSEE_TOKEN,
+    client: { captureNetwork: true },
+    server: { instrumentIncomingRequests: true },
+  },
+});
+```
+
+`client` takes the [browser options](/sdk/javascript/platforms/browser#browser-options). `server` takes the [Node.js options](/sdk/javascript/platforms/node#node-options). Values you set under `runtimeConfig.public.bugsee` or `runtimeConfig.bugsee` directly, or through environment overrides, win over the module defaults.
+
+## Entry points
+
+| Entry | Description |
+| --- | --- |
+| `@bugsee/nuxt` | The module, with `ModuleOptions` and `setupBugseeModule`. |
+| `@bugsee/nuxt/client` | `installBugseeClient(nuxtApp, options)`, used by the generated client plugin. |
+| `@bugsee/nuxt/server` | `installBugseeNitro` and the shared client exports. |
+| `@bugsee/nuxt/edge` | The edge build for edge Nitro presets. |
+
+You normally use only the module.
+
+## Notes
+
+- **The Vue error handler is installed for you.** On a plain Vue app it is required in production; see [Vue](/sdk/javascript/frameworks/vue).
+- **Edge presets** use the incident-driven edge SDK. See [Vercel Edge](/sdk/javascript/platforms/vercel-edge).
+- **Source maps.** The Nuxt build runs on Vite. See [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins).
+- **Backend context.** Each Nitro request gets a context so logs and errors tie to it. See [Backend](/sdk/javascript/backend/overview).
+
+## Verify
+
+Throw from a component or a server route:
+
+```ts title="server/api/test.get.ts"
+export default defineEventHandler(() => {
+  throw new Error('Bugsee test error');
+});
+```
+
+Request `/api/test`. The error shows up in the Bugsee dashboard.
+
+## Related pages
+
+- [Vue](/sdk/javascript/frameworks/vue) — the adapter this module installs
+- [Browser](/sdk/javascript/platforms/browser) — client launch options
+- [Node.js](/sdk/javascript/platforms/node) — server launch options
+- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — upload source maps from Vite

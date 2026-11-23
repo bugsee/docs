@@ -1,0 +1,142 @@
+---
+title: "Packages"
+description: "Catalogue of the 49 Bugsee JavaScript SDK packages: which ones you install for each runtime, framework and build tool, and which are internal building blocks."
+sidebar_position: 20
+slug: "/sdk/javascript/packages"
+---
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+The SDK is published as 49 npm packages under the `@bugsee` scope. You install only a few of them. The rest are building blocks that the packages you install depend on, and their APIs can change without notice.
+
+All packages share one version (currently 0.1.0-beta.8), ship ESM and CommonJS builds, and target ES2022. Keep every `@bugsee/*` package in your project at the same version. Install with the `beta` tag, for example `npm install @bugsee/bugsee@beta`.
+
+## Which packages do I install?
+
+| Where your code runs | Install | Launch from |
+| --- | --- | --- |
+| Browser, Node.js | `@bugsee/bugsee` | `@bugsee/bugsee` |
+| Bun | `@bugsee/bun` | `@bugsee/bun` |
+| Electron | `@bugsee/electron` | `@bugsee/electron/main`, `/preload`, `/renderer` |
+| Cloudflare Workers | `@bugsee/cloudflare` | `@bugsee/cloudflare` |
+| Vercel Edge | `@bugsee/vercel-edge` | `@bugsee/vercel-edge` |
+| Web Worker, Service Worker | `@bugsee/webworker` | `@bugsee/webworker` |
+| React | `@bugsee/bugsee` and `@bugsee/react` | `@bugsee/bugsee` |
+| Vue, Angular, Svelte, Solid | `@bugsee/bugsee` and the matching adapter | `@bugsee/bugsee` |
+| Next.js, Nuxt, Remix, SvelteKit, Astro | the matching adapter alone | the adapter package |
+| Express, Fastify, NestJS, Hono, Koa, hapi, Elysia | `@bugsee/bugsee` and the matching adapter | `@bugsee/bugsee` |
+
+See [Installation](/sdk/javascript/installation) for the steps.
+
+## Packages you install
+
+### Core SDK and runtimes
+
+| Package | Use it for | Page |
+| --- | --- | --- |
+| `@bugsee/bugsee` | The main entry point. It resolves to the browser, Node.js, Bun, Cloudflare, Vercel Edge or worker build, and turns on performance monitoring and OpenTelemetry interop. It also has explicit subpaths: `/node`, `/bun`, `/workerd`, `/edge-light` and `/worker`. | [Installation](/sdk/javascript/installation) |
+| `@bugsee/bun` | Bun. Runs the Node.js pipeline and identifies the runtime as Bun. | [Bun](/sdk/javascript/platforms/bun) |
+| `@bugsee/electron` | Electron: main process, preload and renderer in one session, with native crashes. Takes the Electron objects as arguments and has no dependency on `electron`. | [Electron](/sdk/javascript/platforms/electron) |
+| `@bugsee/cloudflare` | Cloudflare Workers and Durable Objects. Needs the `nodejs_compat` flag. | [Cloudflare](/sdk/javascript/platforms/cloudflare) |
+| `@bugsee/vercel-edge` | Vercel Edge Functions and other Web-API-only isolates. | [Vercel Edge](/sdk/javascript/platforms/vercel-edge) |
+| `@bugsee/webworker` | Web Workers and Service Workers, which need their own launch because they are separate JavaScript contexts. | [Web Workers](/sdk/javascript/platforms/web-workers) |
+
+### Frontend adapters
+
+Install these next to `@bugsee/bugsee`. Each re-exports the umbrella's launch API, and requires the framework as a peer dependency.
+
+| Package | Framework | Page |
+| --- | --- | --- |
+| `@bugsee/react` | React 18 or later, and Preact: error boundary, root error handlers, profiler, router naming. | [React](/sdk/javascript/frameworks/react) |
+| `@bugsee/vue` | Vue 3: error handler and vue-router naming. | [Vue](/sdk/javascript/frameworks/vue) |
+| `@bugsee/angular` | Angular 16 or later: `ErrorHandler` and router naming. | [Angular](/sdk/javascript/frameworks/angular) |
+| `@bugsee/svelte` | Svelte 4 or later and SvelteKit 2 or later: `handleError` hook and navigation naming. | [Svelte](/sdk/javascript/frameworks/svelte) |
+| `@bugsee/solid` | Solid 1.6 or later: error primitives and router naming. | [Solid](/sdk/javascript/frameworks/solid) |
+
+### Meta-framework adapters
+
+Each is a single install. It wires the browser client and the server (and the edge, where the framework has one) together, so one session covers the request and the browser that made it.
+
+| Package | Framework | Page |
+| --- | --- | --- |
+| `@bugsee/nextjs` | Next.js: `instrumentation.ts`, `instrumentation-client.ts`, middleware, Node.js and Edge runtimes. | [Next.js](/sdk/javascript/frameworks/nextjs) |
+| `@bugsee/nuxt` | Nuxt module, with the Vue error handler and the Nitro server. | [Nuxt](/sdk/javascript/frameworks/nuxt) |
+| `@bugsee/remix` | Remix and React Router v7: `handleError` and the client entry. | [Remix](/sdk/javascript/frameworks/remix) |
+| `@bugsee/sveltekit` | SvelteKit server and client hooks, and an edge entry. | [Svelte](/sdk/javascript/frameworks/svelte) |
+| `@bugsee/astro` | Astro integration: browser launch on every page, plus a server middleware. | [Astro](/sdk/javascript/frameworks/astro) |
+
+### Backend adapters
+
+Install these next to `@bugsee/bugsee` on Node.js 18 or later (or Bun). Each adds per-request context, an `http.server` transaction, and error reporting for its framework.
+
+| Package | Framework | Page |
+| --- | --- | --- |
+| `@bugsee/express` | Express | [Express](/sdk/javascript/backend/express) |
+| `@bugsee/fastify` | Fastify | [Fastify](/sdk/javascript/backend/fastify) |
+| `@bugsee/nestjs` | NestJS, on the Express and Fastify platforms | [NestJS](/sdk/javascript/backend/nestjs) |
+| `@bugsee/hono` | Hono, hosted on Node.js or Bun | [Hono](/sdk/javascript/backend/hono) |
+| `@bugsee/koa` | Koa | [Koa](/sdk/javascript/backend/koa) |
+| `@bugsee/hapi` | hapi | [Hapi](/sdk/javascript/backend/hapi) |
+| `@bugsee/elysia` | Elysia, on Bun and Node.js | [Elysia](/sdk/javascript/backend/elysia) |
+
+### Build tooling
+
+Install these as development dependencies. They upload source maps and stamp debug IDs so production stack traces resolve to your source; see [Symbolication](/sdk/javascript/symbolication/overview).
+
+| Package | Use it for | Page |
+| --- | --- | --- |
+| `@bugsee/vite-plugin` | Vite. | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
+| `@bugsee/webpack-plugin` | webpack. | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
+| `@bugsee/bundler-plugin-core` | The engine behind the two plugins. Install it directly only for the Rollup, esbuild and Rspack plugins (`bugseeRollupPlugin`, `bugseeEsbuildPlugin`, `bugseeRspackPlugin`), which are less exercised than Vite and webpack. | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
+| `@bugsee/babel-plugin-component-annotate` | Optional. Labels DOM elements of React, Preact and Solid components with the component name (`data-bugsee-component`), so clicks and errors are attributed to a component even after minification. | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
+| `@bugsee/svelte-plugin-component-annotate` | Optional. The same labels for Svelte and SvelteKit, as a Svelte preprocessor. | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
+
+The `bugsee-cli` command-line tool, which the plugins run, is a separate package, `@bugsee/cli`. See [Symbolication: manual](/sdk/javascript/symbolication/manual).
+
+## Packages you do not install
+
+### Extensions pulled in by the umbrella
+
+These are dependencies of `@bugsee/bugsee` and are switched on or off through launch options. Do not add them yourself.
+
+| Package | What it does | Controlled by |
+| --- | --- | --- |
+| `@bugsee/performance` | Performance monitoring: web vitals, page-load and navigation transactions, HTTP spans and the manual span API. On by default. | `performanceMonitoring`. See [Performance](/sdk/javascript/performance). |
+| `@bugsee/opentelemetry` | OpenTelemetry interop: export Bugsee transactions as OTLP/JSON, and consume your own OpenTelemetry spans. | `otelExportUrl`, `otelConsume`. See [OpenTelemetry](/sdk/javascript/opentelemetry). |
+| `@bugsee/replay` | Session replay for the browser. Loaded lazily; on by default. | `replay`. See [Session replay](/sdk/javascript/session-replay). |
+| `@bugsee/replay-canvas` | Opt-in canvas recording for replay. Loaded lazily; off by default. | `replay.canvas`. |
+
+### Platform builds
+
+`@bugsee/browser` and `@bugsee/node` are the platform builds the umbrella wraps and selects for you by `exports` condition. Other packages (the adapters, Bun and Electron) build on them. Install `@bugsee/bugsee` instead.
+
+### Internal building blocks
+
+These packages are implementation details. Their READMEs say the API may change, so do not depend on them.
+
+| Package | Role |
+| --- | --- |
+| `@bugsee/core` | The SDK kernel: client, capture and storage, report and upload pipelines, extension registry. |
+| `@bugsee/capture` | Cross-runtime capture sources (console, network) and capture providers. |
+| `@bugsee/protocol` | The wire contract: shapes the SDK uploads and the rules for sanitizing them. |
+| `@bugsee/types` | TypeScript types shared across packages. No runtime code. |
+| `@bugsee/util` | Pure, runtime-portable helpers. |
+| `@bugsee/logger` | The SDK's own diagnostic logger. |
+| `@bugsee/service` | The service container used for dependency injection inside the SDK. |
+| `@bugsee/trackers` | Foundation for the domain trackers over system and runtime APIs. |
+| `@bugsee/node-utils` | Node.js HTTP transport and file-system storage, shared by Node.js, Bun and Electron main. |
+| `@bugsee/browser-utils` | `fetch` transport, IndexedDB storage and DOM helpers, shared by browser and worker builds. |
+| `@bugsee/rrweb` | Thin wrapper over the record path of Bugsee's hardened rrweb fork, used by session replay. |
+| `@bugsee/integration-shims` | No-op stand-ins for DOM-only integrations on runtimes without a DOM. |
+| `@bugsee/web-adapter` | Shared plumbing for the frontend framework adapters. |
+| `@bugsee/adapter-kit` | Shared primitives for the meta-framework adapters. |
+| `@bugsee/webview` | The JavaScript side of Bugsee for web content in native WebViews. The native Bugsee SDK ships and injects it; you do not install it in a web app. |
+
+## Related pages
+
+- [Installation](/sdk/javascript/installation) — add a package and launch the SDK.
+- [Overview](/sdk/javascript/overview) — what the SDK records and detects.
+- [Configuration](/sdk/javascript/configuration) — launch options by runtime.
+- [Release notes](/sdk/javascript/release-notes) — what changed in each beta.

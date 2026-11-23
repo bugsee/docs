@@ -1,0 +1,84 @@
+---
+title: "Environment and variables"
+description: "Where the Bugsee build tooling reads its token, version, build and other settings: plugin options, environment variables and the .env.bugsee-build-plugin file."
+sidebar_position: 4
+slug: "/sdk/javascript/symbolication/environment"
+---
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+The [bundler plugins](/sdk/javascript/symbolication/bundler-plugins) and the [CLI](/sdk/javascript/symbolication/manual) need a token and a version at build time. This page lists where they come from.
+
+## Lookup order
+
+For every setting, the plugin uses the first value it finds:
+
+1. The **plugin option**.
+2. The **process environment variable**.
+3. The **`.env.bugsee-build-plugin` file**, for the three settings that the file may supply.
+
+A variable that is empty or only whitespace counts as not set. This protects against a leftover `export BUGSEE_APP_TOKEN=" "` in a CI template.
+
+## Variables
+
+| Variable | Plugin option | In the file | Description |
+| --- | --- | --- | --- |
+| `BUGSEE_APP_TOKEN` | `appToken` | Yes | Your app token. Without one, the plugin does nothing. |
+| `BUGSEE_APP_VERSION` | `appVersion` | Yes | The app version recorded with the upload. |
+| `BUGSEE_APP_BUILD` | `appBuild` | Yes | The build number recorded with the upload. |
+| `BUGSEE_ENDPOINT` | `endpoint` | No | The API endpoint. Default `https://api.bugsee.com`. |
+| `BUGSEE_BUILD_COMMIT` | `commit` | No | The commit SHA of the build, 7 to 64 hexadecimal characters. |
+| `BUGSEE_REGISTER_BUILD` | `registerBuild` | No | `release`, `always` or `false`. Any other value is ignored, so a typo cannot switch registration on or off. |
+| `BUGSEE_CLI_PATH` | none | No | The path of a `bugsee-cli` binary to run instead of the one that comes with `@bugsee/cli`. Useful on locked-down CI. Read from the process environment only. |
+
+The CLI, when you run it yourself, reads `BUGSEE_APP_TOKEN` and `BUGSEE_ENDPOINT` from the environment. It does not read the `.env.bugsee-build-plugin` file. See [Configuration](/cli/configuration) for the CLI's own settings.
+
+## The `.env.bugsee-build-plugin` file
+
+The file keeps the app token out of your build scripts and your version control. Put it in your project folder:
+
+```bash title=".env.bugsee-build-plugin"
+BUGSEE_APP_TOKEN=<your_app_token>
+```
+
+Add it to `.gitignore`.
+
+- **Format.** UTF-8 lines of `KEY=value`. An optional `export`, quotes and `#` comments are allowed.
+- **Keys.** Only `BUGSEE_APP_TOKEN`, `BUGSEE_APP_VERSION` and `BUGSEE_APP_BUILD` are read. Every other line is ignored. The endpoint and the CLI path are deliberately not read from a file: a file that could set them could send your token to another host, or choose which program runs.
+- **Where it is found.** The plugin looks for the nearest copy, starting at the project folder of the bundler (Vite `root`, webpack and Rspack `context`, esbuild `absWorkingDir`, and the working directory for Rollup) and going up to the repository or workspace root, which is a folder that holds `.git` or `pnpm-workspace.yaml`. With no such root, only the project folder is read. The home folder and everything above it are never read, so a stray file there cannot give a token to every project below it.
+- **Precedence.** The file only fills gaps. A variable that the environment already has is never replaced, and the plugin never writes to `process.env`.
+- **Failure.** A missing or malformed file never fails the build. If a file is found but cannot be used, for example because it is unreadable, is not UTF-8 or holds none of the three keys, the plugin prints one notice that names the file and never shows its contents.
+
+## Version and build
+
+The version and build you give the upload are a fallback join key. The debug ID is what matches a crash to its map. They still identify the release in Bugsee, so set them.
+
+**At build time**, the plugin resolves them like this:
+
+| Setting | Resolved from |
+| --- | --- |
+| Version | `appVersion`, then `BUGSEE_APP_VERSION`, then the `version` of the nearest `package.json`, then `0.0.0`. |
+| Build | `appBuild`, then `BUGSEE_APP_BUILD`, then the commit id of your CI, then `0`. |
+
+The nearest `package.json` is searched from the bundler's project folder, so an app in a monorepo reports its own version, not the root's. If that file has no version, there is none: a parent's version is not adopted.
+
+The CI commit id comes from the first variable that is set in this list: `GITHUB_SHA`, `VERCEL_GIT_COMMIT_SHA`, `CI_COMMIT_SHA`, `CIRCLE_SHA1`, `BUILDKITE_COMMIT`, `SOURCE_VERSION`, `RENDER_GIT_COMMIT`, `COMMIT_REF`, `CF_PAGES_COMMIT_SHA` and `GIT_COMMIT`.
+
+**Baked into the bundle.** A version or build that was really found, not the `0.0.0` and `0` placeholders, is also written into your bundle as the constants `__BUGSEE_APP_VERSION__` and `__BUGSEE_APP_BUILD__`. The SDK reads them at launch, so the app reports the same release without you passing `appVersion` to `launch()`.
+
+- It works in Vite, esbuild, webpack 5, Rspack and Rollup. webpack 4 cannot bake, so there only an explicit value is recorded.
+- It happens even without a token. Set `disabled: true` to turn it off.
+- A constant that you define yourself is never overridden. If it is a plain string, such as `JSON.stringify('2.4.1')`, the upload is recorded with it too. If it is an expression the plugin cannot read, the upload uses only an explicit option or `BUGSEE_APP_*` variable, never a detected value, and the plugin warns until you pass one.
+
+**At run time**, on Node.js and Bun, the SDK looks for the version in this order: the `appVersion` option of `launch()`, the baked constant, the `BUGSEE_APP_VERSION` variable, then the nearest `package.json`. The build comes from the `appBuild` option, the baked constant, `BUGSEE_APP_BUILD`, then the CI commit variables above. In a browser it is the option or the baked constant.
+
+To keep the two sides identical, bake the value at build time and leave `appVersion` out of `launch()`.
+
+## Related pages
+
+- [Symbolication overview](/sdk/javascript/symbolication/overview) — how debug IDs work
+- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — every plugin option
+- [Manual upload with the CLI](/sdk/javascript/symbolication/manual) — the CLI steps
+- [Configuration](/sdk/javascript/configuration) — all launch options

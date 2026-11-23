@@ -1,0 +1,125 @@
+---
+title: "Elysia"
+description: "Report errors and trace requests in an Elysia app on Bun or Node.js with the Bugsee JavaScript SDK: per-request context, http.server transactions and error capture."
+sidebar_position: 8
+slug: "/sdk/javascript/backend/elysia"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/elysia` adds a request context, an `http.server` transaction and error reporting to an Elysia app. It runs on Bun, and on Node.js through the app's fetch handler. Read the [backend overview](/sdk/javascript/backend/overview) first for how context and trace correlation work.
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm">
+
+```bash
+npm install @bugsee/bugsee@beta @bugsee/elysia@beta
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/bugsee@beta @bugsee/elysia@beta
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/bugsee@beta @bugsee/elysia@beta
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/bugsee@beta @bugsee/elysia@beta
+```
+
+  </TabItem>
+</Tabs>
+
+The adapter declares no peer dependency. It only relies on the shape of your Elysia app. On Node.js it needs Node.js 18 or newer.
+
+## Set up
+
+Call `launch()` at the top of your server entry, then pass the app to `setupElysia`:
+
+```ts title="server.ts"
+import { launch } from '@bugsee/bugsee';
+import { setupElysia } from '@bugsee/elysia';
+import { Elysia } from 'elysia';
+
+launch('<your_app_token>');
+
+const app = new Elysia();
+setupElysia(app);
+
+// ... your routes ...
+```
+
+Hooks are scoped to the Elysia instance they are added to, so register `setupElysia` on the instance that owns your routes.
+
+If your Elysia app type does not unify with the adapter's structural type, cast it:
+
+```ts
+import { type ElysiaAppLike, setupElysia } from '@bugsee/elysia';
+
+setupElysia(app as unknown as ElysiaAppLike);
+```
+
+## Node.js and Bun
+
+On Bun, the full Elysia server works.
+
+On Node.js, Elysia's `.listen` is not supported. Use the app's fetch handler, `app.fetch`, instead.
+
+## What it does
+
+Elysia hooks are additive, so `setupElysia` adds three without replacing yours:
+
+| Hook | What it does |
+| --- | --- |
+| `onRequest` | Opens a request context, continues an inbound `traceparent` and starts an `http.server` transaction. |
+| `onError` | Reports server errors, meaning a plain throw or a 5xx status. Framework control flow such as `NOT_FOUND` and `VALIDATION` is skipped. |
+| `mapResponse` | Finishes the transaction without altering the response. |
+
+## Options
+
+Pass options as the second argument of `setupElysia`.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `user` | `(c) => string \| undefined` | off | The end-user identity for reports raised during the request. |
+| `shouldReport` | `(error) => boolean` | server errors only | Decides whether a thrown error is reported. |
+| `onError` | `(error) => void` | none | Receives a failure of the adapter itself. It never reaches the request. |
+
+`c` is a structural view of the Elysia context: `request`, `set` and `route`.
+
+## Launch options
+
+The adapter does not change the launch options. These are the ones that matter most on a server:
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `instrumentIncomingRequests` | `true` | Automatic per-request context and `http.server` transaction. See the [backend overview](/sdk/javascript/backend/overview#incoming-request-instrumentation). |
+| `captureLocalVariables` | `false` | Attach local variables to the stack frames of a reported error. See [Diagnostics](/sdk/javascript/issue-detection/diagnostics). |
+| `captureSourceContext` | `false` | Attach the source lines around each stack frame. See [Diagnostics](/sdk/javascript/issue-detection/diagnostics). |
+| `detectHangs` | `true` | Report event-loop hangs. See [Hangs](/sdk/javascript/issue-detection/hangs). |
+| `profiling` | `false` | Attach a rolling CPU profile to reports. See [Diagnostics](/sdk/javascript/issue-detection/diagnostics). |
+
+`@bugsee/elysia` also re-exports everything from the Node entry of `@bugsee/bugsee`.
+
+## Related pages
+
+- [Backend overview](/sdk/javascript/backend/overview) — request context, trace correlation and incoming-request instrumentation
+- [Issue detection](/sdk/javascript/issue-detection/overview) — what else is detected on a server
+- [Performance](/sdk/javascript/performance) — transactions and spans

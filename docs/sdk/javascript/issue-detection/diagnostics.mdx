@@ -1,0 +1,128 @@
+---
+title: "Diagnostics"
+description: "Opt-in diagnostics for Node.js and Bun with the Bugsee JavaScript SDK: rolling CPU profiling, local variables on crash frames, and source lines around each frame."
+sidebar_position: 5
+slug: "/sdk/javascript/issue-detection/diagnostics"
+---
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+Three diagnostics add depth to what the [detectors](/sdk/javascript/issue-detection/overview) report on a server. All three are off by default, because each has a cost: CPU, or the exposure of data that a stack trace does not contain.
+
+| Diagnostic | Option | Default | Adds to a report | Node.js | Bun |
+| --- | --- | --- | --- | --- | --- |
+| CPU profiling | `profiling` | `false` | `profile.json`, and the blocking stack of a hang | Yes | Yes |
+| Local variables | `captureLocalVariables` | `false` | The variables in scope on the stack frames | Yes | No |
+| Source context | `captureSourceContext` | `false` | The source lines around each frame | Yes | Yes |
+
+These options are for servers and other Node.js and Bun processes. They have no effect in a browser.
+
+## CPU profiling
+
+Bugsee runs the V8 sampling profiler continuously and keeps the most recent window. When a report is created, the window is attached to it as `profile.json`, in the standard `.cpuprofile` format that Chrome DevTools and speedscope open.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `profiling` | `boolean` | `false` | Keep a rolling CPU profile and attach it to reports. |
+| `profilingSamplingIntervalMicros` | `number` | `1000` | Sampling interval in microseconds. |
+
+```ts
+import { launch } from '@bugsee/bugsee';
+
+launch('<your_app_token>', {
+  profiling: true,
+});
+```
+
+The window follows `maxRecordingTime` (60 seconds by default), so a long-running process never accumulates an unbounded profile.
+
+Cost, measured on Node.js 24 and Bun 1.3 on an Apple M4 Pro:
+
+| Sampling interval | CPU overhead |
+| --- | --- |
+| 10 ms | Under 1% |
+| 1 ms (default) | Under 1% |
+| 100 microseconds | About 4% on Node.js, 7% on Bun |
+
+A 60-second profile at the default interval is about 0.05 MB compressed.
+
+The profile is also what gives a [hang](/sdk/javascript/issue-detection/hangs) report its stack.
+
+## Local variables
+
+A stack trace says where an error was thrown. Local variables say what the code held at that moment. With `captureLocalVariables`, the variables in scope are attached to the stack frames of the crash or error.
+
+`true` turns it on with the defaults. Pass an object to tune it:
+
+```ts
+launch('<your_app_token>', {
+  captureLocalVariables: {
+    includeCaught: false,
+    maxFrames: 5,
+    maxVariables: 20,
+    maxValueLength: 120,
+  },
+});
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `includeCaught` | `boolean` | `false` | Also capture at the throw site of exceptions that your code catches. Costly, see below. |
+| `reportSite` | `boolean` | `true` | For an error you report with `logException`, also capture the scope the call was made from. |
+| `maxFrames` | `number` | `5` | How many frames, from the top, get their variables. |
+| `maxVariables` | `number` | `20` | How many variables per frame. |
+| `maxValueLength` | `number` | `120` | The longest value kept, in characters. Longer values are truncated. |
+| `maxCaughtPerSecond` | `number` | `50` | With `includeCaught`, how many caught throws per second may be captured. Above that, capture falls back to uncaught errors for a while. |
+| `maxCached` | `number` | `20` | How many captured exceptions are held before the oldest is dropped. |
+
+By default Bugsee captures at uncaught exceptions, which costs almost nothing, and at the `logException` call site.
+
+:::caution[Cost]
+The feature uses the V8 debugger. Merely enabling it costs a few percent of CPU in steady state. With `includeCaught`, every caught exception pauses the process for a few hundred microseconds, so an app that throws in a hot path pays continuously. Measure before you enable it in production.
+:::
+
+:::caution[Privacy]
+Variables hold whatever your code held. Names that match the SDK's sensitive-key list are redacted, and values are truncated, but a variable named `row` can still contain a customer record. That is why the feature is opt-in.
+:::
+
+On Bun, `captureLocalVariables` is always off: Bun refuses the debugger domain it needs without an active inspector.
+
+## Source context
+
+With `captureSourceContext`, Bugsee reads the source of each application frame at report time and attaches the line that threw plus the lines around it. Reports then show code next to the stack, even when you have not uploaded source maps with embedded sources.
+
+Only application frames are read. Dependency frames are skipped.
+
+`true` turns it on with the defaults. Pass an object to tune it:
+
+```ts
+launch('<your_app_token>', {
+  captureSourceContext: {
+    contextLines: 5,
+    maxFrames: 5,
+  },
+});
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `contextLines` | `number` | `5` | Lines on each side of the throwing line. |
+| `maxFrames` | `number` | `5` | How many frames, from the top, get source context. |
+| `maxLineLength` | `number` | `200` | The longest line kept, in characters. A minified bundle is one very long line. |
+| `maxCachedFiles` | `number` | `50` | How many files are kept in memory after they are read. |
+| `appRoot` | `string` | `process.cwd()` | Where relative frame paths are resolved from. |
+
+:::caution[Privacy]
+Source context uploads your own source code, which a stack trace does not. That is why it is off by default. If you use source maps without embedded sources, source context reads the files from the running process, not from the maps.
+:::
+
+The files must exist on the machine that runs the service. If you ship only a bundle, the frames point into the bundle, and the lines read from it are the bundle's lines.
+
+## Related pages
+
+- [Hangs](/sdk/javascript/issue-detection/hangs) — the report that uses the CPU profile
+- [Errors and crashes](/sdk/javascript/issue-detection/errors-and-crashes) — the reports that carry local variables and source context
+- [Symbolication](/sdk/javascript/symbolication/overview) — map minified frames to your source
+- [Backend overview](/sdk/javascript/backend/overview) — where these options apply
