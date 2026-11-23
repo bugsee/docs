@@ -41,7 +41,7 @@ The analysis runs in the background, so you can leave the page. The tab waits fo
 
 To produce the analysis, AI Insights sends an AI model the following:
 
-- the report's full environment record without device identifiers: device, OS and app details, locale, app permissions and installer, boot time, cellular state; on iOS with `BugseeOptionCaptureDeviceAndNetworkNames`, also the device name, Wi-Fi SSID and carrier; plus the wrapper (runtime) and Bugsee SDK type, version and build;
+- the report's full environment record without device identifiers: device, OS and app details, locale, network and cellular state; on Android also app permissions, installer and boot time; on iOS with `BugseeOptionCaptureDeviceAndNetworkNames`, also the device name, Wi-Fi SSID and carrier; plus the wrapper (runtime) and Bugsee SDK type, version and build;
 - whether Bugsee flagged the report as an error in its own SDK;
 - the report's summary and description;
 - how the report was triggered: trigger, mechanism and origin;
