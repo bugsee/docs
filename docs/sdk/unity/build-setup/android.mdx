@@ -43,15 +43,15 @@ The Bugsee Gradle plugin needs AGP 8.6 and Gradle 8.7 or later. The package read
 | Generated AGP | Typical Unity version | What the package applies |
 | --- | --- | --- |
 | 8.6 or later | Unity 6, for example 6000.0.84f1 with AGP 9.0.0 | The Gradle plugin `4.1.1` and `bugsee { ndk { enabled = true } }` in the launcher module. |
-| 7.4.x and 8.0 to 8.5 | Unity 2021.3 and 2022.3 (AGP 7.4.2, Gradle 7.5.1 in the releases checked) | No plugin. The package adds a small Gradle task to the launcher that writes the build id asset, and the Editor uploads symbols itself. |
-| Older than 7.4, or unreadable | The first Unity 2021.3 patch releases ship AGP 4.0.1 | No plugin and no build id task. A warning explains why. |
+| 7.4.x and 8.0 to 8.5 | Unity 2021.3 and 2022.3 (AGP 7.4.2, Gradle 7.5.1 in the releases checked) | No plugin. The package adds a small Gradle task to a Groovy launcher file that writes the build id asset, and the Editor uploads symbols itself. A Kotlin DSL launcher gets no task. |
+| Older than 7.4, or unreadable | The first Unity 2021.3 patch releases ship AGP 4.0.1 | No plugin and no build id task. The build logs an info line when it can read the AGP version, and a warning when it cannot. |
 
 On the older AGPs, the plugin functions that the package recovers are these:
 
 | Plugin function | On AGP 8.6 and later | On older AGPs |
 | --- | --- | --- |
 | Declare `bugsee-android` and `bugsee-android-ndk` | The package. | The package. |
-| `assets/bugsee_build_id.properties`, the id of the R8 mapping | The plugin. | The package's Gradle task, on AGP 7.4.x and 8.0 to 8.5. With R8 off, no asset is written and the SDK derives its own id. |
+| `assets/bugsee_build_id.properties`, the id of the R8 mapping | The plugin. | The package's Gradle task, on AGP 7.4.x and 8.0 to 8.5, for a Groovy launcher file only. With a Kotlin DSL launcher the SDK derives its own id. With R8 off, no asset is written and the SDK derives its own id. |
 | Mapping and native symbol upload | The Editor uploads after Gradle runs. | The Editor uploads after Gradle runs. |
 | Bytecode instrumentation of Java and Kotlin code, build info and size analysis | The plugin. | Not available. The plugin needs AGP 8.6 or later. |
 
@@ -71,11 +71,11 @@ Unity 2021.3, 2022.3 and 6 generate Groovy files (`*.gradle`). A project that co
 | A plugin you declared yourself (`id`, `apply plugin`, `classpath`) | Kept as written. Nothing is added next to it. |
 | A launcher that applies the Android plugin with `apply` and no `plugins { }` block, or a one-line `plugins { }` | Left alone. A warning on every build names the lines to add. |
 
-If the settings file's `pluginManagement` repositories do not serve the plugin (not the Gradle plugin portal, not Maven Central, and no mirror whose filter includes `com.bugsee`), the package appends `mavenCentral()` after the existing entries and warns. Set the environment variable `BUGSEE_NO_GRADLE_REPO_INJECTION` (any value) to stop the package from changing project repositories. The plugin is then not applied, and the warning lists the lines to add.
+If the settings file's `pluginManagement` repositories do not serve the plugin (not the Gradle plugin portal, not Maven Central, and no mirror whose filter includes `com.bugsee`), the package appends `mavenCentral()` after the existing entries and warns. Set the environment variable `BUGSEE_NO_GRADLE_REPO_INJECTION` (any value) to stop the package from adding Maven Central to the plugin and buildscript repositories. The package still adds `mavenCentral()` to the dependency repositories that resolve `bugsee-android`. If the plugin cannot then resolve from your repositories, it is not applied, and the warning lists the lines to add.
 
 Two menu items help with templates:
 
-- **Bugsee > Android > Remove Legacy Gradle Templates** checks `Assets/Plugins/Android` for Gradle templates that earlier package versions wrote, and backs up and removes the unedited ones. A template of your own that pins another AGP major than your Unity's default is left unchanged, and the build warns about it.
+- **Bugsee > Android > Remove Legacy Gradle Templates** checks `Assets/Plugins/Android` for Gradle templates that earlier package versions wrote, and backs up and removes the unedited ones. A template of your own that pins another AGP major than your Unity's default is left unchanged, and the build warns about it. The same cleanup also runs automatically before every Android build, for templates that pin another AGP major or use the removed DSL. The menu item runs it on demand.
 - **Bugsee > Android > Force Gradle Plugin On Older AGP (unsupported)** applies the plugin whatever AGP the package detects. A plugin that needs AGP 8.6 will likely fail Gradle configuration on an older AGP.
 
 ## Minify and R8
@@ -139,7 +139,7 @@ Limits of an exported project:
 - Builds that the Editor runs itself keep the token-less block, because the Editor's own upload after Gradle sends the mapping and symbols.
 
 :::warning[The token can appear in logs]
-Gradle with `--info` or `--debug` prints the `bugsee-cli` command line, which contains `--app-token <token>`, in the console and in the daemon log under `~/.gradle/daemon`. Do not run CI builds of an exported project with `--info` or `--debug`, or mask the value.
+Gradle with `--info` or `--debug` can print the `bugsee-cli` command line, which contains `--app-token <token>`, in the console and in the daemon log under `~/.gradle/daemon`. Do not run CI builds of an exported project with `--info` or `--debug`, or mask the value.
 :::
 
 ## Related pages

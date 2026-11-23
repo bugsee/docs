@@ -35,6 +35,12 @@ The SDK turns problems into reports automatically:
 - **Out-of-memory exits on iOS 27 and later**, through the Crash Report Extension that the iOS export can add. See [Crash Report Extension](/sdk/unity/issue-detection/crash-report-extension).
 - **Manual reports**: open the report dialog or upload a report from code. Shake-to-report is off by default. See [Bug reporting](/sdk/unity/manual/bug-reporting).
 
+:::caution[Unity and iOS 27]
+Building with Xcode 27 links the iOS 27 SDK, which requires the UIScene lifecycle. Unity versions without UIScene support can fail to launch on iOS 27 when built with Xcode 27. This is a maintainer note that is being re-verified per Unity version, so check the Unity version of your project in Unity's release notes. The extension only helps in a player that runs on iOS 27.
+:::
+
+{/* TODO(lead): replace with the verified per-version statement from the UIScene investigation */}
+
 ## How it works
 
 - **One package.** You install `com.bugsee.unity` from a git tag. There is no scoped registry, no dependency-resolve step and no custom Gradle template. See [Installation](/sdk/unity/installation).

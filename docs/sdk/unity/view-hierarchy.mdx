@@ -29,11 +29,11 @@ using BugseeSdk = Bugsee.Bugsee;
 
 #if UNITY_ANDROID
 var options = new AndroidLaunchOptions { CaptureViewHierarchy = true };
+BugseeSdk.Launch("<your Android app token>", options);
 #elif UNITY_IOS
 var options = new IOSLaunchOptions { CaptureViewHierarchy = true };
+BugseeSdk.Launch("<your iOS app token>", options);
 #endif
-
-BugseeSdk.Launch("<your_app_token>", options);
 ```
 
 The SDK takes a snapshot when it builds a report. To record the hierarchy at a moment of your choosing, for example before a scene transition you want to inspect, call `Bugsee.CaptureViewHierarchy()`.
@@ -48,7 +48,7 @@ The iOS SDK documents these rules for the call: it does nothing while `CaptureVi
 
 ## What is captured
 
-The tree starts at a root node named `UnityPlayer`. Below it is one `Scene` node for each loaded scene, then each scene's root GameObjects and their children. Objects in the `DontDestroyOnLoad` scene are included. The SDK's own helper object is left out.
+The tree starts at a root node whose `class_name` is `UnityPlayer`. The root has no name. Below it is one `Scene` node for each loaded scene, then each scene's root GameObjects and their children. Objects in the `DontDestroyOnLoad` scene are included. The SDK's own helper object is left out.
 
 Only GameObjects that are active in the hierarchy are captured. Each node holds:
 
@@ -56,9 +56,9 @@ Only GameObjects that are active in the hierarchy are captured. Each node holds:
 | --- | --- |
 | `id` | The instance id of the GameObject. |
 | `class_name` | The type of the first component that says what the object is, such as `Image` or `Camera`. `RectTransform` or `GameObject` when there is none. |
-| `bounds` | A rectangle `[x, y, width, height]` in screen coordinates with the origin at the top left: pixels on Android, points on iOS. |
+| `bounds` | A rectangle `[x, y, width, height]` in screen coordinates with the origin at the top left. On Android the unit is Unity's render pixels, which equal device pixels only when Unity does not use Resolution Scaling. On iOS the unit is points. |
 | `options.name` | The name of the GameObject. |
-| `options.components` | The names of the components on the object, at most 8, comma separated. |
+| `options.components` | The names of the components on the object, at most 8, comma separated. `Transform` and `CanvasRenderer` are not listed. |
 | `subitems` | The child nodes. |
 | `truncated` | `true` when the walk stopped at this node and left some of its children out. |
 
@@ -111,6 +111,10 @@ In development builds, each capture writes one console line that starts with `[B
 The hierarchy follows the same privacy rules as video and screenshots. A node whose box overlaps a secure rectangle registered with `Bugsee.AddSecureRectangle` or `Bugsee.AddSecureScreenRectangle` loses its `options.name` and `options.components`. Its `class_name` and bounds stay. Each node is judged by its own box, so a full-screen container is protected and its far-away children are not.
 
 A node with no usable bounds counts as covered while any secure rectangle is registered.
+
+:::caution[The test is exact only at native resolution]
+The overlap test compares the node boxes, which are in Unity's render pixels, with the secure rectangles as registered, in native pixels. It is exact only when Unity renders at the native resolution and fills the screen. With Resolution Scaling, `Screen.SetResolution` or a surface that is offset in the window, a node under a rectangle can keep its name and components. If the names of your GameObjects must not reach Bugsee, set `CaptureViewHierarchy = false`, which turns the view hierarchy capture off.
+:::
 
 See [Privacy: video](/sdk/unity/privacy/video) and [Video capture](/sdk/unity/video-capture#secure-rectangles) for how to register rectangles.
 

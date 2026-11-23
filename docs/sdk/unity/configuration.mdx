@@ -9,7 +9,7 @@ slug: "/sdk/unity/configuration"
 This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
 :::
 
-You configure the SDK with launch options, the second argument of `Bugsee.Launch`. The options are the same `com.bugsee.option.*` keys the native [Android](/sdk/android/configuration) and [iOS](/sdk/ios/configuration) SDKs read. This page lists every option the Unity package exposes as a C# property, with its type, default and key.
+You configure the SDK with launch options, the second argument of `Bugsee.Launch`. The options are the same `com.bugsee.option.*` keys the native [Android](/sdk/android/configuration) and [iOS](/sdk/ios/configuration) SDKs read. This page lists the options the package documents, with their type, default and key. The typed properties are also in the API reference and in IntelliSense.
 
 :::warning[Defaults changed in 7.x]
 Shake-to-report is off on both platforms, and the notification-bar trigger is off on Android. Both were on in earlier versions. To keep them, set `ReportingTriggerByShake = true` (both platforms) and `ReportingTriggerByNotification = true` (Android).
@@ -28,7 +28,7 @@ Shake-to-report is off on both platforms, and the notification-bar trigger is of
 All three live in the `Bugsee.Contracts.Options` namespace.
 
 - **Unset options keep the SDK default.** The typed properties are write-only. An option you do not set is not sent, and the native SDK applies its own default.
-- **An option the other platform does not know is dropped.** Setting an Android-only option on an iOS launch has no effect, and the reverse. The package removes these keys before the native SDK sees them.
+- **A typed property the other platform does not know is dropped.** Setting an Android-only property on an iOS launch has no effect, and the reverse. The package removes a fixed list of keys before the native SDK sees them. A key outside that list, set with `SetCustomOption`, reaches the native SDK as is.
 - **`SetCustomOption(key, value)`** sets any key on a typed options object. `Clear()` removes everything you set. `ToDictionary()` returns the current map.
 - **`Options` holds the key constants**, for example `Options.CaptureNetwork`. Each key is `com.bugsee.option.` plus the suffix shown in the tables below.
 
@@ -66,7 +66,7 @@ public static class BugseeSetup
 }
 ```
 
-The `OptionsBuilder` form works on both platforms from one code path. Its `Set` overloads take a key and a `bool`, `int`, `float` or `string`, and it has helpers for enum options (`SetVideoMode`, `SetVideoQuality`, `SetFrameRate`, `SetLogLevel`, `SetDefaultCrashPriority`, `SetDefaultErrorPriority`, `SetDefaultBugPriority`, `SetCrashHandlerType`, `SetCrashSignals`, `SetReportingUIStyle`) and for common switches (`Duration`, `CaptureVideo`, `CaptureNetwork`, `CaptureLogs`, `DetectAndReportCrash`, `CaptureManagedExceptions`, `CaptureUnobservedTaskExceptions`, `DetectAndReportHang`, `DetectAndReportExitNotResponding`, `DetectAndReportExitLowMemory`).
+The `OptionsBuilder` form works on both platforms from one code path. Its `Set` overloads take a key and a `bool`, `int`, `float`, `string` or `object`, and it has helpers for enum options (`SetVideoMode`, `SetVideoQuality`, `SetFrameRate`, `SetLogLevel`, `SetDefaultCrashPriority`, `SetDefaultErrorPriority`, `SetDefaultBugPriority`, `SetCrashHandlerType`, `SetCrashSignals`, `SetReportingUIStyle`) and for common switches (`Duration`, `CaptureVideo`, `CaptureNetwork`, `CaptureLogs`, `DetectAndReportCrash`, `CaptureManagedExceptions`, `CaptureUnobservedTaskExceptions`, `DetectAndReportHang`, `DetectAndReportExitNotResponding`, `DetectAndReportExitLowMemory`).
 
 ```csharp
 using Bugsee.Contracts.Options;
@@ -216,7 +216,7 @@ These properties exist on `AndroidLaunchOptions` only. An iOS launch drops the k
 | `WebViewDomainAllowlist` | Android | `string` | `""` | `capture.webview.domain-allowlist` | Domains the WebView capture may record. |
 | `WebViewReportTrigger` | Android | `bool` | `false` | `capture.webview.report-trigger` | Let WebView content trigger a report. The iOS SDK also reads this key. |
 | `CaptureVideoMode` | Android | `VideoMode` | `V2` | `capture.video.mode` | How the screen is captured. See [VideoMode](#enums). |
-| `CaptureVideoAdaptive` | Android | `bool` | `false` | `capture.video.adaptive` | Skip frames while nothing on screen changes. |
+| `CaptureVideoAdaptive` | Android | `bool` | `false` (iOS: `true`) | `capture.video.adaptive` | Skip frames while nothing on screen changes. |
 | `CaptureVideoSecureScrolling` | Android | `bool` | `false` | `capture.video.secure-scrolling` | With `VideoMode.V1`, skip more frames while secure views are on screen. |
 | `CaptureVideoUsingCustomMuxer` | Android | `bool` | `false` | `capture.video.custom-muxer` | Use Bugsee's MP4 muxer instead of Android's `MediaMuxer`. |
 | `CaptureVideoFullscreenRememberUserDecision` | Android | `bool` | `true` | `capture.video.fullscreen-remember-decision` | With `VideoMode.Fullscreen`, remember the user's screen-capture consent across launches. |
@@ -229,7 +229,7 @@ These properties exist on `AndroidLaunchOptions` only. An iOS launch drops the k
 | `ReportingTriggerByNotification` | Android | `bool` | `false` | `reporting.triggers.notification-bar` | Show a notification-bar entry that opens the report dialog. |
 | `ReportingTriggerByBroadcast` | Android | `bool` | `false` | `reporting.triggers.broadcast` | Allow a broadcast intent to trigger a report. |
 
-`DetectAndReportExit`, `DetectAndReportMainThreadMisuse`, `CaptureNetworkOnLaunch`, `AdvancedWebViewCapture` and `WebViewReportTrigger` have a typed property on `AndroidLaunchOptions` only, but the iOS SDK reads the same keys. On iOS, set them with `SetCustomOption` and the `Options` constants.
+`DetectAndReportExit`, `DetectAndReportMainThreadMisuse`, `CaptureNetworkOnLaunch`, `AdvancedWebViewCapture`, `WebViewReportTrigger` and `CaptureVideoAdaptive` have a typed property on `AndroidLaunchOptions` only, but the iOS SDK reads the same keys. On iOS, set them with `SetCustomOption` and the `Options` constants. The iOS default for `CaptureVideoAdaptive` is `true`.
 
 The NDK options (`DetectAndReportCrashNdk`, `CrashNdkIncludeTombstoneLogs` and the Android side of `CrashSignals`) belong to the `bugsee-android-ndk` module, which the package declares in every Android build.
 
@@ -260,6 +260,7 @@ These properties exist on `IOSLaunchOptions` only. An Android launch drops the k
 | `BuildTarget` | iOS | `string` | none | `config.build-target` | The Xcode target name, reported with the session. |
 | `BuildType` | iOS | `string` | none | `config.build-type` | The build type (for example debug or release), reported with the session. |
 | `ReportingUIStyle` | iOS | `ReportingUIStyle` | `System` | `reporting.ui.style` | Look of the report screen. See [ReportingUIStyle](#enums). |
+
 Three iOS keys have no property: `capture.logs.oslog` (the iOS SDK accepts and ignores it), `capture.status-bar-info` (read only by a debug build of the iOS SDK) and `capture.mach-exceptions` (removed from the iOS SDK; use `CrashHandlerType`).
 
 :::warning[Privacy options]

@@ -50,7 +50,7 @@ Options:
 | --- | --- | --- | --- | --- |
 | `CaptureManagedExceptions` | Android, iOS | `bool` | `true` | Installs the hooks above. A `Relaunch` applies a changed value. |
 | `CaptureUnobservedTaskExceptions` | Android, iOS | `bool` | `true` | Reports `TaskScheduler.UnobservedTaskException` as an error. Needs `CaptureManagedExceptions`. |
-| `TreatUnityLogExceptionsAsFatal` | Android, iOS | `bool` | `false` | Reports exceptions that Unity logs as crashes instead of errors. |
+| `TreatUnityLogExceptionsAsFatal` | Android, iOS | `bool` | `false` | Reports exceptions that Unity logs as crashes instead of errors. A `Relaunch` does not change it while the managed hooks stay installed. |
 
 An uncaught exception that Unity logs is reported as an error, because the game keeps running. Set `TreatUnityLogExceptionsAsFatal` to report these as crashes. When a crash report is made on a background thread, the call waits up to 4 seconds for Unity's main thread to take it.
 
@@ -221,6 +221,10 @@ How much of a stack trace Bugsee can resolve to C# class, file and line depends 
 
 The mapping and symbols are uploaded by the build. See [Symbolication](/sdk/unity/symbolication/overview), and the pages for [Android](/sdk/unity/symbolication/android), [iOS](/sdk/unity/symbolication/ios) and [managed code](/sdk/unity/symbolication/managed-code).
 
+### Limits
+
+- **IL2CPP, exceptions rethrown through `await`.** For an exception thrown in an async continuation and rethrown where it is awaited, the frames before the line `--- End of stack trace from previous location where exception was thrown ---` carry no address and stay unresolved when the build has no IL2CPP line information. Only the frames after the separator resolve.
+
 ### Known issues
 
 These apply to Bugsee Unity SDK 7.0.0-beta.1:
@@ -228,7 +232,6 @@ These apply to Bugsee Unity SDK 7.0.0-beta.1:
 - **Android, Release IL2CPP, Public symbols.** Handled managed exceptions in a Release IL2CPP build without IL2CPP line information stay unsymbolicated (no file and line) when the symbols are Public (symbol table only). Use Debugging symbols with the il2cpp line map: set **Create symbols.zip** to **Debugging** in Player Settings, use the menu **Bugsee > Android > Use Full Native Symbols (Debugging) For Symbol Upload**, or set `BUGSEE_ANDROID_FULL_SYMBOLS=1`.
 - **Android, Development IL2CPP.** Development builds send no addresses, and Debugging symbols do not change that.
 - **Public, then Debugging.** Switching the symbol level from Public to Debugging for the same `libil2cpp.so` build id may leave frames raw on the dashboard. This is open and under investigation: [bugsee-unity#263](https://github.com/bugsee/bugsee-unity/issues/263). Choose the symbol level before you upload a build.
-- **IL2CPP, exceptions rethrown through `await`.** For an exception thrown in an async continuation and rethrown where it is awaited, the frames before the line `--- End of stack trace from previous location where exception was thrown ---` carry no address and stay unresolved when the build has no IL2CPP line information. Only the frames after the separator resolve.
 
 ## Test crash reporting
 

@@ -36,7 +36,7 @@ Set these launch options on `AndroidLaunchOptions` or `IOSLaunchOptions`. See [C
 | Option | Platform | Type | Default | What it does |
 | --- | --- | --- | --- | --- |
 | `CaptureLogs` | Both | `bool` | `true` | Capture logs. Unity console lines and, on Android, Logcat are recorded while it is on. |
-| `CaptureLogsLevel` | Both | `LogLevel` | `Verbose` | Lines more verbose than this level are dropped. |
+| `CaptureLogsLevel` | Both | `LogLevel` | `Verbose` | Lines more verbose than this level are dropped. On Android it applies to the lines the SDK reads from logcat, not to the Unity console lines the package forwards. |
 | `CaptureLogsUseAllSources` | Android | `bool` | `false` | Read all Logcat buffers (system, radio and others) instead of the default sources. |
 
 `LogLevel` has the values `Error` (1), `Warning` (2), `Info` (3), `Debug` (4) and `Verbose` (5).
@@ -51,15 +51,15 @@ var options = new AndroidLaunchOptions
     CaptureLogs = true,
     CaptureLogsLevel = LogLevel.Info,
 };
+BugseeSdk.Launch("<your Android app token>", options);
 #elif UNITY_IOS
 var options = new IOSLaunchOptions
 {
     CaptureLogs = true,
     CaptureLogsLevel = LogLevel.Info,
 };
+BugseeSdk.Launch("<your iOS app token>", options);
 #endif
-
-BugseeSdk.Launch("<your_app_token>", options);
 ```
 
 To turn log capture off, set `CaptureLogs = false`. See [Privacy: console logs](/sdk/unity/privacy/logs).
@@ -84,7 +84,7 @@ BugseeSdk.Log("Upload failed", LogLevel.Error);
 - `Bugsee.Log(string message, LogLevel level, bool requiresFiltering)` also runs the line through the filter when `requiresFiltering` is `true`. Use it when the message can hold data that your filter redacts.
 - Both overloads do nothing for a `null` message or before the SDK is launched.
 - Lines written with `Bugsee.Log` are recorded, and the ones that opt in are filtered, even with `CaptureLogs` off.
-- On iOS, a line below `CaptureLogsLevel` is dropped before it reaches the filter. On Android, `CaptureLogsLevel` applies only to Logcat lines. An opt-in `Debug` line under `CaptureLogsLevel = LogLevel.Error` never reaches the filter on iOS.
+- On iOS, a line below `CaptureLogsLevel` is dropped before it reaches the filter. On Android, `CaptureLogsLevel` applies only to Logcat lines and not to the Unity console lines the package forwards. To keep personal data out of forwarded Unity lines, filter them with `SetLogEventFilter`. An opt-in `Debug` line under `CaptureLogsLevel = LogLevel.Error` never reaches the filter on iOS.
 
 ## Filter log lines
 

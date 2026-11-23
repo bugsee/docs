@@ -33,7 +33,7 @@ A report bundles what the SDK recorded with what the user or your code put into 
 - `OnBeforeReportCreated(IReport report, bool isTerminating, Action completionCallback)`
 - `OnAfterReportCreated(IReport report, bool isTerminating, Action completionCallback)`
 
-Derive from `ReportHandlerBase` and override what you need. Each method must call `completionCallback()` when it is done. The `IReport` you receive is the report itself: what you change is what is uploaded.
+Derive from `ReportHandlerBase` and override what you need. Each method must call `completionCallback()` when it is done. The `IReport` you receive is the report: when the handler finishes, the changes you made are what is uploaded.
 
 | You can | With |
 | --- | --- |
@@ -57,14 +57,14 @@ public sealed class RedactingReportHandler : ReportHandlerBase
 
     public override void OnBeforeReportCreated(IReport report, bool isTerminating, Action completionCallback)
     {
-        Redact(report);
-        completionCallback();
+        try { Redact(report); }
+        finally { completionCallback(); }
     }
 
     public override void OnAfterReportCreated(IReport report, bool isTerminating, Action completionCallback)
     {
-        Redact(report);
-        completionCallback();
+        try { Redact(report); }
+        finally { completionCallback(); }
     }
 
     static void Redact(IReport report)
@@ -97,6 +97,7 @@ What to know:
 - **The handler runs on the Unity main thread, inside its turn.** Do the redaction there, keep it short, and call `completionCallback()` when you are done.
 - **The SDK does not wait indefinitely.** The native SDK carries on with the report unchanged after the handler timeout, 30 seconds by default. A before-phase handler that only gets to run after that is skipped. On Android, the `ReportHandlerCallbackTimeout` launch option sets the timeout. The iOS SDK does not read that option. While the app is in the background, Unity's loop is paused, and the handler waits until it resumes.
 - **The handler is skipped for a report that is created while the process is terminating.** When `isTerminating` is `true`, the package acknowledges the native SDK at once and does not call your handler. Do not rely on the handler to redact those reports. Keep the data out where it is recorded: mask it on screen, or drop it in a filter.
+- **A handler that throws uploads the report unredacted.** The package logs the exception and the report continues without your edits. On iOS every edit except a screenshot change is dropped. A filter differs: a filter that throws drops the event. Catch exceptions inside the handler and call `completionCallback()` in a `finally` block, as the example does.
 - **Edits after the handler's turn are not applied.** Do not keep the `IReport` and change it later.
 - **The handler cannot remove the video, the logs or the network traffic from a report.** Use the capture options and the filters.
 - **A report from `Bugsee.CreateReport`.** `IReport.Email` set on a report from `Bugsee.CreateReport` is used on Android. On iOS it is dropped with a warning, because the managed upload cannot carry it. Use `Bugsee.SetUserIdentifier` there.

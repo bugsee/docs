@@ -49,7 +49,7 @@ Set `BUGSEE_NO_SYMBOL_UPLOAD` to any value to turn every upload off. [Build envi
 
 ## An upload never fails your build
 
-The package treats every symbol upload as best effort. A missing token, a missing `bugsee-cli`, a missing map or a failed upload prints a warning in the Unity Console (Android) or the Xcode build log (iOS), and the build continues. Read the log of a release build once to see that the uploads ran.
+The package treats every symbol upload as best effort. A missing `bugsee-cli`, a missing map or a failed upload prints a warning in the Unity Console (Android) or the Xcode build log (iOS), and the build continues. With no token, the Android build uploads nothing and prints no warning, and the iOS Run Script prints a warning for an archive and a note for other builds. Read the log of a release build once to see that the uploads ran.
 
 The Android upload logs lines that start with `Bugsee: uploading`. The iOS Run Script prints `Bugsee: uploading dSYM` for each dSYM, and a `warning:` line for each problem.
 

@@ -17,6 +17,12 @@ In a Unity project you do not add the extension by hand. The iOS export adds it 
 The extension needs Xcode 27 or later to build, and a device on iOS 27 or later to run. Only the extension target needs iOS 27: your app keeps its own deployment target. The Simulator never runs the extension.
 :::
 
+:::caution[Unity and iOS 27]
+Building with Xcode 27 links the iOS 27 SDK, which requires the UIScene lifecycle. Unity versions without UIScene support can fail to launch on iOS 27 when built with Xcode 27. This is a maintainer note that is being re-verified per Unity version, so check the Unity version of your project in Unity's release notes. The extension only helps in a player that runs on iOS 27.
+:::
+
+{/* TODO(lead): replace with the verified per-version statement from the UIScene investigation */}
+
 ## What is reported
 
 | Termination | Report |
@@ -117,12 +123,12 @@ export BUGSEE_IOS_APP_TOKEN=<your iOS app token>
 export BUGSEE_IOS_EARLY_LAUNCH_OPTIONS='{"com.bugsee.option.detect.hang":true}'
 ```
 
-Or use the menu **Bugsee > iOS > Early Launch...**, which stores the same three values as an Editor preference per machine. The variables win. The export writes the values into the app's `Info.plist`, with `$` written as `$` so that Xcode does not collapse `$$` and drop internal keys. Nothing is written when early launch is off.
+Or use the menu **Bugsee > iOS > Early Launch...**, which stores the same three values as an Editor preference per machine. The variables win. The export writes the values into the app's `Info.plist`, with `$` written as `\u0024` so that Xcode does not collapse `$$` and drop internal keys. Nothing is written when early launch is off.
 
 How it behaves:
 
 - The native start happens when the app posts the did-finish-launching notification, after Unity's own `didFinishLaunching` returns.
-- The first `Bugsee.Launch` with the same token adopts the running session. The `Launching` and `Launched` lifecycle events are delivered once.
+- The first `Bugsee.Launch` with the same token adopts the running session.
 - Options are fixed at build time. Options you pass to `Bugsee.Launch` that differ from the early options are logged as a warning and not applied, and so is a different token. Put what you need into `BUGSEE_IOS_EARLY_LAUNCH_OPTIONS`.
 - After `Bugsee.Stop`, `Bugsee.Launch` works as it does without early launch.
 - Early launch does nothing in the Simulator.

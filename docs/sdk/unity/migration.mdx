@@ -19,7 +19,7 @@ This guide compares Bugsee Unity SDK 6.0.x (the `.unitypackage`, namespace `Bugs
 
 ## Before you start
 
-- [ ] Commit or back up your project. The migration deletes the 6.x plugin folder and edits every file that calls Bugsee.
+- [ ] Commit or back up your project. The migration deletes the 6.x plugin folders and edits every file that calls Bugsee.
 - [ ] Read the Beta banner above. 7.0.0-beta.1 can change between betas, and 6.x stays the stable release.
 - [ ] Install 7.x from the pinned git tag with the Unity Package Manager, as described in [Installation](/sdk/unity/installation). Do not install without the `#v7.0.0-beta.1` part.
 
@@ -30,18 +30,18 @@ This guide compares Bugsee Unity SDK 6.0.x (the `.unitypackage`, namespace `Bugs
 | | 6.x | 7.x |
 | --- | --- | --- |
 | Distribution | `Bugsee.unitypackage`, imported into `Assets` | Unity Package Manager package `com.bugsee.unity`, from a git tag |
-| Where the files go | `Assets/Plugins/Bugsee`, with the native binaries `Bugsee-Unity.aar` (Android) and `Bugsee.a` with headers (iOS) inside | `Packages/`, read-only. The package bundles no native binaries. |
+| Where the files go | Three folders in `Assets`: `Assets/Plugins/Bugsee` (the scripts), `Assets/Plugins/iOS/Bugsee` (`Bugsee.a`, the headers, `BugseePlugin.m` and `BugseeAgent`) and `Assets/Plugins/Android/Bugsee-Unity.aar` | `Packages/`, read-only. The package bundles no native binaries. |
 | Native SDKs | Bundled in the plugin folder | Added at build time: Android SDK 7.6.0 through Gradle, iOS SDK 7.1.0 through Swift Package Manager |
 | Launch | A `BugseeLauncher` component on an object in your first scene, or a call you make yourself | One call, `Launch`, from any script |
 | Namespace and class | `BugseePlugin`, class `Bugsee` (a `MonoBehaviour`) | Namespace `Bugsee`, static class `Bugsee` |
 
 Do these steps in order:
 
-1. Delete the folder `Assets/Plugins/Bugsee`. It holds the 6.x scripts, the AAR and the iOS library.
+1. Delete `Assets/Plugins/Bugsee` (the 6.x scripts), `Assets/Plugins/iOS/Bugsee` (the iOS library, headers and `BugseePlugin.m`) and `Assets/Plugins/Android/Bugsee-Unity.aar`. If the old AAR stays, it sits next to the Bugsee Android SDK 7.6.0 that 7.x adds through Maven.
 2. Remove the `BugseeLauncher` component from your scene, and the object you created for it, if it has no other use.
 3. Remove `gameObject.AddComponent<Bugsee>()` from any code that did a manual launch. In 6.x the `Bugsee` class was a component that had to be on a scene object, and the launcher gave that object the name `bgs_gameObject`. In 7.x `Bugsee` is a static class, so `AddComponent<Bugsee>()` does not compile, and nothing in your scene is required. The package creates its own helper object, `Bugsee.MainThreadDispatcher`, before the first scene loads.
 4. Remove the `BugseeEventsListener` component from your main camera if you added it for GPU information. The 7.x package has no such component.
-5. If you edited `Assets/Plugins/BugseeLaunchHandler.cs` or set `BugseeLauncher.AndroidOptionsHandler` and its siblings, move those options into your own launch code (see section 2).
+5. If you wrote your own `partial class BugseeLauncher` (in namespace `BugseePlugin`) that set `AndroidOptionsHandler` and `IosOptionsHandler`, delete that file and move its options into your own launch code (see section 2).
 6. Add the package from `https://github.com/bugsee/bugsee-unity.git#v7.0.0-beta.1`. See [Installation](/sdk/unity/installation).
 
 The package needs no scoped registry and no custom Gradle template. If your project already uses the External Dependency Manager for other SDKs, it keeps working. See [Android build setup](/sdk/unity/build-setup/android) and [iOS build setup](/sdk/unity/build-setup/ios) for what the package changes in the exported projects.
@@ -149,7 +149,7 @@ All 7.x members below are on the static class `Bugsee`, which the examples call 
 
 | 6.x (`BugseePlugin.Bugsee`) | 7.x | Notes |
 | --- | --- | --- |
-| `Launch(string, BugseeLaunchOptions = null)` and `Launch(string, IDictionary<string, object>)` | `Launch(string, Dictionary<string, object> options = null)` | Typed options, `OptionsBuilder` and a dictionary all go to the same parameter. |
+| `Launch(string, BugseeLaunchOptions = null)` and `Launch(string, IDictionary<string, object>)` | `Launch(string, Dictionary<string, object> options = null)` | Typed options, `OptionsBuilder` and a dictionary all go to the same parameter. It is a `Dictionary<string, object>`, so pass another `IDictionary` as `new Dictionary<string, object>(d)`. |
 | `Relaunch(BugseeLaunchOptions = null)` | `Relaunch(Dictionary<string, object> options = null)`, `RelaunchAsync` | |
 | `Stop()` | `Stop(Action completion = null)`, `StopAsync` | |
 | `ShowReport(summary, description, BugseeSeverityLevel severity = High)` | `ShowReportDialog(summary, description, IssueSeverity? severity = null, IList<string> labels = null)` | Renamed. `null` severity uses `ReportingDefaultBugPriority`. 6.x always sent High. |
@@ -159,14 +159,14 @@ All 7.x members below are on the static class `Bugsee`, which the examples call 
 | `Trace(name, object)` | `Trace(name, object)` | Unchanged signature. |
 | `Log(message, BugseeLogLevel level = Debug)` | `Log(message, LogLevel level = Info)` | The default level is now `Info`. A second overload takes `requiresFiltering`. See [Console logs](/sdk/unity/logs). |
 | `LogException(Exception)` | `LogException(Exception, IDictionary<string, object> options = null)` | Source compatible. `LogUnhandledException` is new. |
-| `TestExceptionCrash()`, `TestSignalCrash()` | `TestCrash()` | One method, a native crash. |
+| `TestExceptionCrash()`, `TestSignalCrash()` | `TestCrash()` | One method. On Android it crashes the app with a Java exception, on iOS it triggers the SDK's test crash. |
 | `ShowFeedbackUI()`, `SetFeedbackGreetingMessage(string)` | `Feedback.ShowFeedbackUi()`, `Feedback.SetDefaultGreeting(string)` | The feedback chat is an opt-in add-on. See [Feedback](/sdk/unity/feedback). |
 | `SetAttribute(key, value)` returns `bool` | `SetAttribute(key, value)` returns nothing | Invalid keys and values throw `ArgumentException`. See [User & session data](/sdk/unity/user-session-data). |
 | `GetAttribute(key)` | `GetAttribute(key)`, `GetAllAttributes()` | Values read back as `string`, `bool`, `long` or `double`. |
 | `ClearAttribute(key)`, `ClearAllAttributes()` return `bool` | Same names, return nothing | |
 | `SetEmail`, `GetEmail`, `ClearEmail` | `SetUserIdentifier`, `GetUserIdentifier`, `ClearUserIdentifier` | There is no email API in 7.x. An email address is a valid identifier. For one report, set `IReport.Email`. |
 | `CaptureViewHierarchy()` | `CaptureViewHierarchy()` | Unchanged. See [View hierarchy](/sdk/unity/view-hierarchy). |
-| `AddSecureRect(Rect)`, `RemoveSecureRect(Rect)` return `bool` | `AddSecureRectangle(RectInt)`, `RemoveSecureRectangle(RectInt)`, and `AddSecureScreenRectangle(Rect, displayId)` | The first pair takes native pixels with a top-left origin. The screen variant takes Unity screen space. See [Privacy: Video](/sdk/unity/privacy/video). |
+| `AddSecureRect(Rect)`, `RemoveSecureRect(Rect)` return `bool` on iOS and nothing on Android | `AddSecureRectangle(RectInt)`, `RemoveSecureRectangle(RectInt)`, and `AddSecureScreenRectangle(Rect, displayId)` | The first pair takes native pixels with a top-left origin. The screen variant takes Unity screen space. See [Privacy: Video](/sdk/unity/privacy/video). |
 | `RemoveAllSecureRects()`, `GetAllSecureRects()` returns `Rect[]` | `RemoveAllSecureRectangles()`, `GetAllSecureRectangles()` returns `RectInt[]` | |
 | `OnAttachmentForReport` event | `SetReportHandler(IReportHandler)` | See 3.3. |
 | `OnLifecycleEvent` event | `LifecycleEvent` event, `SetLifecycleEventListener` | See 3.4. |
@@ -187,13 +187,12 @@ All 7.x members below are on the static class `Bugsee`, which the examples call 
 | `BugseeFrameRate`: `Low`, `Medium`, `High` | `FrameRate`: `Low`, `Medium`, `High`, `Raw` | `Raw` is new and is meaningful for `VideoMode.DirectBuffers` only. |
 | `BugseeStyle`: `Default` 0, `Dark` 1, `BasedOnStatusBar` 2 | `ReportingUIStyle`: `Light` 0, `Dusk` 1, `BasedOnStatusBar` 2, `System` 3 | The default is now `System`. iOS only. |
 | `BugseeAndroidVideoMode`: `None`, `V1`, `V2`, `V3`, `V4` | `VideoMode`: `None` 0, `V1` 1, `V2` 2, `Fullscreen` 20, `DirectBuffers` 21 | `V3` and `V4` no longer exist. The 6.x `V2` used MediaProjection and asked the user for consent; in 7.x that is `Fullscreen`. The 7.x `V2` is the Android SDK's default capture engine. See [Video capture](/sdk/unity/video-capture). |
-| `BugseeAndroidVideoQuality` | `VideoQuality` | `Default`, `Medium`, `High`. |
 | `BugseeLifecycleEventType` | Strings in `LifecycleEvents` | See 3.4. |
 | `BugseeReport`, `BugseeAttachment` structs | `IReport`, `IAttachment` | See 3.3. |
 
 ### 3.3 Attachments and the report handler
 
-6.x added attachments by returning a list from the `OnAttachmentForReport` event. In 7.x you register a report handler and call `AddAttachmentBytes` or `AddAttachmentFile` on the report. The handler must call the completion callback.
+6.x added attachments by returning a list from the `OnAttachmentForReport` event. In 7.x you register a report handler and call `AddAttachmentBytes` or `AddAttachmentFile` on the report from `OnAfterReportCreated`. Both return `null` when the report refuses the attachment. The handler must call the completion callback.
 
 ```csharp
 // 6.x
@@ -215,10 +214,14 @@ public class StateAttachments : ReportHandlerBase
 
     public StateAttachments(byte[] stateBytes) { _stateBytes = stateBytes; }
 
-    public override void OnBeforeReportCreated(IReport report, bool isTerminating, Action completionCallback)
+    public override void OnAfterReportCreated(IReport report, bool isTerminating, Action completionCallback)
     {
         IAttachment attachment = report.AddAttachmentBytes(_stateBytes, "state", "application/json");
-        attachment.Filename = "state.json";
+        if (attachment != null)
+        {
+            attachment.Filename = "state.json";
+        }
+
         completionCallback?.Invoke();
     }
 }
@@ -286,14 +289,13 @@ The tables list the 6.x property, its 7.x counterpart and both defaults. 6.x def
 | `NotificationBarTrigger` | Android | `ReportingTriggerByNotification` | `true` | `false` |
 | `ScreenshotToReport` | Both | `ReportingTriggerByScreenshot` | Android `false`, iOS `true` | `false` |
 | `CrashReport` | Both | `DetectAndReportCrash` | `true` | `true` |
-| `DetectAppExit` | Both | `DetectAndReportExit` | `false` | `true` |
+| `DetectAppExit` | Both | `DetectAndReportExit`, a typed property on `AndroidLaunchOptions` only. On iOS use `SetCustomOption(Options.DetectAndReportExit, value)`. | `false` | `true` |
 | `MaxNetworkBodySize` | Both | `CaptureNetworkBodySizeLimit` | `20480` | `20480` |
 | `MonitorNetwork` | Both | `CaptureNetwork` | `true` | `true` |
 | `RecordHttpBodyWithoutType` | Android | `CaptureNetworkBodyWithoutType` | not set | `false` |
 | `VideoEnabled` | Both | `CaptureVideo` | `true` | `true` |
 | `VideoScale` | Both | `CaptureVideoScale` | Android `1.0`, iOS `0` (not used) | `1` |
 | `FrameRate` | Both | `CaptureVideoFrameRate` | `High` | `High` |
-| `VideoQuality` | Android | `CaptureVideoQuality` | `Default` | `Default` |
 | `VideoMode` | Android | `CaptureVideoMode` | `V3` | `V2` |
 | `CaptureLogs` | Both | `CaptureLogs` | `true` | `true` |
 | `LogLevel` | Android | `CaptureLogsLevel`, now on both platforms | `Verbose` | `Verbose` |
@@ -336,7 +338,7 @@ These 6.x options have no property in 7.x and no key in the native option manife
 
 ### 4.3 Options that are new in 7.x
 
-7.x types many options that 6.x did not have, among them hang, early-crash, HTTP-error, anomaly and frustration detection, breadcrumbs, performance monitoring, pending-report limits, screenshot scale, `CrashSignals`, `CaptureManagedExceptions` and the iOS capture switches. They are in [Configuration](/sdk/unity/configuration).
+7.x types many options that 6.x did not have, among them hang, early-crash, HTTP-error, anomaly and frustration detection, breadcrumbs, performance monitoring, pending-report limits, screenshot scale, `CrashSignals`, `CaptureManagedExceptions`, `CaptureVideoQuality` (with the `VideoQuality` enum) and the iOS capture switches. They are in [Configuration](/sdk/unity/configuration).
 
 ## 5. Behavior changes
 
@@ -349,7 +351,7 @@ Several options start with another value than they did in 6.x. The table in 4.1 
 - **The iOS screenshot trigger is off.** The 6.x iOS wrapper had it on. Set `ReportingTriggerByScreenshot = true` to keep it.
 - **`MaxDataSize` is 150 MB, not 50.**
 - **View hierarchy capture is on.** The 6.x wrapper had it off.
-- **Exit detection is on.** Application exits (on Android, the reasons of `ApplicationExitInfo`; on iOS, out-of-memory kills) are reported unless you set `DetectAndReportExit = false`.
+- **Exit detection is on.** Application exits (on Android, the reasons of `ApplicationExitInfo`; on iOS, out-of-memory kills) are reported unless you switch them off. On Android set `DetectAndReportExit = false`. On iOS call `options.SetCustomOption(Options.DetectAndReportExit, false)`.
 - **Early-crash handling is on.** The 6.x iOS option `AppLaunchCrashDetection` was off.
 - **The default bug severity on iOS is `High`.** It was `Low` in the 6.x options.
 - **The Android video mode default is `V2`** (the SDK's default capture engine), where 6.x used `V3`.
@@ -400,7 +402,7 @@ The client signature of a managed exception changed too. 6.x hashed the exceptio
 
 ## 8. Migration checklist
 
-- [ ] Delete `Assets/Plugins/Bugsee`, the `BugseeLauncher` component, any `AddComponent<Bugsee>()` call and the `BugseeEventsListener` component.
+- [ ] Delete `Assets/Plugins/Bugsee`, `Assets/Plugins/iOS/Bugsee` and `Assets/Plugins/Android/Bugsee-Unity.aar`, the `BugseeLauncher` component, any `AddComponent<Bugsee>()` call and the `BugseeEventsListener` component.
 - [ ] Add `com.bugsee.unity` from `https://github.com/bugsee/bugsee-unity.git#v7.0.0-beta.1`.
 - [ ] Replace `using BugseePlugin;` with `using Bugsee.Contracts.Options;` (and the other namespaces you need) and `using BugseeSdk = Bugsee.Bugsee;`.
 - [ ] Port the launch to `BugseeSdk.Launch(token, options)` with `AndroidLaunchOptions` or `IOSLaunchOptions`.
@@ -410,6 +412,6 @@ The client signature of a managed exception changed too. 6.x hashed the exceptio
 - [ ] Replace `OnAttachmentForReport` with a report handler and `OnLifecycleEvent` with `LifecycleEvent`.
 - [ ] Replace the appearance properties with `SetColor` and `SetString`.
 - [ ] Fix attribute reads that unbox to `int` or `float`.
-- [ ] Decide `CaptureManagedExceptions`, `DetectAndReportExit` and `MaxDataSize` on purpose; they changed.
+- [ ] Decide `CaptureManagedExceptions`, `DetectAndReportExit` (on iOS through `SetCustomOption`) and `MaxDataSize` on purpose; they changed.
 - [ ] Set `BUGSEE_APP_TOKEN` in your build environment if you want symbols uploaded.
 - [ ] Build for a device, send a report with `ShowReportDialog` and a crash with `TestCrash`, and check both in the dashboard. See [Installation](/sdk/unity/installation#check-that-it-works).

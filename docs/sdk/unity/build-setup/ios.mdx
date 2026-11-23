@@ -39,11 +39,11 @@ Debug builds then have no dSYM to upload.
 
 The export writes `BugseeScripts/upload-symbols.sh` next to the Xcode project and adds a **Bugsee Upload Symbols** Run Script phase to the app target that runs it. The phase uploads the app's and `UnityFramework`'s dSYMs and the IL2CPP line map, so crash frames resolve to your code.
 
-- **Token.** The script reads `BUGSEE_APP_TOKEN` when Xcode builds, from the environment or from a user-defined build setting. The token is never written into the project. Without it, the build prints a warning and uploads nothing.
+- **Token.** The script reads `BUGSEE_APP_TOKEN` when Xcode builds, from the environment or from a user-defined build setting. The token is never written into the project. Without it, nothing is uploaded. An archive or install build prints a warning, and any other build prints a note.
 - **Which builds.** The script runs for every Xcode configuration, Debug included, and on every build that has the token in its environment, not only archives. Set `BUGSEE_SKIP_UPLOAD_ON_DEBUG=1` to skip the Debug configuration, for example for local runs from Xcode.
 - **Opt out.** `BUGSEE_NO_SYMBOL_UPLOAD` set in the environment of the Xcode build makes the script print that it skips the upload and upload nothing.
 - **The CLI.** The script never downloads `bugsee-cli`. At export, on macOS with `BUGSEE_APP_TOKEN` set, the Editor looks for an installed CLI and writes its absolute path into the script. That path contains your home directory. If you commit the exported project, set `BUGSEE_NO_SYMBOL_UPLOAD` or unset `BUGSEE_APP_TOKEN` before you export, and nothing is baked. When no CLI is found, the script prints a warning that lists the paths it tried, and the build continues.
-- **Sandbox.** The export sets `ENABLE_USER_SCRIPT_SANDBOXING = NO` on the `Unity-iPhone` target. With the sandbox on, Xcode refuses to start the script and nothing is uploaded. A project-wide or command-line `ENABLE_USER_SCRIPT_SANDBOXING=YES` still wins over the target's setting.
+- **Sandbox.** The export sets `ENABLE_USER_SCRIPT_SANDBOXING = NO` on the `Unity-iPhone` target. With the sandbox on, Xcode refuses to start the script and nothing is uploaded. A command-line override or an Xcode configuration file override of `ENABLE_USER_SCRIPT_SANDBOXING` still wins.
 - **Failures.** A failing upload never fails the build.
 
 For what is uploaded and how to read the results, see [iOS symbolication](/sdk/unity/symbolication/ios) and [Environment variables](/sdk/unity/symbolication/environment-variables).
@@ -52,17 +52,23 @@ For what is uploaded and how to read the results, see [iOS symbolication](/sdk/u
 
 On iOS 27 and later, the iOS SDK can report exits that no in-process handler survives, such as out-of-memory kills, through a Crash Report Extension. The export can add that extension to your Xcode project as an ExtensionKit target named `BugseeCrashReport`, with the bundle id `<your app id>.BugseeCrashReport`, an iOS 27.0 deployment target on the extension only, and an App Group shared with the app.
 
-The target is added only when the build machine has **Xcode 27 or later**. The setting decides the rest:
+The target is added only when `xcodebuild -version` on the Mac that exports the project reports **Xcode 27 or later**. The setting decides the rest:
 
 | Setting | Behavior |
 | --- | --- |
 | **Auto** (default) | Adds the extension in an interactive Editor build when Player Settings has **Automatically Sign** on and a team id. Never in batch mode. |
-| **On** | Adds it for any signing setup. Register the App Group on both App IDs yourself. |
+| **On** | Adds it for any signing setup. Register the App Group on both App IDs yourself unless Xcode signs automatically. |
 | **Off** | Never adds it. |
 
 Set it from the menu **Bugsee > iOS > Crash Report Extension** (Auto, On or Off), which is saved per machine, or from the environment with `BUGSEE_IOS_CRASH_EXTENSION=auto`, `1` or `0`, which wins over the menu. The App Group defaults to `group.<your bundle id>`. Override it with `BUGSEE_IOS_APP_GROUP=group.<your id>`.
 
-The extension's `CFBundleShortVersionString` and `CFBundleVersion` are set to the app's at export. If you change the app's version after export, change the extension's too.
+The extension's `CFBundleShortVersionString` and `CFBundleVersion` are set to the app's at export. If you change the app's version after export, change the extension's too. A version mismatch between the app and the extension fails App Store validation.
+
+:::caution[Unity and iOS 27]
+Building with Xcode 27 links the iOS 27 SDK, which requires the UIScene lifecycle. Unity versions without UIScene support can fail to launch on iOS 27 when built with Xcode 27. This is a maintainer note that is being re-verified per Unity version, so check the Unity version of your project in Unity's release notes. The extension only helps in a player that runs on iOS 27.
+:::
+
+{/* TODO(lead): replace with the verified per-version statement from the UIScene investigation */}
 
 If you do not want the target, set the mode to Off. See [Crash Report Extension](/sdk/unity/issue-detection/crash-report-extension) for what it reports, its limits, the signing requirements and the Append export behavior.
 
@@ -84,11 +90,11 @@ Turn it on for the export in one of two ways. The environment variables win over
 
 Or choose **Bugsee > iOS > Early Launch...**, a window with an enable toggle, the iOS app token and the options JSON. It is saved per machine.
 
-The export writes these values into the app's `Info.plist`. It writes `$` as `$` in the options, because Xcode would otherwise collapse `$$` in plist strings. A token that is not a single printable line of at most 256 characters means early launch is not added, with a warning in the build log. Options that are not a JSON object, or are longer than 16,384 characters, are ignored with a warning, and the SDK defaults are used. Nothing is written when early launch is off, and an Append export removes an earlier export's entry.
+The export writes these values into the app's `Info.plist`. It writes `$` as `\u0024` in the options, because Xcode would otherwise collapse `$$` in plist strings. A token that is not a single printable line of at most 256 characters means early launch is not added, with a warning in the build log. Options that are not a JSON object, or are longer than 16,384 characters, are ignored with a warning, and the SDK defaults are used. Nothing is written when early launch is off, and an Append export removes an earlier export's entry.
 
 How the first `Bugsee.Launch` behaves with early launch:
 
-- **No second launch.** It adopts the running session. The `Launching` and `Launched` lifecycle events arrive once.
+- **No second launch.** It adopts the running session.
 - **Options are launch-only.** Options passed to `Bugsee.Launch` that differ from the early options are logged as a warning and not applied. Put them in the early options, or call `Stop` and launch again.
 - **The build-time token wins.** A different token in `Bugsee.Launch` is logged, and the session keeps the build-time token.
 - **After `Stop`**, `Launch` works as without early launch.

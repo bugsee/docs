@@ -27,11 +27,11 @@ In the Unity Editor, and on platforms other than Android and iOS, `StartTransact
 ```csharp
 using System.Collections.Generic;
 using Bugsee.Contracts.Apm;
+using BugseeSdk = Bugsee.Bugsee;
 
 using (var checkout = BugseeSdk.StartTransaction(
            "checkout", "user.flow", new Dictionary<string, object> { ["cart"] = 3 }))
 using (var pay = checkout.StartChild("payment", "charge card"))
-using BugseeSdk = Bugsee.Bugsee;
 {
     pay.SetAttribute("provider", "example-pay");
     // ... do the work ...
@@ -91,7 +91,7 @@ Set these launch options on `AndroidLaunchOptions` or `IOSLaunchOptions`. See [C
 | `PerformanceAdaptiveSampling` | Both | `bool` | `true` | Promote transactions that lost the random draw into the standalone upload, based on their status, duration and span-tree complexity. |
 | `PerformanceUploadMode` | Android | `string` | `"batched"` | How sampled transactions are uploaded: `"batched"` or `"realtime"`. The package drops it before an iOS launch. |
 
-Every transaction goes into reports, whatever the sampling options say. Sampling affects only the standalone upload. What that upload does is defined by the native SDKs. See [Android performance](/sdk/android/performance#sampling-and-upload-modes) and [iOS performance](/sdk/ios/performance#sampling).
+Every transaction goes into reports, whatever the sampling options say. Sampling affects only the standalone upload. On iOS the standalone upload is not active yet, so `PerformanceSampleRate` and `PerformanceAdaptiveSampling` have no effect there. What that upload does is defined by the native SDKs. See [Android performance](/sdk/android/performance#sampling-and-upload-modes) and [iOS performance](/sdk/ios/performance#sampling).
 
 ```csharp
 using Bugsee.Contracts.Options;
@@ -103,15 +103,15 @@ var options = new AndroidLaunchOptions
     PerformanceMonitoring = true,
     PerformanceSampleRate = 0.1f,
 };
+BugseeSdk.Launch("<your Android app token>", options);
 #elif UNITY_IOS
 var options = new IOSLaunchOptions
 {
     PerformanceMonitoring = true,
     PerformanceSampleRate = 0.1f,
 };
+BugseeSdk.Launch("<your iOS app token>", options);
 #endif
-
-BugseeSdk.Launch("<your_app_token>", options);
 ```
 
 ## Related pages

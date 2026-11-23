@@ -66,7 +66,7 @@ An `INetworkEvent` exposes these fields:
 | --- | --- |
 | `Url`, `Body`, `Size`, `ResponseCode`, `StatusText`, `ErrorShortMessage`, `ErrorDescription`, `Headers`, `IsOverride` (Android only) | `Id`, `Mechanism`, `Method`, `Stage` |
 
-The error texts can quote a URL, so redact them too if your URLs carry secrets. `Headers` returns a copy: assign the dictionary back to `Headers` after you change it.
+The error texts can quote a URL, so redact them too if your URLs carry secrets. On Android, `Headers` returns a copy, and on iOS it is live. Assign the dictionary back to `Headers` after you change it on both.
 
 ```csharp
 using System;

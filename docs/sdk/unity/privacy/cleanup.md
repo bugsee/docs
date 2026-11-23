@@ -45,7 +45,7 @@ In 7.x, `DeleteCollectedDataOnDevice` on Android also deletes the finished repor
 
 On iOS, the two narrower scopes keep the crashes that are not reported yet, so the next launch can still report them. On Android, the scopes map to `includingIntermediate` and `includingBundles` of the native call. See the native pages for the details.
 
-Pass the scope to the synchronous overload or to the async one:
+Pass the scope to the overload that returns nothing or to the async one:
 
 ```csharp
 using System.Threading.Tasks;
@@ -68,6 +68,7 @@ public static class UserData
 
     public static void ForgetCaptureOnly()
     {
+        // Returns before the data is deleted. Use the async form to wait for it.
         BugseeSdk.DeleteCollectedDataOnDevice(DeleteScope.CaptureOnly);
     }
 }

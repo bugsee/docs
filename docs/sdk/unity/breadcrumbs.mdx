@@ -28,11 +28,11 @@ using BugseeSdk = Bugsee.Bugsee;
 
 #if UNITY_ANDROID
 var options = new AndroidLaunchOptions { CaptureBreadcrumbs = true };
+BugseeSdk.Launch("<your Android app token>", options);
 #elif UNITY_IOS
 var options = new IOSLaunchOptions { CaptureBreadcrumbs = true };
+BugseeSdk.Launch("<your iOS app token>", options);
 #endif
-
-BugseeSdk.Launch("<your_app_token>", options);
 ```
 
 In the Unity Editor, and on platforms other than Android and iOS, breadcrumb calls do nothing.

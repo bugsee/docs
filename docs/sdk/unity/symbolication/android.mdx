@@ -25,7 +25,7 @@ When `BUGSEE_APP_TOKEN` is set in the Editor's environment and `BUGSEE_NO_SYMBOL
 
 The last two are covered in [Symbolication: C# code](/sdk/unity/symbolication/managed-code). A library that carries only dynamic symbols is not uploaded. That includes the Bugsee SDK's own native libraries and most third-party AARs, so a frame inside such a library stays a module name and an offset.
 
-The upload never fails the build. A missing token, a missing CLI or a failed upload logs a warning and the build continues.
+The upload never fails the build. A missing CLI or a failed upload logs a warning and the build continues. With no token the Android build uploads nothing and prints no warning. It logs an info line when an R8 mapping exists that was not uploaded.
 
 ## Public and Debugging symbols
 
@@ -57,7 +57,7 @@ The Debugging symbols file is larger than the Public one. The build warning ment
 - Handled managed exceptions in a Release IL2CPP build on Android without IL2CPP line information stay unsymbolicated (no file and line) when the symbols are Public. Use Debugging symbols plus the IL2CPP line map. Development builds send no addresses on Android, and Debugging symbols do not change that.
 - Switching the symbol level from Public to Debugging for the same `libil2cpp.so` build id may leave frames raw on the dashboard. This is open and under investigation ([issue 263](https://github.com/bugsee/bugsee-unity/issues/263)). Choose the symbol level before the first upload of a build, or change the code so the build id changes.
 
-The server skips a symbol it already has for a build id, and the CLI replaces a symbol table with debug information for the same build id only from CLI 0.8.1. See [Uploading debug information files](/cli/debug-files#native-elf). The package never passes `--force`.
+The server skips a symbol it already has for a build id. For how the CLI upgrades a symbol table to debug information for the same build id, see [Uploading debug information files](/cli/debug-files#native-elf). The package never passes `--force`.
 
 ## Unwind data for the Android 11 minidump path
 
@@ -77,7 +77,7 @@ The package patches the generated Gradle project; you do not add a Gradle templa
 | Unity and Android Gradle plugin (AGP) | What the package does |
 | --- | --- |
 | Unity 6 with AGP 8.6 or newer | Applies the Bugsee Gradle plugin 4.1.1 with `ndk { enabled = true }`. |
-| AGP below 8.6, for example Unity 2021.3 and 2022.3 | Does not apply the plugin, which needs AGP 8.6 or newer. On AGP 7.4.x and 8.0 to 8.5 it adds a small build-id block to the launcher instead. |
+| AGP below 8.6, for example Unity 2021.3 and 2022.3 | Does not apply the plugin, which needs AGP 8.6 or newer. On AGP 7.4.x and 8.0 to 8.5 it adds a small build-id block to a Groovy launcher file instead (none for a Kotlin DSL launcher). |
 
 In a build the Editor runs itself, the Gradle plugin finds no app token (the app gets its token from `Bugsee.Launch`), so its own uploads skip. The Editor's uploads in the table above do the work for every Unity version. See [Android build setup](/sdk/unity/build-setup/android) for the Player Settings checklist and the Gradle file layouts the patching understands.
 

@@ -61,6 +61,7 @@ var options = new AndroidLaunchOptions
     CaptureVideoFrameRate = FrameRate.Medium,
     CaptureVideoScale = 0.75f,
 };
+BugseeSdk.Launch("<your Android app token>", options);
 #elif UNITY_IOS
 var options = new IOSLaunchOptions
 {
@@ -69,9 +70,8 @@ var options = new IOSLaunchOptions
     CaptureVideoFrameRate = FrameRate.Medium,
     CaptureVideoScale = 0.75f,
 };
+BugseeSdk.Launch("<your iOS app token>", options);
 #endif
-
-BugseeSdk.Launch("<your_app_token>", options);
 ```
 
 The package drops the Android-only options before an iOS launch, and the iOS-only options before an Android launch.
@@ -183,7 +183,8 @@ At the end of each due frame the capturer calls `ScreenCapture.CaptureScreenshot
 ### What it records and what it does not
 
 - It records Unity's final composite, including screen-space overlay UI. Native Android views, such as WebViews, dialogs and system UI, are not in the video.
-- The SDK does not mask frames pushed this way: no secure views, no secure WebViews and no pixelation. The pusher blanks the rectangles you register with `Bugsee.AddSecureRectangle`. See [Secure rectangles](#secure-rectangles).
+- The SDK does not mask frames pushed this way: no secure views, no secure WebViews and no pixelation. The pusher blanks the rectangles you register with `Bugsee.AddSecureRectangle` and with `Bugsee.AddSecureScreenRectangle`. See [Secure rectangles](#secure-rectangles).
+- The pusher records Unity's surface even when its window sets `FLAG_SECURE`, and the package has no `FLAG_SECURE` handling for pushed frames. `CaptureRespectFlagSecure` does not blank them. Use secure rectangles or a blackout for what must stay out of the video.
 - Blackout is honored by the SDK.
 - `Bugsee.AddSecureWebView` has no effect while the pusher is the capture source.
 

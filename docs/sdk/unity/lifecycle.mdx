@@ -74,7 +74,7 @@ public class BugseeLifecycleExample : MonoBehaviour
 
 These calls do not wait for the native SDK. They are handed to the Unity main thread.
 
-- **Android**: a call from another thread is queued and never refused. `Launch`, `Relaunch` and `DeleteCollectedDataOnDevice` run one at a time, in request order. A queued `Launch` replaces earlier queued `Launch` and `Relaunch` requests. A `Relaunch` requested while another `Relaunch` is in flight joins it: it gets that relaunch's outcome, and its own options are ignored (a warning says so). `Stop` is not queued behind the others: it starts at once and drops every queued `Launch` and `Relaunch`. A `Stop` that arrives while a relaunch is stopping, or before its launch has begun, cancels the relaunch, and the relaunch completes `false`.
+- **Android**: a call from another thread is queued and never refused. `Launch`, `Relaunch` and `DeleteCollectedDataOnDevice` run one at a time, in request order. A queued `Launch` replaces the queued `Launch` and `Relaunch` requests that follow the last queued `DeleteCollectedDataOnDevice`. A queued `Relaunch` folds its options into the queued `Launch` or `Relaunch` before it. A `Relaunch` requested while another `Relaunch` is in flight joins it: it gets that relaunch's outcome, and its own options are ignored (a warning says so). `Stop` is not queued behind the others: it starts at once and drops every queued `Launch` and `Relaunch`. A `Stop` that arrives while a relaunch is stopping, or before its launch has begun, cancels the relaunch, and the relaunch completes `false`.
 - **iOS**: a call from another thread waits up to 5 seconds for the main thread to take it. If it does not, the request does not run and an error is logged: `LaunchAsync` and `RelaunchAsync` complete `false`, and `StopAsync` faults with `TimeoutException`. Stops and the delete's wipe run one at a time. A `Launch` or `Relaunch` requested while a stop or a wipe is in flight waits until the SDK reports it finished. A later `Launch` or `Relaunch` replaces the waiting one, and a later `Stop` or `DeleteCollectedDataOnDevice` cancels it.
 
 ### Deadlines
@@ -111,7 +111,7 @@ In the Unity Editor, `Launch` does nothing: `Status` is `Stopped`, `IsLaunched` 
 
 `Bugsee.DeleteCollectedDataOnDevice()` stops the SDK if needed, deletes the data it collected on the device, and leaves the SDK stopped. Call `Launch` again to resume. It returns nothing; a failure is only logged.
 
-To get the result, or to delete less, use `DeleteCollectedDataOnDeviceAsync(DeleteScope scope = DeleteScope.Everything)`, which returns `Task<bool>`, or the synchronous `DeleteCollectedDataOnDevice(DeleteScope scope)`.
+To get the result, or to delete less, use `DeleteCollectedDataOnDeviceAsync(DeleteScope scope = DeleteScope.Everything)`, which returns `Task<bool>`, or `DeleteCollectedDataOnDevice(DeleteScope scope)`, which returns before the data is deleted and has no result.
 
 | `DeleteScope` | Deletes | Keeps |
 | --- | --- | --- |
@@ -185,6 +185,8 @@ The constants mirror the Android SDK's list. The native SDKs decide which events
 ## iOS early launch
 
 If you turned on iOS native early launch at export, the SDK starts at app launch, before the first scene, and the first `Bugsee.Launch` adopts that running session instead of starting a second one. See [iOS build setup](/sdk/unity/build-setup/ios#early-launch).
+
+Known issue: after an iOS launch that died before the app became active, the next launch can block the main thread for up to about 8 seconds. An app that uses early launch can hit it. Details are in the early launch section of the [iOS build setup](/sdk/unity/build-setup/ios#early-launch).
 
 ## Related pages
 

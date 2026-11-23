@@ -9,7 +9,7 @@ slug: "/sdk/unity/privacy/logs"
 This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
 :::
 
-Log lines often carry more than you meant to share: a token in a URL, an e-mail address in a debug message, a payload dumped while a feature was being built. Bugsee records the Unity console output, the native logs of the app, and the lines you send with `Bugsee.Log`. See [Console logs](/sdk/unity/logs) for where each comes from. This page covers how to keep sensitive data out of them.
+Log lines often carry more than you meant to share: a token in a URL, an email address in a debug message, a payload dumped while a feature was being built. Bugsee records the Unity console output, the native logs of the app, and the lines you send with `Bugsee.Log`. See [Console logs](/sdk/unity/logs) for where each comes from. This page covers how to keep sensitive data out of them.
 
 The filter and the options forward to the native SDKs. For their behavior, see [Android log privacy](/sdk/android/privacy/logs) and [iOS log privacy](/sdk/ios/privacy/logs).
 
@@ -50,7 +50,7 @@ The Unity log and logcat both need `CaptureLogs`.
 
 | Platform | `CaptureLogsLevel` applies to |
 | --- | --- |
-| Android | The lines the SDK reads from logcat. It does not apply to the lines you send with `Bugsee.Log`, which are recorded whatever their level. |
+| Android | The lines the SDK reads from logcat. It does not apply to the lines you send with `Bugsee.Log`, which are recorded whatever their level, or to the Unity console lines the package forwards. To keep personal data out of those, use a log filter. |
 | iOS | Every line the SDK records, including the lines you send with `Bugsee.Log`. |
 
 To keep a particular line out of a report whatever the level, use a log filter.
@@ -132,7 +132,7 @@ public static class SafeLog
 
 - The `level` default of `Bugsee.Log(string, LogLevel)` is `LogLevel.Info`.
 - A line you send with `requiresFiltering` set to `true` is filtered even with `CaptureLogs` off.
-- On iOS, a line below `CaptureLogsLevel` never reaches the filter. On Android, the level applies only to the logcat lines.
+- On iOS, a line below `CaptureLogsLevel` never reaches the filter. On Android, the level applies only to the logcat lines, not to the Unity console lines the package forwards.
 - Do not call `Bugsee.Log(..., true)` from inside the log filter. On Android the filter runs during the call, so it recurses.
 - The call does nothing for a null message, and before the SDK is launched.
 

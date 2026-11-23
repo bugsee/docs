@@ -54,6 +54,8 @@ These options are off by default. Each one records data you may not want in a re
 
 :::warning[iOS early launch starts before your consent check]
 If you turn on the optional iOS early launch at build time, the iOS SDK starts natively before any C# code runs, so before any consent check of yours, and even if your app never calls `Bugsee.Launch`. Do not turn it on if Bugsee must wait for user consent. See [iOS build setup](/sdk/unity/build-setup/ios).
+
+With early launch, options you pass to `Bugsee.Launch` that differ from the early options are logged and not applied. A privacy option you set in C#, such as `CaptureNetwork = false` or `CaptureLogs = false`, is ignored: put it in the early launch options. Filters and the report handler are set from C# later, so what the SDK captures before you set them is not filtered.
 :::
 
 The optional iOS [Crash Report Extension](/sdk/unity/issue-detection/crash-report-extension) is a separate component. Read its page before you add it to an app that asks for consent.
@@ -82,8 +84,9 @@ Two features send data without a report, and only when your app calls them:
 - **Install filters and the report handler before `Bugsee.Launch`.** A filter applies to what is recorded after you set it. Set the log, network and breadcrumb filters and the report handler at the top of your startup code.
 - **Filters and the report handler run on the Unity main thread.** The native SDKs can call them on other threads, and the package hands each call to the main thread. While the app is in the background, Unity's loop is paused, and filter calls wait until it resumes.
 - **A filter that throws drops the event.** The package drops an event when your filter throws an exception. It does not record the event unfiltered.
+- **A report handler that throws does not drop the report.** The package logs the exception and the report continues without your edits (on iOS every edit except a screenshot change is dropped). A redaction handler that throws uploads the report unredacted. Catch exceptions inside the handler and call `completionCallback()` in a `finally` block. See [Privacy: Report](/sdk/unity/privacy/report).
 - **A network filter turns the built-in network redaction off.** Run `Bugsee.ApplyDefaultNetworkSanitizer` first in your filter to keep it. See [Privacy: Network](/sdk/unity/privacy/network).
-- **The report handler is not a redaction boundary for every report.** It is skipped for a report that is created while the process is terminating, and it cannot remove the video, the logs or the network traffic from a report. See [Privacy: Report](/sdk/unity/privacy/report).
+- **The report handler is not a redaction boundary for every report.** It is skipped for a report that is created while the process is terminating, it uploads the report unredacted if it throws, and it cannot remove the video, the logs or the network traffic from a report. See [Privacy: Report](/sdk/unity/privacy/report).
 - **Secure rectangles cover Unity content.** Unity draws its UI itself, so the native secure views and the automatic masking of native password fields do not know your Unity elements. Register a rectangle for each one. See [Privacy: Video](/sdk/unity/privacy/video).
 
 ## Native references

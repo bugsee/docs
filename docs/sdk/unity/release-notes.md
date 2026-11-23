@@ -13,7 +13,7 @@ Release history for Bugsee Unity SDK 7.x, the package `com.bugsee.unity`. Lookin
 
 Each release lists the native SDKs it is built on. Their own changes are in the native SDK release notes: [Android](/sdk/android/release-notes) and [iOS](/sdk/ios/release-notes).
 
-## 7.0.0-beta.1 (November 23 2026)
+## 7.0.0-beta.1 (November 23, 2026)
 
 The first beta of the 7.x line, which continues the sequence from 6.x. It is a new package with a new C# API, built on Bugsee Android SDK 7.6.0 and Bugsee iOS SDK 7.1.0. It is a beta: it can contain rough edges, and the API can change in later betas.
 
@@ -40,8 +40,7 @@ The [migration guide](/sdk/unity/migration) lists every change from 6.x, with th
 
 **Added**
 
-- **`CrashSignals` reaches Android.** It is a shared launch option now (it was iOS only). On Android it is read by the NDK module. A mask meant only for iOS, such as `CrashSignals.None`, also narrows native signal capture on Android: leave it out of the Android options to keep every signal.
-- **`DeleteScope` and `DeleteCollectedDataOnDeviceAsync`.** `Bugsee.DeleteCollectedDataOnDeviceAsync(DeleteScope scope = DeleteScope.Everything)` returns a `Task<bool>`, and `DeleteCollectedDataOnDevice(DeleteScope scope)` is the synchronous form. On Android, `DeleteCollectedDataOnDevice()` also deletes finished reports that were not uploaded yet, and stops the SDK first. Use `DeleteScope.CaptureAndIntermediate` to keep them. See [Lifecycle & status](/sdk/unity/lifecycle#delete-collected-data).
+- **`DeleteScope` and `DeleteCollectedDataOnDeviceAsync`.** `Bugsee.DeleteCollectedDataOnDeviceAsync(DeleteScope scope = DeleteScope.Everything)` returns a `Task<bool>`, and `DeleteCollectedDataOnDevice(DeleteScope scope)` is the fire-and-forget form: it returns before the data is deleted and has no result, and a failure is only logged. Use `DeleteCollectedDataOnDeviceAsync` when you need to know that the delete finished. On Android, `DeleteCollectedDataOnDevice()` also deletes finished reports that were not uploaded yet, and stops the SDK first. Use `DeleteScope.CaptureAndIntermediate` to keep them. See [Lifecycle & status](/sdk/unity/lifecycle#delete-collected-data).
 - **`IReport.Severity` is `IssueSeverity?`.** `null` is unset.
 - **Typed options.** Android options such as `MaxDataSize` and iOS options such as `CrashSignals`, `CaptureOnDeviceSymbolication`, `CrashSwiftAsyncStackTraces`, `CrashFillEmptyExceptionStacks` and `CaptureWebSocket` have typed properties and `Options` constants. They were reachable only through `SetCustomOption`.
 - **`CaptureUnobservedTaskExceptions`.** A Unity-only option, `true` by default, that needs `CaptureManagedExceptions`. Set it to `false` to stop reporting `TaskScheduler.UnobservedTaskException` as a handled error.
@@ -52,10 +51,11 @@ The [migration guide](/sdk/unity/migration) lists every change from 6.x, with th
 
 **Changed**
 
+- **`CrashSignals` reaches Android.** It is a shared launch option with a typed property. Before, the iOS key was reachable only through `SetCustomOption` and was not sent to Android. On Android it is read by the NDK module. A mask meant only for iOS, such as `CrashSignals.None`, also narrows or switches off native signal capture on Android when the NDK module is present, for example when iOS and Android share one options object. Leave it out of the Android options to keep every signal. See [Configuration](/sdk/unity/configuration#crashsignals).
 - **Native SDKs moved to Android SDK 7.6.0 and iOS SDK 7.1.0.** Their option defaults changed: see the shake and notification-bar item under Breaking changes.
 - **Feedback is opt-in and works when on.** Add the scripting define `BUGSEE_FEEDBACK` (or set the environment variable `BUGSEE_FEEDBACK=1` for the export) to link the feedback add-on. See [Feedback](/sdk/unity/feedback).
 - **Android symbols.** The Editor's upload of Unity's `symbols.zip` now gives `libunity.so`, `libil2cpp.so` and `libmain.so` the unwind tables that Unity strips from that copy, taken from the same-build-id libraries in the built APK or AAB.
-- **Android launch and iOS launch options** are checked against the option manifests the native SDKs publish.
+- **Option constants.** The package's tests check the `Options` constants against the option manifests that the native SDKs publish.
 - **`Relaunch` and `RelaunchAsync` replace the whole option set** on both platforms. Pass the full set again. See [Lifecycle & status](/sdk/unity/lifecycle).
 - **Breadcrumbs and log lines.** `CaptureBreadcrumbs` is off by default on both native SDKs, so `Bugsee.AddBreadcrumb` records nothing until you set it. `Bugsee.Log(message, level)` lines skip the log filter on both platforms.
 - **`ResetVideoCapturePermission()` on iOS** logs a warning once, because iOS has no capture permission to reset.
@@ -75,7 +75,7 @@ The [migration guide](/sdk/unity/migration) lists every change from 6.x, with th
 - Android, Windows: a build output under a path over 260 characters no longer breaks the symbol upload's reads or uploads a mapping under a wrong build id.
 - The Bugsee Editor assembly compiles in an Editor without iOS Build Support.
 - The build-output scans no longer stop at one bad folder or hide it silently.
-- `BUGSEE_NO_SYMBOL_UPLOAD` also turns off the IL2CPP line map upload, on iOS as well, as it does for the R8 mapping and native symbol uploads.
+- iOS: `BUGSEE_NO_SYMBOL_UPLOAD` also turns off the IL2CPP line map upload, as it does for the R8 mapping and native symbol uploads. Before, the line map upload ran when a token was set even with the switch set.
 - The symbol upload also sends the native libraries that Unity's `symbols.zip` does not hold, when they are the build's own and still carry symbols.
 - The client signature of a managed exception no longer depends on the Java call site on Android, and is the same recipe on both platforms.
 - `Bugsee.Trace` with a map, list or array records the same JSON on both platforms (at most 8192 UTF-16 units). On Android, maps, lists and arrays you pass to the SDK are sent as JSON text and not as their type name.

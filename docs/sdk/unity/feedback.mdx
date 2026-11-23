@@ -40,7 +40,7 @@ If your project declares the Bugsee Android SDK itself (EDM4U, a custom Gradle t
 
 ### iOS requirements
 
-The iOS add-on needs iOS 15 or later.
+The iOS add-on needs iOS 15 or later. It is not linked when the build uses a local SDK package instead of the published one: the export logs a warning and `Bugsee.Feedback` does nothing in that build.
 
 An export that appends to an existing Xcode project with the switch off removes the `feedback-spm` link, including one you added by hand. Keep the define on, or link the package in a target of your own.
 

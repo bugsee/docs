@@ -50,6 +50,7 @@ var options = new AndroidLaunchOptions
     CaptureNetworkBodySizeLimit = 64 * 1024,
     CaptureNetworkOnLaunch = true,
 };
+BugseeSdk.Launch("<your Android app token>", options);
 #elif UNITY_IOS
 var options = new IOSLaunchOptions
 {
@@ -57,9 +58,8 @@ var options = new IOSLaunchOptions
     CaptureNetworkBodySizeLimit = 64 * 1024,
 };
 options.SetCustomOption(Options.CaptureNetworkOnLaunch, true);
+BugseeSdk.Launch("<your iOS app token>", options);
 #endif
-
-BugseeSdk.Launch("<your_app_token>", options);
 ```
 
 To turn network capture off, set `CaptureNetwork = false`. See [Privacy: network](/sdk/unity/privacy/network).
@@ -164,7 +164,7 @@ BugseeSdk.SetNetworkEventFilter(e =>
 Keep these rules in mind:
 
 - **Do not keep the event.** The event is valid only inside the callback. Using it afterward throws `ObjectDisposedException` on Android.
-- **Assign `Headers` back.** On Android, `Headers` returns a copy, so editing the returned dictionary in place does not change the event. Assign the edited dictionary to `e.Headers`.
+- **Assign `Headers` back.** On Android, `Headers` returns a copy, so editing the returned dictionary in place does not change the event. On iOS it is live. Assign the edited dictionary to `e.Headers` on both.
 - **A filter that throws drops the event.** The SDK records nothing for that event.
 - **The filter runs on the Unity main thread.** On Android the SDK calls it on its own threads and the package hands each call to the main thread, which processes its queue in `Update`. While the app is in the background Unity's loop is paused, so the call waits until the app resumes.
 - **A filter that blocks forever blocks the main thread.** Keep it short.
@@ -184,7 +184,7 @@ BugseeSdk.SetNetworkEventFilter(e =>
     // rather than record it unredacted.
     if (!BugseeSdk.ApplyDefaultNetworkSanitizer(e)) return null;
 
-    e.Url = e.Url.Replace("/internal/", "/x/");
+    if (e.Url != null) e.Url = e.Url.Replace("/internal/", "/x/");
     return e;
 });
 ```
