@@ -115,12 +115,12 @@ Upload source maps for your function bundle so stack traces are readable. See [S
 ## Verify
 
 1. Deploy the function (or run it locally) with the token set.
-2. Trigger an error in the handler:
+2. Trigger an error in the handler of the Launch example, keeping `export const config = { runtime: 'edge' }` and the default export:
 
 ```ts
-fetch: withBugseeFetch(bugsee, async () => {
+export default withBugseeFetch(bugsee, async () => {
   throw new Error('Bugsee test error');
-}),
+});
 ```
 
 3. Open the Bugsee dashboard. The report appears with the request context and the captured logs.

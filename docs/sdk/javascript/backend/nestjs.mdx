@@ -62,10 +62,16 @@ import { AppModule } from './app.module';
 
 launch('<your_app_token>');
 
-const app = await NestFactory.create(AppModule);
-setupNest(app);
-await app.listen(3000);
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  setupNest(app);
+  await app.listen(3000);
+}
+
+void bootstrap();
 ```
+
+`launch()` returns the client directly on Node.js, so it needs no `await`. The `bootstrap` function keeps the example valid in a CommonJS project, where top-level `await` is not available.
 
 ## What it does
 
