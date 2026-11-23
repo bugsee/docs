@@ -219,7 +219,7 @@ These options apply to `@bugsee/bugsee` on Node.js, to `@bugsee/bun`, and to the
 | `captureLocalVariables` | `boolean \| object` | `false` | Capture the local variables in scope at a throw, onto the stack frames. Always off on Bun. |
 | `captureSourceContext` | `boolean \| object` | `false` | Attach the source lines around each throwing application frame. It uploads your source code, so it is opt-in. |
 
-`captureLocalVariables` costs about 3% steady-state because it enables the V8 debugger, and pausing on caught exceptions costs more on every throw. Variable names that look sensitive are redacted and values are truncated, but a variable can still hold personal data. Pass an object to tune it:
+`captureLocalVariables` costs about 3% steady-state in internal benchmarks (approximate, not repeated for every release) because it enables the V8 debugger, and pausing on caught exceptions costs more on every throw. Variable names that look sensitive are redacted and values are truncated, but a variable can still hold personal data. Pass an object to tune it:
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
