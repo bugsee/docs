@@ -32,7 +32,7 @@ A Unity Editor started from the Hub or the Finder does not inherit your shell's 
 | Variable | Platform | Default | What it does |
 | --- | --- | --- | --- |
 | `BUGSEE_CLI_PATH` | Android, iOS | Unset | The `bugsee-cli` binary to use, as a path or a command name on `PATH`. The Editor, the iOS Run Script and the Gradle plugin of an exported project all read it. The Editor warns when the CLI at a path it names is older than 0.8.1. It does not warn for a bare command name. |
-| `BUGSEE_CLI_VERSION` | Android, iOS | The default CLI version the package downloads (see the release notes) | The CLI release to download. A leading `v` is ignored. A value that is not a release version, or is older than 0.8.1, is ignored with a warning. For the Mono step, a value below 0.9.0 is ignored. The Run Script looks for this release in the cache first. |
+| `BUGSEE_CLI_VERSION` | Android, iOS | The default CLI version the package downloads (see the release notes) | The CLI release to download. A leading `v` is ignored. A value that is not a release version, or is older than 0.8.1, is ignored with a warning. For the Mono step, a value below 0.9.0 is ignored. The Run Script looks for this release in the cache first, and its minimum is 0.8.0, not the Editor's 0.8.1. |
 | `BUGSEE_NO_CLI_DOWNLOAD` | Android | Unset | Flag. The Editor does not download a CLI. Without a token the Editor never downloads. |
 | `BUGSEE_CLI_BASE_URL` | Android | `https://download.bugsee.com/cli` | A mirror to download the CLI from. HTTPS only. |
 
@@ -41,7 +41,7 @@ A Unity Editor started from the Hub or the Finder does not inherit your shell's 
 | Variable | Platform | Default | What it does |
 | --- | --- | --- | --- |
 | `BUGSEE_NO_IL2CPP_MAPPING` | Android, iOS | Unset | Flag. Turns off the IL2CPP line map flags and the line map upload. The iOS Run Script reads it too, and still uploads the dSYMs. |
-| `BUGSEE_IL2CPP_MAPPING` | Android, iOS | Unset | Path to a `LineNumberMappings.json` of your own to upload instead of the build's. Set it, and `BUGSEE_APP_TOKEN`, in the Unity Editor's environment before the build: the Editor reads it, and a Run Script in Xcode does not. A missing file gives a warning and no upload. |
+| `BUGSEE_IL2CPP_MAPPING` | Android, iOS | Unset | Path to a `LineNumberMappings.json` of your own to upload instead of the build's. Set it, and `BUGSEE_APP_TOKEN`, in the Unity Editor's environment before the build: the Editor reads it, and a Run Script in Xcode does not. On Android, a missing file gives a warning and no upload. On an iOS export it gives a warning and the Editor writes no pointer, so the Xcode Run Script then looks for the exported build's own line map. |
 | `BUGSEE_IL2CPP_UUIDS` | Android, iOS | Read from the build | The IL2CPP module UUIDs, comma separated, for the line map upload. The iOS Run Script reads it from the Xcode environment. |
 | `BUGSEE_SKIP_UPLOAD_ON_DEBUG` | iOS | Unset | Set to `1` in the Xcode environment to skip the upload for the Debug configuration. |
 | `BUGSEE_NO_DSYM_FORCE` | iOS | Unset | Flag. The export keeps Unity's `DEBUG_INFORMATION_FORMAT` and does not force `dwarf-with-dsym`. The Debug configuration then has no dSYM. |

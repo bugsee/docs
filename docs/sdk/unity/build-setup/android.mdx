@@ -44,7 +44,7 @@ The Bugsee Gradle plugin needs AGP 8.6 and Gradle 8.7 or later. The package read
 | --- | --- | --- |
 | 8.6 or later | Unity 6 | The Bugsee Gradle plugin and `bugsee { ndk { enabled = true } }` in the launcher module. |
 | 7.4.x and 8.0 to 8.5 | Unity 2021.3 and 2022.3 (AGP 7.4.x) | No plugin. The package adds a small Gradle task to a Groovy launcher file that writes the build id asset, and the Editor uploads symbols itself. A Kotlin DSL launcher gets no task. |
-| Older than 7.4, or unreadable | Early Unity 2021.3 patch releases ship an older AGP | No plugin and no build id task. The build logs an info line when it can read the AGP version, and a warning when it cannot. |
+| Older than 7.4, or unreadable | Early Unity 2021.3 patch releases ship an older AGP | No plugin and no build id task. The build logs an info line when it can read the AGP version, and a warning when it cannot. Without the build id task, the SDK derives the build id from your token, version name and version code, so bump the version code for a minified build whose obfuscation changed. |
 
 On the older AGPs, the plugin functions that the package recovers are these:
 

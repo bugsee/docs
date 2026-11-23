@@ -38,7 +38,7 @@ BugseeSdk.SetReportHandler(new MyReportHandler());
 ```
 
 - A new handler replaces the previous one. `SetReportHandler(null)` removes it.
-- Register the handler before you call `Bugsee.Launch`. The native iOS SDK files the crash of the previous run while it launches, and a handler registered later does not see that report.
+- Register the handler before you call `Bugsee.Launch`. The native iOS SDK files the crash of the previous run while it launches, and a handler registered later does not see that report. With iOS early launch on, a handler registered from C# never sees it, so do not rely on a report handler to redact it. See [Crash Report Extension](/sdk/unity/issue-detection/crash-report-extension#ios-native-early-launch).
 - In the Unity Editor there is no report handler, so nothing calls yours.
 
 `IReportHandler` has two methods, and both have the signature `(IReport report, bool isTerminating, Action completionCallback)`:
@@ -48,7 +48,7 @@ BugseeSdk.SetReportHandler(new MyReportHandler());
 | `OnBeforeReportCreated` | First, before the report is assembled. For a report from the dialog, before the dialog opens on iOS. |
 | `OnAfterReportCreated` | Later in the pipeline, before upload. For a dialog report on iOS, after the player sends it. |
 
-The exact order differs a little between platforms: see the native pages above. Use the "before" callback to change summary, severity, labels and attributes. Use the "after" callback to add attachments and to redact the description and email: for a dialog report on iOS, the text the player typed exists only there.
+The exact order differs a little between platforms: see the native pages above. Use the "before" callback to change severity and attributes. Use the "after" callback to add attachments and to redact the summary, description, labels and email: for a dialog report on iOS, what the player typed exists only there.
 
 ## Complete the callback
 

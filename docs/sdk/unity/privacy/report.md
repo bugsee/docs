@@ -71,8 +71,11 @@ public sealed class RedactingReportHandler : ReportHandlerBase
     {
         // Strip what the user may have typed into the report dialog.
         report.Email = null;
+        if (report.Summary != null)
+            report.Summary = CardNumber.Replace(report.Summary, "[CARD]");
         if (report.Description != null)
             report.Description = CardNumber.Replace(report.Description, "[CARD]");
+        report.ClearLabels();
 
         // Keep an attribute off the report.
         report.RemoveAttribute("session_token");

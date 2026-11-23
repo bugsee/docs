@@ -9,7 +9,7 @@ slug: "/sdk/unity/privacy/overview"
 This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
 :::
 
-Bugsee does not stream data continuously. The SDK keeps what it records in a rolling buffer on the device, as long as the `Duration` launch option (60 seconds by default on both platforms), and sends it only when a report is created: by a crash or another issue Bugsee detects, from the report dialog, or from your code. The shake trigger and the Android notification-bar trigger are off by default in 7.x. In 6.x, the Android shake trigger and the Android notification-bar trigger were on, and the iOS shake trigger was off.
+Bugsee does not stream data continuously. The SDK keeps what it records in a rolling buffer on the device, as long as the `Duration` launch option (60 seconds by default on both platforms), and sends it only when a report is created: by a crash or another issue Bugsee detects, from the report dialog, or from your code. The shake trigger and the Android notification-bar trigger are off by default in 7.x. In 6.x, the Android shake trigger and the Android notification-bar trigger were on, the iOS shake trigger was off, and the iOS screenshot trigger was on (it is off in 7.x too).
 
 The data in a report (screen video, touches, console logs, network traffic, breadcrumbs, attributes and the text a user types into the report dialog) can contain personal data. It is the responsibility of your application to keep sensitive data out of reports before they leave the device. Bugsee gives you a control at each point where data is recorded.
 
