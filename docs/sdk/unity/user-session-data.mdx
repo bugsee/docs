@@ -1,0 +1,114 @@
+---
+title: "User & session data"
+description: "Attach a user identifier and custom attributes to every Bugsee report in the Unity SDK 7.x: SetUserIdentifier, SetAttribute, GetAllAttributes, accepted value types and limits."
+sidebar_position: 11
+slug: "/sdk/unity/user-session-data"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+When you know who is using the game, or something about the session, attach it to every report. Issues in the dashboard can be searched by these values.
+
+## User identity
+
+Set a user identifier, such as an account id or an email address, and Bugsee adds it to every report from then on. If the value is an email address, the server may link the report to an existing user.
+
+```csharp
+using BugseeSdk = Bugsee.Bugsee;
+
+
+BugseeSdk.SetUserIdentifier("name@example.com");
+
+// null when none is set
+string identifier = BugseeSdk.GetUserIdentifier();
+
+BugseeSdk.ClearUserIdentifier();
+```
+
+- `Bugsee.SetUserIdentifier(string)` with `null` or an empty string clears the identifier, like `ClearUserIdentifier`.
+- `Bugsee.GetUserIdentifier()` returns `null` when no identifier is set.
+- There is no separate email API on the `Bugsee` class in 7.x. The identifier replaces the 6.x email calls. To set the email of a single report, use `IReport.Email` in a [report handler](/sdk/unity/report-handler).
+- On iOS the identifier persists across launches until you clear it. For Android, see [Android user & session data](/sdk/android/user-session-data).
+
+## User and session attributes
+
+Attributes are arbitrary key-value pairs, such as a plan name, a feature flag or a count, attached to every report.
+
+```csharp
+using BugseeSdk = Bugsee.Bugsee;
+
+
+BugseeSdk.SetAttribute("name", "John Doe");
+BugseeSdk.SetAttribute("age", 23);
+BugseeSdk.SetAttribute("married", true);
+BugseeSdk.SetAttribute("score", 12.5);
+
+object age = BugseeSdk.GetAttribute("age");   // 23L, null when not set
+```
+
+### Accepted values
+
+`Bugsee.SetAttribute(string key, object value)` accepts:
+
+| Value | Limit |
+| --- | --- |
+| `string` | At most 1024 UTF-16 units. |
+| `bool` | None. |
+| Integer types (`sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`) | Within the signed 64-bit range. |
+| `float`, `double`, `decimal` | Finite and below 2^63 in magnitude. |
+
+The key must not be empty. Any other value, including `null`, throws `ArgumentException`. The call also throws `ArgumentException` if the SDK drops the attribute after you set it, for example because it exceeds the native size limits.
+
+Native limits apply on top. Each attribute is limited to about 1 KB and all attributes together to about 25 KB. See [Android user & session data](/sdk/android/user-session-data) and [iOS user & session data](/sdk/ios/user-session-data).
+
+:::note[Attribute values read back as `long` and `double`]
+`Bugsee.GetAttribute` returns the kind that was set: `string`, `bool`, `long` or `double`. Every integer reads back as `long` and floating-point values as `double`, on both platforms, whatever width you set. A value set as `1.0` stays floating. In 7.0.0-beta.1 Android returns `long` and `double` as iOS does. Replace `(int)` unboxing with `Convert.ToInt32` or `(long)`.
+:::
+
+### Read attributes
+
+```csharp
+using System.Collections.Generic;
+using BugseeSdk = Bugsee.Bugsee;
+
+// A read-only snapshot, never null, empty when no attribute is set.
+IReadOnlyDictionary<string, object> all = BugseeSdk.GetAllAttributes();
+
+foreach (var pair in all)
+{
+    UnityEngine.Debug.Log(pair.Key + " = " + pair.Value);
+}
+```
+
+`Bugsee.GetAllAttributes()` returns each value typed as `GetAttribute` reads it. The snapshot does not change when attributes change later. A container set natively reads as a nested dictionary or list on Android and as JSON text on iOS.
+
+### Clear attributes
+
+```csharp
+using BugseeSdk = Bugsee.Bugsee;
+
+
+// One attribute
+BugseeSdk.ClearAttribute("name");
+
+// All of them
+BugseeSdk.ClearAllAttributes();
+```
+
+Attributes persist across launches until you clear them or the app is uninstalled.
+
+### Attributes on a single report
+
+The calls above set attributes on every report. To set one on a single report, use `IReport.SetAttribute` on the report itself, in a [report handler](/sdk/unity/report-handler) or on a report you build with `Bugsee.CreateReport()`. See [Bug reporting](/sdk/unity/manual/bug-reporting).
+
+## In the Editor
+
+In the Unity Editor, and on platforms other than Android and iOS, the calls do not reach an SDK. `SetAttribute` still validates its arguments and throws for a bad key or value. `GetAttribute` returns `null` and `GetAllAttributes` returns an empty dictionary.
+
+## Related pages
+
+- [Custom events & traces](/sdk/unity/events-and-traces)
+- [Report handler](/sdk/unity/report-handler)
+- [Breadcrumbs](/sdk/unity/breadcrumbs)

@@ -1,0 +1,112 @@
+---
+title: "Feedback"
+description: "Add the in-app feedback chat to a Unity game with Bugsee SDK 7.x: turn the add-on on for a build, open the chat, set the greeting, and listen for messages with Bugsee.Feedback."
+sidebar_position: 18
+slug: "/sdk/unity/feedback"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+Bugsee includes an in-app chat that lets your players talk to your support team and developers. The chat is a native UI that opens over your game. In 7.x it is an opt-in add-on: the native SDKs ship it as a separate module, and the Unity package links it into your build only when you ask. An app that does not use the chat carries no chat code.
+
+For what the chat does and how replies reach your team, see the native pages: [Android feedback](/sdk/android/feedback) and [iOS feedback](/sdk/ios/feedback).
+
+## Turn the add-on on
+
+Choose one of these, then rebuild:
+
+- Add the scripting define `BUGSEE_FEEDBACK` in **Player Settings > Other Settings > Scripting Define Symbols**, for Android, iOS or both.
+- Set the environment variable `BUGSEE_FEEDBACK=1` (or `true`) for the build. This is the way to do it on CI.
+
+Where the Editor reads the switch:
+
+- The define is read from Player Settings for the build platform. On Unity 6, it is also read from the defines of the active build profile. A define passed only through `BuildPlayerOptions.extraScriptingDefines` is not seen.
+- The environment variable is read by the Editor process while it exports the build, not by a later Gradle or Xcode run.
+
+What the build adds:
+
+| Platform | What is added |
+| --- | --- |
+| Android | `com.bugsee:bugsee-android-feedback`, at the version of the Android SDK the package pins, is declared in the generated `unityLibrary/build.gradle` next to the core and NDK artifacts. |
+| iOS | The Xcode export links the `BugseeFeedback` product of [`bugsee/feedback-spm`](https://github.com/bugsee/feedback-spm) into `UnityFramework`, at the same version as the iOS SDK the package pins. |
+
+### Android requirements
+
+The Android add-on needs Android Gradle plugin 8.1.1 or later and `compileSdk` 35 or later. Unity 2021.3 and 2022.3 generate an older Gradle plugin (4.0.1 to 7.4.2), and an older Target API Level gives an older `compileSdk`. When the define is on and the project cannot build the add-on, the Android build fails with a message that names the reason, instead of failing later in Gradle. Use Unity 6 with a Target API Level of 35 or newer.
+
+If your project declares the Bugsee Android SDK itself (EDM4U, a custom Gradle template), the export does not add the add-on and warns that it did not. Declare `com.bugsee:bugsee-android-feedback` at the same version as the core artifact next to it. A project that declares the add-on itself does not need the define.
+
+### iOS requirements
+
+The iOS add-on needs iOS 15 or later. It is not linked when the build uses a local SDK package instead of the published one: the export logs a warning and `Bugsee.Feedback` does nothing in that build.
+
+An export that appends to an existing Xcode project with the switch off removes the `feedback-spm` link, including one you added by hand. Keep the define on, or link the package in a target of your own.
+
+## Show the chat
+
+`Bugsee.Feedback` is a property of type `IFeedback`. Open the chat from your own UI, for example a "Contact support" button, after `Bugsee.Launch`:
+
+```csharp
+using BugseeSdk = Bugsee.Bugsee;
+
+public void OnContactSupportClicked()
+{
+    BugseeSdk.Feedback.ShowFeedbackUi();
+}
+```
+
+`IFeedback` has three members:
+
+| Member | What it does |
+| --- | --- |
+| `ShowFeedbackUi()` | Opens the native feedback chat over the game. Needs the add-on and a launched SDK. |
+| `SetDefaultGreeting(string greeting)` | Sets the greeting shown at the top of an empty conversation. `null` clears it. |
+| `SetListener(IFeedbackListener listener)` | Receives new and sent messages. `null` removes the listener. |
+
+## Greeting and messages
+
+```csharp
+using System.Collections.Generic;
+using Bugsee.Contracts.Feedback;
+using UnityEngine;
+using BugseeSdk = Bugsee.Bugsee;
+
+sealed class SupportChatListener : IFeedbackListener
+{
+    public void OnNewMessagesReceived(IReadOnlyList<string> newMessages)
+    {
+        Debug.Log("Support replied: " + newMessages.Count + " new message(s).");
+    }
+
+    public void OnNewMessageSent(string message)
+    {
+        Debug.Log("Message sent.");
+    }
+}
+
+// After BugseeSdk.Launch:
+BugseeSdk.Feedback.SetDefaultGreeting("Hi! How can we help?");
+BugseeSdk.Feedback.SetListener(new SupportChatListener());
+```
+
+`OnNewMessagesReceived` and `OnNewMessageSent` are called on Unity's main thread.
+
+## Without the add-on
+
+Without the add-on, each of the three members does nothing, and the wrapper logs a warning once per process that says how to turn the add-on on.
+
+On Android, when the add-on is in the app but the SDK has no feedback extension registered (for example because Bugsee is not launched), the call does nothing and logs a warning.
+
+In the Unity Editor and in players for other platforms, the members do nothing and log once. Test the chat on an Android or iOS device.
+
+## Colors of the chat
+
+The colors of the chat are set through `Bugsee.Appearance` with the keys of `FeedbackAppearance`. They are independent of the add-on switch and only affect a chat that is present. On iOS, only some of the colors apply. See [Appearance](/sdk/unity/appearance#feedback-colors).
+
+## Related pages
+
+- [Appearance](/sdk/unity/appearance): the report and chat colors.
+- [User & session data](/sdk/unity/user-session-data): the user identifier and attributes.
+- [Build setup: Android](/sdk/unity/build-setup/android) and [Build setup: iOS](/sdk/unity/build-setup/ios).

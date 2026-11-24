@@ -2,12 +2,16 @@
 title: "Privacy and video"
 description: "Disable video recording or hide sensitive screen regions in Unity using secure rectangles and pause/resume APIs."
 sidebar_position: 1
-slug: "/sdk/unity/privacy/video"
+slug: "/sdk/unity/v6/privacy/video"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Unity SDK **6.x**, the current stable release. The new **7.x** SDK is in beta: see [Migrating from 6.x to 7.x](/sdk/unity/migration) to evaluate it, or the [7.x overview](/sdk/unity/overview) to start a new integration.
+:::
 
 ## Disabling video
 
-Video recording can be disabled completely using **VideoEnabled** launch option. See [configuration](/sdk/unity/configuration/) for more info.
+Video recording can be disabled completely using **VideoEnabled** launch option. See [configuration](/sdk/unity/v6/configuration/) for more info.
 
 ## Protecting by coordinates
 

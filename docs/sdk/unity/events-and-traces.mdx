@@ -1,0 +1,111 @@
+---
+title: "Custom events & traces"
+description: "Record named events and trace how values change over time with Bugsee.Event and Bugsee.Trace in the Bugsee Unity SDK 7.x."
+sidebar_position: 10
+slug: "/sdk/unity/events-and-traces"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+Events mark moments in the app's life ("payment processed"). Traces follow how a value changes ("credit balance"). Both appear on the report's timeline next to the video, logs and network traffic.
+
+In the Unity Editor, and on platforms other than Android and iOS, these calls do nothing.
+
+## Custom events
+
+An event has a name and optional parameters.
+
+```csharp
+using System.Collections.Generic;
+using BugseeSdk = Bugsee.Bugsee;
+
+// Without parameters
+BugseeSdk.Event("payment_processed");
+
+// With parameters
+BugseeSdk.Event("payment_processed", new Dictionary<string, object>
+{
+    ["amount"] = 125,
+    ["currency"] = "USD",
+    ["success"] = true,
+});
+```
+
+The signature is `Bugsee.Event(string name, IDictionary<string, object> parameters = null)`.
+
+- Use strings, booleans and numbers as parameter values. The two platforms convert other types differently, so keep to these.
+- On Android, parameters with a `null` key or a `null` value are skipped.
+- Use a non-empty name. The iOS SDK ignores an event with an empty name.
+
+## Custom traces
+
+A trace is a named value. Set it every time the value changes. The report shows how it changed over the recorded period.
+
+```csharp
+using BugseeSdk = Bugsee.Bugsee;
+
+
+BugseeSdk.Trace("credit_balance", 15);
+BugseeSdk.Trace("level_name", "forest_3");
+BugseeSdk.Trace("music_enabled", true);
+```
+
+The signature is `Bugsee.Trace(string name, object value)`. Use a non-empty name. The iOS SDK ignores a trace with an empty name.
+
+### Value forms
+
+The SDK accepts these value forms on both platforms:
+
+| Value | What is sent |
+| --- | --- |
+| `string`, `bool`, `int`, `long` | The value as is. |
+| `float`, `double` | A floating-point number. `1.0f` stays `1.0` and is never turned into the integer `1`. |
+| Dictionary, list or array (any `IDictionary`, or any `ICollection` including generic collections) | JSON, with the limits below. |
+| Enum | Its integer value. |
+| `DateTime`, `DateTimeOffset` | ISO 8601 text. |
+| `byte[]` | Base64 text. |
+| Any other type | Its culture-invariant text. |
+
+Other sequence types that are not collections, such as a Unity `Transform`, are sent as text, not iterated.
+
+`NaN` and the infinities have no JSON form. Do not trace them: iOS sends `null` for them.
+
+### Dictionaries, lists and arrays
+
+A map, list or array is written as JSON with these rules:
+
+- The JSON is at most 8192 UTF-16 units long, and the writer visits at most 4096 values (entries, elements and scalars together).
+- A container that does not fit keeps its leading entries whole and drops the rest. The text is always valid JSON and is never cut inside an entry.
+- A map entry whose value is `null` is left out. A `null` list element is written as `null`.
+- A collection that contains itself writes `null` where it repeats.
+- The iOS SDK receives the JSON as a dictionary or array. The Android SDK receives the same text as a string.
+
+```csharp
+using System.Collections.Generic;
+using BugseeSdk = Bugsee.Bugsee;
+
+BugseeSdk.Trace("inventory", new Dictionary<string, object>
+{
+    ["coins"] = 120,
+    ["items"] = new List<string> { "sword", "shield" },
+});
+```
+
+## When events and traces are recorded
+
+The native SDKs differ for calls made before the SDK is fully launched:
+
+- **Android:** calls made before launch are buffered.
+- **iOS:** events and traces are recorded once the SDK status is `Launched`. Calls made earlier, while the SDK is stopped, while a launch waits for the app to become active, or while it is still `Launching`, may be lost.
+
+To behave the same on both platforms, wait for `Bugsee.IsLaunched` before you rely on a call. See [Lifecycle & status](/sdk/unity/lifecycle).
+
+## Related pages
+
+- [View hierarchy](/sdk/unity/view-hierarchy)
+- [Breadcrumbs](/sdk/unity/breadcrumbs)
+- [User & session data](/sdk/unity/user-session-data)
+- [Android events and traces](/sdk/android/events-and-traces)
+- [iOS events and traces](/sdk/ios/events-and-traces)

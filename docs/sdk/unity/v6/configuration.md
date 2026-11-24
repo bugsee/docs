@@ -2,8 +2,12 @@
 title: "Configuration"
 description: "Reference for all Bugsee Unity SDK launch options for iOS and Android, including video modes, crash reporting, and network monitoring."
 sidebar_position: 1
-slug: "/sdk/unity/configuration"
+slug: "/sdk/unity/v6/configuration"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Unity SDK **6.x**, the current stable release. The new **7.x** SDK is in beta: see [Migrating from 6.x to 7.x](/sdk/unity/migration) to evaluate it, or the [7.x overview](/sdk/unity/overview) to start a new integration.
+:::
 
 ## Launching with options
 
@@ -152,4 +156,4 @@ If you want to use V2 mode, your application will have to declare these permissi
 
 **\*\*\*\*VideoMode.V4**: VideoMode.V4 (experimental) gives client code an ability to decide when to add frames to a video, calling Bugsee.Snapshot() method. If frames are added rarely, additional CPU and GPU load is relatively small, but the resulting video looks more like a slide show. And vice versa, in case of frequent calls to Bugsee.Snapshot() performance can be influenced essentially, but the resulting video looks better. By default frame is added to a video only on the start of recording and on exception.
 
-Note that it is necessary to enable "Allow unsafe code" option in Player Settings and to execute an additional step, described in "Gather GPU info on Android" section of [Installation guide](/sdk/unity/installation/) to make VideoMode.V4 work. Also, note that starting with Bugsee Unity SDK 1.7.0 V4 is disabled and unavailable by default. You need to define ```BUGSEE_VIDEO_V4``` to enable VideoMode.V4. The reason for this, as stated above, is that V4 requires unsafe option to be set for the project, which is not usually desired. You can find out how to supply your own ```#define``` directives in <a class="external-link" href="https://docs.unity3d.com/Manual/PlatformDependentCompilation.html" rel="noopener noreferrer" target="_blank">Platform dependent compilation</a> section of Unity documentation.
+Note that it is necessary to enable "Allow unsafe code" option in Player Settings and to execute an additional step, described in "Gather GPU info on Android" section of [Installation guide](/sdk/unity/v6/installation/) to make VideoMode.V4 work. Also, note that starting with Bugsee Unity SDK 1.7.0 V4 is disabled and unavailable by default. You need to define ```BUGSEE_VIDEO_V4``` to enable VideoMode.V4. The reason for this, as stated above, is that V4 requires unsafe option to be set for the project, which is not usually desired. You can find out how to supply your own ```#define``` directives in <a class="external-link" href="https://docs.unity3d.com/Manual/PlatformDependentCompilation.html" rel="noopener noreferrer" target="_blank">Platform dependent compilation</a> section of Unity documentation.

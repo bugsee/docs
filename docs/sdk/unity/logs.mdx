@@ -1,0 +1,131 @@
+---
+title: "Console logs"
+description: "How the Bugsee Unity SDK 7.x captures the Unity console, how to write your own log lines with Bugsee.Log, the log options, and how to filter or redact log lines with SetLogEventFilter."
+sidebar_position: 8
+slug: "/sdk/unity/logs"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+Bugsee records the app's log output and attaches it to every report, so you can read what the game was saying before something went wrong.
+
+## What is captured
+
+**Unity console.** The SDK subscribes to Unity's `Application.logMessageReceivedThreaded` event when you launch it and unsubscribes when you stop it. Every `Debug.Log`, `Debug.LogWarning`, `Debug.LogError` and `Debug.LogAssertion` line, from any thread, is forwarded to the native SDK. Lines logged from other threads are handed to the Unity main thread first.
+
+| Unity `LogType` | Bugsee `LogLevel` |
+| --- | --- |
+| `Log` | `Info` |
+| `Warning` | `Warning` |
+| `Error`, `Assert` | `Error` |
+| `Exception` | Not forwarded as a log line |
+
+- If Unity supplies a stack trace for the line, the SDK appends it to the message after a line break.
+- `LogType.Exception` lines are not forwarded as logs. Exceptions are reported through the exception pipeline instead. See [Crash & error reporting](/sdk/unity/manual/crash-error-reporting).
+
+**Native logs.** The native SDKs capture their own sources too. On Android that includes Logcat. See [Android console logs](/sdk/android/logs) and [iOS console logs](/sdk/ios/logs).
+
+In the Unity Editor, and on platforms other than Android and iOS, log calls do nothing.
+
+## Options
+
+Set these launch options on `AndroidLaunchOptions` or `IOSLaunchOptions`. See [Configuration](/sdk/unity/configuration) for the full tables. The defaults are those of the native SDKs the package pins.
+
+| Option | Platform | Type | Default | What it does |
+| --- | --- | --- | --- | --- |
+| `CaptureLogs` | Both | `bool` | `true` | Capture logs. Unity console lines and, on Android, Logcat are recorded while it is on. |
+| `CaptureLogsLevel` | Both | `LogLevel` | `Verbose` | Lines more verbose than this level are dropped. On Android it applies to the lines the SDK reads from logcat, not to the Unity console lines the package forwards. |
+| `CaptureLogsUseAllSources` | Android | `bool` | `false` | Read all Logcat buffers (system, radio and others) instead of the default sources. |
+
+`LogLevel` has the values `Error` (1), `Warning` (2), `Info` (3), `Debug` (4) and `Verbose` (5).
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+#if UNITY_ANDROID
+var options = new AndroidLaunchOptions
+{
+    CaptureLogs = true,
+    CaptureLogsLevel = LogLevel.Info,
+};
+BugseeSdk.Launch("<your Android app token>", options);
+#elif UNITY_IOS
+var options = new IOSLaunchOptions
+{
+    CaptureLogs = true,
+    CaptureLogsLevel = LogLevel.Info,
+};
+BugseeSdk.Launch("<your iOS app token>", options);
+#endif
+```
+
+To turn log capture off, set `CaptureLogs = false`. See [Privacy: console logs](/sdk/unity/privacy/logs).
+
+## Write your own log lines
+
+`Bugsee.Log` adds a line to the Bugsee log without printing it to the Unity console.
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+// The level defaults to Info.
+BugseeSdk.Log("User tapped Checkout");
+
+BugseeSdk.Log("Payment succeeded", LogLevel.Info);
+BugseeSdk.Log("Retrying request", LogLevel.Warning);
+BugseeSdk.Log("Upload failed", LogLevel.Error);
+```
+
+- `Bugsee.Log(string message, LogLevel level = LogLevel.Info)` skips the log filter.
+- `Bugsee.Log(string message, LogLevel level, bool requiresFiltering)` also runs the line through the filter when `requiresFiltering` is `true`. Use it when the message can hold data that your filter redacts.
+- Both overloads do nothing for a `null` message or before the SDK is launched.
+- Lines written with `Bugsee.Log` are recorded, and the ones that opt in are filtered, even with `CaptureLogs` off.
+- On iOS, a line below `CaptureLogsLevel` is dropped before it reaches the filter. On Android, `CaptureLogsLevel` applies only to Logcat lines and not to the Unity console lines the package forwards. To keep personal data out of forwarded Unity lines, filter them with `SetLogEventFilter`. An opt-in `Debug` line under `CaptureLogsLevel = LogLevel.Error` never reaches the filter on iOS.
+
+## Filter log lines
+
+`Bugsee.SetLogEventFilter` installs a filter that sees each captured log line before it is stored. Change the line and return it to keep it, or return `null` to drop it. Pass `null` to remove the filter.
+
+```csharp
+using System.Text.RegularExpressions;
+using Bugsee.Contracts.Exchange;
+using BugseeSdk = Bugsee.Bugsee;
+
+BugseeSdk.SetLogEventFilter(log =>
+{
+    if (log.Message == null) return log;
+
+    // Drop lines you never want in a report.
+    if (log.Message.Contains("[private]")) return null;
+
+    // Redact email addresses.
+    log.Message = Regex.Replace(log.Message, @"[\w.+-]+@[\w-]+\.[\w.]+", "<email>");
+    return log;
+});
+```
+
+The event has two settable properties: `Message` (`string`) and `Level` (`LogLevel`).
+
+The filter sees the Unity console lines the SDK forwards and, on Android, Logcat lines, as long as `CaptureLogs` is on. Lines written with `Bugsee.Log(message, level)` skip it. Pass `requiresFiltering: true` to send a line through it.
+
+Keep these rules in mind:
+
+- **Set the filter before the lines you want filtered are logged.** A line recorded before the filter is set is not filtered.
+- **Do not keep the event.** It is valid only inside the callback.
+- **Do not call `Bugsee.Log(..., true)` from inside the filter.** Android runs the filter during the `Log` call, so that recurses.
+- **A filter that throws drops the line.**
+- **The filter runs on the Unity main thread.** On Android the SDK calls it on its own threads and the package hands each call to the main thread, which processes its queue in `Update`. While the app is in the background Unity's loop is paused, so the call waits until the app resumes. On Android the SDK drops a line if its log filter does not answer within 10 seconds.
+- **A filter that blocks forever blocks the main thread.** Keep it short.
+
+For privacy guidance, see [Privacy: console logs](/sdk/unity/privacy/logs).
+
+## Related pages
+
+- [Network events](/sdk/unity/network)
+- [Breadcrumbs](/sdk/unity/breadcrumbs)
+- [Crash & error reporting](/sdk/unity/manual/crash-error-reporting)
+- [Privacy: console logs](/sdk/unity/privacy/logs)

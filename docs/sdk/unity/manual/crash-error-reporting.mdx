@@ -1,0 +1,252 @@
+---
+title: "Crash & error reporting"
+description: "What Bugsee Unity SDK 7.x reports automatically (native crashes, unhandled and logged C# exceptions), how to report handled and unhandled exceptions yourself, and what the SDK cannot see."
+sidebar_position: 2
+slug: "/sdk/unity/manual/crash-error-reporting"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+Most crashes and errors are reported **automatically** once `Bugsee.Launch` has run. This page lists what is captured, how each kind is reported, and how to report exceptions yourself.
+
+Bugsee files two kinds of report here:
+
+- A **crash** report, for something that ended the app. Its default severity is `Blocker` (`ReportingDefaultCrashPriority`).
+- An **error** report, for a handled, non-fatal exception. Its default severity is `High` (`ReportingDefaultErrorPriority`).
+
+Both are `IssueSeverity` launch options and apply to both platforms. In the snippets on this page, `BugseeSdk` is the alias `using BugseeSdk = Bugsee.Bugsee;`, see [Installation](/sdk/unity/installation#launch-the-sdk).
+
+## What is captured automatically
+
+A Unity game has two layers of crash handling. The **native** layer is the Bugsee Android and iOS SDK, which catches crashes in the native runtime. The **managed** layer is the Unity wrapper, which catches C# exceptions. They are controlled by separate options.
+
+| Source | Reported as | Controlled by |
+| --- | --- | --- |
+| Native crash: fatal signal, uncaught native exception. Reported on the next launch | crash | `DetectAndReportCrash` (default on) |
+| `AppDomain.UnhandledException` | crash | `CaptureManagedExceptions` (default on) |
+| An exception Unity logs, including `Debug.LogException` and uncaught exceptions on the main thread | error, or crash with `TreatUnityLogExceptionsAsFatal` | `CaptureManagedExceptions` |
+| `TaskScheduler.UnobservedTaskException` | error | `CaptureManagedExceptions` and `CaptureUnobservedTaskExceptions` (default on) |
+| `Bugsee.LogException` | error | You call it |
+| `Bugsee.LogUnhandledException` | crash | You call it |
+
+`CaptureManagedExceptions` does not depend on `DetectAndReportCrash`. Hangs, ANRs and out-of-memory kills are separate detectors: see [Issue detection](/sdk/unity/issue-detection/overview).
+
+### Managed exceptions
+
+With `CaptureManagedExceptions` on, the SDK registers these hooks during `Launch`:
+
+- A wrapper around `Debug.unityLogger.logHandler`, which receives `Debug.LogException` and the exceptions Unity logs itself. The SDK passes each call on to the handler it replaced.
+- `Application.logMessageReceivedThreaded`, for exceptions Unity logs without going through the handler. An exception already reported through the handler is not reported twice.
+- `AppDomain.CurrentDomain.UnhandledException`.
+- `TaskScheduler.UnobservedTaskException`, unless the project is compiled with the `NET_LEGACY` define or `CaptureUnobservedTaskExceptions` is `false`.
+
+An exception that reaches none of these hooks is not reported.
+
+Options:
+
+| Option | Platform | Type | Default | What it does |
+| --- | --- | --- | --- | --- |
+| `CaptureManagedExceptions` | Android, iOS | `bool` | `true` | Installs the hooks above. A `Relaunch` applies a changed value. |
+| `CaptureUnobservedTaskExceptions` | Android, iOS | `bool` | `true` | Reports `TaskScheduler.UnobservedTaskException` as an error. Needs `CaptureManagedExceptions`. |
+| `TreatUnityLogExceptionsAsFatal` | Android, iOS | `bool` | `false` | Reports exceptions that Unity logs as crashes instead of errors. A `Relaunch` does not change it while the managed hooks stay installed. |
+
+An uncaught exception that Unity logs is reported as an error, because the game keeps running. Set `TreatUnityLogExceptionsAsFatal` to report these as crashes. When a crash report is made on a background thread, the call waits up to 4 seconds for Unity's main thread to take it.
+
+Unity raises `UnobservedTaskException` only after the faulted `Task` is garbage-collected, so that error arrives late, at a time you do not control. Set `CaptureUnobservedTaskExceptions` to `false` if your fire-and-forget tasks fault on purpose.
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+#if UNITY_ANDROID
+var options = new AndroidLaunchOptions
+{
+    CaptureManagedExceptions = true,
+    CaptureUnobservedTaskExceptions = false,
+    TreatUnityLogExceptionsAsFatal = true,
+};
+BugseeSdk.Launch("<your Android app token>", options);
+#elif UNITY_IOS
+var options = new IOSLaunchOptions
+{
+    CaptureManagedExceptions = true,
+    CaptureUnobservedTaskExceptions = false,
+    TreatUnityLogExceptionsAsFatal = true,
+};
+BugseeSdk.Launch("<your iOS app token>", options);
+#endif
+```
+
+### Exceptions the SDK cannot see
+
+- **A `ThreadPool` work item on the Mono backend.** On the Mono scripting backend, an exception thrown inside a `ThreadPool.QueueUserWorkItem` callback can be lost: Unity logs nothing and `AppDomain.UnhandledException` is not raised, so no hook sees it. On IL2CPP the exception reaches `AppDomain.UnhandledException` and is reported. A `new Thread` that throws is logged by Unity and reported on both backends.
+- **`Task.Run` and a dropped `async Task`.** The exception is stored in the `Task` and nothing is logged. It is reported only if the runtime finalizes the faulted task and raises `UnobservedTaskException`, which depends on garbage collection. The report can arrive late, or not at all if the app exits first. Await your tasks or handle their faults.
+
+To report an exception from a work item or a task continuation, catch it and call `Debug.LogException`. The SDK's log handler builds the report and hands it to Unity's main thread, so the call is safe from a background thread:
+
+```csharp
+using System;
+using System.Threading;
+using UnityEngine;
+
+ThreadPool.QueueUserWorkItem(_ =>
+{
+    try { DoWork(); }
+    catch (Exception e) { Debug.LogException(e); }
+});
+```
+
+`Debug.LogException` also prints the exception to the Unity console, and it reports only while `CaptureManagedExceptions` is on.
+
+### Native crashes
+
+Native crashes are reported on the next launch of the app, together with the recording of the session that crashed.
+
+- **Android:** uncaught exceptions in Java and Kotlin code, and crashes in native (NDK) code. The NDK part is the `bugsee-android-ndk` extension, which the package declares for you. The option `DetectAndReportCrashNdk` (default `true`, `AndroidLaunchOptions`) controls it, and it is also off when `DetectAndReportCrash` is `false`.
+- **iOS:** fatal signals and uncaught Objective-C exceptions. `CrashHandlerType` (`IOSLaunchOptions`) selects how they are intercepted: `BSD`, `Mach` or `MachAndBSD` (the default).
+
+For the details of each platform, see the native pages: [Android crashes](/sdk/android/issue-detection/crashes), [Android native crashes](/sdk/android/issue-detection/native-crashes) and [iOS crashes](/sdk/ios/issue-detection/crashes).
+
+| Option | Platform | Type | Default | What it does |
+| --- | --- | --- | --- | --- |
+| `DetectAndReportCrash` | Android, iOS | `bool` | `true` | Native crash reporting. |
+| `DetectAndReportEarlyCrash` | Android, iOS | `bool` | `true` | Early-crash detection of the native SDK. See the native pages. |
+| `CrashSignals` | Android, iOS | `CrashSignals` | `Default` | Which fatal signals the native crash reporter intercepts. |
+| `CrashHandlerType` | iOS | `CrashHandlerType` | `MachAndBSD` | How the iOS crash reporter intercepts crashes. |
+| `DetectAndReportCrashNdk` | Android | `bool` | `true` | Native (NDK) crash detection. |
+| `CrashNdkIncludeTombstoneLogs` | Android | `bool` | `false` | Adds the raw log buffers of the OS tombstone to a native crash report. |
+
+:::warning[Tombstone logs are not redacted]
+With `CrashNdkIncludeTombstoneLogs` on, the log buffers of the Android tombstone are uploaded as they are. They skip Bugsee's log filters and redaction, and can contain text logged in-process by system or third-party libraries.
+:::
+
+#### Crash signals
+
+`CrashSignals` is a `[Flags]` enum with one bit per signal. Combine values to choose which signals the native reporter intercepts:
+
+| Value | Bit | Signal |
+| --- | --- | --- |
+| `None` | 0 | No signals. |
+| `Abrt` | 1 | `SIGABRT` |
+| `Segv` | 2 | `SIGSEGV` |
+| `Bus` | 4 | `SIGBUS` |
+| `Ill` | 8 | `SIGILL` |
+| `Fpe` | 16 | `SIGFPE` |
+| `Trap` | 32 | `SIGTRAP` |
+| `All` | 63 | Every signal above. |
+| `Default` | 128 | Let the SDK choose: every signal. |
+
+```csharp
+using Bugsee.Contracts.Options;
+
+var options = new IOSLaunchOptions
+{
+    CrashSignals = CrashSignals.Abrt | CrashSignals.Segv | CrashSignals.Bus,
+};
+```
+
+Rules:
+
+- `Default` is honored only on its own. Combined with other bits, the value is used as given and the `Default` bit means nothing.
+- `None` selects no signal on both platforms.
+- Android reads the mask in the NDK extension. A nonzero value that selects none of the six signals (for example `64`) is also taken as every signal, and bits above `Trap` are ignored. iOS uses any other value as given.
+- `CrashSignals` is a shared option, so a mask you set for iOS only also applies to Android if it is in the options you pass there. Set it per platform, or omit it on Android, to keep every signal.
+- Keep `Segv` and `Bus`. IL2CPP raises `NullReferenceException` with explicit null checks, not from a signal, so managed null references never reach the native crash reporter. A real memory fault would go unreported without these two signals.
+- On iOS a bad memory access arrives as one Mach exception that the kernel turns into `SIGSEGV` or `SIGBUS`, so it is intercepted when either of the two is selected. Leaving out `Abrt` also stops uncaught Objective-C exceptions from being reported, because they end in `abort()`.
+
+:::caution[iOS Simulator and debugger]
+The iOS Simulator build of the Bugsee SDK has no crash reporter. On the Simulator, native crashes, hang detection and managed exceptions (`LogException`, `Debug.LogException`, `LogUnhandledException`, `AppDomain.UnhandledException`) are not reported. Manual bug reports, uploads, logs, events and video still work. Test crash reporting on a physical device. While the Xcode debugger is attached, the iOS SDK installs no crash handler: start the app from the Home Screen. See [iOS crashes](/sdk/ios/issue-detection/crashes).
+:::
+
+## Report a handled exception
+
+`Bugsee.LogException` records an exception you caught, as an **error** report, without ending the app:
+
+```csharp
+public static void LogException(Exception exception, IDictionary<string, object> options = null)
+```
+
+```csharp
+using System;
+using BugseeSdk = Bugsee.Bugsee;
+
+try
+{
+    LoadProfile();
+}
+catch (Exception e)
+{
+    BugseeSdk.LogException(e);
+    ShowOfflineBanner();
+}
+```
+
+Notes:
+
+- A `null` exception is ignored.
+- Report an exception you threw, not one you only created. For a thrown exception on an IL2CPP player, the SDK also sends the native addresses of the stack, which let Bugsee resolve file and line numbers. A `new Exception(...)` that was never thrown has no native stack.
+- On iOS, the options dictionary honors only the key `skipFrames`. The keys `labels`, `includeVideo` and `mergingRules` are ignored, with a one-time warning in the Unity console and the native log. A logged exception takes no labels and always carries the live capture. To set labels, use a [report handler](/sdk/unity/report-handler).
+- In 7.x the SDK computes a new signature for managed exceptions (user frames only, never the message). Issues grouped before you update to 7.x can regroup.
+- From a background thread, report with `Debug.LogException` as described above.
+
+## Report an unhandled exception
+
+`Bugsee.LogUnhandledException` reports an exception as a **crash**. Use it for an exception your game treats as fatal that Bugsee's hooks did not see, for example because your own error handler takes it first:
+
+```csharp
+using System;
+using BugseeSdk = Bugsee.Bugsee;
+
+void OnFatalError(Exception e)
+{
+    BugseeSdk.LogUnhandledException(e);
+    // End the session your own way.
+}
+```
+
+For uncaught exceptions, prefer the automatic capture above: you do not need to call `LogUnhandledException` for exceptions that reach `AppDomain.UnhandledException`. For handled exceptions, use `LogException`.
+
+## Stack traces and symbolication
+
+How much of a stack trace Bugsee can resolve to C# class, file and line depends on the scripting backend and the build type:
+
+| Build | What the stack carries |
+| --- | --- |
+| Mono, Development build | A portable `.pdb` ships next to each assembly, so the stack text has file and line for the assemblies Unity compiles. |
+| Mono, not a Development build | Method names and IL offsets only. Bugsee resolves file and line from a mapping that the Editor builds from the portable `.pdb` files and uploads. Android only: Mono is not available on iOS. |
+| IL2CPP with line information | If Player Settings sets the IL2CPP stack trace information to **Method Name, File Name, and Line Number** (or Script Debugging), the stack text carries file and line. |
+| IL2CPP without line information | The SDK sends the native addresses of a thrown exception. Bugsee resolves them with the il2cpp line map and the native symbols you upload. |
+
+The mapping and symbols are uploaded by the build. See [Symbolication](/sdk/unity/symbolication/overview), and the pages for [Android](/sdk/unity/symbolication/android), [iOS](/sdk/unity/symbolication/ios) and [managed code](/sdk/unity/symbolication/managed-code).
+
+### Limits
+
+- **IL2CPP, exceptions rethrown through `await`.** For an exception thrown in an async continuation and rethrown where it is awaited, the frames before the line `--- End of stack trace from previous location where exception was thrown ---` carry no address and stay unresolved when the build has no IL2CPP line information. Only the frames after the separator resolve.
+
+### Known issues
+
+These apply to Bugsee Unity SDK 7.0.0-beta.1:
+
+- **Android, Release IL2CPP, Public symbols.** Handled managed exceptions in a Release IL2CPP build without IL2CPP line information stay unsymbolicated (no file and line) when the symbols are Public (symbol table only). Use Debugging symbols with the il2cpp line map: set **Create symbols.zip** to **Debugging** in Player Settings, use the menu **Bugsee > Android > Use Full Native Symbols (Debugging) For Symbol Upload**, or set `BUGSEE_ANDROID_FULL_SYMBOLS=1`.
+- **Android, Development IL2CPP.** Development builds send no addresses, and Debugging symbols do not change that.
+- **Public, then Debugging.** Switching the symbol level from Public to Debugging for the same `libil2cpp.so` build id may leave frames raw on the dashboard. This is open and under investigation: [bugsee-unity#263](https://github.com/bugsee/bugsee-unity/issues/263). Choose the symbol level before you upload a build.
+
+## Test crash reporting
+
+`Bugsee.TestCrash()` crashes the app on purpose, so you can check that crash reporting works:
+
+```csharp
+using BugseeSdk = Bugsee.Bugsee;
+
+BugseeSdk.TestCrash();
+```
+
+Use it in QA builds only. It ends the process, and the crash report is sent on the next launch. It does nothing in the Unity Editor.
+
+## Related pages
+
+- [Issue detection](/sdk/unity/issue-detection/overview): hangs, ANRs, out-of-memory kills and the iOS Crash Report Extension.
+- [Report handler](/sdk/unity/report-handler): change severity, labels and attributes of crash and error reports.
+- [Configuration](/sdk/unity/configuration): every launch option.
