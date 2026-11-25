@@ -182,7 +182,7 @@ The `Report` you receive is mutable. The most commonly used members:
 - `setSeverity(IssueSeverity)` — one of `VeryLow`, `Medium`, `High`, `Critical`, `Blocker`.
 - `addLabel(String)` / `addLabels(List<String>)` / `setLabels(List<String>)` / `clearLabels()` — dashboard labels.
 - `getAttachments()` returns the current `List<Attachment>`; `createAndAddAttachment(name)` adds a new one (see [Attachments](/sdk/android/report-handler#attachments)).
-- `setScreenshotAsync(Bitmap, Runnable)` — replaces the screenshot; see [Replacing the screenshot](#replacing-the-screenshot) for when to upload.
+- `setScreenshot(Bitmap)` / `setScreenshotAsync(Bitmap, Runnable)` — replace the screenshot. `setScreenshot` encodes and writes the image on the calling thread; `setScreenshotAsync` does it in the background and calls the `Runnable` once the screenshot is stored. See [Replacing the screenshot](#replacing-the-screenshot) for which one to use in `onCreated` and when to upload.
 
 The same `Report` is what `ReportHandler.onBeforeReportCreated(...)` / `onAfterReportCreated(...)` hands you, so the same mutators apply there.
 
