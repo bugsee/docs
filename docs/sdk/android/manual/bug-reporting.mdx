@@ -224,6 +224,7 @@ Bugsee.createReport { report ->
 - `setScreenshotAsync` returns before the screenshot is stored, and calls the callback once it is.
 - A report uploaded before that can be sent without the new screenshot, so do not call `Bugsee.upload(report)` right after `setScreenshotAsync`.
 - The callback runs on the thread that called `setScreenshotAsync` when that thread has a `Looper` (here, the main thread), otherwise on the main thread.
+- The SDK reads the bitmap on a background thread after the call returns, and does not copy it, so do not recycle or change the bitmap until the callback runs. The report neither keeps nor recycles it: after the callback the bitmap is yours again.
 
 <Tabs groupId="lang-android">
   <TabItem value="java" label="Java">
@@ -233,6 +234,7 @@ Bugsee.createReport(report -> {
     if (report == null) {
         return; // SDK not launched, or creation failed
     }
+    Bitmap bitmap = renderCheckoutScreen(); // a Bitmap your app produces
     report.setSummary("Checkout frozen");
     report.setScreenshotAsync(bitmap, () -> Bugsee.upload(report));
 });
@@ -244,6 +246,7 @@ Bugsee.createReport(report -> {
 ```kotlin
 Bugsee.createReport { report ->
     report ?: return@createReport // SDK not launched, or creation failed
+    val bitmap = renderCheckoutScreen() // a Bitmap your app produces
     report.summary = "Checkout frozen"
     report.setScreenshotAsync(bitmap) { Bugsee.upload(report) }
 }
