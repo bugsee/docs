@@ -28,7 +28,8 @@ If your policy says captured data must never be written to the device, keep it i
 ```ts
 import { launch } from '@bugsee/bugsee';
 
-// Browser: no IndexedDB, nothing survives a reload
+// Browser: the capture window and report queue stay in memory, nothing of them survives a reload.
+// The device id is still stored in the browser (see "What identifies the user").
 await launch('<your_app_token>', { persist: false });
 ```
 
@@ -92,7 +93,7 @@ With `diskProtection` on (the default), the browser SDK watches the storage quot
 | --- | --- | --- |
 | User identifier | Memory. In the browser, `localStorage` too when `persistUserIdentifier` is `true`. | `clearUserIdentifier()` |
 | Attributes | Memory only. | `clearAttribute(key)` or `clearAllAttributes()` |
-| Device id | Browser only: a random UUID kept in `localStorage`, a first-party cookie, IndexedDB and the Cache API, so that it survives a cleared store. | Clear the site data in the browser. There is no SDK call. |
+| Device id | Browser only: a random UUID kept in `localStorage`, a first-party cookie, IndexedDB and the Cache API, so that it survives a cleared store. | Clear the site data in the browser. There is no SDK call. Stored even with `persist: false`, which covers only captured data and the report queue. |
 
 Call both clear methods at sign-out:
 
@@ -113,7 +114,7 @@ import { launch } from '@bugsee/bugsee';
 export const bugsee = await launch('<your_app_token>');
 ```
 
-Import this module first in your entry file, before your app bootstraps, not lazily. Capture covers only what runs after `launch()`, and code that runs earlier is not recorded.
+Capture covers only what runs after `launch()`, and code that runs earlier is not recorded. Top-level `await` delays only the modules that import this one: an unrelated app module that your entry file imports next can still run while `launch()` is pending. Either import this module from every app module that needs the client or capture, or have the entry file load the app after launch settles, with `import './bugsee'; await import('./app');`. Install any filter in this module too, right after `launch` and before the export, so no application code runs before the filter exists.
 
 Clearing applies to reports created afterwards. A report that is already assembled and waiting in the queue, and the recovery record of an incident that has not been delivered, keep the identifier they were created with until they are uploaded or expire.
 

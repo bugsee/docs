@@ -113,7 +113,7 @@ bugsee.isBlackout(); // true while a blackout is in force
 
 ## Lifecycle events
 
-Lifecycle events are coarse milestones of the SDK. You observe them through one listener. Set it at launch to see the very first event, or later:
+Lifecycle events are coarse milestones of the SDK. You observe them through one listener. Set it at launch to see the very first event, or later. In the browser `launch()` returns a `Promise`, so await it before using the client. On Node.js and Bun it returns the client directly, and `await` is harmless.
 
 <Tabs groupId="lang">
   <TabItem value="ts" label="TypeScript">
@@ -121,7 +121,7 @@ Lifecycle events are coarse milestones of the SDK. You observe them through one 
 ```ts
 import { launch, LifecycleEvents } from '@bugsee/bugsee';
 
-launch('<your_app_token>', {
+const bugsee = await launch('<your_app_token>', {
   lifecycleEventsListener: (eventType, data) => {
     if (eventType === LifecycleEvents.AfterReportUploaded) {
       console.log('uploaded', data);
@@ -141,7 +141,7 @@ bugsee.setLifecycleEventsListener((eventType, data) => {
 ```js
 import { launch, LifecycleEvents } from '@bugsee/bugsee';
 
-launch('<your_app_token>', {
+const bugsee = await launch('<your_app_token>', {
   lifecycleEventsListener: (eventType, data) => {
     if (eventType === LifecycleEvents.AfterReportUploaded) {
       console.log('uploaded', data);

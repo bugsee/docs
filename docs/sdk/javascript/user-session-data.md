@@ -19,7 +19,7 @@ import { launch } from '@bugsee/bugsee';
 export const bugsee = await launch('<your_app_token>');
 ```
 
-Import this module first in your entry file, before your app bootstraps, not lazily. Capture covers only what runs after `launch()`, and code that runs earlier is not recorded.
+Capture covers only what runs after `launch()`, and code that runs earlier is not recorded. Top-level `await` delays only the modules that import this one: an unrelated app module that your entry file imports next can still run while `launch()` is pending. Either import this module from every app module that needs the client or capture, or have the entry file load the app after launch settles, with `import './bugsee'; await import('./app');`.
 
 ## User identifier
 
@@ -40,6 +40,8 @@ bugsee.clearUserIdentifier();
 | `setUserIdentifier(id: string)` | Set the identifier. A value that is not a string clears it. |
 | `getUserIdentifier()` | The current identifier, or `null`. |
 | `clearUserIdentifier()` | Remove it. Reports created afterwards carry none. |
+
+On a server, `setUserIdentifier` writes the process-wide identifier, so two concurrent requests that each call it can overwrite one another. In server code, attach the user through the request context instead, with the framework adapter's `user` option (the context's user takes precedence for reports created in that request); see the [Backend overview](/sdk/javascript/backend/overview). The global call is for single-user or client runtimes.
 
 The identifier is sent as the reporter's email on a report, unless the report has its own `email`. Use an id that is meaningful to your team. Prefer an opaque id to an email address, because the identifier is personal data.
 

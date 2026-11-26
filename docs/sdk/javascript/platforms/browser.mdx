@@ -67,7 +67,7 @@ import { launch } from '@bugsee/bugsee';
 launch('<your_app_token>', { appVersion: '1.4.2', appBuild: '381' });
 ```
 
-In the browser `launch()` returns a `Promise` of the client. Await it only if you need the client right away:
+In the browser `launch()` returns a `Promise` of the client. Await it if you need the client right away, and also if you need capture to be armed by a known point. The launch finishes an asynchronous step (it resolves the device id first) before it starts error and unhandled-rejection capture, so code that runs in the same synchronous task after an un-awaited `launch()` call runs before capture is armed, and an error thrown there is not reported. To avoid the gap, `await launch(...)` (or load your app after it settles) before running code you want covered:
 
 ```ts
 const bugsee = await launch('<your_app_token>');

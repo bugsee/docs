@@ -38,6 +38,9 @@ A [report handler](/sdk/javascript/report-handler) can change the report details
 ```ts
 import { bugsee } from './bugsee';
 
+// Replace with your own check: true when the signed-in account is staff
+const isStaffAccount = (): boolean => false;
+
 bugsee.setReportHandler({
   before: (request) => {
     const { report } = request;
@@ -47,8 +50,9 @@ bugsee.setReportHandler({
     if (report.summary?.includes('Card declined')) {
       return null;
     }
-    // Do not report on behalf of staff accounts
-    if (report.email?.endsWith('@example.com')) {
+    // Do not report on behalf of staff accounts. Use a flag your app sets for staff,
+    // not the email: the report email may be an opaque user identifier.
+    if (isStaffAccount()) {
       return null;
     }
     return request;
@@ -64,7 +68,7 @@ import { launch } from '@bugsee/bugsee';
 export const bugsee = await launch('<your_app_token>');
 ```
 
-Import this module first in your entry file, before your app bootstraps, not lazily. Capture covers only what runs after `launch()`, and code that runs earlier is not recorded.
+Capture covers only what runs after `launch()`, and code that runs earlier is not recorded. Top-level `await` delays only the modules that import this one: an unrelated app module that your entry file imports next can still run while `launch()` is pending. Either import this module from every app module that needs the client or capture, or have the entry file load the app after launch settles, with `import './bugsee'; await import('./app');`. Install any filter in this module too, right after `launch` and before the export, so no application code runs before the filter exists.
 
 ### What it cannot do
 

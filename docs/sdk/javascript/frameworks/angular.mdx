@@ -67,13 +67,18 @@ launch('<your_app_token>');
 Register the Bugsee error handler in place of Angular's default `ErrorHandler`:
 
 ```ts title="app.config.ts"
-import { ErrorHandler } from '@angular/core';
+import { ApplicationConfig, ErrorHandler } from '@angular/core';
 import { BugseeErrorHandler } from '@bugsee/angular';
 
-bootstrapApplication(AppComponent, {
-  providers: [{ provide: ErrorHandler, useClass: BugseeErrorHandler }],
-});
+export const appConfig: ApplicationConfig = {
+  providers: [
+    // ...your existing providers
+    { provide: ErrorHandler, useClass: BugseeErrorHandler },
+  ],
+};
 ```
+
+Keep `bootstrapApplication(AppComponent, appConfig)` in `main.ts`; it already imports this configuration.
 
 `BugseeErrorHandler` reports the error to Bugsee, then runs Angular's default handler so the console output stays. It unwraps Angular's own error wrapper where one exists, so the report shows the real error.
 

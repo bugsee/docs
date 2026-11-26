@@ -87,7 +87,7 @@ On Node `launch()` returns the client directly, not a `Promise`. A second `launc
 Read the token from your environment rather than hard-coding it:
 
 ```ts
-launch(process.env.BUGSEE_APP_TOKEN);
+launch(process.env.BUGSEE_APP_TOKEN ?? '');
 ```
 
 ### App version and build
