@@ -1261,6 +1261,11 @@ const sidebars: SidebarsConfig = {
               id: "sdk/javascript/symbolication/environment",
               label: "Environment",
             },
+            {
+              type: "doc",
+              id: "sdk/javascript/symbolication/doctor",
+              label: "Source map doctor",
+            },
           ],
         },
         { type: "doc", id: "sdk/javascript/packages", label: "Packages" },

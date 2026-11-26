@@ -1,6 +1,6 @@
 ---
 title: "Next.js"
-description: "Set up the Bugsee JavaScript SDK in a Next.js app with @bugsee/nextjs: instrumentation.ts for Node.js and Edge, instrumentation-client.ts, middleware errors and trace correlation."
+description: "Set up the Bugsee JavaScript SDK in a Next.js app with @bugsee/nextjs: instrumentation.ts for Node.js and Edge, instrumentation-client.ts, middleware errors, source maps with withBugsee and trace correlation."
 sidebar_position: 6
 slug: "/sdk/javascript/frameworks/nextjs"
 ---
@@ -121,6 +121,7 @@ It returns `{}` when no trace is active.
 | `@bugsee/nextjs` | `register`, `onRequestError`, `createOnRequestError`, `getBugseeTraceData` |
 | `@bugsee/nextjs/client` | `registerClient`, `onRouterTransitionStart`, plus the React adapter |
 | `@bugsee/nextjs/middleware` | `withBugseeMiddleware` |
+| `@bugsee/nextjs/config` | `withBugsee`. Build time only: import it from `next.config`, never from app code. |
 | `@bugsee/nextjs/server` | `registerServer` and the shared client exports. The Node.js composition that `register()` loads for you. |
 | `@bugsee/nextjs/edge` | `registerEdge` and the shared client exports. The Edge composition that `register()` loads for you. |
 
@@ -133,12 +134,60 @@ It returns `{}` when no trace is active.
 | Server | `instrumentIncomingRequests` | `true` | Instrument incoming requests. |
 | Server | `captureLocalVariables` | `false` | Capture local variables on errors. |
 | Server | `detectHangs` | `true` | Event-loop hang detection. |
-| Server | `setupOtelProvider` | `true` | Install Bugsee's OpenTelemetry provider. Set `false` if you manage OpenTelemetry yourself. |
+| Server | `setupOtelProvider` | `true` | Install Bugsee's OpenTelemetry provider when no provider is registered yet. An existing provider is never replaced. Set `false` if you manage OpenTelemetry yourself. |
 | Client | `captureLogs`, `captureNetwork` | `true` | Console and network capture. |
 | Client | `maxRecordingTime` | `60` | Seconds of recording to keep. |
 | Client | `replay` | `true` | Session replay. Pass `false` to turn it off. |
 
 See [Browser](/sdk/javascript/platforms/browser#browser-options) and [Node.js](/sdk/javascript/platforms/node#node-options) for the full lists.
+
+## Source maps
+
+`withBugsee` makes `next build` stamp debug IDs and upload source maps, so a minified browser, server or edge stack trace is shown against your original source. It handles both webpack (`next build --webpack`, the default up to Next.js 15) and Turbopack (the default in Next.js 16).
+
+```js title="next.config.mjs"
+import { withBugsee } from '@bugsee/nextjs/config';
+
+export default withBugsee(
+  {
+    // your Next.js config: an object, a (phase) function, or an async function
+  },
+  {
+    // BUGSEE_APP_TOKEN in the environment (or .env.bugsee-build-plugin) works too
+    appToken: process.env.BUGSEE_APP_TOKEN,
+  },
+);
+```
+
+With CommonJS, use `const { withBugsee } = require('@bugsee/nextjs/config');` in `next.config.js`. Without a token the integration changes nothing about what Next.js emits and uploads nothing.
+
+For a production build it does this:
+
+- Turns on `productionBrowserSourceMaps` when you did not set it, and only when the build can actually upload, so the browser bundles have maps. Where it cannot upload, it leaves the option as you set it and says so.
+- **webpack:** adds one Bugsee plugin to each of the client, server and edge compilations. Each stamps a debug ID into its bundles inside the build, before Subresource Integrity hashes are taken, and uploads the maps of exactly the files that compilation wrote.
+- **Turbopack:** has no plugin API, so the upload runs from the `compiler.runAfterProductionCompile` hook (Next.js 15.4.0 or newer). After Turbopack writes `.next` and before Next.js generates the static pages, it stamps the written bundles, verifies the stamp (and undoes it if it does not verify), uploads the maps and removes them.
+- Deletes the browser maps in `.next/static`, which `next start` and CDNs serve publicly, after a confirmed upload. Server and edge maps stay on disk.
+- Bakes the app version and build into every bundle for the runtime SDK (needs Next.js 15.1.0 or newer).
+
+Your own config is kept. Your `webpack` function runs first and its result is extended, your `compiler.runAfterProductionCompile` runs before Bugsee's, `compiler.define` keys you set win, and `productionBrowserSourceMaps: false` is respected. `next dev`, `next start` and `next export` are not touched.
+
+The options are those of the [bundler plugins](/sdk/javascript/symbolication/bundler-plugins#options): `appToken`, `appVersion`, `appBuild`, `endpoint`, `deleteMaps`, `dryRun`, `failOnError`, `stripSourcesContent`, `disabled`, `vcs`, `commit`, `registerBuild`, `onError` and `onNotice`. Three more are specific to Next.js:
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `serverSourceMaps` | `true` | Emit and upload server and edge maps. With webpack, the server and edge compilations get `devtool: "source-map"` if you left it unset. Next.js's own `experimental.serverSourceMaps` is never changed. |
+| `deleteServerMaps` | `false` | Delete server and edge maps after a confirmed upload. |
+| `silent` | `false` | Suppress configuration notices. Failures are still reported. |
+
+Things to know:
+
+- Run `next build` from the project folder. The config is resolved once, at load, from the working directory, which decides where the token file, the app version and the installed Next.js version are looked up.
+- The browser maps are written to `.next/static`, which is served publicly, and deleted after a confirmed upload. If the upload fails and `failOnError` is off, they stay there so you can retry. If that is not acceptable, set `failOnError: true` so a failed upload stops the build, or delete `.next/static/**/*.map` in your deploy step.
+- **Subresource Integrity.** Turbopack hashes its output (`experimental.sri`) before the hook runs, so stamping afterwards would make the browser refuse your scripts. A Turbopack SRI build is therefore left exactly as Next.js wrote it, with a notice, and no maps are uploaded. Build with `--webpack` to upload maps for an SRI build.
+- On Next.js 15, Turbopack points two runtime chunks at one shared map. Those chunks are left unstamped, and that map is neither uploaded nor deleted. It contains Turbopack's runtime source, not your code.
+- A build with source maps turned off, so nothing is stamped, registers no build.
+
+See [Symbolication](/sdk/javascript/symbolication/overview) for how debug IDs work, and the [source map doctor](/sdk/javascript/symbolication/doctor) to check a build.
 
 ## Navigation breadcrumbs
 
@@ -147,7 +196,7 @@ See [Browser](/sdk/javascript/platforms/browser#browser-options) and [Node.js](/
 ## Notes
 
 - **Edge runtime.** `register()` picks the Edge SDK there. Edge capture is incident-driven: it uploads only when something goes wrong. See [Vercel Edge](/sdk/javascript/platforms/vercel-edge).
-- **Source maps.** Next.js on webpack uses the webpack plugin. See [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins).
+- **Source maps.** `withBugsee` uploads them from `next build`. See [Source maps](#source-maps).
 - **Backend context.** Each server request gets a context so logs and errors tie to it. See [Backend](/sdk/javascript/backend/overview).
 
 ## Verify
@@ -167,4 +216,5 @@ Request `/api/test`. The error shows up in the Bugsee dashboard.
 - [React](/sdk/javascript/frameworks/react) — the error boundary and route naming
 - [Vercel Edge](/sdk/javascript/platforms/vercel-edge) — the Edge runtime build
 - [Backend](/sdk/javascript/backend/overview) — request context and trace correlation
-- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — upload source maps from webpack
+- [Symbolication](/sdk/javascript/symbolication/overview) — source maps and debug IDs
+- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — the options that `withBugsee` shares

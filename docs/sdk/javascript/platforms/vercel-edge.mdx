@@ -96,6 +96,7 @@ Outside Next.js, a Vercel function runs on Node.js unless it exports `config = {
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `appVersion`, `appBuild`, `appId` | `string` | resolved | Identify your release in reports. |
+| `bindings` | `Record<string, unknown>` | none | The host's bindings object (Cloudflare's per-deployment `env`), read once at launch for the app version and build when `process.env` is empty. See [App version and build](#app-version-and-build). |
 | `captureLogs`, `captureNetwork`, `captureNetworkBodies` | `boolean` | `true` | Capture streams. |
 | `maxDataSize` | `number` | 10 MB | Size of the in-memory buffer, in megabytes. |
 | `maxTenantPartitions` | `number` | `8` | Number of per-tenant capture partitions, used when one isolate serves several tenants. |
@@ -106,7 +107,7 @@ See [Configuration](/sdk/javascript/configuration) for the shared options.
 
 ## App version and build
 
-Pass `appVersion` and `appBuild` to `launch`. The Vite and webpack plugins can also inject `__BUGSEE_APP_VERSION__` and `__BUGSEE_APP_BUILD__` at build time, and the `BUGSEE_APP_VERSION` and `BUGSEE_APP_BUILD` environment variables apply below those constants. On Vercel, if no build is given by an option, a build-time constant or `BUGSEE_APP_BUILD`, the deployed commit (`VERCEL_GIT_COMMIT_SHA`) is used as the build. If no version is found, reports show `0.0.0`.
+Pass `appVersion` and `appBuild` to `launch`. The Vite and webpack plugins can also inject `__BUGSEE_APP_VERSION__` and `__BUGSEE_APP_BUILD__` at build time, and the `BUGSEE_APP_VERSION` and `BUGSEE_APP_BUILD` environment variables apply below those constants. The `bindings` option names a host object to read the same two variables from, which matters mostly on Cloudflare (see [Cloudflare](/sdk/javascript/platforms/cloudflare#app-version-and-build)). On Vercel, if no build is given by an option, a build-time constant or `BUGSEE_APP_BUILD`, the deployed commit (`VERCEL_GIT_COMMIT_SHA`) is used as the build. If no version is found, reports show `0.0.0`.
 
 ## Source maps
 

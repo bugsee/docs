@@ -1,6 +1,6 @@
 ---
 title: "Angular"
-description: "Set up the Bugsee JavaScript SDK in an Angular app with @bugsee/angular: the ErrorHandler, Router route names, and uploading source maps with the CLI."
+description: "Set up the Bugsee JavaScript SDK in an Angular app with @bugsee/angular: the ErrorHandler, Router route names, and ng add with source-map upload."
 sidebar_position: 3
 slug: "/sdk/javascript/frameworks/angular"
 ---
@@ -12,7 +12,7 @@ import TabItem from '@theme/TabItem';
 This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
 :::
 
-`@bugsee/angular` adds Angular-specific error reporting to the [browser SDK](/sdk/javascript/platforms/browser): an `ErrorHandler` that reports uncaught errors, and route naming from the Angular Router.
+`@bugsee/angular` adds Angular-specific error reporting to the [browser SDK](/sdk/javascript/platforms/browser): an `ErrorHandler` that reports uncaught errors, route naming from the Angular Router, and an `ng add` schematic that also sets up source-map upload.
 
 ## Requirements
 
@@ -56,7 +56,7 @@ bun add @bugsee/angular
 
 ## Set up
 
-Launch Bugsee as early as possible, at the top of your entry module. In the browser `launch()` returns a `Promise` of the client. Await it only if you need the client right away.
+`ng add @bugsee/angular` does the steps below for you, and sets up [source maps](#source-maps). To do it yourself, launch Bugsee as early as possible, at the top of your entry module. In the browser `launch()` returns a `Promise` of the client. Await it only if you need the client right away.
 
 ```ts title="main.ts"
 import { launch } from '@bugsee/angular';
@@ -133,16 +133,52 @@ constructor(router: Router) {
 
 ## Source maps
 
-The Angular builder does not accept bundler plugins, so there is no plugin for it. Add the Bugsee CLI as a step after `ng build`: it injects debug IDs into the built files and uploads the source maps.
+`ng add` sets up source maps for you, and the build step stamps debug IDs, uploads the maps and re-seals Subresource Integrity (SRI) hashes. You can also run that step by hand.
+
+### ng add
 
 ```bash
-ng build --source-map
-export BUGSEE_APP_TOKEN=<your_app_token>
-bugsee-cli sourcemaps inject dist/<project>/browser
-bugsee-cli debug-files upload dist/<project>/browser --type sourcemaps --version "$APP_VERSION" --build "$APP_BUILD"
+ng add @bugsee/angular
 ```
 
-Run `inject` before you deploy. If you turn on `"subresourceIntegrity": true`, `inject` refuses to run unless you pass `--allow-sri`; see [Manual source map upload](/sdk/javascript/symbolication/manual) for details.
+It asks for your app token and then, in the workspace's application:
+
+- Turns on hidden script source maps in the production configuration of `angular.json` (`"sourceMap": { "scripts": true, "styles": false, "hidden": true }`), unless it already produces maps.
+- Launches the SDK in `main.ts`, before the bootstrap.
+- Registers `BugseeErrorHandler` as your `ErrorHandler` through Angular's `addRootProvider`, in a standalone `app.config.ts` or an `AppModule`.
+- Adds a `build:bugsee` script, and keeps the token for it in `.env.bugsee-build-plugin`, which it adds to `.gitignore`.
+
+Where it cannot find your bootstrap, it changes no source and prints the lines to add by hand. If your app already provides its own `ErrorHandler`, it does not add a second one. It prints how to report from yours with `reportAngularError(error)`, or how to wrap it with `createAngularErrorHandler({ delegate })`. Running it again changes nothing. With several applications in the workspace, pass `--project <name>`.
+
+`ng add` needs `@angular-devkit/schematics` and `@schematics/angular` 16.1 or newer, which every Angular workspace already has.
+
+### Build and upload
+
+Build for release with the script that `ng add` added:
+
+```bash
+npm run build:bugsee
+```
+
+It runs `ng build --configuration production` and then `bugsee-angular-upload --configuration production`. That command stamps debug IDs into `dist/<project>/browser`, uploads the maps, registers the build and removes the local maps. Set `BUGSEE_APP_TOKEN`, or keep the env file, where you run it. A plain `ng build` does not upload.
+
+You can run it by hand after any `ng build`. `bugsee-angular-upload --help` lists the options, including `--project`, `--configuration`, `--dist`, `--output-path`, `--app-version`, `--app-build`, `--endpoint`, `--dry-run`, `--keep-maps`, `--strip-sources-content`, `--fail-on-error`, `--upload-in-development` and `--no-vcs`. From code, use the `@bugsee/angular/sourcemaps` entry:
+
+```ts
+import { uploadAngularSourcemaps } from '@bugsee/angular/sourcemaps';
+
+await uploadAngularSourcemaps({ project: 'my-app', configuration: 'production' });
+```
+
+It works with Angular's esbuild `application` builder and the webpack `browser` builder. Only the browser output is uploaded. Errors from an SSR server are reported by the [Node.js SDK](/sdk/javascript/platforms/node).
+
+- **Subresource Integrity.** `"subresourceIntegrity": true` is supported. After stamping, the integrity hashes in `index.html`, in the import map (how Angular 21 and later pins lazy chunks) and in the copy of the page that an SSR build embeds in its server modules are rewritten to match, so the page keeps loading.
+- **Service worker.** A build with a service worker works. `ngsw.json` (one per locale for a localized build) lists the SHA-1 of every file it caches, so after stamping those hashes are recomputed and checked. If one cannot be reconciled, the build is restored and nothing is uploaded.
+- **Moved output.** If the output is not where `angular.json` says (`ng build --output-path other`), pass `--output-path other` or `--dist <browser folder>`.
+- **Problems finding the output.** No `angular.json`, several applications without `--project`, or no build output yet are printed as warnings, and the command still exits 0, so it cannot fail a pipeline whose build succeeded. Add `--fail-on-error` to exit non-zero.
+- **Install weight.** `@bugsee/angular` depends on `@bugsee/bundler-plugin-core`, and through it on the Bugsee CLI. They are used at build time only and never reach a browser bundle.
+
+To check the result offline, run the [source map doctor](/sdk/javascript/symbolication/doctor) on `dist/<project>/browser`. To upload with the CLI alone, see [Manual upload](/sdk/javascript/symbolication/manual#angular).
 
 ## Verify
 
@@ -160,5 +196,6 @@ Trigger it. The error shows up in the Bugsee dashboard.
 
 - [Browser](/sdk/javascript/platforms/browser) — launch options, persistence and replay
 - [Manual source map upload](/sdk/javascript/symbolication/manual) — the CLI recipe for Angular
+- [Source map doctor](/sdk/javascript/symbolication/doctor) — check the build output offline
 - [Symbolication](/sdk/javascript/symbolication/overview) — source maps and debug IDs
 - [Privacy](/sdk/javascript/privacy/overview) — what replay masks

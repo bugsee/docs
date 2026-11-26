@@ -133,6 +133,7 @@ The options are the same as for `launch(appToken, options)`.
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `appVersion`, `appBuild`, `appId` | `string` | resolved | Identify your release in reports. |
+| `bindings` | `Record<string, unknown>` | none | Your Worker's `env` object, read once at launch for the app version and build. See [App version and build](#app-version-and-build). |
 | `captureLogs`, `captureNetwork`, `captureNetworkBodies` | `boolean` | `true` | Capture streams. |
 | `maxDataSize` | `number` | 10 MB | Size of the in-memory buffer, divided across the partitions below. |
 | `partitionCaptureByTenant` | `boolean` | `true` on Cloudflare | Keep each Durable Object's capture in its own partition, so an incident uploads only the faulting tenant's data. Setting `false` turns that isolation off and logs a warning. |
@@ -155,7 +156,7 @@ See [Configuration](/sdk/javascript/configuration) for the shared options.
 
 ## App version and build
 
-Pass `appVersion` and `appBuild` in the options. The Vite and webpack plugins can also inject `__BUGSEE_APP_VERSION__` and `__BUGSEE_APP_BUILD__` at build time, and the `BUGSEE_APP_VERSION` and `BUGSEE_APP_BUILD` environment variables apply below those constants. If none is found, reports show version `0.0.0` and build `0`.
+Pass `appVersion` and `appBuild` in the options. The Vite and webpack plugins can also inject `__BUGSEE_APP_VERSION__` and `__BUGSEE_APP_BUILD__` at build time, and the `BUGSEE_APP_VERSION` and `BUGSEE_APP_BUILD` environment variables apply below those constants. Workers often have an empty `process.env`, so pass your Worker's `env` object as the `bindings` option, for example `(env) => ({ appToken: env.BUGSEE_APP_TOKEN, bindings: env })`, and Bugsee reads `BUGSEE_APP_VERSION` and `BUGSEE_APP_BUILD` from it. Below those, a `CF_VERSION_METADATA` binding supplies the version (its `tag`) and the build (its `id`) when nothing explicit answered. If none is found, reports show version `0.0.0` and build `0`.
 
 ## Source maps
 

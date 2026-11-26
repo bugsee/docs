@@ -47,7 +47,7 @@ The replay recorder is loaded as a separate chunk only when replay runs, so `rep
 | --- | --- | --- | --- |
 | `maskAllText` | `boolean` | `true` | Mask every text node. |
 | `maskAllInputs` | `boolean` | `true` | Mask every input value. |
-| `blockAllMedia` | `boolean` | `true` | Block images, video, audio, SVG and iframes. A blocked element becomes an empty placeholder of the same size. |
+| `blockAllMedia` | `boolean` | `true` | Block images (including SVG `<image>`), video, audio and iframes. A blocked element becomes an empty placeholder of the same size. Inline `<svg>` is recorded. |
 | `blockAllCanvas` | `boolean` | `false` | Block every `<canvas>`, except the ones you mark with `bugsee-show`. |
 | `maskTextSelector` | `string` | none | Extra CSS selector whose text is masked. |
 | `blockSelector` | `string` | none | Extra CSS selector whose elements are blocked. |

@@ -55,7 +55,7 @@ module.exports = {
 };
 ```
 
-With ES modules, use `import { bugseeWebpackPlugin } from '@bugsee/webpack-plugin';`. Next.js on webpack uses this plugin.
+With ES modules, use `import { bugseeWebpackPlugin } from '@bugsee/webpack-plugin';`. Next.js has its own integration, `withBugsee`. See [Next.js](/sdk/javascript/frameworks/nextjs#source-maps).
 
   </TabItem>
   <TabItem value="rollup" label="Rollup">
@@ -76,7 +76,7 @@ export default {
 };
 ```
 
-The plugin runs at `writeBundle`.
+The plugin stamps inside the build, in `generateBundle`, and uploads at `writeBundle`.
 
   </TabItem>
   <TabItem value="esbuild" label="esbuild">
@@ -120,6 +120,24 @@ Rspack emits no source maps by default in production (`devtool: false`), so the 
 
   </TabItem>
 </Tabs>
+
+## Where the stamp happens
+
+Where the bundler has a hook that runs before it writes files, the plugin stamps the debug IDs **inside the build**. That way any Subresource Integrity (SRI) hash taken later describes the stamped bytes, and a page that pins hashes keeps loading while its maps are uploaded.
+
+| Bundler | When the stamp runs |
+| --- | --- |
+| Vite, Rollup | In `generateBundle`, before other plugins (`order: 'pre'`). |
+| webpack 5, Rspack | In `processAssets`, just after the development-tooling stage. |
+| esbuild, and the CLI on its own | After the files are written. |
+
+List the Bugsee plugin before any SRI plugin, so the hashes are taken after the stamp.
+
+If an in-build stamp fails or is not possible (an older Rollup, or `sourcemap: 'inline'`), the plugin falls back to stamping after the files are written, where the [SRI refusal](#behavior-to-know) still applies. With `failOnError`, a failed in-build stamp fails the build instead.
+
+Every stamp is verified: each bundle still parses, its `sourceMappingURL` comment is intact, the bytes are the original plus the appended stamp, and the map carries the bundle's debug ID. A bundle that fails the check keeps or gets its original bytes back, and the failure is reported. An in-build stamp is checked again on disk and against the integrity pins in your pages.
+
+To check a finished build folder yourself, without a network, run the [source map doctor](/sdk/javascript/symbolication/doctor).
 
 ## Options
 
@@ -171,8 +189,8 @@ For a build made from an artifact, with no working tree, pass `commit` or set `B
 ## Behavior to know
 
 - **Development builds.** The Vite, webpack and Rollup plugins upload every build they run. Set `disabled` for builds you do not want uploaded. The esbuild and Rspack plugins skip builds that the bundler calls development, and leave the local maps alone, unless you set `uploadInDevelopment: true`. esbuild states no mode, so only `NODE_ENV=development` marks a development build there.
-- **Subresource Integrity.** The stamp rewrites each bundle, which would invalidate script hashes in your HTML. When the stamp happens inside the build, as in webpack, the plugin checks for hashes that no longer match and warns. When it runs after the output is written, it refuses to stamp a build whose HTML pins a hash of a script. The page stays as the bundler emitted it, and the maps are not uploaded.
-- **Source maps are deleted** after a fully successful upload, which is why the browser no longer finds them. Set `deleteMaps: false` to keep them. A dry run deletes nothing.
+- **Subresource Integrity.** The stamp rewrites each bundle, which would invalidate script hashes in your HTML. When the stamp happens inside the build (Vite, Rollup, webpack and Rspack), the hashes are taken afterwards and describe the stamped bytes. The plugin still checks for hashes that no longer match and warns. When it runs after the output is written, it refuses to stamp a build whose HTML pins a hash of a script. The page stays as the bundler emitted it, and the maps are not uploaded.
+- **Source maps are deleted** only after a confirmed upload of that map, and only when it carries a debug ID. This is why the browser no longer finds them. The `.css.map` and `.d.ts.map` files that this build wrote have no debug ID and are deleted with them once something was uploaded. Set `deleteMaps: false` to keep them. A dry run deletes nothing.
 - **Watch mode.** The plugins keep no state between rebuilds, and builds that share an output folder do not wait for each other.
 
 ### esbuild notes
@@ -184,7 +202,8 @@ For a build made from an artifact, with no working tree, pass `commit` or set `B
 
 ### What the plugins do not cover
 
-- **Angular.** Its builder does not accept esbuild plugins. Use the [CLI recipe](/sdk/javascript/symbolication/manual#angular).
+- **Angular.** Its builder does not accept esbuild plugins. Use `ng add @bugsee/angular`, which uploads the maps for you. See [Angular](/sdk/javascript/frameworks/angular#source-maps).
+- **Next.js.** Use `withBugsee` from `@bugsee/nextjs/config`, which handles both webpack and Turbopack. See [Next.js](/sdk/javascript/frameworks/nextjs#source-maps).
 - **Bun's bundler, `tsc` and `swc`.** They have no hook. Use the [CLI recipe](/sdk/javascript/symbolication/manual).
 
 ## Related pages
@@ -192,4 +211,5 @@ For a build made from an artifact, with no working tree, pass `commit` or set `B
 - [Symbolication overview](/sdk/javascript/symbolication/overview) — how debug IDs work
 - [Manual upload with the CLI](/sdk/javascript/symbolication/manual) — tsup, `tsc`, Bun and Angular
 - [Environment and variables](/sdk/javascript/symbolication/environment) — tokens, versions and the `.env.bugsee-build-plugin` file
+- [Source map doctor](/sdk/javascript/symbolication/doctor) — check a build folder offline
 - [Source maps (CLI)](/cli/sourcemaps) — the commands that the plugins run

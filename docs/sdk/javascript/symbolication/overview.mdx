@@ -39,16 +39,18 @@ Nothing changes in your runtime code. The SDK reads the debug IDs by itself.
 | Your build | Use | Page |
 | --- | --- | --- |
 | Vite, or a framework built on Vite | `@bugsee/vite-plugin` | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
-| webpack, including Next.js on webpack | `@bugsee/webpack-plugin` | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
+| webpack | `@bugsee/webpack-plugin` | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
 | Rollup, esbuild, Rspack | The plugins exported by `@bugsee/bundler-plugin-core` | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
-| tsup, `tsc`, Bun's bundler, Angular, any other tool | The `bugsee-cli` commands after the build | [Manual upload with the CLI](/sdk/javascript/symbolication/manual) |
+| Angular | `ng add @bugsee/angular` | [Angular](/sdk/javascript/frameworks/angular#source-maps) |
+| Next.js | `withBugsee` from `@bugsee/nextjs/config` | [Next.js](/sdk/javascript/frameworks/nextjs#source-maps) |
+| tsup, `tsc`, Bun's bundler, any other tool | The `bugsee-cli` commands after the build | [Manual upload with the CLI](/sdk/javascript/symbolication/manual) |
 
 The plugins run the same CLI that you can run by hand. The CLI works on any finished output folder, whatever produced it. See [Source maps](/cli/sourcemaps) for every command and flag, and [CLI installation](/cli/installation) to install it.
 
 ## Requirements and limits
 
 - **Composed maps.** If your build has several transform steps, such as a separate minifier after the bundler, the map you upload must map the shipped code straight to your original sources. The CLI uploads the map it finds on disk and does not compose layers itself.
-- **The stamp rewrites your bundles.** It appends bytes to each `.js`, `.cjs` and `.mjs` file. A build that pins script hashes with Subresource Integrity breaks if the hashes are computed before the stamp. When the plugin stamps after the build, it refuses to stamp a build that pins hashes. When the stamp happens inside the build (webpack), the plugin detects a hash that no longer matches but only warns by default: the emitted files are not restored and the build is not stopped, so the deployed scripts can be rejected by browsers. Compute integrity hashes after the stamp, or set `failOnError: true` to fail the build on a detected mismatch.
+- **The stamp rewrites your bundles.** It appends bytes to each `.js`, `.cjs` and `.mjs` file. A build that pins script hashes with Subresource Integrity breaks if the hashes are computed before the stamp. The Vite, Rollup, webpack and Rspack plugins stamp inside the build, before later hashes are taken, so list the Bugsee plugin before any SRI plugin. When the plugin stamps after the build (esbuild, the CLI), it refuses to stamp a build that pins hashes. When an in-build stamp is followed by a hash that no longer matches, the plugin detects it but only warns by default: the emitted files are not restored and the build is not stopped, so the deployed scripts can be rejected by browsers. Compute integrity hashes after the stamp, or set `failOnError: true` to fail the build on a detected mismatch. The Angular tool re-seals the hashes for you after stamping.
 - **Bytecode targets are not covered.** This SDK is for web, Node.js and Bun. It does not symbolicate JavaScript compiled to bytecode.
 - **Unbundled code.** Plain `tsc` or `tsx` output has no bundler hook, so use the CLI.
 
@@ -61,6 +63,7 @@ The SDK also stamps frames of server code. Two details:
 
 ## Verify it works
 
+- Run the [source map doctor](/sdk/javascript/symbolication/doctor) on the output folder. It checks offline why a crash from this build would not symbolicate.
 - Run the build with `dryRun: true` in the plugin, or `--dry-run` in the CLI. Nothing is uploaded or deleted, and the log shows what would be.
 - Check that the log says files were stamped. A bundle with an extension other than `.js`, `.cjs` or `.mjs` is skipped silently by the CLI.
 - Trigger a test error from a production build and open the report. Frames should show your file names and lines.
@@ -68,6 +71,7 @@ The SDK also stamps frames of server code. Two details:
 ## Related pages
 
 - [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — Vite, webpack, Rollup, esbuild and Rspack, with all options
-- [Manual upload with the CLI](/sdk/javascript/symbolication/manual) — tsup, `tsc`, Bun and Angular
+- [Manual upload with the CLI](/sdk/javascript/symbolication/manual) — tsup, `tsc` and Bun
 - [Environment and variables](/sdk/javascript/symbolication/environment) — tokens, versions and the `.env.bugsee-build-plugin` file
+- [Source map doctor](/sdk/javascript/symbolication/doctor) — check a build folder offline
 - [Errors and crashes](/sdk/javascript/issue-detection/errors-and-crashes) — the reports that carry debug IDs

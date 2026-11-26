@@ -75,6 +75,8 @@ export const bugsee = await launch('<your_app_token>', {
 });
 ```
 
+In a hidden or background browser tab, timers are throttled or frozen and animation frames stop. Before a report is built, Bugsee re-records any held trace (such as memory use) that has gone stale at the end of the capture range, and carries the value in force to its start, so the traces cover the whole range. Polled values such as frame rate are never carried, so a hidden tab shows an honest gap there. For a report opened from the report dialog, the range ends when the dialog opened.
+
 A malformed value turns the option off and is reported through the `onError` launch option. For the options that tune individual browser traces, see [Configuration](/sdk/javascript/configuration).
 
 ## Route and view

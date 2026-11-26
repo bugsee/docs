@@ -27,7 +27,7 @@ With `replay: false` the replay recorder is never loaded. For a single sensitive
 | --- | --- | --- |
 | `maskAllText` | `true` | Every text node is recorded as masked characters, with its length kept so the layout does not change. Attribute values are masked too, except the ones the page needs to render. |
 | `maskAllInputs` | `true` | Every input value is masked. |
-| `blockAllMedia` | `true` | `img`, `svg`, `video`, `audio`, `picture`, `object`, `embed`, `map`, `source` and `iframe` are recorded as empty placeholders of the same size. |
+| `blockAllMedia` | `true` | `img`, `image`, `feImage`, `video`, `audio`, `picture`, `object`, `embed`, `map`, `source` and `iframe` are recorded as empty placeholders of the same size. Inline `<svg>` (icons, charts) is recorded, because it is vector markup. Its raster-bearing `<image>` and `<feImage>` children stay blocked, and its `<text>` follows the text masking rules. |
 | `blockAllCanvas` | `false` | Canvas content is recorded only when the canvas add-on is on. See [Canvas](#canvas). |
 
 You can relax a default, for example `maskAllText: false` to see page text. Elements you mark with `bugsee-mask` stay masked.

@@ -90,6 +90,17 @@ Reports carry your app's version and build. Bugsee resolves them in this order:
 <meta name="bugsee:app-build" content="381">
 ```
 
+A browser cannot read your `package.json` or environment at run time, so the version has to be baked in at build time. The Vite and webpack plugins do it for you. Without a plugin, define the two constants yourself. Angular's esbuild `application` builder takes a `define` map in `angular.json` (`projects.<app>.architect.build.options.define`):
+
+```json
+"define": {
+  "__BUGSEE_APP_VERSION__": "\"2.4.1\"",
+  "__BUGSEE_APP_BUILD__": "\"381\""
+}
+```
+
+Generate those two lines in CI from your own version and commit id. The same constants work with any bundler that can substitute globals: esbuild and Vite take `define`, webpack uses `DefinePlugin`, and Rollup has no `define` option, so use a replacement plugin such as `@rollup/plugin-replace`.
+
 If no version is found, the SDK logs one warning and reports version `0.0.0` and build `0`.
 
 ## What is exported

@@ -11,7 +11,7 @@ This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can 
 
 The SDK is published as 49 npm packages under the `@bugsee` scope. You install only a few of them. The rest are building blocks that the packages you install depend on, and their APIs can change without notice.
 
-All packages share one version (currently 0.1.0-beta.8), ship ESM and CommonJS builds, and target ES2022. Keep every `@bugsee/*` package in your project at the same version. Install without a tag, for example `npm install @bugsee/bugsee`; the npm `latest` tag currently points at the current beta.
+All packages share one version (currently 0.1.0-beta.9), ship ESM and CommonJS builds, and target ES2022. Keep every `@bugsee/*` package in your project at the same version. Install without a tag, for example `npm install @bugsee/bugsee`; the npm `latest` tag currently points at the current beta.
 
 ## Which packages do I install?
 
@@ -50,7 +50,7 @@ Install the adapter on its own. It depends on `@bugsee/bugsee` and re-exports it
 | --- | --- | --- |
 | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/react" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/react</code></a> | React 18 or later, and Preact: error boundary, root error handlers, profiler, router naming. | [React](/sdk/javascript/frameworks/react) |
 | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/vue" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/vue</code></a> | Vue 3: error handler and vue-router naming. | [Vue](/sdk/javascript/frameworks/vue) |
-| <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/angular" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/angular</code></a> | Angular 16 or later: `ErrorHandler` and router naming. | [Angular](/sdk/javascript/frameworks/angular) |
+| <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/angular" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/angular</code></a> | Angular 16 or later: `ErrorHandler`, router naming, and `ng add` with source-map upload. | [Angular](/sdk/javascript/frameworks/angular) |
 | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/svelte" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/svelte</code></a> | Svelte 4 or later and SvelteKit 2 or later: `handleError` hook and navigation naming. | [Svelte](/sdk/javascript/frameworks/svelte) |
 | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/solid" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/solid</code></a> | Solid 1.6 or later: error primitives and router naming. | [Solid](/sdk/javascript/frameworks/solid) |
 
@@ -69,7 +69,7 @@ Each is a single install. It wires the browser client and the server (and the ed
 
 | Package | Framework | Page |
 | --- | --- | --- |
-| <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/nextjs" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/nextjs</code></a> | Next.js: `instrumentation.ts`, `instrumentation-client.ts`, middleware, Node.js and Edge runtimes. | [Next.js](/sdk/javascript/frameworks/nextjs) |
+| <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/nextjs" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/nextjs</code></a> | Next.js: `instrumentation.ts`, `instrumentation-client.ts`, middleware, Node.js and Edge runtimes, and `withBugsee` for source maps. | [Next.js](/sdk/javascript/frameworks/nextjs) |
 | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/nuxt" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/nuxt</code></a> | Nuxt module, with the Vue error handler and the Nitro server. | [Nuxt](/sdk/javascript/frameworks/nuxt) |
 | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/remix" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/remix</code></a> | Remix and React Router v7: `handleError` and the client entry. | [Remix](/sdk/javascript/frameworks/remix) |
 | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/sveltekit" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/sveltekit</code></a> | SvelteKit server and client hooks, and an edge entry. | [Svelte](/sdk/javascript/frameworks/svelte) |
@@ -97,7 +97,7 @@ Install these as development dependencies. They upload source maps and stamp deb
 | --- | --- | --- |
 | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/vite-plugin" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/vite-plugin</code></a> | Vite. | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
 | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/webpack-plugin" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/webpack-plugin</code></a> | webpack. | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
-| <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/bundler-plugin-core" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/bundler-plugin-core</code></a> | The engine behind the two plugins. Install it directly only for the Rollup, esbuild and Rspack plugins (`bugseeRollupPlugin`, `bugseeEsbuildPlugin`, `bugseeRspackPlugin`), which are less exercised than Vite and webpack. | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
+| <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/bundler-plugin-core" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/bundler-plugin-core</code></a> | The engine behind the two plugins, and the `bugsee-sourcemaps-doctor` command. Install it directly only for the Rollup, esbuild and Rspack plugins (`bugseeRollupPlugin`, `bugseeEsbuildPlugin`, `bugseeRspackPlugin`), which are less exercised than Vite and webpack, or to run the [source map doctor](/sdk/javascript/symbolication/doctor). | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
 
 The `bugsee-cli` command-line tool, which the plugins run, is a separate package, `@bugsee/cli`. See [Symbolication: manual](/sdk/javascript/symbolication/manual).
 

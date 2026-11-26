@@ -97,7 +97,7 @@ The SDK picks the first usable value in this order:
 1. The `appVersion` and `appBuild` launch options.
 2. Build-time constants `__BUGSEE_APP_VERSION__` and `__BUGSEE_APP_BUILD__`.
 3. The `appIdentitySource` option, a function returning `{ version?, build? }`.
-4. For the version: the `BUGSEE_APP_VERSION` environment variable, then the `version` field of the nearest `package.json`, searched upward from `appRoot` or the working directory.
+4. For the version: the `BUGSEE_APP_VERSION` environment variable, then the `version` field of the nearest `package.json`, searched upward from `appRoot` or the working directory. If the working directory has none (a container with `WORKDIR /`, or a service manager's folder), the folder of the entry script is searched next (`Bun.main` on Bun, otherwise `process.argv[1]`). An entry script under `node_modules`, which is a tool's script and not your app, is not searched, and an explicit `appRoot` is never overridden.
 5. For the build: the `BUGSEE_APP_BUILD` environment variable, then the commit variable of your CI or host, such as `GITHUB_SHA` or `VERCEL_GIT_COMMIT_SHA`.
 
 If no version is found, reports show `0.0.0` and the SDK prints one warning.

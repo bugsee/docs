@@ -13,6 +13,24 @@ Release history for the Bugsee JavaScript SDK. All packages (`@bugsee/bugsee`, t
 
 The npm `latest` and `beta` tags both point at the newest beta, so `npm install @bugsee/bugsee` and `npm install @bugsee/bugsee@beta` install the same version, and the install commands in these docs need no tag. Keep every `@bugsee/*` package you use at the same version.
 
+## 0.1.0-beta.9 (November 26 2026)
+
+Source maps get a safer in-build stamp, an offline doctor and Angular and Next.js integrations, and several reports become more accurate.
+
+**Changes**
+
+- **Debug IDs are stamped inside the build for Vite, Rollup and Rspack.** The stamp now happens before the bundler writes files, as it already did in webpack 5, so Subresource Integrity hashes taken later describe the stamped bytes and a page that pins them keeps loading, with its maps uploaded. List the Bugsee plugin before any SRI plugin. If an in-build stamp is not possible, the plugin falls back to stamping after the files are written. Every stamp is now verified, and a `.map` file is deleted only after a confirmed upload and only when it carries a debug ID. See [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins#where-the-stamp-happens).
+- **`bugsee-sourcemaps-doctor`.** A new offline check of a build output folder that tells you why a crash from the build would not symbolicate, with stable check ids, `--json` and `--strict` output, and exit codes 0, 1 and 2. See [Source map doctor](/sdk/javascript/symbolication/doctor).
+- **Angular: `ng add`, source-map upload and SRI re-seal.** `ng add @bugsee/angular` launches the SDK, registers the error handler and adds a `build:bugsee` script. The new `bugsee-angular-upload` command stamps, uploads and re-seals the integrity hashes, including import maps and service worker manifests. See [Angular](/sdk/javascript/frameworks/angular#source-maps).
+- **Next.js: `withBugsee`.** `@bugsee/nextjs/config` makes `next build` stamp debug IDs and upload source maps on webpack and Turbopack. See [Next.js](/sdk/javascript/frameworks/nextjs#source-maps).
+- **Session replay records inline `<svg>`.** Icons and charts were replayed as empty boxes because SVG was blocked with other media. Inline `<svg>` is now recorded by default. `<image>` and `<feImage>` stay blocked. See [Replay privacy](/sdk/javascript/privacy/replay).
+- **App version and build are detected from more places.** On Node.js and Bun, the folder of the entry script is searched for a `package.json` when the working directory has none. On Cloudflare and Vercel Edge, the new `bindings` option reads `BUGSEE_APP_VERSION`, `BUGSEE_APP_BUILD` and a `CF_VERSION_METADATA` binding from your Worker's `env`. See [Browser](/sdk/javascript/platforms/browser#app-version-and-build), [Node.js](/sdk/javascript/platforms/node#app-version-and-build) and [Cloudflare](/sdk/javascript/platforms/cloudflare#app-version-and-build).
+- **Traces cover the whole capture range.** In a throttled or hidden browser tab, system traces no longer start late or stop early, and a report opened from the report dialog ends where the dialog opened. See [Events and traces](/sdk/javascript/events-and-traces).
+- **Failed module loads name the module.** A failed dynamic `import()` in the browser, and a failed module load on Node.js and Bun, produce a report that names the module instead of an error with no usable location. See [Errors and crashes](/sdk/javascript/issue-detection/errors-and-crashes).
+- **OpenTelemetry 3.** The optional `@opentelemetry/sdk-trace-base` peer allows 1.x and 2.x, and `@opentelemetry/sdk-trace` (2.9 or newer) covers 3.x. `@bugsee/nextjs` registers its provider only when none is registered yet and works on OpenTelemetry 3. See [OpenTelemetry](/sdk/javascript/opentelemetry).
+- **Security fixes.** Hardening for several code-scanning findings: regular expressions that could run for a long time on crafted input, URL host checks, and timers. The Subresource Integrity page scan in the build plugins is now linear, and pages larger than 8 MiB are skipped.
+- **Nuxt.** The module's default export carries an explicit type, so the declaration build works against Nuxt 4.6 and later.
+
 ## 0.1.0-beta.8 (November 20 2026)
 
 A fix for stack traces of thrown values that are not `Error` objects.

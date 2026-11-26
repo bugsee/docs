@@ -22,6 +22,8 @@ Both are controlled by `detectCrashes`, which is `true` by default. Set it to `f
 
 Bugsee listens for `error` and `unhandledrejection` on the window. It reads the message and the stack from the thrown value. A value that is not an `Error`, such as a thrown string or object, is still reported, with a summary built from it.
 
+**Failed module loads.** A failed dynamic `import()`, and other errors a browser reports without a stack, produce a report that names the module. Safari rejects a failed module load with a bare `Importing a module script failed.` that has no stack and no URL. Chrome and Firefox name the module in the message but ship no frames. The report carries one frame for the failed module, taken from the message where the browser gives it, and otherwise inferred from the Resource Timing entry of the failed script fetch (same-origin only, and flagged as inferred). When nothing identifies the module, one fixed `<unknown module>` frame is used, so those occurrences still group. The report description adds the page route (without the query string), the online state and the scripts that had just loaded. A real stack, and the call site of a platform rejection, always take precedence.
+
 Nothing changes for the page. Bugsee does not call `preventDefault`, so the browser still logs the error to the console.
 
 On a framework with its own error handling, for example Vue, which catches component errors, add the matching adapter so that the errors reach Bugsee. See the framework pages, starting with [Frameworks](/sdk/javascript/frameworks/react).
@@ -69,6 +71,8 @@ launch('<your_app_token>', {
 ### Delivery after a crash
 
 The capture buffer of a Node.js or Bun process is on disk by default. The report is stored before it is uploaded, so a crash that kills the process before the upload finishes is delivered on the next launch (`recover` is `true` by default). See [Node.js](/sdk/javascript/platforms/node) for the storage options.
+
+**Failed module loads.** An uncaught exception or unhandled rejection raised while loading a module names the module that failed, instead of being reported as an error at `node:internal/modules/...` (Node.js) or with no frames at all (Bun). The failed module is the first frame (`import()` or `require()`), and the report description adds the importer, how it was loaded, the error `code` and the CommonJS `require` stack. A syntax error becomes a frame at its file, line and column where the runtime gives them. Node.js gives no file for a syntax error in a dynamically imported ES module, so that case is reported as before. The runtime's own frames follow the new first frame.
 
 ## Stack traces
 
