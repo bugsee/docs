@@ -1,0 +1,196 @@
+---
+title: "Lifecycle & status"
+description: "Launch, relaunch, stop and delete the Bugsee Unity SDK 7.x, read its status, and subscribe to its lifecycle events."
+sidebar_position: 5
+slug: "/sdk/unity/lifecycle"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+You can launch, relaunch and stop the SDK at runtime, ask for its status, and subscribe to its lifecycle events: status transitions, report assembly and upload, blackouts and crash relaunches.
+
+## Launch, relaunch and stop
+
+| Call | Returns | What it does |
+| --- | --- | --- |
+| `Bugsee.Launch(string appToken, Dictionary<string, object> options = null)` | `void` | Starts the SDK. Throws `ArgumentException` for an empty token. |
+| `Bugsee.LaunchAsync(string appToken, Dictionary<string, object> options = null)` | `Task<bool>` | `Launch` that completes with the SDK's answer. |
+| `Bugsee.Relaunch(Dictionary<string, object> options = null)` | `void` | Restarts a launched SDK with a new option set. |
+| `Bugsee.RelaunchAsync(Dictionary<string, object> options = null)` | `Task<bool>` | `Relaunch` that completes with the SDK's answer. |
+| `Bugsee.Stop(Action completion = null)` | `void` | Stops the SDK. `completion` runs once the SDK has reported the stop, or after a timeout. |
+| `Bugsee.StopAsync()` | `Task` | `Stop` that completes once the SDK has reported the stop, and faults on the timeout. |
+| `Bugsee.DeleteCollectedDataOnDevice(...)` | `void` or `Task<bool>` | Stops the SDK and deletes the data it collected. See [Delete collected data](#delete-collected-data). |
+
+The `options` argument takes `AndroidLaunchOptions`, `IOSLaunchOptions` or `OptionsBuilder`; see [Configuration](/sdk/unity/configuration).
+
+```csharp
+using System.Threading.Tasks;
+using Bugsee.Contracts.Options;
+using UnityEngine;
+using BugseeSdk = Bugsee.Bugsee;
+
+public class BugseeLifecycleExample : MonoBehaviour
+{
+    const string AppToken = "<your app token>";
+
+    async void Start()
+    {
+        bool accepted = await BugseeSdk.LaunchAsync(AppToken, BuildOptions(videoOn: true));
+        Debug.Log("Bugsee accepted the launch: " + accepted);
+    }
+
+    // Relaunch with a new option set. Pass every option you want, not only the one that changes.
+    public async void RestartWithoutVideo()
+    {
+        bool accepted = await BugseeSdk.RelaunchAsync(BuildOptions(videoOn: false));
+        Debug.Log("Bugsee accepted the relaunch: " + accepted);
+    }
+
+    // To change the token, stop first and launch again.
+    public async void SwitchToken(string newToken)
+    {
+        await BugseeSdk.StopAsync();
+        BugseeSdk.Launch(newToken, BuildOptions(videoOn: true));
+    }
+
+    static OptionsBuilder BuildOptions(bool videoOn) =>
+        new OptionsBuilder()
+            .CaptureVideo(videoOn)
+            .Set(Options.ReportingTriggerByShake, true);
+}
+```
+
+### What each call guarantees
+
+- **`Launch` and `LaunchAsync`** start a session when the SDK accepts the request. They do not wait for the native SDK to finish launching. A launch made while a stop is in flight waits for the stop. A launch while the SDK is already running ignores the new token and the new native options. On iOS, the managed capture options (`CaptureManagedExceptions`, `CaptureUnobservedTaskExceptions`) are applied again by such a repeated launch, so it can change or switch off managed exception capture in a running session. Android leaves the managed capture hooks unchanged.
+- **`Relaunch` and `RelaunchAsync`** replace the whole option set; they do not merge. Every native option you leave out goes back to its default, and a `Relaunch()` without options resets every option. Handlers, filters and the lifecycle listener are kept. `TreatUnityLogExceptionsAsFatal` is read only when the managed exception hooks are installed, so a relaunch that keeps the hooks does not change it. Android ignores a `Relaunch` unless the status is `Launched`.
+- **`Stop` and `StopAsync`** stop the SDK. The `Stop` completion runs when the SDK has reported the stop, or after the 10-second timeout described below while the native stop is still in flight. A callback cannot tell the two cases apart. A `StopAsync` that completes normally means the stop was reported. A `Launch` or `Relaunch` requested during the stop waits for it, and the completion runs before that launch does. If the completion itself calls `Launch`, that call replaces the waiting one. An unfinished managed `IReport` and an in-flight managed upload are dropped by a stop.
+- **`LaunchAsync` and `RelaunchAsync`** complete `true` when the SDK accepted the request. They complete `false` when the SDK refused it, or when a later request cancelled it while it waited. If the SDK gives no answer within 10 seconds, they complete `true` when the status is `Launching` or `Launched`, and `false` otherwise.
+- **`StopAsync`** completes when the SDK has reported the stop, even if a `Launch` follows. It faults with `TimeoutException` when the SDK has not reported the stop within 10 seconds of the call.
+
+### Threads and ordering
+
+These calls do not wait for the native SDK. They are handed to the Unity main thread.
+
+- **Android**: a call from another thread is queued and never refused. `Launch`, `Relaunch` and `DeleteCollectedDataOnDevice` run one at a time, in request order. A queued `Launch` replaces the queued `Launch` and `Relaunch` requests that follow the last queued `DeleteCollectedDataOnDevice`. A queued `Relaunch` folds its options into the queued `Launch` or `Relaunch` before it. A `Relaunch` requested while another `Relaunch` is in flight joins it: it gets that relaunch's outcome, and its own options are ignored (a warning says so). `Stop` is not queued behind the others: it starts at once and drops every queued `Launch` and `Relaunch`. A `Stop` that arrives while a relaunch is stopping, or before its launch has begun, cancels the relaunch, and the relaunch completes `false`.
+- **iOS**: a call from another thread waits up to 5 seconds for the main thread to take it. If it does not, the request does not run and an error is logged: `LaunchAsync` and `RelaunchAsync` complete `false`, and `StopAsync` faults with `TimeoutException`. Stops and the delete's wipe run one at a time. A `Launch` or `Relaunch` requested while a stop or a wipe is in flight waits until the SDK reports it finished. A later `Launch` or `Relaunch` replaces the waiting one, and a later `Stop` or `DeleteCollectedDataOnDevice` cancels it.
+
+### Deadlines
+
+If the native SDK does not report back, the package stops waiting:
+
+- After **10 seconds** it answers the caller with a warning: the `Stop` completion runs, `StopAsync` faults, and `LaunchAsync` and `RelaunchAsync` complete from the current status. The native operation stays in flight, and a launch requested meanwhile still waits for it.
+- After **60 seconds** it stops waiting for a stop and moves on, with a warning. A late report from the native SDK is ignored.
+
+## Status
+
+`Bugsee.Status` returns a `BugseeStatus`, and `Bugsee.IsLaunched` returns whether the SDK is launched.
+
+| `BugseeStatus` | Meaning |
+| --- | --- |
+| `Stopped` | Not running. |
+| `Launching` | Starting up. |
+| `Launched` | Running. |
+| `Stopping` | Shutting down. |
+
+```csharp
+using Bugsee.Contracts.Lifecycle;
+using BugseeSdk = Bugsee.Bugsee;
+
+public static class BugseeStatusExample
+{
+    public static bool IsRecording() => BugseeSdk.Status == BugseeStatus.Launched;
+}
+```
+
+In the Unity Editor, `Launch` does nothing: `Status` is `Stopped`, `IsLaunched` is `false`, `LaunchAsync` completes `false` and `StopAsync` completes at once. Test launch, capture and reporting on a device. The Editor does not record or send anything.
+
+## Delete collected data
+
+`Bugsee.DeleteCollectedDataOnDevice()` stops the SDK if needed, deletes the data it collected on the device, and leaves the SDK stopped. Call `Launch` again to resume. It returns nothing; a failure is only logged.
+
+To get the result, or to delete less, use `DeleteCollectedDataOnDeviceAsync(DeleteScope scope = DeleteScope.Everything)`, which returns `Task<bool>`, or `DeleteCollectedDataOnDevice(DeleteScope scope)`, which returns before the data is deleted and has no result.
+
+| `DeleteScope` | Deletes | Keeps |
+| --- | --- | --- |
+| `CaptureOnly` | The recorded capture. | Report snapshots and report bundles waiting for upload. |
+| `CaptureAndIntermediate` | The capture and the report snapshots. | Report bundles waiting for upload. |
+| `Everything` | Everything the SDK collected on disk, including report bundles not uploaded yet. This is the default. | Nothing. |
+
+The task completes `true` when the SDK reported the data deleted. It completes `false` when the SDK refused, gave no answer in time, or on iOS the call did not reach the main thread within 5 seconds. A timeout is a `false`, not a `TimeoutException`. On Android the time is counted from when the delete starts and is 10 seconds, stop included. On iOS the stop and the wipe each give up after 60 seconds. An undefined `DeleteScope` value throws `ArgumentOutOfRangeException`. On Android, the plain call deletes finished reports that were not uploaded yet; use `DeleteScope.CaptureAndIntermediate` to keep them.
+
+See [Privacy: Cleanup](/sdk/unity/privacy/cleanup) for how this fits with data retention.
+
+## Lifecycle events
+
+The SDK reports its transitions as events. You can receive them two ways, and both fire for every event:
+
+- `Bugsee.LifecycleEvent`, a static `event Action<string, object>`.
+- `Bugsee.SetLifecycleEventListener(ILifecycleEventListener listener)`. The listener has one method, `OnEvent(string eventType, object data)`. A second call replaces the first listener.
+
+Handlers run on the Unity main thread, on iOS and Android alike. The package keeps up to 128 events that the native SDK announces before it is listening, for example from a launch made natively before any C# call, and delivers them in order shortly after you launch.
+
+`data` is `null` or a `string`: the snapshot or request id for the report events. The native SDKs send nothing else.
+
+```csharp
+using Bugsee.Contracts.Lifecycle;
+using UnityEngine;
+using BugseeSdk = Bugsee.Bugsee;
+
+public sealed class BugseeListener : ILifecycleEventListener
+{
+    public void OnEvent(string eventType, object data)
+    {
+        switch (eventType)
+        {
+            case LifecycleEvents.Launched:
+                Debug.Log("Bugsee is running");
+                break;
+            case LifecycleEvents.RelaunchedAfterCrash:
+                Debug.Log("The previous session ended with a crash");
+                break;
+            case LifecycleEvents.AfterReportUploaded:
+                Debug.Log("Report uploaded: " + data);
+                break;
+        }
+    }
+}
+
+public static class BugseeListenerSetup
+{
+    public static void Register() => BugseeSdk.SetLifecycleEventListener(new BugseeListener());
+}
+```
+
+Compare `eventType` against the constants on `LifecycleEvents`, never against literal strings:
+
+| Constant | Dispatched when |
+| --- | --- |
+| `Launching` | The SDK is starting. |
+| `Launched` | The SDK has launched. |
+| `Stopping` | The SDK is stopping. |
+| `Stopped` | The SDK has stopped. |
+| `RelaunchedAfterCrash` | The SDK launched and found a crash left by an earlier run. |
+| `BeforeReportShown`, `AfterReportShown` | The report dialog is about to be shown, or has been shown. |
+| `BeforeReportAssembled`, `AfterReportAssembled`, `ReportAssemblyFailed` | The stages of assembling a report. |
+| `BeforeReportUploaded`, `AfterReportUploaded` | A report is about to be uploaded, or was uploaded. |
+| `ReportUploadFailedWithFutureRetry`, `ReportUploadFailed` | An upload failed and will be retried later, or failed for good. |
+| `BlackoutStarted`, `BlackoutEnded` | A [blackout](/sdk/unity/privacy/video) began or ended. |
+| `BeforeFeedbackShown`, `AfterFeedbackShown` | The [feedback](/sdk/unity/feedback) screen is about to be shown, or has been shown. |
+
+The constants mirror the Android SDK's list. The native SDKs decide which events they send; for example, the iOS SDK reserves the feedback events and does not dispatch them yet (see [iOS lifecycle events](/sdk/ios/lifecycle#available-lifecycle-events)).
+
+## iOS early launch
+
+If you turned on iOS native early launch at export, the SDK starts at app launch, before the first scene, and the first `Bugsee.Launch` adopts that running session instead of starting a second one. See [iOS build setup](/sdk/unity/build-setup/ios#early-launch).
+
+Known issue: after an iOS launch that died before the app became active, the next launch can block the main thread for up to about 8 seconds. An app that uses early launch can hit it. Details are in the early launch section of the [iOS build setup](/sdk/unity/build-setup/ios#early-launch).
+
+## Related pages
+
+- [Configuration](/sdk/unity/configuration): the launch options.
+- [Installation](/sdk/unity/installation): add the package and make the first launch.
+- [Privacy: Cleanup](/sdk/unity/privacy/cleanup): delete collected data and limit retention.
+- [Report handler](/sdk/unity/report-handler): change reports before and after they upload.

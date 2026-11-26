@@ -3,7 +3,7 @@ import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 // Wrapper SDKs share one layout: an installation page and a privacy section.
-const wrapperSdks = ['cordova', 'dotnet', 'flutter', 'kmp', 'react_native', 'unity', 'xamarin'];
+const wrapperSdks = ['cordova', 'dotnet', 'flutter', 'kmp', 'react_native', 'xamarin'];
 
 const config: Config = {
   title: 'Bugsee',
@@ -125,6 +125,16 @@ const config: Config = {
           { from: '/sdk/react-native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
           { from: '/sdk/react_native/v6', to: '/sdk/react_native/v6/installation/' },
           { from: '/sdk/react_native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
+          // 6.x moved under /sdk/unity/v6/. The bare Unity routes stay on 6.x until 7.x is GA.
+          { from: '/sdk/unity', to: '/sdk/unity/v6/installation/' },
+          { from: '/sdk/unity/privacy', to: '/sdk/unity/v6/privacy/overview/' },
+          { from: '/sdk/unity/v6', to: '/sdk/unity/v6/installation/' },
+          { from: '/sdk/unity/v6/privacy', to: '/sdk/unity/v6/privacy/overview/' },
+          // Unity 6.x routes with no 7.x page at the same address keep their 6.x content during the beta.
+          { from: '/sdk/unity/manual', to: '/sdk/unity/v6/manual/' },
+          { from: '/sdk/unity/custom', to: '/sdk/unity/v6/custom/' },
+          { from: '/sdk/unity/crashes', to: '/sdk/unity/v6/crashes/' },
+          { from: '/sdk/unity/versions', to: '/sdk/unity/v6/versions/' },
         ],
         // Android 7.x and iOS 7.x lived under /sdk/<platform>/v7/ until they became the
         // default; every current Android and iOS page keeps answering at its old v7 address.
@@ -214,7 +224,7 @@ const config: Config = {
             { label: 'Bugsee for Xamarin', to: '/sdk/xamarin/installation/' },
             { label: 'Bugsee for .NET/MAUI', to: '/sdk/dotnet/installation/' },
             { label: 'Bugsee for Flutter', to: '/sdk/flutter/installation/' },
-            { label: 'Bugsee for Unity', to: '/sdk/unity/installation/' },
+            { label: 'Bugsee for Unity', to: '/sdk/unity/v6/installation/' },
           ],
         },
         {

@@ -1,0 +1,114 @@
+---
+title: "Symbolication: C# code"
+description: "Get C# method names, files and lines in crash and exception reports from Unity IL2CPP and Mono builds with the Bugsee Unity SDK 7.x."
+sidebar_position: 4
+slug: "/sdk/unity/symbolication/managed-code"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+A C# method in a Release player does not show up with its file and line by itself. What you get depends on the scripting backend and on what you upload. This page covers the C# frames of crashes and of exceptions you report with `Bugsee.LogException`. For native frames, see [Symbolication: Android](/sdk/unity/symbolication/android) and [Symbolication: iOS](/sdk/unity/symbolication/ios).
+
+## What each build gives you
+
+| Build | The app sends | What resolves the C# file and line |
+| --- | --- | --- |
+| Mono on Android, Development Build | A stack text with file and line, because the player ships the `.pdb` files | The text itself |
+| Mono on Android, Release | A method, an IL offset and a module id, for example `[0x0000b] in <module-guid>:0` | The mapping the Editor uploads from your portable `.pdb` files. See [Mono on Android Release builds](#mono-on-android-release-builds). |
+| IL2CPP with IL2CPP line information (**Method Name, File Name, and Line Number**) | A stack text with file and line where Unity provides it | The text itself |
+| IL2CPP Release without line information | Native addresses and the module UUID | The IL2CPP line map plus native symbols with line information: Debugging on Android, a dSYM on iOS. See [The IL2CPP line map](#the-il2cpp-line-map). |
+
+A managed plug-in `.dll` without a `.pdb` stays at IL offsets on Mono.
+
+## The IL2CPP line map
+
+IL2CPP turns your C# into C++. The line map records which C++ line came from which C# file and line. With it, Bugsee takes a native address from a crash or an exception, finds the C++ line in the native symbols, and maps that to your C#.
+
+The package adds `--emit-source-mapping --emit-method-map` to the IL2CPP arguments of every IL2CPP build, through the Editor process's `IL2CPP_ADDITIONAL_ARGS` for the build only. It does not change Player Settings. The build writes `LineNumberMappings.json` and `MethodMap.tsv`, with or without a token.
+
+- Set `BUGSEE_NO_IL2CPP_MAPPING` to turn the emission and the upload off.
+- Set `BUGSEE_IL2CPP_MAPPING` to the path of a `LineNumberMappings.json` of your own to upload that file instead. The arguments are still added.
+- Set `BUGSEE_IL2CPP_UUIDS` to the module UUIDs, comma separated, to skip reading them from the build output.
+- `BUGSEE_NO_SYMBOL_UPLOAD` turns the upload off but still writes the files.
+
+The first build after you update the package, and every toggle of `BUGSEE_NO_IL2CPP_MAPPING`, compiles all the generated C++ again once. The flags add `//<source_info:...>` comments with absolute source paths to the generated C++. Set `BUGSEE_NO_IL2CPP_MAPPING` if you hand the generated C++ or an Xcode export to other people.
+
+On Android the Editor uploads the line map after the build, when `BUGSEE_APP_TOKEN` is set. On iOS the Xcode Run Script uploads it, keyed by the UUID of `UnityFramework`. If the Editor cannot find the UUID at export, it leaves the upload to the Run Script.
+
+The line map alone does not symbolicate. You also need the native symbols of the same build with line information:
+
+- Android: **Create symbols.zip** set to Debugging. See [Public and Debugging symbols](/sdk/unity/symbolication/android#public-and-debugging-symbols).
+- iOS: the dSYMs the Run Script uploads.
+
+### Known issues
+
+- Handled managed exceptions in a Release IL2CPP build on Android without IL2CPP line information stay unsymbolicated (no file and line) when the symbols are Public. Use Debugging symbols plus the IL2CPP line map. Development builds send no addresses on Android, and Debugging symbols do not change that.
+- Switching the symbol level from Public to Debugging for the same `libil2cpp.so` build id may leave frames raw on the dashboard. This is open and under investigation ([issue 263](https://github.com/bugsee/bugsee-unity/issues/263)).
+
+An exception that is rethrown through `await` has a stack text in two parts, joined by `--- End of stack trace from previous location ---`. On IL2CPP the frames before the separator get no address, so they stay unresolved. Only the frames after it, the live stack, resolve.
+
+### Upload the IL2CPP line map from CI
+
+The build writes the line map next to the generated C++, even without a token. Keep the folder as a build artifact and upload after the build:
+
+| Platform | Where `LineNumberMappings.json` is |
+| --- | --- |
+| Android, APK or AAB | `<output>_BackUpThisFolder_ButDontShipItWithYourGame/il2cppOutput/Symbols/`. Keep this folder: the next build overwrites the copy under `Library/Bee`. |
+| Android, Export Project | In the exported project folder: search it for `LineNumberMappings.json` |
+| iOS | `<Xcode export>/Il2CppOutputProject/Source/il2cppOutput/Symbols/` |
+
+```bash
+export BUGSEE_APP_TOKEN="your-app-token"
+
+bugsee-cli debug-files upload <Symbols>/LineNumberMappings.json \
+  --type il2cpp-linemap \
+  --version <version> --build <build number> \
+  --uuid <module UUIDs>
+```
+
+`MethodMap.tsv` and `il2cppFileRoot.txt` beside the JSON are sent with it. `il2cppFileRoot.txt` is written by Unity and is not required. The module UUIDs are those of the IL2CPP module:
+
+- Android: the GNU build id of each `libil2cpp.so`, one per ABI, comma separated. Read it with `llvm-readelf -n` from the NDK on `lib/<abi>/libil2cpp.so` in the APK, or on the copy in `symbols.zip`.
+- iOS: the Mach-O UUID of `UnityFramework`, from `dwarfdump --uuid` on the built `UnityFramework.framework/UnityFramework` or its dSYM.
+
+The version and the build number must match the build's. Upload the matching native symbols (`elf` or `dsym`) too. See [Uploading debug information files](/cli/debug-files#unity-il2cpp).
+
+## Mono on Android Release builds
+
+A Mono build that is not a Development Build ships no `.pdb`, so the dashboard has an IL offset and a module id for each C# frame. After such a build, the Editor has `bugsee-cli` convert your assemblies and their portable `.pdb` files into Bugsee's BMF mapping and upload that. The CLI does not upload the `.pdb` files themselves. The mapping is keyed by method signature and IL offset, and registered under the module id of the assembly the app ships.
+
+The Editor runs this step when:
+
+- The build target is Android with the Mono scripting backend and is not a Development Build.
+- `BUGSEE_APP_TOKEN` is set in the Editor's environment and `BUGSEE_NO_SYMBOL_UPLOAD` is not.
+
+It does not run for IL2CPP or on iOS. With no token or with `BUGSEE_NO_SYMBOL_UPLOAD` set, the Editor warns once with the manual command and continues.
+
+### CLI version
+
+This step needs `bugsee-cli` 0.9.0 or newer. If the CLI the shared lookup found is older, the Editor looks for the first CLI of 0.9.0 or newer in the lookup order, and otherwise uses the package's cached or downloaded default release (or the release in `BUGSEE_CLI_VERSION`, when that is 0.9.0 or newer; a lower value is ignored for this step). It logs which CLI it took. A `BUGSEE_CLI_PATH` that names an older CLI is not replaced: the Editor warns and skips the step. The same warning appears when no CLI of 0.9.0 or newer is found and downloading is not possible (`BUGSEE_NO_CLI_DOWNLOAD` is set, an earlier download failed, or no release exists for the host). The build continues in every case.
+
+### Where the files come from
+
+The Editor reads the compiler output in `Library/Bee/artifacts/<prefix>P.dag`, the newest folder compiled for Android, and the linked assemblies in `Library/Bee/artifacts/Android/ManagedStripped`. Managed stripping at Low or higher gives each assembly a new module id, so the mapping must be registered under the stripped assemblies' ids. If the `ManagedStripped` folder is missing or older than the compiler output, the upload still runs under the compiler's module ids, the Editor warns, and the result matches the app only with managed stripping Disabled. If several Android release folders exist, the Editor warns and names them. Delete the folders you no longer build with.
+
+A failure, a missing folder or a non-zero exit is a warning, never a failed build.
+
+### Upload by hand
+
+```bash
+export BUGSEE_APP_TOKEN="your-app-token"
+
+bugsee-cli debug-files upload Library/Bee/artifacts/<prefix>P.dag \
+  --type portable-pdb \
+  --shipped-dir Library/Bee/artifacts/Android/ManagedStripped \
+  --version <version> --build <build number>
+```
+
+Use `debug-files convert ... --to bmf --output <dir>` to write the same BMF files locally without uploading. The CLI exits with 11 when a `.pdb` does not belong to its assembly, or when two different assemblies map to one module id, so name one `.dag` folder and not its parent. See [Unity Mono](/cli/debug-files#unity-mono) for every option.
+
+### Limits on Android Mono
+
+Unity 2021.3 has no Mono ARM64 build, and frames inside the Mono runtime libraries stay unsymbolicated. See [Mono](/sdk/unity/symbolication/android#mono).

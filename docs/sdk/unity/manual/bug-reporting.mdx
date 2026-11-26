@@ -1,0 +1,196 @@
+---
+title: "Bug reporting"
+description: "File bug reports from a Unity game with Bugsee SDK 7.x: the built-in triggers, the report dialog, silent uploads, reports you build in code, and severity."
+sidebar_position: 1
+slug: "/sdk/unity/manual/bug-reporting"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+A bug report is a recording of what happened (video, console logs, network events, events and traces) plus a summary, a description, labels and a severity. A player files one from the report dialog, you file one from code, or a trigger you turned on opens the dialog.
+
+Call these methods after the SDK has launched: see [Lifecycle & status](/sdk/unity/lifecycle). In the Unity Editor they do nothing (`CreateReport` and `Upload(report)` throw, see below), so test on an Android or iOS device.
+
+The snippets on this site call the facade through the alias `using BugseeSdk = Bugsee.Bugsee;`. See [Installation](/sdk/unity/installation#launch-the-sdk) for why.
+
+## Built-in report triggers
+
+Four triggers can open the report dialog. In 7.x all of them are off until you turn them on. In 6.x, shake (Android) and the Android notification-bar trigger were on by default.
+
+| Option | Platform | Type | Default | What it does |
+| --- | --- | --- | --- | --- |
+| `ReportingTriggerByShake` | Android, iOS | `bool` | `false` | Shaking the device opens the dialog. |
+| `ReportingTriggerByScreenshot` | Android, iOS | `bool` | `false` | Taking a system screenshot opens the dialog. |
+| `ReportingTriggerByNotification` | Android | `bool` | `false` | A notification-bar entry opens the dialog. Set on `AndroidLaunchOptions`. |
+| `ReportingTriggerByBroadcast` | Android | `bool` | `false` | A broadcast opens the dialog. Set on `AndroidLaunchOptions`. |
+
+Set them in the launch options. The Android-only options exist on `AndroidLaunchOptions` only:
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+#if UNITY_ANDROID
+var options = new AndroidLaunchOptions
+{
+    ReportingTriggerByShake = true,
+    ReportingTriggerByScreenshot = true,
+    ReportingTriggerByNotification = true,
+};
+BugseeSdk.Launch("<your Android app token>", options);
+#elif UNITY_IOS
+var options = new IOSLaunchOptions
+{
+    ReportingTriggerByShake = true,
+    ReportingTriggerByScreenshot = true,
+};
+BugseeSdk.Launch("<your iOS app token>", options);
+#endif
+```
+
+For what each trigger does on the device, see the native pages: [Android](/sdk/android/manual/bug-reporting) and [iOS](/sdk/ios/manual/bug-reporting). Every launch option is listed in [Configuration](/sdk/unity/configuration).
+
+## Show the report dialog
+
+`ShowReportDialog` opens the dialog from your own UI, for example a "Report a problem" button:
+
+```csharp
+public static void ShowReportDialog(
+    string summary = "",
+    string description = "",
+    IssueSeverity? severity = null,
+    IList<string> labels = null)
+```
+
+All parameters are optional and pre-fill the form:
+
+```csharp
+using System.Collections.Generic;
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+BugseeSdk.ShowReportDialog();
+
+BugseeSdk.ShowReportDialog(
+    "Cannot join the match",
+    "The lobby never loads after the splash screen.",
+    IssueSeverity.High,
+    new List<string> { "multiplayer", "lobby" });
+```
+
+`severity` is `IssueSeverity?`. Leave it out (or pass `null`) and the SDK uses the `ReportingDefaultBugPriority` launch option, which is `High` unless you set it. An explicit value is used as given. The enum values are:
+
+| `IssueSeverity` | Value |
+| --- | --- |
+| `VeryLow` | 1 |
+| `Medium` | 2 |
+| `High` | 3 |
+| `Critical` | 4 |
+| `Blocker` | 5 |
+
+In 6.x the call was `ShowReport(...)`. In 7.x it is `ShowReportDialog(...)`.
+
+### Report form options
+
+These launch options change the dialog. They are shared by both platforms unless noted:
+
+| Option | Platform | Type | Default | What it does |
+| --- | --- | --- | --- | --- |
+| `ReportingUISummaryRequired` | Android, iOS | `bool` | `false` | The summary field must be filled in. |
+| `ReportingUIDescriptionRequired` | Android, iOS | `bool` | `false` | The description field must be filled in. |
+| `ReportingUIEmailRequired` | Android, iOS | `bool` | `false` | The email field must be filled in. |
+| `ReportingUILabelsEnabled` | Android, iOS | `bool` | `false` | Shows the labels field. |
+| `ReportingUILabelsRequired` | Android, iOS | `bool` | `false` | At least one label is required. |
+| `ReportingUIPrioritySelectorEnabled` | Android, iOS | `bool` | `false` | Shows the severity selector. |
+| `ReportingUIStyle` | iOS | `ReportingUIStyle` | `System` | The look of the report screen: `Light`, `Dusk`, `BasedOnStatusBar` or `System`. Set on `IOSLaunchOptions`. |
+
+To change colors and placeholder texts of the dialog, see [Appearance](/sdk/unity/appearance).
+
+## Upload a report without UI
+
+`Upload` creates and sends a report with no dialog:
+
+```csharp
+public static void Upload(
+    string summary,
+    string description = "",
+    IssueSeverity? severity = null,
+    IList<string> labels = null)
+```
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+BugseeSdk.Upload("Save file is corrupted", "Slot 2 failed the checksum on load.", IssueSeverity.Critical);
+```
+
+An omitted `severity` is handled as for `ShowReportDialog`: the SDK applies `ReportingDefaultBugPriority`.
+
+:::warning
+Do not call `Upload` from automated error paths. To report a caught exception, use [`Bugsee.LogException`](/sdk/unity/manual/crash-error-reporting#report-a-handled-exception): the report then carries the stack trace and is grouped with the other occurrences of the same error.
+:::
+
+## Build a report in code
+
+`CreateReport` returns an `IReport` you fill in, then send with `Upload(IReport)`. Use it when you need to set an attribute or an attachment on the report, or when you collect the fields over time:
+
+```csharp
+using System.Text;
+using Bugsee.Contracts.Options;
+using Bugsee.Contracts.Reporting;
+using BugseeSdk = Bugsee.Bugsee;
+
+IReport report = BugseeSdk.CreateReport();
+report.Summary = "Checkout failed";
+report.Description = "The payment sheet closed without a result.";
+report.Severity = IssueSeverity.High;
+report.AddLabel("checkout");
+report.SetAttribute("order_id", "A-1721");
+report.AddAttachmentBytes(Encoding.UTF8.GetBytes("{\"retries\":3}"), "state.json", "application/json");
+
+BugseeSdk.Upload(report);
+```
+
+To drop a report you do not want to send, call `BugseeSdk.Discard(report)`.
+
+Rules for `CreateReport`:
+
+- Only one report can be open at a time. A second `CreateReport` before `Upload(report)` or `Discard(report)` throws `InvalidOperationException`.
+- `Upload(report)` and `Discard(report)` accept only the report object that `CreateReport` returned. Another `IReport` throws `ArgumentException`.
+- The report is a snapshot that the SDK turns into a native report when you upload it. It has no report `Id` yet, its `Type` is `Bug`, and it holds no screenshots: `ScreenshotDisplayIds` is empty and `SetScreenshotPng` returns `false`.
+- `IReport.Email` is used on Android. On iOS it is dropped with a warning: use `Bugsee.SetUserIdentifier` instead. See [User & session data](/sdk/unity/user-session-data).
+- In the Unity Editor, `CreateReport` and `Upload(report)` throw `NotSupportedException`.
+
+`IReport.Severity` is `IssueSeverity?`. `null` means unset, and the SDK then applies its default. The value `0` is not a severity and counts as unset.
+
+The members of `IReport` are the same ones a [report handler](/sdk/unity/report-handler) receives:
+
+| Area | Members |
+| --- | --- |
+| Identity | `Id`, `Type` (`Bug`, `Crash` or `Error`) |
+| Text | `Summary`, `Description`, `Email` |
+| Severity | `Severity` |
+| Labels | `Labels`, `AddLabel`, `SetLabels`, `ClearLabels` |
+| Attributes | `Attributes`, `GetAttribute`, `SetAttribute`, `RemoveAttribute`, `ClearAllAttributes` |
+| Attachments | `Attachments`, `AddAttachmentFile`, `AddAttachmentBytes`, `ClearAttachments` |
+
+On a report from `CreateReport`, `AddAttachmentFile(path, name, mimeType)` copies the file when you call it, so you can delete the original afterwards. It returns `null` when the file does not exist. Attachment count and size limits come from the native SDKs: see [Attachments](/sdk/unity/report-handler#attachments).
+
+## Default severities
+
+A report gets a default severity unless you set one in the call or in a report handler:
+
+| Report | Option | Default |
+| --- | --- | --- |
+| Bug report | `ReportingDefaultBugPriority` | `High` |
+| Error (handled exception) | `ReportingDefaultErrorPriority` | `High` |
+| Crash | `ReportingDefaultCrashPriority` | `Blocker` |
+
+All three are `IssueSeverity` properties on the launch options and apply to both platforms.
+
+## Add context to the report
+
+A report includes the events, traces, attributes, breadcrumbs and logs recorded before it. See [Custom events & traces](/sdk/unity/events-and-traces), [User & session data](/sdk/unity/user-session-data), [Breadcrumbs](/sdk/unity/breadcrumbs) and [Console logs](/sdk/unity/logs). To change a report before it is uploaded, use a [report handler](/sdk/unity/report-handler). For what a report may contain and how to limit it, see [Privacy: Report](/sdk/unity/privacy/report).

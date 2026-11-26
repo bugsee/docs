@@ -1,201 +1,104 @@
 ---
 title: "Release notes"
-description: "Changelog for the Bugsee Unity SDK, listing all version updates, new features, bug fixes, and breaking changes."
-sidebar_position: 10
+description: "Release history for Bugsee Unity SDK 7.x (beta), with the native SDK versions each release is built on."
+sidebar_position: 23
 slug: "/sdk/unity/release-notes"
 ---
 
-## 6.0.2 (March 20 2026)
-- Feat: Updated native SDKs to their latest versions (Android: [6.0.2](/sdk/android/v6/release-notes/#602-march-11-2026), iOS: [6.1.2](/sdk/ios/v6/release-notes/#612-march-4-2026))
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
 
-## 6.0.0 (March 6 2026)
-- Feat: Updated native SDKs to their latest versions (Android: [6.0.0](/sdk/android/v6/release-notes/#600-december-9-2025), iOS: [6.1.2](/sdk/ios/v6/release-notes/#612-march-4-2026))
-- Breaking: \[iOS\] Minimum deployment target is iOS 12.0
-- Breaking: \[Android\] Bugsee SDK is now built with Android SDK version 35, hence requires compileSDKVersion 35
-- Breaking: \[Android\] AGP 8.6.0 or newer is now required
+Release history for Bugsee Unity SDK 7.x, the package `com.bugsee.unity`. Looking for the stable release? See the [6.x release notes](/sdk/unity/v6/release-notes). Upgrading from 6.x? See the [migration guide](/sdk/unity/migration).
 
-## 5.3.9 (December 5 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.9.3](/sdk/android/v6/release-notes/#593-december-4-2025), iOS: [5.5.9](/sdk/ios/v6/release-notes/#559-november-17-2025))
+Each release lists the native SDKs it is built on. Their own changes are in the native SDK release notes: [Android](/sdk/android/release-notes) and [iOS](/sdk/ios/release-notes).
 
-## 5.3.8 (November 18 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.9.1](/sdk/android/v6/release-notes/#591-september-29-2025), iOS: [5.5.9](/sdk/ios/v6/release-notes/#559-november-17-2025))
+## 7.0.0-beta.1 (November 23, 2026)
 
-## 5.3.7 (August 21 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.8.4](/sdk/android/v6/release-notes/#584-august-21-2025), iOS: [5.5.8](/sdk/ios/v6/release-notes/#558-august-21-2025))
+The first beta of the 7.x line, which continues the sequence from 6.x. It is a new package with a new C# API. It ships with Bugsee Android SDK 7.6.0 and Bugsee iOS SDK 7.1.0. It is a beta: it can contain rough edges, and the API can change in later betas.
 
-## 5.3.6 (July 10 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.7.6](/sdk/android/v6/release-notes/#576-june-19-2025), iOS: [5.5.6](/sdk/ios/v6/release-notes/#556-march-25-2025))
-- Fix: \[iOS\] In some configurations, build may fail with "Undefined symbols" error
+**Highlights**
 
-## 5.3.5 (June 8 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.7.5](/sdk/android/v6/release-notes/#575-june-8-2025), iOS: [5.5.6](/sdk/ios/v6/release-notes/#556-march-25-2025))
-- Fix: \[Android\] In some configurations, application may crash on device with 16KB memory pages
+- **A new package and a new C# API.** You install `com.bugsee.unity` from a git tag with the Unity Package Manager, and you call the static class `Bugsee` (namespace `Bugsee`). See [Installation](/sdk/unity/installation).
+- **Typed launch options** for Android and iOS, `AndroidLaunchOptions` and `IOSLaunchOptions`, with the same keys the native SDKs read. See [Configuration](/sdk/unity/configuration).
+- **iOS Crash Report Extension** (Xcode 27 and later) and opt-in **iOS native early launch**. See [Crash Report Extension](/sdk/unity/issue-detection/crash-report-extension).
+- **Symbol upload from the build** for Android and iOS. See [Symbolication](/sdk/unity/symbolication/overview).
 
-## 5.3.4 (May 6 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.7.3](/sdk/android/v6/release-notes/#573-may-5-2025), iOS: [5.5.6](/sdk/ios/v6/release-notes/#556-march-25-2025))
+**Breaking changes**
 
-## 5.3.3 (April 22 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.7.2](/sdk/android/v6/release-notes/#572-march-17-2025), iOS: [5.5.6](/sdk/ios/v6/release-notes/#556-march-25-2025)) 
+The [migration guide](/sdk/unity/migration) lists every change from 6.x, with the old and the new code. These are the main ones.
 
-## 5.3.2 (February 4 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.6.5](/sdk/android/v6/release-notes/#565-february-3-2025), iOS: [5.5.4](/sdk/ios/v6/release-notes/#554-january-27-2025))
-- Fix: \[Android\] Built-in UI shifts upwards in some scenarios on Android 15 (specifically, when hosting application itself is targeting Android 15, i.e. target SDK version is 35)
+- **New package, new API.** The `.unitypackage` and the `Assets/Plugins/Bugsee` files, the `BugseeLauncher` component and the namespace `BugseePlugin` are replaced by the git package and the namespace `Bugsee`. Remove the 6.x plugin files and the old AAR, and port your calls.
+- **Shake-to-report and the Android notification-bar trigger are off by default** (iOS SDK 7.1.0 and Android SDK 7.6.0). In 6.x, shake was on for Android and off for iOS, the Android notification-bar trigger was on, and the iOS screenshot trigger was on. The iOS screenshot trigger is also off in 7.x: set `ReportingTriggerByScreenshot = true` to keep it. Set `ReportingTriggerByShake = true` (both platforms) and `AndroidLaunchOptions.ReportingTriggerByNotification = true` (Android) to turn them on.
+- **`ShowReportDialog` and `Upload` take `IssueSeverity? severity = null`.** `null` uses the `ReportingDefaultBugPriority` option. They used to always send High.
+- **Attribute values read back as `long` and `double` on Android**, as on iOS: `GetAttribute`, `GetAllAttributes` and `IReport.GetAttribute`. Replace `(int)` unboxing with `Convert.ToInt32` or a cast to `long`.
+- **There is no typed `Debug` or `Endpoint` launch option.** Set an endpoint with `SetCustomOption("com.bugsee.option.$$ENDPOINT", url)`.
+- **The iOS key `BugseeEnableMachExceptions` is not supported.** Use `IOSLaunchOptions.CrashHandlerType`.
+- **The client signature of managed exceptions changed**, so existing issues can regroup after the update.
+- **If your CI sets `BUGSEE_BUILD_UUID`,** the Android mapping upload is now keyed by the build id the built app carries. The variable applies only when the app has none and the value is a UUID.
+- **An iOS export on Xcode 27 or later can add a `BugseeCrashReport` extension target** and an App Group entitlement. Set `BUGSEE_IOS_CRASH_EXTENSION=0` to keep the export as before.
 
-## 5.3.1 (September 12 2024)
-- Feat: Updated native SDKs to their latest versions (Android: 5.4.2, iOS: 5.3.2)
-- Fix: \[Android\] Crash when bug is sent from built-in reporting UI after removing screenshot
+**Added**
 
-## 5.3.0 (September 9 2024)
-- Feat: Updated native SDKs to their latest versions (Android: 5.4.1, iOS: 5.3.2)
-- Feat: \[Android\] 16KB memory pages support
+- **`DeleteScope` and `DeleteCollectedDataOnDeviceAsync`.** `Bugsee.DeleteCollectedDataOnDeviceAsync(DeleteScope scope = DeleteScope.Everything)` returns a `Task<bool>`, and `DeleteCollectedDataOnDevice(DeleteScope scope)` is the fire-and-forget form: it returns before the data is deleted and has no result, and a failure is only logged. Use `DeleteCollectedDataOnDeviceAsync` when you need to know that the delete finished. On Android, `DeleteCollectedDataOnDevice()` also deletes finished reports that were not uploaded yet, and stops the SDK first. Use `DeleteScope.CaptureAndIntermediate` to keep them. See [Lifecycle & status](/sdk/unity/lifecycle#delete-collected-data).
+- **`IReport.Severity` is `IssueSeverity?`.** `null` is unset.
+- **Typed options.** Android options such as `MaxDataSize` and iOS options such as `CrashSignals`, `CaptureOnDeviceSymbolication`, `CrashSwiftAsyncStackTraces`, `CrashFillEmptyExceptionStacks` and `CaptureWebSocket` have typed properties and `Options` constants. They were reachable only through `SetCustomOption`.
+- **`CaptureUnobservedTaskExceptions`.** A Unity-only option, `true` by default, that needs `CaptureManagedExceptions`. Set it to `false` to stop reporting `TaskScheduler.UnobservedTaskException` as a handled error.
+- **`Bugsee.ApplyDefaultNetworkSanitizer`** runs the SDK's built-in network redaction on an event, on Android and now on iOS (it returns `false` in the Editor). Call it first in a network filter to keep the redaction. See [Network events](/sdk/unity/network).
+- **iOS native early launch** (opt-in, off by default). With `BUGSEE_IOS_EARLY_LAUNCH=1` and `BUGSEE_IOS_APP_TOKEN`, or **Bugsee > iOS > Early Launch**, the iOS SDK starts at app launch, before Unity's first scene, and the first `Bugsee.Launch` adopts that session. The SDK then starts before any C# consent check. See [Lifecycle & status](/sdk/unity/lifecycle#ios-early-launch).
+- **iOS Crash Report Extension.** On Xcode 27 and later the iOS export adds a `BugseeCrashReport` extension target, so that devices on iOS 27 and later report foreground (crash) and background (non-fatal) out-of-memory kills and exits. See [Crash Report Extension](/sdk/unity/issue-detection/crash-report-extension).
+- **Built-in module declarations.** The package declares the Unity modules `com.unity.modules.androidjni`, `jsonserialize` and `ui`. Without them, a project that had those modules disabled failed to compile. `com.unity.modules.screencapture` stays optional.
 
-## 5.2.0 (April 23 2024)
-- Fix: \[Android\] In some cases, video before FG->BG->FG transitions may be absent
-- Note: \[Android\] compileSdkVersion 34 and up is now required
+**Changed**
 
-## 5.1.0 (April 11 2024)
-- Feat: Updated native SDKs to their latest versions (Android: 4.2.4, iOS: 5.0.2)
+- **`CrashSignals` reaches Android.** It is a shared launch option with a typed property. Before, the iOS key was reachable only through `SetCustomOption` and was not sent to Android. On Android it is read by the NDK module. A mask meant only for iOS, such as `CrashSignals.None`, also narrows or switches off native signal capture on Android when the NDK module is present, for example when iOS and Android share one options object. Leave it out of the Android options to keep every signal. See [Configuration](/sdk/unity/configuration#crashsignals).
+- **Native SDKs moved to Android SDK 7.6.0 and iOS SDK 7.1.0.** Their option defaults changed: see the shake and notification-bar item under Breaking changes.
+- **Feedback is opt-in and works when on.** Add the scripting define `BUGSEE_FEEDBACK` (or set the environment variable `BUGSEE_FEEDBACK=1` for the export) to link the feedback add-on. See [Feedback](/sdk/unity/feedback).
+- **Android symbols.** The Editor's upload of Unity's `symbols.zip` now gives `libunity.so`, `libil2cpp.so` and `libmain.so` the unwind tables that Unity strips from that copy, taken from the same-build-id libraries in the built APK or AAB.
+- **Option constants.** The package's tests check the `Options` constants against the option manifests that the native SDKs publish.
+- **`Relaunch` and `RelaunchAsync` replace the whole option set** on both platforms. Pass the full set again. See [Lifecycle & status](/sdk/unity/lifecycle).
+- **Breadcrumbs and log lines.** `CaptureBreadcrumbs` is off by default on both native SDKs, so `Bugsee.AddBreadcrumb` records nothing until you set it. `Bugsee.Log(message, level)` lines skip the log filter on both platforms.
+- **`ResetVideoCapturePermission()` on iOS** logs a warning once, because iOS has no capture permission to reset.
+- **`Bugsee.SetAttribute` in the Editor and on unsupported platforms** applies the same validation as on a device and throws `ArgumentException` for an invalid key or value. It still stores nothing.
+- **The iOS Simulator.** The SDK logs a warning once at the first launch on the iOS or tvOS Simulator: its build has no crash reporter, so crashes, hangs and managed exceptions are reported only from a device.
+- **`Bugsee.IsBlackout` on iOS** reads the state from the iOS SDK.
 
-## 5.0.0 (January 10 2024)
-- Feat: Updated native SDKs to their latest versions (Android: 4.2.1, iOS: 5.0.0)
-- Breaking: \[iOS\] Bitcode is not present in the resulting binaries any more
+**Fixed**
 
-## 4.0.0 (October 2 2023)
-- Feat: Updated native SDKs to their latest versions (Android: [4.0.1](/sdk/android/v6/release-notes/#401-september-30-2023), iOS: [4.0.1](/sdk/ios/v6/release-notes/#401-september-30-2023))
-- Breaking: Changes for the underlying SDKs: [Android](/sdk/android/v6/release-notes/#401-september-30-2023) and [iOS](/sdk/ios/v6/release-notes/#401-september-30-2023).
+- The Android Mono Portable PDB upload fetches `bugsee-cli` 0.9.0 when the installed CLI is older. Before, a machine with CLI 0.8.1 or 0.8.2 got a warning and no mapping, and managed frames stayed IL offsets.
+- iOS: `xcodebuild` of an export with `BUGSEE_APP_TOKEN` and the Crash Report Extension on no longer fails with `Cycle inside Unity-iPhone`.
+- iOS: an Append export no longer lists the Run Script phase twice after the IL2CPP arguments change.
+- iOS: the symbol upload Run Script no longer passes an empty `--version` or `--build` when the export has no `MARKETING_VERSION` or `CURRENT_PROJECT_VERSION`. The values come from `BUGSEE_VERSION` and `BUGSEE_BUILD`, then from the built app.
+- Android, Export Project: `assembleRelease` no longer fails in `:unityLibrary:buildIl2Cpp` on Unity 6 and 2021.3 because of the IL2CPP line map arguments.
+- Android, Unity 6: a Minify build no longer stops in `:launcher:minifyReleaseWithR8` with a missing class such as `android.telephony.satellite.SatelliteManager`.
+- Android: native (NDK) crash capture is set up on a Unity 6 build with AGP 9.0.0.
+- Android, Windows: a build output under a path over 260 characters no longer breaks the symbol upload's reads or uploads a mapping under a wrong build id.
+- The Bugsee Editor assembly compiles in an Editor without iOS Build Support.
+- The build-output scans no longer stop at one bad folder or hide it silently.
+- iOS: `BUGSEE_NO_SYMBOL_UPLOAD` also turns off the IL2CPP line map upload, as it does for the R8 mapping and native symbol uploads. Before, the line map upload ran when a token was set even with the switch set.
+- The symbol upload also sends the native libraries that Unity's `symbols.zip` does not hold, when they are the build's own and still carry symbols.
+- The client signature of a managed exception no longer depends on the Java call site on Android, and is the same recipe on both platforms.
+- `Bugsee.Trace` with a map, list or array records the same JSON on both platforms (at most 8192 UTF-16 units). On Android, maps, lists and arrays you pass to the SDK are sent as JSON text and not as their type name.
+- `AddAttachmentFile` on a report from `CreateReport` copies the file under the app's cache directory, not `/data/local/tmp`, which some Android 11 devices do not let the app write.
+- Values that cross to native or become identifiers no longer follow the device's culture: a device with a decimal comma wrote `1,5`, and a bool was `"True"`.
+- iOS: lifecycle events that arrive before the managed callback is registered are held (up to 128) and replayed in order after the registering `Launch` or `Relaunch` call, as on Android. A lifecycle payload that is a dictionary reaches your listener as a `Dictionary<string, object>`.
+- Managed exceptions the SDK reports from Unity's log text no longer forward a hex value found in that text as a frame address.
 
-## 3.3.0 (September 4 2023)
-- Feat: Updated native SDKs to their latest versions (Android: 3.10.0, iOS: 3.8.0)
-- Feat: Add new API to manually trigger view hierarchy capturing. Multiple view hierarchies support.
+**Known issues**
 
-## 3.2.0 (April 12 2023)
-- Feature: Add Appearance API support \[[Learn more](/sdk/unity/appearance/)\]
+- Handled managed exceptions in a Release IL2CPP build on Android without IL2CPP line information stay unsymbolicated (no file and line) when the symbols are Public (symbol table only). Use Debugging symbols plus the IL2CPP line map. Development builds send no addresses on Android, and Debugging symbols do not change that. See [Symbolication: Android](/sdk/unity/symbolication/android#public-and-debugging-symbols).
+- Switching the symbol level from Public to Debugging for the same `libil2cpp.so` build id may leave frames raw on the dashboard. This is open and under investigation ([issue 263](https://github.com/bugsee/bugsee-unity/issues/263)).
+- After an iOS launch that ended before the app became active, the next launch may block the main thread for up to about 8 seconds while the crash report uploads. The fix is in the native iOS SDK and is not released yet. Normal Unity launches do not hit it, because the SDK starts while the app is active. The opt-in iOS native early launch starts the SDK at app launch, before the app is active, so an app that uses it can hit this.
+- Secure rectangles and scaled or offset surfaces: with Resolution Scaling, `Screen.SetResolution` or a surface that is offset in the window, a view hierarchy node under a secure rectangle can keep its name and components ([bugsee-unity#291](https://github.com/bugsee/bugsee-unity/issues/291)). Set `CaptureViewHierarchy = false` if those names must not reach Bugsee. See [Privacy: Video](/sdk/unity/privacy/video).
+- A report handler that throws does not drop the report, and is not a redaction boundary ([bugsee-unity#293](https://github.com/bugsee/bugsee-unity/issues/293)). See [Privacy: Report](/sdk/unity/privacy/report).
 
-## 3.1.0 (April 6 2023)
-- Feature: Update native SDKs to the latest versions (Android: 3.6.0, iOS: 3.5.0)
+**Compatibility**
 
-## 3.0.5 (March 3 2023)
-- Feature: Update native SDKs to the latest versions (Android: 3.4.0, iOS: 3.3.3)
+- Unity 2021.3 or later. iOS 15.0 or later, Android API 21 or later.
+- Android: Bugsee Android SDK 7.6.0 (with `bugsee-android-ndk` 7.6.0), Bugsee Gradle plugin 4.1.1.
+- iOS: Bugsee iOS SDK 7.1.0.
+- `bugsee-cli` 0.9.0.
 
-## 3.0.4 (January 31 2023)
-- Feature: Update native SDKs to the latest versions (Android: 3.4.0, iOS: 3.3.2)
+## Earlier releases
 
-## 3.0.3 (November 25 2022)
-- Feature: Update native SDKs to the latest versions (Android: 3.1.0, iOS: 3.3.2)
-- Feature: On iOS, captured video is now brighter than before and should be aligned (in brightness) with actual picture on real device
-
-## 3.0.2 (November 25 2022)
-- Feature: Update native SDKs to the latest versions (Android: 3.0.2, iOS: 3.2.1)
-
-## 3.0.1 (October 25 2022)
-- Feature: Update native SDKs to the latest versions (Android: 3.0.0, iOS: 3.1.1)
-- Fix: "OSLog.framework" is not mandatory now
-
-## 3.0.0 (September 2 2022)
-- Feature: Update native SDKs to the latest versions (Android: 3.0.0, iOS: 3.0.0)
-- Note: Please refer to the underlying SDKs release notes to get the detailed list of changes: [Android](/sdk/android/v6/release-notes/#300-august-19-2022) / [iOS](/sdk/ios/v6/release-notes/#300-september-1-2022)
-- Note: On iOS, “OSLog.framework” needs to be added to your project with Bugsee in Xcode into “Frameworks, Libraries and Embedded Content” to fix this. This is required as now Bugsee is able to intercept OSLog-based logged data.
-
-
-## 2.0.3 (August 16 2022)
-- Feature: Updated native Android SDKs to their latest version. Improvements for Unity as a Library scenario
-
-## 2.0.2 (June 1 2022)
-- Feature: Updated native Android SDKs to their latest version. Several race conditions are fixed
-
-## 2.0.1 (May 11 2022)
-- Feature: Update native SDKs to the latest versions (Android: 2.1.2, iOS: 2.1.7)
-
-## 2.0.0 (Mar 23 2022)
-- Feature: Update native SDKs to the latest versions (Android: 2.0.7, iOS: 2.1.1)
-- Breaking change: Underlying Bugsee SDK was built with the iOS SDK 15.0
-- Breaking change: Underlying Bugsee Android SDK is now completely AndroidX-based
-
-## 1.8.0 (Dec 22 2021)
-- Feature: Update native Android SDK to the latest version
-
-## 1.7.6 (Aug 9 2021)
-- Feature: Update native Android SDK to the latest version
-
-## 1.7.5 (Dec 11 2020)
-- Fix: Broken AddSecureRect API on Android
-- Fix: Missing ClearAllAttributes API on Android
-- Feature: Update native iOS SDK to the latest version
-
-## 1.7.4 (Aug 31 2020)
-- Feature: Update native SDKs to the latest versions
-
-## 1.7.3 (Jun 15 2020)
-- Fix: Build failure for Unity 2019+
-
-## 1.7.2 (Jun 9 2020)
-- Feature: Update native SDKs to their latest versions (Android: 1.18.0, iOS: 1.25.6)
-
-## 1.7.1 (April 7 2020)
-- Fix: Update native SDK, to disable on-device symbolication by default to prevent application crash \[iOS\]
-
-## 1.7.0 (March 27 2020)
-- Feature: Improve backward compatibility with older versions of Unity and .NET
-- Feature: Update native SDKs to their latest versions (Android: 1.17.3, iOS: 1.25.3)
-
-## 1.6.2 (December 12 2019)
-- Fix: Completely strip all the references to UIWebView \[iOS\]
-
-## 1.6.1 (December 8 2019)
-- Fix: Do not report errors logged with Debug.LogError()
-- Fix: Degrade syntax to make code backward compatible with previous Unity versions
-
-## 1.6.0 (Nov 28 2019)
-- Feature: Native SDKs are updated to their latest versions
-- Fix: inconsistency in handled/unhandled report state propagation for iOS/Android
-
-## 1.5.0 (Sep 27 2019)
-- Fix: Make input fields in reporting UI always accessible \[iOS\]
-- Fix: Do not skip WebView requests \[Android\]
-- Feature: Add support for Android 10 \[Android\]
-- Feature: Improve crashes and errors
-- Native SDKs are updated to their latest versions
-
-## 1.4.3 (Sep 16 2019)
-- Fix: Crashes in video rendering pipeline
-- Native SDKs are updated to their latest versions
-
-## 1.4.2 (Jul 17 2019)
-- Native SDKs are updated to their latest versions
-
-## 1.4.1 (Jun 27 2019)
-- Native SDKs are updated to their latest versions
-
-## 1.4.0 (Jun 12 2019)
-- Feature: lifecycle events are now supported
-- Native SDKs are updated to their latest versions
-
-## 1.3.1 (Dec 12 2018)
-- Maintenance update
-
-## 1.3.0 (Dec 11 2018)
-- Update: Native SDKs are updated to their latest versions (contains fixes for known issues)
-
-## 1.2.10 (Oct 26 2018)
-- Feature: attachments are supported now both on iOS and Android platforms [read more](/sdk/unity/custom/)
-- Fix: handle exceptions, thrown from worker threads, properly
-
-## 1.2.9 (Sep 24 2018)
-- Update iOS to 1.18.15 to fix iOS12 crash when collecting extended crash data
-
-## 1.2.8 (Aug 28 2018)
-- Feature: Add getDeviceID() method
-- Bug fixes: various stability fixes
-- Use iOS SDK 1.18.11 and Android SDK 1.12.9
-
-## 1.2.7 (Apr 10 2018)
-- Feature: Hide screen regions from video [read more](/sdk/unity/privacy/video/)
-- Feature: SDK can now be stopped and relaunched [read more](/sdk/unity/configuration/)
-- Feature: Video on Android is now disabled by default
-- Updated native SDK: iOS 1.18.0 and Android SDK 1.11.8
-- Minor bug fixes
-
-## 1.2.6 (Mar 9 2018)
-- Updated native SDK: iOS 1.17.20
-- Feature: VideoScale option [read more](/sdk/unity/configuration/)
-- Minor bug fixes
+The 6.x release history is in the [6.x release notes](/sdk/unity/v6/release-notes).

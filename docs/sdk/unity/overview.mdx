@@ -1,0 +1,98 @@
+---
+title: "Overview"
+description: "What the Bugsee Unity SDK 7.x records and detects on iOS and Android, how it wraps the native SDKs, and what your project needs to run it."
+sidebar_position: 0
+slug: "/sdk/unity/overview"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+The Bugsee Unity SDK captures what happened before a bug: a video of the screen, console logs, network events and the steps that led to it. It attaches that timeline to crash, error and bug reports from your iOS and Android games and apps, which you replay in the Bugsee dashboard.
+
+The SDK is a Unity Package Manager package, `com.bugsee.unity`. It wraps the native Bugsee SDKs for Android and iOS and gives both platforms one C# API, the static `Bugsee` class.
+
+## What Bugsee records
+
+Every report carries a synchronized timeline of the session that led up to it:
+
+- **Video**: a rolling recording of the screen. See [Video capture](/sdk/unity/video-capture) and [Privacy: Video](/sdk/unity/privacy/video).
+- **Console logs**: Unity's console output, plus lines you send with `Bugsee.Log`. See [Console logs](/sdk/unity/logs).
+- **Network events**: events you add from your own networking code, with filters to redact them. See [Network events](/sdk/unity/network).
+- **Breadcrumbs**: steps you add, recorded once you turn them on. Breadcrumbs are off by default. See [Breadcrumbs](/sdk/unity/breadcrumbs).
+- **Custom events, traces and attributes**: see [Custom events & traces](/sdk/unity/events-and-traces) and [User & session data](/sdk/unity/user-session-data).
+- **View hierarchy**: a snapshot of your Unity scene. See [View hierarchy](/sdk/unity/view-hierarchy).
+- **Performance**: transactions and spans you start from C#. See [Performance monitoring](/sdk/unity/performance).
+
+## What Bugsee detects
+
+The SDK turns problems into reports automatically:
+
+- **Native crashes** on both platforms. See [Issue detection](/sdk/unity/issue-detection/overview).
+- **Managed exceptions** from your C# code, handled and unhandled. Capture is on by default. See [Crash & error reporting](/sdk/unity/manual/crash-error-reporting).
+- **Hangs**, and on Android **ANRs and application exits**. Hang detection is off by default. See [Issue detection](/sdk/unity/issue-detection/overview).
+- **Out-of-memory exits on iOS 27 and later**, through the Crash Report Extension that the iOS export can add. See [Crash Report Extension](/sdk/unity/issue-detection/crash-report-extension).
+- **Manual reports**: open the report dialog or upload a report from code. Shake-to-report is off by default. See [Bug reporting](/sdk/unity/manual/bug-reporting).
+
+:::caution[Unity and iOS 27]
+Apps built with Xcode 27 must use the UIScene lifecycle, or they abort at launch on iOS 27. This is not specific to Bugsee, and some Unity versions are affected. See [Unity and iOS 27](/sdk/unity/build-setup/ios#crash-report-extension) for the verified versions and your options.
+:::
+
+## How it works
+
+- **One package.** You install `com.bugsee.unity` from a git tag. There is no scoped registry, no dependency-resolve step and no custom Gradle template. See [Installation](/sdk/unity/installation).
+- **Native SDKs come with your build.** On Android, every build declares the Bugsee Android SDK in the Gradle project that Unity generates. On iOS, every export adds the Bugsee Swift package to the Xcode project. See [Android build setup](/sdk/unity/build-setup/android) and [iOS build setup](/sdk/unity/build-setup/ios).
+- **Launch from C#.** One call, `Bugsee.Launch(token, options)`, starts the SDK. See [Lifecycle & status](/sdk/unity/lifecycle).
+- **Typed launch options.** `AndroidLaunchOptions` and `IOSLaunchOptions` set the same `com.bugsee.option.*` keys the native SDKs read. See [Configuration](/sdk/unity/configuration).
+- **Privacy on the device.** Mask regions of the video and filter or drop network, log and breadcrumb data before it is recorded. See [Privacy overview](/sdk/unity/privacy/overview).
+- **Readable release reports.** The Editor uploads symbols, mappings and line maps after a build, and an Xcode Run Script uploads dSYMs, so crash frames resolve to your source. A missing token or tool produces a warning, never a failed build. See [Symbolication](/sdk/unity/symbolication/overview).
+- **Automatic upload.** Reports upload to the dashboard in the background.
+
+The in-app feedback chat is an opt-in add-on. See [Feedback](/sdk/unity/feedback).
+
+## Requirements
+
+| | |
+| --- | --- |
+| Unity | 2021.3 or later |
+| iOS | 15.0 or later, built with Xcode and Swift Package Manager |
+| Android | API 21 (Android 5.0) or later |
+| Platforms | iOS and Android |
+
+The Android minimum is the minimum of the Bugsee Android SDK; see the [Android overview](/sdk/android/overview). The minimum API level of your player comes from your Unity version and Player Settings, and can be higher.
+
+The package compiles for every build target, but it records and sends data only on iOS and Android. In the Unity Editor and on other platforms, `Bugsee.Launch` does nothing.
+
+Scripting backends:
+
+- **iOS** builds use IL2CPP, the only scripting backend Unity offers for iOS.
+- **Android**: IL2CPP is the supported configuration for fully symbolicated native crashes. A Mono build works, but frames inside the Mono runtime stay unsymbolicated, and the build logs a warning about it.
+
+The iOS Simulator has no crash reporter, so crashes and exceptions are reported only from a physical device.
+
+## Versions
+
+The package pins the versions of the components it adds to your build, and each release uses the versions it was tested with. The [release notes](/sdk/unity/release-notes) list them for every release.
+
+| Component | What the package adds |
+| --- | --- |
+| Bugsee Android SDK | The core artifact and the NDK module `bugsee-android-ndk`, declared in the generated Gradle project |
+| Bugsee iOS SDK | The Swift package from `github.com/bugsee/spm`, added to the Xcode project |
+| Bugsee Gradle plugin | Applied when the generated project uses AGP 8.6 or later |
+| `bugsee-cli` | The default version the package downloads for symbol uploads, when no installed CLI is found |
+
+7.x replaces the 6.x `.unitypackage` distribution. The C# API is new, so 6.x code does not compile unchanged. See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+
+## Get started
+
+Head to [Installation](/sdk/unity/installation) to add the package and make the first launch. From there, [Configuration](/sdk/unity/configuration) covers the launch options and [Privacy overview](/sdk/unity/privacy/overview) covers redaction.
+
+## Related pages
+
+- [Installation](/sdk/unity/installation): add the package and launch the SDK.
+- [Android build setup](/sdk/unity/build-setup/android) and [iOS build setup](/sdk/unity/build-setup/ios): what the Editor does to your build.
+- [Configuration](/sdk/unity/configuration): launch options for both platforms.
+- [Lifecycle & status](/sdk/unity/lifecycle): launch, relaunch, stop and lifecycle events.
+- [Release notes](/sdk/unity/release-notes): what changed in each release.
+- [FAQ](/sdk/unity/faq): common questions.

@@ -10,7 +10,7 @@ import TabItem from '@theme/TabItem';
 
 This page documents the Bugsee Android SDK **7.x**. For the previous major version, see [Adding custom data](/sdk/android/v6/custom).
 
-Breadcrumbs are small contextual entries that record the sequence of events leading up to an issue — navigation, taps, lifecycle changes, network requests, and system events. They are aggregated into the report timeline and surface in the Bugsee dashboard. The SDK captures four built-in breadcrumb sources (app, UI, network, and system) automatically; to disable collection, scrub, or drop them, see [Privacy → Breadcrumbs](/sdk/android/privacy/breadcrumbs).
+Breadcrumbs are small contextual entries that record the sequence of events leading up to an issue — navigation, taps, lifecycle changes, network requests, and system events. They are aggregated into the report timeline and surface in the Bugsee dashboard. The SDK has four built-in breadcrumb sources (app, UI, network, and system). Breadcrumb capture is off by default: turn it on with the `CaptureBreadcrumbs` option, which custom breadcrumbs need too. To enable collection, or to scrub or drop entries, see [Privacy → Breadcrumbs](/sdk/android/privacy/breadcrumbs).
 
 ## Recording custom breadcrumbs
 

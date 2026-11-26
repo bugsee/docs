@@ -1,0 +1,150 @@
+---
+title: "Android build setup"
+description: "What the Bugsee Unity SDK 7.x Editor package changes in your Android build: Gradle dependencies, the Gradle plugin, R8 rules, symbol settings and Export Project."
+sidebar_position: 2
+slug: "/sdk/unity/build-setup/android"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+You do not edit Gradle files to use Bugsee on Android. The package patches the Gradle project that Unity generates for each build. This page lists what it does, the Player Settings to check, what differs between Unity versions, and how an Export Project build behaves.
+
+## What the package does to an Android build
+
+The package runs when Unity generates the Gradle project. It never needs a custom template.
+
+| Step | What it does |
+| --- | --- |
+| Native SDK | Declares `com.bugsee:bugsee-android` and `com.bugsee:bugsee-android-ndk`, at the version the package pins, in `unityLibrary/build.gradle`, between marker comments so a second run does not duplicate them. |
+| Repositories | Adds `mavenCentral()` to the project repositories if Unity's layout lacks it. A project that sets `FAIL_ON_PROJECT_REPOS` is never given project-level repositories. |
+| Manifest provider | Adds a content provider, `com.bugsee.unity.UnityWrapperProvider`, to the merged manifest. It registers the Bugsee extension modules that your app carries before `Application.onCreate`. |
+| R8 keep rules | Appends rules to `unityLibrary/proguard-unity.txt` so a Minify build keeps the wrapper classes that C# reaches over JNI. See [Minify and R8](#minify-and-r8). |
+| Gradle plugin | Applies the Bugsee Gradle plugin, at the version the package pins, when the generated project pins AGP 8.6 or later. See [Unity versions](#unity-versions). |
+| Symbols | Warns when the symbol settings cannot give file and line information, and can switch to full symbols for one build. See [Native symbols](#native-symbols). |
+
+If the project already declares the Bugsee Android SDK itself, through the External Dependency Manager (EDM4U), a custom `mainTemplate.gradle` or a local AAR, that declaration is kept and nothing is added next to it. The build log warns when its version differs from the one this package pins, or when the NDK artifact is missing.
+
+If the package cannot add the dependencies, the build fails with a `[Bugsee]` message. The app would build but Bugsee could not start, so the package fails loudly.
+
+## Player Settings checklist
+
+1. **Scripting Backend: IL2CPP.** This is the supported configuration for fully symbolicated native crashes. With Mono, frames inside the Mono runtime stay unsymbolicated, and the build logs a warning once. See [Managed code symbolication](/sdk/unity/symbolication/managed-code) for how Mono and IL2CPP differ.
+2. **Create symbols.zip** (native debug symbols) enabled, with a level that carries the information you need. See [Native symbols](#native-symbols).
+3. **Minify** can be on for Release and Debug builds. No extra setup is needed. See [Minify and R8](#minify-and-r8).
+4. **Custom Gradle templates are not needed.** If you have your own, see [Gradle file layouts](#gradle-file-layouts).
+5. **Video mode** is an Android launch option. See [Video capture](/sdk/unity/video-capture) before you change it.
+
+## Unity versions
+
+The Bugsee Gradle plugin needs AGP 8.6 and Gradle 8.7 or later. The package reads the AGP version that the generated root build file pins, and decides from it.
+
+| Generated AGP | Typical Unity version | What the package applies |
+| --- | --- | --- |
+| 8.6 or later | Unity 6 | The Bugsee Gradle plugin and `bugsee { ndk { enabled = true } }` in the launcher module. |
+| 7.4.x and 8.0 to 8.5 | Unity 2021.3 and 2022.3 (AGP 7.4.x) | No plugin. The package adds a small Gradle task to a Groovy launcher file that writes the build id asset, and the Editor uploads symbols itself. A Kotlin DSL launcher gets no task. |
+| Older than 7.4, or unreadable | Early Unity 2021.3 patch releases ship an older AGP | No plugin and no build id task. The build logs an info line when it can read the AGP version, and a warning when it cannot. Without the build id task, the SDK derives the build id from your token, version name and version code, so bump the version code for a minified build whose obfuscation changed. |
+
+On the older AGPs, the plugin functions that the package recovers are these:
+
+| Plugin function | On AGP 8.6 and later | On older AGPs |
+| --- | --- | --- |
+| Declare `bugsee-android` and `bugsee-android-ndk` | The package. | The package. |
+| `assets/bugsee_build_id.properties`, the id of the R8 mapping | The plugin. | The package's Gradle task, on AGP 7.4.x and 8.0 to 8.5, for a Groovy launcher file only. With a Kotlin DSL launcher the SDK derives its own id. With R8 off, no asset is written and the SDK derives its own id. |
+| Mapping and native symbol upload | The Editor uploads after Gradle runs. | The Editor uploads after Gradle runs. |
+| Bytecode instrumentation of Java and Kotlin code, build info and size analysis | The plugin. | Not available. The plugin needs AGP 8.6 or later. |
+
+Because a Unity app's own Java and Kotlin code is a launcher stub, little is lost. A Java or Kotlin library of yours that uses OkHttp or `HttpEngine` is not captured automatically on these Unity versions.
+
+`BUGSEE_NO_GRADLE_BUILD_ID` (any value) stops the package from adding the build id task and removes an earlier one. The SDK then derives its own build id.
+
+## Gradle file layouts
+
+Unity 2021.3, 2022.3 and 6 generate Groovy files (`*.gradle`). A project that converts them to the Kotlin DSL in its own `IPostGenerateGradleAndroidProject` step gets patched in Kotlin syntax. Give that step a `callbackOrder` below 10 so the package patches the converted files.
+
+| File shape | Result |
+| --- | --- |
+| Unity's Groovy layout, also with custom base, launcher, settings or main templates that keep Unity's lines | The root file declares the plugin with `apply false`, and the launcher applies it after the AGP line. |
+| Root declares AGP with a `buildscript { dependencies { classpath } }` block and no `plugins { }` block | The plugin becomes a root `classpath` entry. The package adds `mavenCentral()` to the buildscript repositories if missing. |
+| Kotlin DSL files, with or without `gradle/libs.versions.toml` aliases | The launcher's `plugins { }` block gets the plugin id after the AGP entry. The AGP version is read through `gradle/libs.versions.toml` in its default location. |
+| A plugin you declared yourself (`id`, `apply plugin`, `classpath`) | Kept as written. Nothing is added next to it. |
+| A launcher that applies the Android plugin with `apply` and no `plugins { }` block, or a one-line `plugins { }` | Left alone. A warning on every build names the lines to add. |
+
+If the settings file's `pluginManagement` repositories do not serve the plugin (not the Gradle plugin portal, not Maven Central, and no mirror whose filter includes `com.bugsee`), the package appends `mavenCentral()` after the existing entries and warns. Set the environment variable `BUGSEE_NO_GRADLE_REPO_INJECTION` (any value) to stop the package from adding Maven Central to the plugin and buildscript repositories. The package still adds `mavenCentral()` to the dependency repositories that resolve `bugsee-android`. If the plugin cannot then resolve from your repositories, it is not applied, and the warning lists the lines to add.
+
+Two menu items help with templates:
+
+- **Bugsee > Android > Remove Legacy Gradle Templates** checks `Assets/Plugins/Android` for Gradle templates that earlier package versions wrote, and backs up and removes the unedited ones. A template of your own that pins another AGP major than your Unity's default is left unchanged, and the build warns about it. The same cleanup also runs automatically before every Android build, for templates that pin another AGP major or use the removed DSL. The menu item runs it on demand.
+- **Bugsee > Android > Force Gradle Plugin On Older AGP (unsupported)** applies the plugin whatever AGP the package detects. A plugin that needs AGP 8.6 will likely fail Gradle configuration on an older AGP.
+
+## Minify and R8
+
+Minify (R8) can be on for Release and Debug builds. Unity does not read keep rules from a package, so on every Android build the package appends its rules to the generated `unityLibrary/proguard-unity.txt`. The rules keep the wrapper classes that C# looks up by name over JNI (`UnityWrapper`, `UnityManagedException` and the SDK interfaces that C# implements). They sit between `# bugsee:proguard begin` and `# bugsee:proguard end` markers and are replaced, not duplicated, on the next build. They also silence R8's "Missing class" errors for `android.telephony.satellite.SatelliteManager`, `android.telephony.satellite.SatelliteStateChangeListener` and `android.app.ApplicationStartInfo`.
+
+If a custom main Gradle template drops `consumerProguardFiles 'proguard-unity.txt'`, the rules do not reach R8 and a Minify build cannot launch the SDK. The build warns when it sees that. Add the line back to the library's `defaultConfig`. If you add your own JNI code, keep its classes in your Custom Proguard File.
+
+## Native symbols
+
+Unity 6 defaults the native debug symbol level to `None`, and `SymbolTable` holds symbol tables only. File and line information for native frames needs `Full` (called `Debugging` on Unity 2021.3) with a zip format.
+
+When a Bugsee app token is set in the environment and the settings do not give that, the build warns. Two ways to build with full symbols:
+
+- Choose **Bugsee > Android > Use Full Native Symbols (Debugging) For Symbol Upload**. It is a toggle that is saved per machine.
+- Set `BUGSEE_ANDROID_FULL_SYMBOLS=1` in the environment.
+
+Either one builds with the full level and a symbols zip, and restores your settings after the build. The state is kept in `Library/Bugsee`, so an interrupted build is still restored.
+
+How the Editor uploads symbols, the mapping and the IL2CPP line map is described in [Android symbolication](/sdk/unity/symbolication/android) and [Environment variables](/sdk/unity/symbolication/environment-variables). An upload never fails the Unity build: a missing token, CLI or map is a warning.
+
+## Export Project
+
+An Export Project build leaves Gradle for later, in Android Studio or with `gradlew` on a CI machine. At export time there is no R8 mapping, no `symbols.zip` and no native library for the Editor to upload, so the Editor uploads nothing.
+
+On AGP 8.6 and later, the package applies the Gradle plugin to the exported launcher and writes a `bugsee { }` block that reads the token when Gradle runs. No token is written to any file of the exported project.
+
+```groovy
+bugsee {
+    if (System.getenv('BUGSEE_NO_SYMBOL_UPLOAD') == null && System.getenv('BUGSEE_APP_TOKEN')) {
+        appToken(System.getenv('BUGSEE_APP_TOKEN'))
+    }
+    if (System.getenv('BUGSEE_ENDPOINT')) {
+        endpoint = System.getenv('BUGSEE_ENDPOINT')
+    }
+    if (System.getenv('BUGSEE_CLI_PATH') && new File(System.getenv('BUGSEE_CLI_PATH')).isFile()) {
+        cliPath = System.getenv('BUGSEE_CLI_PATH')
+    }
+    ndk {
+        enabled = true
+        useMergedNativeLibs = false
+    }
+}
+```
+
+The Kotlin DSL form is the same in Kotlin syntax.
+
+To upload from the exported project, build it with `BUGSEE_APP_TOKEN` in the environment of the Gradle process:
+
+```bash
+BUGSEE_APP_TOKEN=<your app token> ./gradlew assembleRelease
+```
+
+Android Studio uses the environment it was started with. Start it from a terminal that has the variable, or run Gradle from a terminal. Without the variable, or with `BUGSEE_NO_SYMBOL_UPLOAD` set (any value), the plugin skips the upload and the build still succeeds.
+
+Limits of an exported project:
+
+- The export writes no IL2CPP line map. Get it as described in [Managed code symbolication](/sdk/unity/symbolication/managed-code) and upload it with `bugsee-cli debug-files upload --type il2cpp-linemap`.
+- On AGP below 8.6 there is no plugin, so the exported project's Gradle build uploads nothing. Use `bugsee-cli` on its output.
+- If the launcher already has a `bugsee { }` block of your own, the package does not edit it, and the Editor warns at export with the lines to add. Without them the plugin skips.
+- Builds that the Editor runs itself keep the token-less block, because the Editor's own upload after Gradle sends the mapping and symbols.
+
+:::warning[The token can appear in logs]
+Gradle with `--info` or `--debug` can print the `bugsee-cli` command line, which contains `--app-token <token>`, in the console and in the daemon log under `~/.gradle/daemon`. Do not run CI builds of an exported project with `--info` or `--debug`, or mask the value.
+:::
+
+## Related pages
+
+- [Installation](/sdk/unity/installation): add the package.
+- [Android symbolication](/sdk/unity/symbolication/android): symbols, mappings and what resolves.
+- [Gradle plugin for Android](/sdk/android/gradle-plugin): what the plugin does in a native app.
+- [Configuration](/sdk/unity/configuration): the launch options, including the Android video and exit options.

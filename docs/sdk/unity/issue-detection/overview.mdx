@@ -1,0 +1,138 @@
+---
+title: "Issue detection: Overview"
+description: "The detectors of Bugsee Unity SDK 7.x (crashes, C# exceptions, hangs, ANRs, out-of-memory kills, HTTP errors, anomalies, frustration) and the launch options that turn each one on."
+sidebar_position: 1
+slug: "/sdk/unity/issue-detection/overview"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+Besides the reports your players file and the ones you file from code, Bugsee files reports on its own when it detects a problem in the running game. You turn each detector on or off with a launch option. On Android, `DetectAndReportCrashNdk` is also off when `DetectAndReportCrash` is `false`.
+
+The detectors are those of the native Bugsee SDKs, plus one that the Unity package adds for C# exceptions. This page lists the options the Unity package exposes. For how each detector works, see the native pages: [Android issue detection](/sdk/android/issue-detection) and [iOS issue detection](/sdk/ios/issue-detection).
+
+Crash, early-crash and exit detection and C# exception capture (`CaptureManagedExceptions`) are on by default. The other detectors are off until you enable them.
+
+## Detectors
+
+| Detector | What it observes | Option | Platform | Default |
+| --- | --- | --- | --- | --- |
+| Crashes | Fatal signals and uncaught native exceptions. Reported on the next launch. | `DetectAndReportCrash` | Android, iOS | On |
+| Native (NDK) crashes | Crashes in native code on Android. | `DetectAndReportCrashNdk` | Android | On |
+| C# exceptions | Unhandled and logged exceptions of your C# code, and unobserved task exceptions. | `CaptureManagedExceptions` | Android, iOS | On |
+| Early crashes | A launch that ended before the app was running normally. | `DetectAndReportEarlyCrash` | Android, iOS | On |
+| Hangs | The main thread not responding for 3, 5 or 10 seconds. | `DetectAndReportHang` | Android, iOS | Off |
+| Exits | Terminations that no crash handler sees: on Android the reasons of `ApplicationExitInfo` (ANR, low memory and more), on iOS out-of-memory kills in the foreground and background. | `DetectAndReportExit` and the `DetectAndReportExit...` reason options | Android, iOS | On |
+| iOS Crash Report Extension | On iOS 27 and later, memory-limit kills and, in some setups, the launch watchdog. | None: the export adds a target. See [Crash Report Extension](/sdk/unity/issue-detection/crash-report-extension). | iOS | Auto |
+| Main-thread misuse | Blocking disk, preferences and network work on the main thread. | `DetectAndReportMainThreadMisuse` | Android, iOS | Off |
+| HTTP errors | Responses with a 5xx status. | `DetectAndReportHttpErrors` | Android, iOS | Off |
+| Anomaly | Spans of completed performance transactions that take far longer than usual. | `DetectAndReportAnomaly` | Android, iOS | Off |
+| Frustration | Rage taps, taps followed by an error, requests that never complete, a frozen UI. | `DetectFrustration` | Android, iOS | Off |
+
+The package does not include the Android memory-leak and thread-leak module.
+
+## Enable a detector
+
+Every detector is a launch option. Typed properties exist on the launch options classes for most of them:
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+#if UNITY_ANDROID
+var options = new AndroidLaunchOptions
+{
+    DetectAndReportHang = true,
+    DetectAndReportHttpErrors = true,
+    DetectAndReportExitNotResponding = true,
+};
+BugseeSdk.Launch("<your Android app token>", options);
+#elif UNITY_IOS
+var options = new IOSLaunchOptions
+{
+    DetectAndReportHang = true,
+    DetectAndReportHttpErrors = true,
+};
+BugseeSdk.Launch("<your iOS app token>", options);
+#endif
+```
+
+`DetectAndReportExit` and `DetectAndReportMainThreadMisuse` are typed properties on `AndroidLaunchOptions` only. To set them on iOS, use `SetCustomOption` with the key constant:
+
+```csharp
+using Bugsee.Contracts.Options;
+
+var options = new IOSLaunchOptions();
+options.SetCustomOption(Options.DetectAndReportMainThreadMisuse, true);
+options.SetCustomOption(Options.DetectAndReportExit, false); // switch iOS exit detection off
+```
+
+See [Configuration](/sdk/unity/configuration) for every launch option.
+
+## Options per detector
+
+### Crashes and exceptions
+
+The options, signals and handler types are described in [Crash & error reporting](/sdk/unity/manual/crash-error-reporting#native-crashes). `CaptureManagedExceptions` is independent of `DetectAndReportCrash`.
+
+### Hangs
+
+| Option | Platform | Type | Default | What it does |
+| --- | --- | --- | --- | --- |
+| `DetectAndReportHang` | Android, iOS | `bool` | `false` | Reports a stalled main thread as an error. |
+| `DetectAndReportHangFairLevel` | Android, iOS | `int` | `3000` | Threshold of the lowest severity band, in milliseconds. |
+| `DetectAndReportHangMediumLevel` | Android, iOS | `int` | `5000` | Threshold of the middle band, in milliseconds. |
+| `DetectAndReportHangSevereLevel` | Android, iOS | `int` | `10000` | Threshold of the highest band, in milliseconds. |
+| `DetectAndReportHangSampling` | Android | `bool` | `true` | Samples the main thread's stack during a hang instead of taking one snapshot. Needs `DetectAndReportHang`. |
+
+See [Android hangs](/sdk/android/issue-detection/hangs) and [iOS hangs](/sdk/ios/issue-detection/hangs).
+
+### Exits (Android)
+
+The master switch `DetectAndReportExit` (default `true`) enables the provider. The reason options below are only read while it is on. They are properties of `AndroidLaunchOptions`:
+
+| Option | Default | What it reports |
+| --- | --- | --- |
+| `DetectAndReportExitLowMemory` | `true` | Low-memory kills. They are reported as crashes. |
+| `DetectAndReportExitNotResponding` | `true` | ANRs (not responding). |
+| `DetectAndReportExitNotRespondingAsCrash` | `false` | Files ANR exits as crashes. |
+| `DetectAndReportExitLowMemoryBackgroundAsError` | `false` | Files a low-memory kill of a process that was in the background as an error instead of a crash. Needs `DetectAndReportExitLowMemory`. |
+| `DetectAndReportAnrSampling` | `true` | Samples the main thread's stack during an ANR. Needs `DetectAndReportExitNotResponding`. |
+| `DetectAndReportExitExcessiveResourceUsage` | `false` | Excessive resource usage. |
+| `DetectAndReportExitDependencyDied` | `false` | Dependency died. |
+| `DetectAndReportExitUserRequested` | `false` | User requested. |
+| `DetectAndReportExitUserWasStopped` | `false` | User was stopped. |
+| `DetectAndReportExitPermissionChanged` | `false` | Permission changed. |
+| `DetectAndReportExitPackageUpdated` | `false` | Package updated. |
+| `DetectAndReportExitPackageStateChanged` | `false` | Package state changed. |
+| `DetectAndReportExitOther` | `false` | Other. |
+| `DetectAndReportExitUnknown` | `false` | Unknown. |
+
+The reasons map onto the exit reasons of Android's `ApplicationExitInfo`. The Android exit detector needs Android 11 (API 30) or later. See [Android exits](/sdk/android/issue-detection/exits).
+
+### Exits (iOS)
+
+iOS terminates an app that uses too much memory without running any of its code. The SDK infers such terminations across launches and reports them on the next launch. It is on by default, and has no reason options. See [iOS exits](/sdk/ios/issue-detection/exits). On iOS 27 and later, the [Crash Report Extension](/sdk/unity/issue-detection/crash-report-extension) makes these reports more precise.
+
+### Other detectors
+
+| Option | Platform | Type | Default | What it does |
+| --- | --- | --- | --- | --- |
+| `DetectAndReportMainThreadMisuse` | Android, iOS | `bool` | `false` | Reports blocking work on the main thread. |
+| `DetectAndReportHttpErrors` | Android, iOS | `bool` | `false` | Reports responses with a 5xx status as errors. |
+| `DetectAndReportAnomaly` | Android, iOS | `bool` | `false` | Reports performance outliers. It uses performance monitoring: see [Performance monitoring](/sdk/unity/performance). |
+| `DetectFrustration` | Android, iOS | `bool` | `false` | Reports frustration patterns. |
+
+See the native pages for each: [main-thread misuse](/sdk/android/issue-detection/main-thread-misuse), [HTTP errors](/sdk/android/issue-detection/http-errors), [anomaly](/sdk/android/issue-detection/anomaly) and [frustration](/sdk/android/issue-detection/frustration) on Android, and [main-thread misuse](/sdk/ios/issue-detection/main-thread-misuse), [HTTP errors](/sdk/ios/issue-detection/http-errors), [anomaly](/sdk/ios/issue-detection/anomaly) and [frustration](/sdk/ios/issue-detection/frustration) on iOS.
+
+## What the reports look like
+
+A detector report carries the same context as any other report: the video, console logs and network events recorded before it. Crashes and exits are filed on the next launch and carry the recording of the run that ended. Severity comes from `ReportingDefaultCrashPriority` and `ReportingDefaultErrorPriority`: see [Bug reporting](/sdk/unity/manual/bug-reporting#default-severities).
+
+Detector reports reach your [report handler](/sdk/unity/report-handler) like any other report. Check `report.Type` to change only some of them.
+
+:::note[iOS Simulator and debugger]
+The iOS Simulator build of the SDK has no crash reporter, and no detector files reports there: run on a device. While a debugger is attached, the iOS SDK installs no crash handler and does not track the run for abnormal exits. See [iOS issue detection](/sdk/ios/issue-detection).
+:::

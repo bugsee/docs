@@ -1,0 +1,252 @@
+---
+title: "Video capture"
+description: "Configure screen video in the Bugsee Unity SDK 7.x: the video options, the Android capture modes, the experimental DirectBuffers frame pusher, blackout and secure rectangles."
+sidebar_position: 13
+slug: "/sdk/unity/video-capture"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+Bugsee records the screen and attaches the last part of the recording to every report. In the Unity SDK, the native Bugsee SDKs record the video by default. On Android you can instead opt in to an experimental mode where Unity supplies the frames.
+
+In the Unity Editor, and on platforms other than Android and iOS, video options have no effect.
+
+## Options
+
+Set these launch options on `AndroidLaunchOptions` or `IOSLaunchOptions`. See [Configuration](/sdk/unity/configuration) for the full tables. The defaults are those of the native SDKs the package pins.
+
+### Both platforms
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `CaptureVideo` | `bool` | `true` | Record the screen. Set it to `false` to record no video. |
+| `CaptureVideoQuality` | `VideoQuality` | `Default` | Quality of the recorded video: `Default`, `Medium` or `High`. |
+| `CaptureVideoFrameRate` | `FrameRate` | `High` | How often frames are captured: `Low`, `Medium` or `High`. `Raw` removes the cap and is meaningful only with `VideoMode.DirectBuffers`. |
+| `CaptureVideoScale` | `float` | `1.0` | Scale applied to the recorded frames. A value below `1.0` records smaller frames. |
+| `CaptureVideoAdaptive` | `bool` | `false` on Android, `true` on iOS | Skip capturing new frames while nothing on screen has been redrawn. A frame is still taken at least once per second. |
+
+`CaptureScreenshot` (default `true`) controls the report screenshot and is independent of `CaptureVideo`.
+
+### Android
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `CaptureVideoMode` | `VideoMode` | `V2` | The capture engine. See [Android capture modes](#android-capture-modes). |
+| `CaptureVideoSecureScrolling` | `bool` | `false` | In `VideoMode.V1`, skip more frames while secure views are on screen. |
+| `CaptureVideoUsingCustomMuxer` | `bool` | `false` | Use Bugsee's MP4 muxer instead of Android's `MediaMuxer`. |
+| `CaptureVideoFullscreenRememberUserDecision` | `bool` | `true` | In `VideoMode.Fullscreen`, remember the user's screen-capture consent across launches. |
+| `CaptureVideoFullscreenKeepRunning` | `bool` | `true` | In `VideoMode.Fullscreen`, keep the capture session running in the background. This shows a persistent foreground-service notification. With `false`, the session stops in the background and Android 14 and later prompt again on return. |
+| `CaptureRespectFlagSecure` | `bool` | `true` | Blank windows that set the Android `FLAG_SECURE` flag in video and screenshots. Set it to `false` to keep recording them. |
+
+### iOS
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `CaptureVideoPrivacyBlur` | `bool` | `true` | Blur the frames of a screen transition. With `false`, the video freezes for the transition instead. |
+| `CaptureVideoMinFrameRate`, `CaptureVideoMaxFrameRate` | `int` (fps) | `0` | Lowest and highest capture frame rate. `0` uses the rate that `CaptureVideoFrameRate` picks. |
+
+The Unity package has a typed property for `CaptureVideoAdaptive` on `AndroidLaunchOptions` only. On iOS, set the key with `SetCustomOption(Options.CaptureVideoAdaptive, false)`.
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+#if UNITY_ANDROID
+var options = new AndroidLaunchOptions
+{
+    CaptureVideo = true,
+    CaptureVideoQuality = VideoQuality.Medium,
+    CaptureVideoFrameRate = FrameRate.Medium,
+    CaptureVideoScale = 0.75f,
+};
+BugseeSdk.Launch("<your Android app token>", options);
+#elif UNITY_IOS
+var options = new IOSLaunchOptions
+{
+    CaptureVideo = true,
+    CaptureVideoQuality = VideoQuality.Medium,
+    CaptureVideoFrameRate = FrameRate.Medium,
+    CaptureVideoScale = 0.75f,
+};
+BugseeSdk.Launch("<your iOS app token>", options);
+#endif
+```
+
+The package drops the Android-only options before an iOS launch, and the iOS-only options before an Android launch.
+
+## Android capture modes
+
+`AndroidLaunchOptions.CaptureVideoMode` takes a `VideoMode`:
+
+| Value | Meaning |
+| --- | --- |
+| `None` | Selects no capture engine. To turn video off, set `CaptureVideo` to `false`. |
+| `V1` | A built-in capture engine of the Android SDK. |
+| `V2` | The default capture engine of the Android SDK. The default. |
+| `Fullscreen` | Android screen capture (MediaProjection). It asks the user for consent. See the `CaptureVideoFullscreen*` options above. |
+| `DirectBuffers` | The app supplies the frames. In Unity this is the experimental [frame pusher](#experimental-unity-frame-pusher-android). |
+
+The 6.x modes `V3` and `V4` no longer exist.
+
+In `VideoMode.Fullscreen`, call `Bugsee.ResetVideoCapturePermission()` to forget the stored consent so that the next capture start asks again. It has no effect before launch and does not change a session that is already capturing. On iOS the call does nothing and logs a warning once, because the iOS SDK needs no capture permission.
+
+For the Android SDK's own description of the modes, see [Android configuration](/sdk/android/configuration) and [Android privacy: video](/sdk/android/privacy/video).
+
+## Experimental: Unity frame pusher (Android)
+
+:::caution[Experimental]
+The frame pusher is experimental and Android only. It is off unless you opt in. Evaluate it in your own app before you ship it.
+:::
+
+By default the Android SDK captures the window itself (`VideoMode.V2`). With `VideoMode.DirectBuffers`, Unity captures the final rendered frame and hands the pixels to the SDK instead. Nothing changes unless a launch asks for `VideoMode.DirectBuffers` or you call `BugseeFrameCapturer.Enable()` yourself.
+
+### Requirements
+
+- An Android player build on a release build (channel `f` or `p`) of Unity 2022.2.0f1 or newer. Alpha and beta builds are not supported. Unity 2021.3 and 2022.1 are not supported.
+- The Screen Capture module (`com.unity.modules.screencapture`) in the project. The package does not require it, and without it the frame pusher is not compiled in.
+- A device that supports `AsyncGPUReadback`.
+- A graphics API whose pixel row order the package knows: Vulkan or OpenGLES3. For another API, see [Row order](#row-order).
+
+### Turn it on
+
+Ask for it with the launch option alone. You do not need to call `Enable()`.
+
+```csharp
+using Bugsee.Capture;
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+// Optional. Set before launching.
+BugseeFrameCapturer.DefaultOptions = new BugseeFrameCapturerOptions
+{
+    TargetFps = 5,
+    MaxDimension = 640,
+};
+
+BugseeSdk.Launch("<your_app_token>", new AndroidLaunchOptions
+{
+    CaptureVideo = true,
+    CaptureVideoMode = VideoMode.DirectBuffers,
+});
+#endif
+```
+
+`Bugsee.Launch` and `Bugsee.Relaunch` start the capturer with `BugseeFrameCapturer.DefaultOptions` when the options ask for `VideoMode.DirectBuffers`.
+
+| `BugseeFrameCapturerOptions` field | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `TargetFps` | `int` | `5` | Frames per second to capture, from 1 to 30. The SDK also caps pushed frames by `CaptureVideoFrameRate`, so it drops a higher `TargetFps`. |
+| `MaxDimension` | `int` | `640` | The longer side of the captured frame, in pixels. The screen is scaled down to this and never up. |
+| `RowOrder` | `VideoFrameRowOrder?` | `null` | The row order of the pixel buffer read from the GPU, `TopDown` or `BottomUp`. See [Row order](#row-order). |
+| `LogStats` | `bool` | `false` | Log the capture counters every 10 seconds. |
+| `LogOrientationProbe` | `bool` | `false` | Log the colors of the first and last pixel rows for the first few frames, to check the row order. |
+
+`VideoFrameRowOrder` is in the `Bugsee.Contracts.Capture` namespace.
+
+`BugseeFrameCapturer.Stats` returns the counters `Requested`, `Pushed`, `Failed`, `DroppedInFlight` and `DroppedBlackoutOrStopped`. `BugseeFrameCapturer.IsEnabled` tells whether the pusher is running. `BugseeFrameCapturer.Disable()` stops it.
+
+`BugseeFrameCapturer.Enable(options)` starts the pusher without a launch option. It returns `false` and does nothing off Android, in the Editor, on an unsupported Unity version, without the Screen Capture module, or on a device that cannot read pixels back from the GPU asynchronously. Called off the main thread, it is queued and returns `true` before it ran: check `IsEnabled`. Frames are skipped until the SDK is launched.
+
+### When it falls back to the default capture
+
+`VideoMode.DirectBuffers` means that the app pushes the frames, and in Unity the only frame source is this capturer. When it cannot run, the package replaces `DirectBuffers` with `VideoMode.V2` before the options reach the native SDK, and logs one warning with the reason. The session never runs in `DirectBuffers` without a frame source, which would record no real video.
+
+The reasons are:
+
+- The player was not probed yet: the launch came from another thread before Unity finished starting.
+- The Unity version is not a release build of 2022.2.0f1 or newer.
+- The project has no Screen Capture module.
+- The device does not support `AsyncGPUReadback`.
+- The graphics API's pixel row order is not known and you did not set `RowOrder`.
+- The capturer failed to start after the SDK accepted the launch. The package then relaunches with the default capture, unless a newer `Launch` or `Relaunch` is waiting, which then decides.
+
+Other video modes are never changed. An app that pushes frames itself through the native `getVideoFrameConsumer()` is affected too: use a native mode there, or this fallback applies.
+
+### Row order
+
+The pusher knows the pixel row order of Vulkan and OpenGLES3. For another graphics API, such as OpenGLES2, the launch falls back to the default capture, and a capturer started with `Enable()` blanks every frame completely while a secure rectangle is registered.
+
+To use another API, check the order on your device with `LogOrientationProbe`, then set `RowOrder` to the order you found. Setting it declares the order verified.
+
+### How it works
+
+At the end of each due frame the capturer calls `ScreenCapture.CaptureScreenshotIntoRenderTexture`, scales into a small render texture, and reads it back with `AsyncGPUReadback`. It never reads synchronously.
+
+- One request is in flight at a time. Frames that come due meanwhile are dropped, not queued.
+- The pixels are copied once into a persistent native buffer. Secure rectangles are blanked in place. A push thread wraps that memory as a Java direct `ByteBuffer` and hands it to the SDK with the SDK's own clock as the timestamp.
+- The package writes no frame to disk. The SDK still writes its recorded video as usual.
+- After 5 failed pixel reads in a row the pusher turns itself off. It never falls back to a synchronous read.
+
+### What it records and what it does not
+
+- It records Unity's final composite, including screen-space overlay UI. Native Android views, such as WebViews, dialogs and system UI, are not in the video.
+- The SDK does not mask frames pushed this way: no secure views, no secure WebViews and no pixelation. The pusher blanks the rectangles you register with `Bugsee.AddSecureRectangle` and with `Bugsee.AddSecureScreenRectangle`. See [Secure rectangles](#secure-rectangles).
+- On Android with `CaptureRespectFlagSecure` true (the default), pushed frames are not recorded while the activity window carries `FLAG_SECURE`, and the video shows placeholders. With it set to `false`, they are recorded. This was verified on one device and OS version. Secure rectangles and Unity-side redaction stay your responsibility for what must stay out of the video.
+- Blackout is honored by the SDK.
+- `Bugsee.AddSecureWebView` has no effect while the pusher is the capture source.
+
+## Blackout
+
+A blackout pauses recording until you end it. Use it around screens you do not want in the video.
+
+```csharp
+using BugseeSdk = Bugsee.Bugsee;
+
+
+BugseeSdk.StartBlackout();
+// ... a sensitive screen ...
+BugseeSdk.EndBlackout();
+
+bool blackedOut = BugseeSdk.IsBlackout;
+```
+
+`Bugsee.Pause()` and `Bugsee.Resume()` still exist as aliases of `StartBlackout` and `EndBlackout`, and are marked obsolete.
+
+## Secure rectangles
+
+A secure rectangle hides a screen region in the captured video and in report screenshots. Register one over any region the game draws that must not be recorded.
+
+Unity's `Screen`, `Input.mousePosition` and screen-space `Rect` values have the origin at the bottom left. The native SDKs expect the top left. The two Unity APIs differ in which one you pass:
+
+| API | Space | When to use it |
+| --- | --- | --- |
+| `Bugsee.AddSecureScreenRectangle(Rect unityScreenRect, int displayId = 0)` | Unity screen space, origin at the bottom left | Preferred. The package flips the y axis, scales it for Android Resolution Scaling or `Screen.SetResolution`, and offsets it by the position of Unity's view. |
+| `Bugsee.AddSecureRectangle(RectInt pixelRect)` | Native display pixels, origin at the top left | When you already have native coordinates. The package does not flip, scale or offset the rectangle. On iOS it divides by the screen scale. |
+
+```csharp
+using UnityEngine;
+using BugseeSdk = Bugsee.Bugsee;
+
+// A UI element under a Screen Space - Overlay canvas.
+RectTransform rectTransform = GetComponent<RectTransform>();
+var corners = new Vector3[4];
+rectTransform.GetWorldCorners(corners);
+var screenRect = Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
+
+BugseeSdk.AddSecureScreenRectangle(screenRect);
+
+// Later, with exactly the same values:
+BugseeSdk.RemoveSecureScreenRectangle(screenRect);
+```
+
+Rules for both:
+
+- Remove a rectangle with exactly the values you added. Adding the same rectangle twice needs two removals.
+- `AddSecureScreenRectangle` is queued and takes effect on the next frame. It remembers the rectangle as a fraction of the screen it was added for, so it follows Resolution Scaling and layouts that scale with the screen. After a rotation or any change that does not scale proportionally, remove the rectangle and add the new one.
+- `Bugsee.GetAllSecureRectangles()` returns the rectangles added with `AddSecureRectangle` and not yet removed, as `RectInt[]` in top-left pixels. It does not return screen-space rectangles.
+- `Bugsee.RemoveAllSecureRectangles()` removes all of them.
+- Display `0` is the main display.
+
+For WebViews, `Bugsee.AddSecureWebView` and `Bugsee.RemoveSecureWebView` take the native handle of a WebView plugin: an `AndroidJavaObject` on Android and an `IntPtr` to a `WKWebView` on iOS. They mark a native view and do nothing for a page drawn into a Unity texture. Use a secure rectangle for that.
+
+For the full privacy guidance, see [Privacy: video](/sdk/unity/privacy/video).
+
+## Related pages
+
+- [Privacy: video](/sdk/unity/privacy/video)
+- [View hierarchy](/sdk/unity/view-hierarchy)
+- [Configuration](/sdk/unity/configuration)
+- [Lifecycle & status](/sdk/unity/lifecycle)

@@ -1,0 +1,122 @@
+---
+title: "Performance monitoring"
+description: "Measure how long your game's work takes with Bugsee.StartTransaction and ISpan in the Bugsee Unity SDK 7.x, and the performance monitoring options."
+sidebar_position: 21
+slug: "/sdk/unity/performance"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+Performance monitoring (APM) records how long your app's work takes, as a tree of transactions and spans. Bugsee attaches the transactions to reports. In the Unity SDK you start transactions and spans from C#, and the native SDKs record them.
+
+The Unity package adds no automatic instrumentation of Unity code, scenes or frames. The native SDKs create transactions and spans of their own while performance monitoring is on. See [Android performance](/sdk/android/performance) and [iOS performance](/sdk/ios/performance) for what each one records.
+
+In the Unity Editor, and on platforms other than Android and iOS, `StartTransaction` returns a span that accepts every call and records nothing.
+
+## Concepts
+
+- A **transaction** is the root of a trace. It has a name, such as `"checkout"`, an operation, such as `"user.flow"`, attributes and a status.
+- A **span** is a unit of work inside a transaction. Spans form a tree: each span can have child spans.
+
+## Transactions and spans
+
+`Bugsee.StartTransaction(string name, string operation, IDictionary<string, object> attributes = null)` returns an `ISpan`, the root of a trace. Start child spans with `ISpan.StartChild`. Finish every span you start.
+
+```csharp
+using System.Collections.Generic;
+using Bugsee.Contracts.Apm;
+using BugseeSdk = Bugsee.Bugsee;
+
+using (var checkout = BugseeSdk.StartTransaction(
+           "checkout", "user.flow", new Dictionary<string, object> { ["cart"] = 3 }))
+using (var pay = checkout.StartChild("payment", "charge card"))
+{
+    pay.SetAttribute("provider", "example-pay");
+    // ... do the work ...
+    pay.Finish();
+    checkout.SetStatus(SpanStatus.Ok);
+}
+```
+
+Spans are always created from a parent. There is no global "current span" and no `StartSpan` or `GetActiveSpan` on `Bugsee`, because the native SDKs track the active span per thread. Pass the parent span to the code that starts children.
+
+### The `ISpan` members
+
+| Member | Description |
+| --- | --- |
+| `SpanId`, `TraceId` | The ids of the span and its trace. Empty strings for an inert span. |
+| `Operation` | The operation the span was started with. |
+| `IsFinished` | `true` once the span was finished, directly or because its parent finished. |
+| `SetName(string)` | Sets the name. Returns the span, so calls can be chained. |
+| `SetDescription(string)` | Sets the description. |
+| `SetAttribute(string key, object value)` | Sets an attribute. |
+| `SetStatus(SpanStatus)` | Sets the status without finishing the span. |
+| `StartChild(string operation, string description = null)` | Starts a child span. A finished parent returns an inert span. |
+| `Finish()` | Finishes the span with `SpanStatus.Ok`. |
+| `Finish(SpanStatus)` | Finishes the span with the given status. |
+| `Dispose()` | The same as `Finish()`. |
+
+`SpanStatus` has the values `Ok`, `Error`, `Timeout`, `Cancelled`, `DeadlineExceeded` and `Unknown`.
+
+Attribute values follow the rules of [`Bugsee.SetAttribute`](/sdk/unity/user-session-data#accepted-values): a string of up to 1024 UTF-16 units, a `bool`, or a number within the signed 64-bit range.
+
+### Rules
+
+- **Finish or dispose every span.** A span wraps a native span. Finishing it releases the native object. A span that is dropped without finishing is not reported as finished.
+- **Finishing a parent finishes its live children.** They finish with `SpanStatus.Cancelled`.
+- **After `Finish`, every call on the span does nothing.**
+- **Nothing throws.** Invalid input and native failures log a Unity warning and leave the span unchanged. A rejected attribute value is dropped with a warning.
+- **A span can be used from any thread,** including thread-pool and `Task` threads. A child can finish on one thread while its parent finishes on another.
+
+### When you get an inert span
+
+`StartTransaction` returns an inert span that accepts every call and records nothing when:
+
+- the SDK is not launched, including while it is still launching,
+- the `name` or the `operation` is empty, or
+- you are in the Unity Editor.
+
+With performance monitoring off, the native SDK returns its own shared no-op span, whose ids read `"0"`.
+
+## Options
+
+Set these launch options on `AndroidLaunchOptions` or `IOSLaunchOptions`. See [Configuration](/sdk/unity/configuration) for the full tables. The defaults are those of the native SDKs the package pins.
+
+| Option | Platform | Type | Default | What it does |
+| --- | --- | --- | --- | --- |
+| `PerformanceMonitoring` | Both | `bool` | `true` | The master switch. With `false`, nothing is instrumented and `StartTransaction` returns the no-op span. |
+| `PerformanceSampleRate` | Both | `float` | `0.01` | The probability that a transaction is sampled for the standalone performance upload. |
+| `PerformanceAdaptiveSampling` | Both | `bool` | `true` | Promote transactions that lost the random draw into the standalone upload, based on their status, duration and span-tree complexity. |
+| `PerformanceUploadMode` | Android | `string` | `"batched"` | How sampled transactions are uploaded: `"batched"` or `"realtime"`. The package drops it before an iOS launch. |
+
+Every transaction goes into reports, whatever the sampling options say. Sampling affects only the standalone upload. On iOS the standalone upload is not active yet, so `PerformanceSampleRate` and `PerformanceAdaptiveSampling` have no effect there. What that upload does is defined by the native SDKs. See [Android performance](/sdk/android/performance#sampling-and-upload-modes) and [iOS performance](/sdk/ios/performance#sampling).
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+#if UNITY_ANDROID
+var options = new AndroidLaunchOptions
+{
+    PerformanceMonitoring = true,
+    PerformanceSampleRate = 0.1f,
+};
+BugseeSdk.Launch("<your Android app token>", options);
+#elif UNITY_IOS
+var options = new IOSLaunchOptions
+{
+    PerformanceMonitoring = true,
+    PerformanceSampleRate = 0.1f,
+};
+BugseeSdk.Launch("<your iOS app token>", options);
+#endif
+```
+
+## Related pages
+
+- [Custom events & traces](/sdk/unity/events-and-traces)
+- [Configuration](/sdk/unity/configuration)
+- [Android performance](/sdk/android/performance)
+- [iOS performance](/sdk/ios/performance)

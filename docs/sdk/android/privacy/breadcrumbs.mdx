@@ -25,18 +25,18 @@ The SDK ships four built-in breadcrumb sources:
 | **Network** | HTTP request lifecycle entries — host, path, method, status, mechanism. |
 | **System** | Connectivity, battery, thermal, orientation, configuration changes. |
 
-Breadcrumb capture is on by default and is gated by the `CaptureBreadcrumbs` option — see [configuration](/sdk/android/configuration).
+Breadcrumb capture is **off by default**. Turn it on with the `CaptureBreadcrumbs` option — see [configuration](/sdk/android/configuration).
 
-## Disabling breadcrumb collection
+## Turning breadcrumb collection on
 
-To turn off breadcrumb capture entirely, set `CaptureBreadcrumbs` to `false` in your manifest or programmatically:
+To capture breadcrumbs, set `CaptureBreadcrumbs` to `true` in your manifest or programmatically:
 
 ```xml
 <meta-data android:name="com.bugsee.option.capture.breadcrumbs"
-           android:value="false" />
+           android:value="true" />
 ```
 
-Most apps should keep capture on and use the filter below to scrub or drop only the entries that matter.
+With the option off, nothing is recorded, including breadcrumbs you add with `Bugsee.addBreadcrumb(...)`. Once capture is on, use the filter below to scrub or drop the entries that matter.
 
 ## Filtering breadcrumbs
 

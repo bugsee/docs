@@ -298,6 +298,23 @@
         "collapsable",
         "RGBA",
         "RRGGBB",
-        "RRGGBBAA"
+        "RRGGBBAA",
+        "Dalvik",
+        "RSSI",
+        "Passpoint",
+        "elif",
+        "Mathf",
+        "screencapture",
+        "Readback",
+        "Dont",
+        "getenv",
+        "androidjni",
+        "jsonserialize",
+        "libunity",
+        "libmain",
+        "libmonobdwgc",
+        "libmono",
+        "dsymutil",
+        "readelf"
     ]
 }

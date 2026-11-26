@@ -2,8 +2,12 @@
 title: "Adding custom data"
 description: "Attach user email, session attributes, custom events, traces, and file attachments to Bugsee reports in Unity."
 sidebar_position: 3
-slug: "/sdk/unity/custom"
+slug: "/sdk/unity/v6/custom"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Unity SDK **6.x**, the current stable release. The new **7.x** SDK is in beta: see [Migrating from 6.x to 7.x](/sdk/unity/migration) to evaluate it, or the [7.x overview](/sdk/unity/overview) to start a new integration.
+:::
 
 ## User email
 

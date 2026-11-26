@@ -1,0 +1,150 @@
+---
+title: "Crash Report Extension (iOS)"
+description: "Report memory-limit kills on iOS 27 and later from a Unity game with the Bugsee Crash Report Extension: what the Xcode export adds, the App Group, the settings and environment variables, and early launch."
+sidebar_position: 2
+slug: "/sdk/unity/issue-detection/crash-report-extension"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+Some terminations end an iOS app before any in-process crash handler can run: a memory-limit kill (jetsam) and the launch watchdog (`0x8badf00d`). Starting with iOS 27, the system hands the dead process to a crash reporter extension embedded in the app. With Bugsee's extension, these terminations are reported.
+
+In a Unity project you do not add the extension by hand. The iOS export adds it to the Xcode project when the conditions below hold. For how the extension works, see the native page: [Crash Report Extension](/sdk/ios/issue-detection/crash-report-extension).
+
+:::info[Requirements]
+The extension needs Xcode 27 or later to build, and a device on iOS 27 or later to run. Only the extension target needs iOS 27: your app keeps its own deployment target. The Simulator never runs the extension.
+:::
+
+:::caution[Unity and iOS 27]
+Apps built with Xcode 27 must use the UIScene lifecycle, or they abort at launch on iOS 27. This is not specific to Bugsee, and some Unity versions are affected. See [Unity and iOS 27](/sdk/unity/build-setup/ios#crash-report-extension) for the verified versions and your options.
+:::
+
+## What is reported
+
+| Termination | Report |
+| --- | --- |
+| Memory limit (jetsam) in the foreground | **Foreground Out of memory**, a crash |
+| Memory limit (jetsam) in the background | **Background Out of memory**, a non-fatal error |
+| Watchdog (`0x8badf00d`) | **Main thread locked**, a crash. When the watchdog ran while the app was not visible, a non-fatal error |
+
+The report carries the threads of the dead process with their stacks. In the dashboard, the summary is `Application process exited`. The kind (for example Main thread locked or Foreground Out of memory) is in the description and the attributes.
+
+The extension does not report other kinds of termination. In particular, a stack overflow is not handled by the extension. It is reported as an ordinary crash by Bugsee's crash handler, like any other native crash.
+
+The extension works next to the crash handler, not instead of it. Keep `DetectAndReportCrash` and the iOS exit detection at their defaults (on). The reports are sent on the next launch.
+
+### Launch watchdog kills in Unity
+
+The extension reports a termination only for a process in which Bugsee was launched, and nothing is filed for a process in which it was not. In Unity, Bugsee starts when your C# code calls `Bugsee.Launch`, which runs after iOS's launch watchdog window. **Launch watchdog kills (`0x8badf00d`) are therefore normally not reported in a Unity game.** Out-of-memory kills, and exits that happen after `Bugsee.Launch`, are reported.
+
+To start Bugsee earlier, turn on [iOS native early launch](#ios-native-early-launch). With early launch on, the SDK starts when the app finishes launching, and a launch watchdog kill that happens after that point can be reported. A crash or a kill inside Unity's own startup, before that point, is not covered.
+
+## What the export adds
+
+On an iOS export that meets the conditions below, the Bugsee package changes the Xcode project:
+
+- A target `BugseeCrashReport`, an ExtensionKit extension with the bundle id `<your app's bundle id>.BugseeCrashReport` and an iOS 27.0 deployment target on the extension only. It links the `BugseeCrashExtension` product of the Bugsee Swift package (`bugsee/spm`) and is embedded in the app. Its source is the two documented lines, `import BugseeCrashExtension` and `@main struct CrashReport: BugseeCrashReporterExtension {}`. The app keeps linking `Bugsee`.
+- The App Group entitlement (`com.apple.security.application-groups`) on the app and on the extension. The export creates `Unity-iPhone.entitlements` or extends the file the app target already names.
+- The key `BugseeAppGroup` in the extension's `Info.plist`, which holds the group id.
+- The extension's `CFBundleShortVersionString` and `CFBundleVersion`, set to the app's.
+
+You do not write any C# for it. There is no launch option.
+
+### When it is added
+
+The export adds the extension only when all of these hold. Otherwise it logs why in the Unity console and carries on unchanged. The step never fails the build.
+
+- The build machine has Xcode 27 or later (`xcodebuild -version`).
+- The setting is not **Off**. The default, **Auto**, adds the extension only in an interactive Editor build, with Player Settings **Automatically Sign** on and a team ID set. The extension needs an App Group, and a manual or wildcard provisioning profile cannot carry one. Auto stays off in batch mode (batch mode, CI), because scripted archives often sign with a manual profile, and the new entitlement could break them. **On** adds the extension for any signing setup. **Off** never adds it.
+- The iOS SDK package is the published `bugsee/spm` package, or a local package that declares the `BugseeCrashExtension` product.
+- The project has no crash-reporter extension of its own. An app can have only one, and the export leaves such a project alone, with a warning.
+
+### Setting
+
+Choose the setting in the Unity Editor with the menu **Bugsee > iOS > Crash Report Extension**, with the items **Auto (Xcode 27+ and automatic signing)**, **On** and **Off**. The menu stores an Editor preference per machine, not per project. On CI, use the environment variable `BUGSEE_IOS_CRASH_EXTENSION`. It takes `auto`, `1` (or `on`) and `0` (or `off`), and it wins over the menu.
+
+```bash
+export BUGSEE_IOS_CRASH_EXTENSION=1
+```
+
+The Editor process reads the variable while it exports the build.
+
+If you do not want the extension, set `BUGSEE_IOS_CRASH_EXTENSION=0` (or choose **Off**): the export then adds no extension target and stays as it was.
+
+### App Group
+
+The extension saves what it finds in an App Group container, and the SDK reads it on the app's next launch. The group id is `group.<your app's bundle id>` by default. Override it with the environment variable `BUGSEE_IOS_APP_GROUP`:
+
+```bash
+export BUGSEE_IOS_APP_GROUP=group.com.example.game
+```
+
+A build script can also set `BugseeIosCrashExtensionPostProcess.AppGroupOverride`, in the `Bugsee.Editor` namespace. The environment variable wins. The id must start with `group.` and contain only letters, digits, `.` and `-`. If the id cannot be derived or is not valid, the export skips the extension and logs the reason.
+
+Signing:
+
+- With automatic signing, Xcode registers the App Group and the extension's App ID when it builds the project itself, or when `xcodebuild` runs with `-allowProvisioningUpdates`.
+- With manual signing, or in any other case, register `group.<id>` and `<app id>.BugseeCrashReport` in the Apple Developer portal, add both to the right App IDs, and add a provisioning profile for the extension. The extension's signing style follows the app target's.
+- With **On**, register the App Group on both App IDs yourself.
+
+Bugsee removes only an App Group it added itself. A group your app's entitlements already had, for a widget for example, is never removed.
+
+### Versions
+
+The export sets the extension's `CFBundleShortVersionString` and `CFBundleVersion` to the app's values (through `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` on the extension target). They must equal the app's. If you change the app's version or build number after the export, for example in a CI script, change the extension's too.
+
+### Appending to an existing project
+
+An export that appends to an existing Xcode project keeps the extension target and refreshes what follows the app: bundle id, version, build, team and signing style. If the extension is no longer wanted (setting **Off**, an older Xcode, or batch mode with **Auto**), the export removes the target, its embed entry, its files and the App Group it added to the app.
+
+## iOS native early launch
+
+By default, Bugsee starts when C# calls `Bugsee.Launch`. Early launch is an opt-in that starts the iOS SDK natively when the app finishes launching, before Unity's first scene. The first `Bugsee.Launch` then adopts that session instead of starting another.
+
+:::warning[Consent and privacy]
+With early launch on, the iOS SDK starts before any C# code runs, so before any consent check of yours, and even if your app never calls `Bugsee.Launch`. Do not turn it on if Bugsee must wait for the player's consent. The app token is stored in the app bundle (`Info.plist`). With early launch on, an `IReportHandler` registered from C# cannot see or edit the report of the previous run's crash, so do not rely on a report handler to redact it.
+:::
+
+Turn it on for the export with these environment variables:
+
+| Variable | What it does |
+| --- | --- |
+| `BUGSEE_IOS_EARLY_LAUNCH` | `1` (or `on`, `true`, `yes`) turns early launch on. Anything else leaves it off. |
+| `BUGSEE_IOS_APP_TOKEN` | The iOS app token the SDK starts with. Required. |
+| `BUGSEE_IOS_EARLY_LAUNCH_OPTIONS` | Optional. A JSON object of launch options, with the same keys as the launch options, for example `{"com.bugsee.option.detect.hang":true}`. |
+
+```bash
+export BUGSEE_IOS_EARLY_LAUNCH=1
+export BUGSEE_IOS_APP_TOKEN=<your iOS app token>
+export BUGSEE_IOS_EARLY_LAUNCH_OPTIONS='{"com.bugsee.option.detect.hang":true}'
+```
+
+Or use the menu **Bugsee > iOS > Early Launch...**, which stores the same three values as an Editor preference per machine. The variables win. The export writes the values into the app's `Info.plist`, with `$` written as `\u0024` so that Xcode does not collapse `$$` and drop internal keys. Nothing is written when early launch is off.
+
+How it behaves:
+
+- The native start happens when the app posts the did-finish-launching notification, after Unity's own `didFinishLaunching` returns.
+- The first `Bugsee.Launch` with the same token adopts the running session.
+- Options are fixed at build time. Options you pass to `Bugsee.Launch` that differ from the early options are logged as a warning and not applied, and so is a different token. Put what you need into `BUGSEE_IOS_EARLY_LAUNCH_OPTIONS`.
+- After `Bugsee.Stop`, `Bugsee.Launch` works as it does without early launch.
+- Early launch does nothing in the Simulator.
+
+### Known issue: a launch that died before the app was active
+
+After an iOS launch that died before the app became active, the next launch may block the main thread for up to about 8 seconds while the crash report is uploaded. The fix is in the native iOS SDK and is not yet released. Unity launches normally do not hit it, because the SDK starts while the app is active. Early launch starts the SDK at app launch, before the app is active, so an app that uses early launch can hit it.
+
+## Test the extension
+
+- Use a device on iOS 27. The Simulator never runs the extension.
+- Run the app without the debugger: launch it from the Home Screen, not with **Run** in Xcode. Nothing is filed with a debugger attached.
+- The report is sent on the next launch of the app.
+
+For the native checks (the App Group container, the Console subsystem), see the native page: [Crash Report Extension](/sdk/ios/issue-detection/crash-report-extension#testing).
+
+## Related pages
+
+- [Issue detection: Overview](/sdk/unity/issue-detection/overview)
+- [Crash & error reporting](/sdk/unity/manual/crash-error-reporting)
+- [Build setup: iOS](/sdk/unity/build-setup/ios)

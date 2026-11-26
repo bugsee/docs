@@ -24,6 +24,8 @@ Connect Bugsee to your AI coding assistants and workflows. Install the Bugsee pl
 - **Track build health** — check build size, what a release added or removed, size/dependency/timing regressions, and dependency vulnerabilities.
 - **Keep traces readable** — upload dSYMs, JavaScript source maps, and Android mapping files so production stack traces resolve to your source.
 
+In the dashboard itself, [AI Insights](/dashboard/ai-insights) explains a crash or handled error without an agent: likely root cause, suggested fix, and confidence, optionally grounded in your GitHub or GitLab repository.
+
 ## Get started
 
 - New to this? Start with **[Plugins](/ai/plugins)** for a one-step install in your assistant.

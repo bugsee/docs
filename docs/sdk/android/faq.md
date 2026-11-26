@@ -113,7 +113,7 @@ Details in the [network client docs](/sdk/android/network) and the [migration gu
 
 Application Performance Monitoring is included in the core SDK at no extra cost. It is enabled by default.
 
-The capture path is designed for minimal overhead: spans use volatile fields and a lock-free dispatcher, provider callbacks run in try/catch isolation, and context propagation is thread-local. The stand-alone APM upload pipeline is sampled (`Options.PerformanceSampleRate`, default `0.01`); sampling gates only uploads, not capture into bug reports.
+The capture path is designed for minimal overhead: spans use volatile fields and a lock-free dispatcher, provider callbacks run in try/catch isolation, and context propagation is thread-local. Performance data reaches Bugsee inside bug reports. A standalone APM upload, sampled by `Options.PerformanceSampleRate` (default `0.01`), is not active yet, so sampling does not change which transactions are sent; it never affects capture into bug reports.
 
 If you need to disable APM entirely, set `Options.PerformanceMonitoring` to `false` — the public `startSpan` / `startTransaction` APIs then return zero-allocation no-op implementations.
 

@@ -7,6 +7,20 @@ slug: "/sdk/android/release-notes"
 
 Release history for Bugsee Android SDK 7.x. Looking for the previous major version? See the [6.x release notes](/sdk/android/v6/release-notes). See the [migration guide](/sdk/android/migration) when planning your upgrade from 6.x.
 
+## 7.6.1 (November 26 2026)
+
+A patch release on top of 7.6.0. It fixes a native crash in screen capture.
+
+**Fixes**
+
+- **A native crash (SIGSEGV) during screen capture is fixed.** On Android 7.0 (API 24) and later,
+  an Activity or a `SurfaceView` that was torn down while the SDK captured a screenshot or a video
+  frame could crash the app inside the system's `PixelCopy` call, with no Java exception. The SDK
+  now captures from its own private copy of the surface and releases the copy as soon as the
+  request returns. This adds a small amount of work on the SDK's capture thread for each window
+  layer and none on the main thread. If the copy cannot be made, that frame is skipped and one
+  warning per process is written to the SDK log.
+
 ## 7.6.0 (November 16 2026)
 
 A release that turns two report triggers off by default and hardens network capture, the internal
