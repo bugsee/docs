@@ -9,23 +9,7 @@ Release history for Bugsee Android SDK 7.x. Looking for the previous major versi
 
 ## 7.6.1 (November 26 2026)
 
-A patch release on top of 7.6.0. It fixes a native crash in screen capture, and the SDK now opens a
-server session on every launch. Read **Behavior changes** before you upgrade.
-
-**Behavior changes**
-
-- **A server session is opened on every launch.** The SDK used to ask the server for a session only
-  when it held no access token, so the session, user and crash-free counts in the dashboard were
-  close to first-install-only. Each `Bugsee.launch()` now sends one session request, with the stored
-  access token when there is one. For the same traffic, those counts rise after you upgrade. The
-  cost is one extra request per launch. Report, performance and other uploads keep reusing the
-  stored token and send no extra request.
-  - If the server rejects the stored token, for example because it expired or was removed, the SDK
-    drops it and sends the request once more without it. The server then finds or creates the
-    session for the app and the device. If that second request fails too, the SDK keeps the stored
-    token, unless the server clearly said the token is invalid.
-  - If the request cannot be sent, for example when the device is offline, the stored token stays in
-    use and uploads continue with it.
+A patch release on top of 7.6.0. It fixes a native crash in screen capture.
 
 **Fixes**
 
