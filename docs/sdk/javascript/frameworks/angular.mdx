@@ -162,6 +162,10 @@ npm run build:bugsee
 
 It runs `ng build --configuration production` and then `bugsee-angular-upload --configuration production`. That command stamps debug IDs into `dist/<project>/browser`, uploads the maps, registers the build and removes the local maps. Set `BUGSEE_APP_TOKEN`, or keep the env file, where you run it. A plain `ng build` does not upload.
 
+:::caution
+`ng add` changes `angular.json` for the whole production configuration. A production build run any other way, such as a plain `ng build` in your CI, now leaves the hidden `.map` files in `dist/<project>/browser`, and they normally contain your original source in `sourcesContent`. Deploy from `npm run build:bugsee`, or exclude `*.map` from what you deploy.
+:::
+
 You can run it by hand after any `ng build`. `bugsee-angular-upload --help` lists the options, including `--project`, `--configuration`, `--dist`, `--output-path`, `--app-version`, `--app-build`, `--endpoint`, `--dry-run`, `--keep-maps`, `--strip-sources-content`, `--fail-on-error`, `--upload-in-development` and `--no-vcs`. From code, use the `@bugsee/angular/sourcemaps` entry:
 
 ```ts
