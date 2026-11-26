@@ -38,8 +38,8 @@ A [report handler](/sdk/javascript/report-handler) can change the report details
 ```ts
 import { bugsee } from './bugsee';
 
-// Your own function: true when the signed-in account is staff
-declare function isStaffAccount(): boolean;
+// Replace with your own check: true when the signed-in account is staff
+const isStaffAccount = (): boolean => false;
 
 bugsee.setReportHandler({
   before: (request) => {

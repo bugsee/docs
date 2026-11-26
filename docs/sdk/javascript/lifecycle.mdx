@@ -113,7 +113,7 @@ bugsee.isBlackout(); // true while a blackout is in force
 
 ## Lifecycle events
 
-Lifecycle events are coarse milestones of the SDK. You observe them through one listener. Set it at launch to see the very first event, or later: (In the browser `launch()` returns a `Promise`, so await it before using the client; on Node.js and Bun it returns the client directly and `await` is harmless.)
+Lifecycle events are coarse milestones of the SDK. You observe them through one listener. Set it at launch to see the very first event, or later. In the browser `launch()` returns a `Promise`, so await it before using the client. On Node.js and Bun it returns the client directly, and `await` is harmless.
 
 <Tabs groupId="lang">
   <TabItem value="ts" label="TypeScript">
