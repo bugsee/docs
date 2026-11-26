@@ -1,0 +1,251 @@
+---
+title: "Quick start"
+description: "Quick start for the Bugsee JavaScript SDK: installing with npm, pnpm, yarn or bun, getting an app token, launching it in a browser, Node.js, Bun or another runtime, and checking that reports arrive."
+sidebar_position: 2
+slug: "/sdk/javascript/quick-start"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+This page walks through the common case end to end: `@bugsee/bugsee` in a browser app or a Node.js server, from install to a first verified report. To find the package and setup page for your runtime or framework, start from [Installation](/sdk/javascript/installation).
+
+## Requirements
+
+| Runtime | Support |
+| --- | --- |
+| Browsers | Modern browsers. The package is built for ES2022. |
+| Node.js | 18 or later |
+| Bun | 1.1.13 or later (tested on 1.3), through `@bugsee/bun` |
+| Other runtimes | Electron, Cloudflare Workers, Vercel Edge, Web and Service Workers: see [Packages](/sdk/javascript/packages) |
+
+## 1. Add the package
+
+Pick the package for where your code runs. Browsers and Node.js use `@bugsee/bugsee`.
+
+| Where your code runs | Install |
+| --- | --- |
+| Browser, Node.js | `@bugsee/bugsee` |
+| Bun | `@bugsee/bun` |
+| Electron | `@bugsee/electron` |
+| Cloudflare Workers | `@bugsee/cloudflare` |
+| Vercel Edge | `@bugsee/vercel-edge` |
+| Web Worker, Service Worker | `@bugsee/webworker` |
+| React, Vue, Angular, Svelte, Solid | The matching adapter alone (it includes `@bugsee/bugsee`) |
+| Next.js, Nuxt, Remix, SvelteKit, Astro | The matching adapter alone |
+| Express, Fastify, NestJS, Hono, Koa, hapi, Elysia | The matching adapter alone (it includes `@bugsee/bugsee`) |
+
+For the common case:
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm">
+
+```bash
+npm install @bugsee/bugsee
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/bugsee
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/bugsee
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/bugsee
+```
+
+  </TabItem>
+</Tabs>
+
+For now the npm `latest` and `beta` tags both point at the current beta, so the commands above need no tag. Add `@beta` yourself if you want to keep following betas once a stable release exists.
+
+If your code runs on the Bun runtime, install `@bugsee/bun` instead (`bun add @bugsee/bun`). Using Bun only as your package manager or bundler for a browser or Node.js app needs `@bugsee/bugsee`.
+
+## 2. Get your app token
+
+Create a JavaScript application in Bugsee: choose **JavaScript application** as the type, then choose your target (for example **Browser**, **Node.js** or a framework). When the application is created, Bugsee shows the setup steps with your app token already filled into the snippets; see [Create your app](/sdk/javascript/installation#create-your-app). Pass the token to `launch()` as the first argument.
+
+Treat the token as configuration: read it from an environment variable or your build settings instead of committing it. A browser app ships the token to every visitor, as with any client-side SDK key.
+
+If the token is missing, empty or not a string, `launch()` does not throw. It reports one error, "Bugsee: the app token is missing", through your `onError` option (or `console.warn` when you gave none), and returns a disabled client. Nothing is captured or uploaded and every method is safe to call. A later `launch()` with a valid token still works.
+
+## 3. Launch Bugsee
+
+Call `launch()` once, as early as you can: at the top of your entry module, before the code you want covered. Capture starts when it runs.
+
+<Tabs groupId="runtime">
+  <TabItem value="browser" label="Browser">
+
+```ts title="main.ts"
+import { launch } from '@bugsee/bugsee';
+
+launch('<your_app_token>', {
+  appVersion: '1.4.2',
+  appBuild: '381',
+});
+```
+
+In the browser `launch()` returns a `Promise` of the client, and capture starts without awaiting it. If you need the client elsewhere, which the verify step and the other guides do, launch **instead** from a module of your own (do not also call `launch()` in `main.ts`; a second call is ignored and reported) and import the client from it:
+
+```ts title="bugsee.ts"
+import { launch } from '@bugsee/bugsee';
+
+export const bugsee = await launch('<your_app_token>', {
+  appVersion: '1.4.2',
+  appBuild: '381',
+});
+```
+
+Import this module first in your entry file, before your app bootstraps, not lazily. Capture covers only what runs after `launch()`, and code that runs earlier is not recorded.
+
+This uses top-level `await`, which needs an ES module build with a target of ES2022 or newer (in Vite, `build.target: 'es2022'` or later). Importers of that module wait for `launch()` to settle. If your build cannot use top-level `await`, call `launch(...)` without it in your entry and `await` it where you need the client. On Node.js and Bun `launch()` returns the client directly, and `await` on it is harmless.
+
+  </TabItem>
+  <TabItem value="node" label="Node.js">
+
+```ts title="server.ts"
+import { launch } from '@bugsee/bugsee';
+
+const bugsee = launch(process.env.BUGSEE_APP_TOKEN ?? '', {
+  appVersion: '1.4.2',
+});
+```
+
+On Node.js, `launch()` returns the client directly (not a `Promise`). Import the module that calls it before the rest of your application so that errors and requests from the start are covered.
+
+  </TabItem>
+  <TabItem value="bun" label="Bun">
+
+```ts title="index.ts"
+import { launch } from '@bugsee/bun';
+
+const bugsee = launch(process.env.BUGSEE_APP_TOKEN ?? '', {
+  appVersion: '1.4.2',
+});
+```
+
+`@bugsee/bun` accepts the same options as the Node.js build. See [Bun](/sdk/javascript/platforms/bun).
+
+  </TabItem>
+</Tabs>
+
+Both `launch` signatures are `launch(appToken, options?)`. The options are all optional; [Configuration](/sdk/javascript/configuration) lists them.
+
+What happens on launch:
+
+- Capture of console output, network traffic and breadcrumbs starts, and in the browser session replay starts.
+- Global handlers report uncaught errors and unhandled promise rejections.
+- Performance monitoring starts (web vitals and transactions); pass `performanceMonitoring: false` to turn it off.
+- Bugsee is a per-process singleton. A second `launch()` is ignored, reported through `onError`, and returns the existing client. To restart with other options, use `relaunch()`; see [Lifecycle & status](/sdk/javascript/lifecycle).
+
+:::note[Short-lived scripts]
+A Node.js or Bun script that exits right after an error can end before the report is uploaded. Await `bugsee.flush()` (or `bugsee.stop()`) before exiting. A long-running server does not need to; on `SIGTERM`, `SIGINT` and `SIGHUP` the SDK flushes what it has captured.
+:::
+
+## 4. Verify the first report
+
+Report a handled error and check that it shows up. Use the `bugsee` client from your own module (see above):
+
+```ts
+const result = await bugsee.logException(new Error('Bugsee test error'));
+console.log(result);
+```
+
+Then open your app in the Bugsee dashboard and look for the report. Reports upload in the background, and a report that cannot be uploaded right away is queued and retried. On a Node.js or Bun script, call `await bugsee.flush()` before the process exits.
+
+A repeated error with the same signature is deduplicated and `logException` is rate-limited (100 per 60 seconds), so change the message if you repeat the test. For a manual report that carries no exception, use `bugsee.upload({ summary: 'Test report' })`; see [Bug reporting](/sdk/javascript/manual/bug-reporting) and [Crash & error reporting](/sdk/javascript/manual/crash-error-reporting).
+
+## App version and build
+
+Reports show the version and build of your app, so you can tell which release a problem belongs to. The most direct way is to pass them to `launch()`:
+
+```ts
+launch('<your_app_token>', { appVersion: '2.4.1', appBuild: '381' });
+```
+
+If you leave them out, the SDK looks for them, and the first usable value for each wins:
+
+1. The `appVersion` and `appBuild` launch options. These always win.
+2. Build-time constants, `__BUGSEE_APP_VERSION__` and `__BUGSEE_APP_BUILD__`. The Bugsee Vite and webpack plugins inject them when you give the plugin an `appVersion` and `appBuild`, or set `BUGSEE_APP_VERSION` and `BUGSEE_APP_BUILD` in the build environment. You can also define the two constants yourself in your bundler, or set them as globals before launching.
+3. On servers: the `BUGSEE_APP_VERSION` and `BUGSEE_APP_BUILD` environment variables. For the version, then the `version` field of the nearest `package.json`. For the build, then the commit variable your CI or host sets (such as `GITHUB_SHA` or `VERCEL_GIT_COMMIT_SHA`).
+4. In the browser: `<meta name="bugsee:app-version" content="2.4.1">` and `<meta name="bugsee:app-build" content="381">` tags in the page.
+
+If no version is found, reports show version `0.0.0` and the SDK logs one warning.
+
+Keep the version and build the same as the ones you give the bundler plugin or `bugsee-cli` when you upload source maps. A mismatch is the most common reason a stack trace stays minified. See [Symbolication](/sdk/javascript/symbolication/overview) and [Symbolication environment](/sdk/javascript/symbolication/environment).
+
+## ESM and CommonJS
+
+Every package ships an ESM and a CommonJS build, selected by `exports` conditions, with TypeScript types for both.
+
+```js title="server.cjs"
+const { launch } = require('@bugsee/bugsee');
+
+launch(process.env.BUGSEE_APP_TOKEN ?? '');
+```
+
+`@bugsee/bugsee` has these conditional entries: `browser`, `node`, `bun`, `workerd`, `edge-light`, `worker` and `default`. A bundler or runtime that honors `exports` conditions picks the right build with no configuration. For a tool that does not honor them, import an explicit subpath instead:
+
+| Subpath | Build |
+| --- | --- |
+| `@bugsee/bugsee/node` | Node.js |
+| `@bugsee/bugsee/bun` | Bun |
+| `@bugsee/bugsee/workerd` | Cloudflare Workers |
+| `@bugsee/bugsee/edge-light` | Vercel Edge |
+| `@bugsee/bugsee/worker` | Web and Service Workers |
+
+When you bundle a server application, keep the SDK launch in the entry that runs in Node.js, and make sure your bundler resolves the `node` condition for it. For browser bundles it must resolve `browser`.
+
+## Troubleshooting
+
+**Nothing arrives in the dashboard.** Check, in order:
+
+- The token is the one shown for your JavaScript app, with no stray whitespace.
+- `onError` is set. Without it, SDK problems are silent. Pass `onError: (error) => console.error(error)` while you set up.
+- The page or server can reach `https://api.bugsee.com`. A Content Security Policy needs it under `connect-src`, and a firewall or proxy must allow outbound HTTPS to it. If you set `endpoint`, use that origin instead.
+- On a short-lived Node.js or Bun script, you await `flush()` before exit.
+- `getStatus()` returns `BugseeStatus.Launched`; see [Lifecycle & status](/sdk/javascript/lifecycle).
+
+**"the app token is missing".** The value you passed was `undefined`, empty or not a string. A common cause is an environment variable that is not set at runtime, or one that a bundler does not expose to browser code.
+
+**A second `launch()` seems to do nothing.** That is by design: one client per process. Use `relaunch(options)` to change options. Options of a relaunch start from the defaults; they are not merged with the previous launch. See [Lifecycle & status](/sdk/javascript/lifecycle#relaunch).
+
+**Reports show version `0.0.0`.** The SDK could not find a version. Pass `appVersion`; that works in every runtime. On Node.js and Bun the SDK also reads `BUGSEE_APP_VERSION` and the `package.json` version. In a browser it needs a build-time constant from the Vite or webpack plugin, or a `bugsee:app-version` meta tag. See [App version and build](#app-version-and-build).
+
+**Cloudflare Worker fails to start.** The SDK needs the `nodejs_compat` compatibility flag. See [Cloudflare](/sdk/javascript/platforms/cloudflare).
+
+**Errors in a framework are not reported.** Many frameworks catch errors before they reach the global handler. React, Vue and the others need their adapter; see [Frameworks](/sdk/javascript/frameworks/react).
+
+**Stack traces are minified.** Upload source maps with a bundler plugin or the CLI; see [Symbolication](/sdk/javascript/symbolication/overview).
+
+**Replay is missing in an SSR or pre-render pass.** Replay needs a DOM. In a DOM-less host the recorder does not start; it runs in the browser.
+
+## Next steps
+
+Your platform or framework has a dedicated page:
+
+- Platforms: [Browser](/sdk/javascript/platforms/browser), [Node.js](/sdk/javascript/platforms/node), [Bun](/sdk/javascript/platforms/bun), [Electron](/sdk/javascript/platforms/electron), [Cloudflare Workers](/sdk/javascript/platforms/cloudflare), [Vercel Edge](/sdk/javascript/platforms/vercel-edge), [Web Workers](/sdk/javascript/platforms/web-workers).
+- Frameworks: [React](/sdk/javascript/frameworks/react), [Vue](/sdk/javascript/frameworks/vue), [Angular](/sdk/javascript/frameworks/angular), [Svelte](/sdk/javascript/frameworks/svelte), [Solid](/sdk/javascript/frameworks/solid), [Next.js](/sdk/javascript/frameworks/nextjs), [Nuxt](/sdk/javascript/frameworks/nuxt), [Remix](/sdk/javascript/frameworks/remix), [Astro](/sdk/javascript/frameworks/astro).
+- Backend frameworks: [Backend overview](/sdk/javascript/backend/overview).
+
+Then:
+
+- [Configuration](/sdk/javascript/configuration) — every launch option.
+- [Privacy](/sdk/javascript/privacy/overview) — masking and redaction.
+- [Symbolication](/sdk/javascript/symbolication/overview) — readable production stack traces.
+- [Lifecycle & status](/sdk/javascript/lifecycle) — launch, stop, relaunch and events.

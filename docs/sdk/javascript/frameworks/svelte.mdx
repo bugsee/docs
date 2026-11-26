@@ -1,0 +1,255 @@
+---
+title: "Svelte and SvelteKit"
+description: "Set up the Bugsee JavaScript SDK in a Svelte app with @bugsee/svelte, or in SvelteKit with @bugsee/sveltekit: client and server hooks, route names and component names."
+sidebar_position: 4
+slug: "/sdk/javascript/frameworks/svelte"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+Two packages cover the Svelte family:
+
+- **`@bugsee/svelte`**: Svelte and browser-only SvelteKit apps. It adds a `handleError` hook for client errors and route naming from SvelteKit navigation.
+- **`@bugsee/sveltekit`**: SvelteKit apps with server code. It adds server hooks (`handle` and `handleError`) and client hooks, so one session covers the server request and the browser that triggered it. It is a single install that bundles the browser, Node.js and Edge SDKs and the Svelte adapter.
+
+If your SvelteKit app has server-side code, use `@bugsee/sveltekit`.
+
+## Requirements
+
+- `@bugsee/svelte`: Svelte 4 or newer, and `@sveltejs/kit` 2 or newer for the hooks (both optional peer dependencies).
+- `@bugsee/sveltekit`: Node.js 18 or newer for the server adapter. SvelteKit 3 applications require Node.js 22.17 or newer.
+- An app token. Create a JavaScript application in Bugsee and choose **Svelte** or **SvelteKit** as its target; see [Create your app](/sdk/javascript/installation#create-your-app).
+
+## Svelte and client-only SvelteKit
+
+### Install
+
+Install the adapter. It pulls in `@bugsee/bugsee` and re-exports it, so `launch()` comes from the adapter and you do not add `@bugsee/bugsee` yourself.
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/svelte
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/svelte
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/svelte
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/svelte
+```
+
+  </TabItem>
+</Tabs>
+
+### Set up
+
+Launch Bugsee as early as possible. In the browser `launch()` returns a `Promise` of the client. Await it only if you need the client right away.
+
+```ts title="src/main.ts"
+import { launch } from '@bugsee/svelte';
+
+launch('<your_app_token>');
+```
+
+That is the entry of a plain Svelte app. SvelteKit does not load `src/main.ts`. In a client-only SvelteKit app, launch and wire the error hook in `src/hooks.client.ts`, which SvelteKit runs when the app starts in the browser:
+
+```ts title="src/hooks.client.ts"
+import { launch, handleErrorWithBugsee } from '@bugsee/svelte';
+
+launch('<your_app_token>');
+
+export const handleError = handleErrorWithBugsee();
+```
+
+`handleErrorWithBugsee(appHandler?)` reports the error with its route id, then calls your own handler if you pass one, and returns what it returns. Errors with a status below 500, such as a 404, are treated as expected and are not reported.
+
+### Route names
+
+Name the active navigation after the route id. Call it once, while the root layout initializes. It must run during component initialization, so it cannot go in a hooks file or in `onMount`. SvelteKit then runs it after mount and on each navigation:
+
+```svelte title="src/routes/+layout.svelte"
+<script lang="ts">
+  import { afterNavigate } from '$app/navigation';
+  import { instrumentSvelteKitNavigation } from '@bugsee/svelte';
+
+  afterNavigate(instrumentSvelteKitNavigation());
+</script>
+
+<slot />
+```
+
+## SvelteKit with server code
+
+### Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/sveltekit
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/sveltekit
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/sveltekit
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/sveltekit
+```
+
+  </TabItem>
+</Tabs>
+
+### Server hooks
+
+Launch Bugsee on the server, add the `handle` hook (it injects the trace into the page head) and the `handleError` hook.
+
+```ts title="src/hooks.server.ts"
+import { sequence } from '@sveltejs/kit/hooks';
+import { registerServer } from '@bugsee/sveltekit/server';
+import { handle as bugseeHandle, handleErrorWithBugsee } from '@bugsee/sveltekit';
+
+registerServer(process.env.BUGSEE_TOKEN!);
+
+export const handle = sequence(bugseeHandle);
+export const handleError = handleErrorWithBugsee();
+```
+
+Add your own handles to `sequence(...)` as usual. `registerServer` returns the started client directly.
+
+### Client hooks
+
+Launch the browser SDK in the client hooks file, which runs only in the browser, and wire the client error hook.
+
+```ts title="src/hooks.client.ts"
+import { PUBLIC_BUGSEE_TOKEN } from '$env/static/public';
+import { registerClient, handleErrorWithBugsee } from '@bugsee/sveltekit/client';
+
+registerClient(PUBLIC_BUGSEE_TOKEN);
+
+export const handleError = handleErrorWithBugsee();
+```
+
+`registerClient` returns a `Promise` of the client. An application token is not a secret, so it is fine in a public variable.
+
+### Edge deployments
+
+For edge targets, use `registerServerEdge` and `createEdgeHandle` from `@bugsee/sveltekit/edge` in place of `registerServer` and `handle`.
+
+## Component names in minified builds
+
+The full setup is on [Component names](/sdk/javascript/frameworks/component-names).
+
+Install the Svelte preprocessor so clicks and errors are attributed to the component that rendered them, even after minification.
+
+```bash
+npm install --save-dev @bugsee/svelte-plugin-component-annotate
+```
+
+```js title="svelte.config.js"
+import { componentAnnotatePreprocessor } from '@bugsee/svelte-plugin-component-annotate';
+
+export default {
+  preprocess: [componentAnnotatePreprocessor()],
+};
+```
+
+On SvelteKit 3 there is no `svelte.config.js`. Pass `preprocess` to the `sveltekit()` Vite plugin instead:
+
+```ts title="vite.config.ts"
+import { componentAnnotatePreprocessor } from '@bugsee/svelte-plugin-component-annotate';
+import { sveltekit } from '@sveltejs/kit/vite';
+
+export default {
+  plugins: [sveltekit({ preprocess: [componentAnnotatePreprocessor()] })],
+};
+```
+
+## API
+
+| Package | Export | Description |
+| --- | --- | --- |
+| `@bugsee/svelte` | `handleErrorWithBugsee(appHandler?, options?)` | Client `handleError` hook. |
+| `@bugsee/svelte` | `instrumentSvelteKitNavigation(options?)` | Returns an `afterNavigate` callback that names navigations after the route id. |
+| `@bugsee/svelte` | `reportSvelteError(error, options?)` | Reports an error you caught yourself. |
+| `@bugsee/svelte` | `startSvelteRenderSpan(name, options?)` | Records a component render span. The preprocessor injects it. |
+| `@bugsee/sveltekit` | `handle`, `createHandle(options?)` | Server `handle` hook. |
+| `@bugsee/sveltekit` | `handleErrorWithBugsee`, `handleError`, `createHandleServerError(options?)` | Server `handleError` hook. |
+| `@bugsee/sveltekit/server` | `registerServer(appToken, options?)` | Launches the Node.js SDK. |
+| `@bugsee/sveltekit/client` | `registerClient(appToken, options?)`, `handleErrorWithBugsee` | Launches the browser SDK and the client hook. |
+| `@bugsee/sveltekit/edge` | `registerServerEdge`, `createEdgeHandle(options?)` | Edge runtime launch and `handle` hook. |
+
+Both packages also re-export the shared client exports (`getStatus`, `BugseeStatus`, `LifecycleEvents`, `addReportAttachment`, `getDefaultNetworkSanitizer`).
+
+## Launch options
+
+`launch(appToken, options)`, `registerServer` and `registerClient` accept the SDK launch options. The most relevant:
+
+| Where | Option | Default | Description |
+| --- | --- | --- | --- |
+| Server | `instrumentIncomingRequests` | `true` | Instrument incoming requests. |
+| Server | `captureLocalVariables` | `false` | Capture local variables on errors. |
+| Server | `detectHangs` | `true` | Event-loop hang detection. |
+| Client | `captureLogs`, `captureNetwork` | `true` | Console and network capture. |
+| Client | `maxRecordingTime` | `60` | Seconds of recording to keep. |
+| Client | `replay` | `true` | Session replay. Pass `false` to turn it off. |
+
+See [Browser](/sdk/javascript/platforms/browser#browser-options) and [Node.js](/sdk/javascript/platforms/node#node-options) for the full lists.
+
+## Notes
+
+- **Source maps.** The Vite plugin uploads them as part of the build. See [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins).
+- **Backend context.** On the server, each request gets a context so logs and errors tie to it. See [Backend](/sdk/javascript/backend/overview).
+
+## Verify
+
+Throw from a `load` function or a component:
+
+```ts title="src/routes/+page.ts"
+export function load() {
+  throw new Error('Bugsee test error');
+}
+```
+
+Open the page. The error shows up in the Bugsee dashboard.
+
+## Related pages
+
+- [Browser](/sdk/javascript/platforms/browser) — client launch options and replay
+- [Node.js](/sdk/javascript/platforms/node) — server launch options
+- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — upload source maps from Vite
+- [Symbolication](/sdk/javascript/symbolication/overview) — source maps and debug IDs

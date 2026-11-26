@@ -1,0 +1,100 @@
+---
+title: "Installation"
+description: "Choose the Bugsee JavaScript SDK package for your runtime or framework and go to its installation page: browsers, Node.js, Bun, Electron, edge and worker runtimes, frontend and meta-frameworks, and backend frameworks."
+sidebar_position: 1
+slug: "/sdk/javascript/installation"
+---
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+The Bugsee JavaScript SDK is a family of npm packages under the `@bugsee` scope. You install the package that matches where your code runs, plus an adapter if you use a framework. Pick your runtime or framework below; each page has the install command, the setup code and the gotchas for that environment.
+
+New to the SDK? [Quick start](/sdk/javascript/quick-start) walks through the common case end to end: install, app token, launch and a first verified report.
+
+## Create your app
+
+You get the app token by creating an application in Bugsee:
+
+1. Create a new application and choose **JavaScript application** as its type.
+2. Choose the target you are integrating Bugsee into. The targets are grouped as **Frontend frameworks** (React, Vue, Angular, Svelte, SolidJS, Preact), **Full-stack frameworks** (Next.js, Nuxt, Remix, SvelteKit, Astro), **Backend frameworks** (Express, Fastify, NestJS, Hono, Koa, hapi, Elysia) and **Runtimes & environments** (Browser, Node.js, Bun, Electron, Cloudflare Workers, Vercel Edge, Web Worker, Service Worker). The target is set once, when the application is created.
+3. Give the application a name and finish creating it.
+4. Bugsee then shows the setup steps for your target: **Installation** (the npm command) and **Configure & launch** (the code to add), with your app token already filled into the snippets. Bugsee waits for your first report in a **Validation** step.
+
+The guides below follow the same targets, so choose the guide that matches the target you picked. Wherever a guide shows `<your_app_token>`, use the token of your application.
+
+## Before you start
+
+- Use Node.js 18 or later, or Bun 1.1.13 or later (tested on 1.3), for tooling and servers.
+- The install commands on these pages have no version or tag. While the SDK is in beta, the npm `latest` tag points at the current beta.
+
+## Runtimes and platforms
+
+| Where your code runs | Install | Guide |
+| --- | --- | --- |
+| Browser | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/bugsee" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/bugsee</code></a> | [Browser](/sdk/javascript/platforms/browser) |
+| Node.js | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/bugsee" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/bugsee</code></a> | [Node.js](/sdk/javascript/platforms/node) |
+| Bun | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/bun" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/bun</code></a> | [Bun](/sdk/javascript/platforms/bun) |
+| Electron | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/electron" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/electron</code></a> | [Electron](/sdk/javascript/platforms/electron) |
+| Cloudflare Workers | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/cloudflare" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/cloudflare</code></a> | [Cloudflare Workers](/sdk/javascript/platforms/cloudflare) |
+| Vercel Edge | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/vercel-edge" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/vercel-edge</code></a> | [Vercel Edge](/sdk/javascript/platforms/vercel-edge) |
+| Web Worker, Service Worker | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/webworker" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/webworker</code></a> | [Web and Service Workers](/sdk/javascript/platforms/web-workers) |
+
+## Frontend frameworks
+
+Install the adapter for your framework. It pulls in `@bugsee/bugsee` and re-exports it, so one package and one import give you `launch` plus the error boundary, router and error-handler hooks.
+
+| Framework | Install | Guide |
+| --- | --- | --- |
+| React | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/react" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/react</code></a> | [React](/sdk/javascript/frameworks/react) |
+| Vue | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/vue" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/vue</code></a> | [Vue](/sdk/javascript/frameworks/vue) |
+| Angular | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/angular" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/angular</code></a> | [Angular](/sdk/javascript/frameworks/angular) |
+| Svelte | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/svelte" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/svelte</code></a> | [Svelte and SvelteKit](/sdk/javascript/frameworks/svelte) |
+| Solid | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/solid" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/solid</code></a> | [Solid](/sdk/javascript/frameworks/solid) |
+
+## Meta-frameworks
+
+These cover the client and the server of the framework in one package.
+
+| Framework | Install | Guide |
+| --- | --- | --- |
+| Next.js | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/nextjs" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/nextjs</code></a> | [Next.js](/sdk/javascript/frameworks/nextjs) |
+| Nuxt | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/nuxt" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/nuxt</code></a> | [Nuxt](/sdk/javascript/frameworks/nuxt) |
+| Remix and React Router | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/remix" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/remix</code></a> | [Remix](/sdk/javascript/frameworks/remix) |
+| SvelteKit | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/sveltekit" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/sveltekit</code></a> | [Svelte and SvelteKit](/sdk/javascript/frameworks/svelte) |
+| Astro | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/astro" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/astro</code></a> | [Astro](/sdk/javascript/frameworks/astro) |
+
+## Backend frameworks
+
+Install the adapter for your server framework. It pulls in `@bugsee/bugsee` and re-exports it, so `launch` and the setup function come from one package. See the [Backend overview](/sdk/javascript/backend/overview) for request context and incoming-request instrumentation.
+
+| Framework | Install | Guide |
+| --- | --- | --- |
+| Express | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/express" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/express</code></a> | [Express](/sdk/javascript/backend/express) |
+| Fastify | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/fastify" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/fastify</code></a> | [Fastify](/sdk/javascript/backend/fastify) |
+| NestJS | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/nestjs" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/nestjs</code></a> | [NestJS](/sdk/javascript/backend/nestjs) |
+| Hono | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/hono" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/hono</code></a> | [Hono](/sdk/javascript/backend/hono) |
+| Koa | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/koa" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/koa</code></a> | [Koa](/sdk/javascript/backend/koa) |
+| hapi | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/hapi" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/hapi</code></a> | [hapi](/sdk/javascript/backend/hapi) |
+| Elysia | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/elysia" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/elysia</code></a> | [Elysia](/sdk/javascript/backend/elysia) |
+
+On Bun, also install `@bugsee/bun` and import `launch` from it, as described in [Running on Bun](/sdk/javascript/backend/overview#running-on-bun).
+
+## Readable stack traces
+
+Production bundles are minified. Upload source maps at build time with a bundler plugin, or with the CLI, so reports show your original code:
+
+- [Source maps overview](/sdk/javascript/symbolication/overview)
+- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) for Vite, webpack, Rollup, esbuild and Rspack
+- [Manual upload](/sdk/javascript/symbolication/manual) for other build tools
+
+## Which packages do I install?
+
+You install only the packages in the tables above. The other `@bugsee/*` packages are dependencies that the SDK pulls in. [Packages](/sdk/javascript/packages) lists all of them and says which are internal.
+
+## Next steps
+
+- [Quick start](/sdk/javascript/quick-start) — a full first-run walkthrough.
+- [Configuration](/sdk/javascript/configuration) — every launch option.
+- [Privacy](/sdk/javascript/privacy/overview) — masking and redaction.

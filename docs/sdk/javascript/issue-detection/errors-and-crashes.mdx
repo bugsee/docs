@@ -1,0 +1,92 @@
+---
+title: "Errors and crashes"
+description: "How the Bugsee JavaScript SDK detects uncaught errors and unhandled promise rejections in the browser, Node.js and Bun, and how to control what happens to the process."
+sidebar_position: 2
+slug: "/sdk/javascript/issue-detection/errors-and-crashes"
+---
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+Bugsee detects two kinds of unhandled failure and reports each one with the recent logs, network calls and breadcrumbs.
+
+| Source | Report type | Default priority |
+| --- | --- | --- |
+| An uncaught error: the `error` event of the window, or `uncaughtException` of the process | Crash | `blocker` |
+| An unhandled promise rejection: the `unhandledrejection` event of the window, or `unhandledRejection` of the process | Error | `high` |
+
+Both are controlled by `detectCrashes`, which is `true` by default. Set it to `false` to turn both detectors off.
+
+## Browser
+
+Bugsee listens for `error` and `unhandledrejection` on the window. It reads the message and the stack from the thrown value. A value that is not an `Error`, such as a thrown string or object, is still reported, with a summary built from it.
+
+**Failed module loads.** A failed dynamic `import()`, and other errors a browser reports without a stack, produce a report that names the module. Safari rejects a failed module load with a bare `Importing a module script failed.` that has no stack and no URL. Chrome and Firefox name the module in the message but ship no frames. The report carries one frame for the failed module, taken from the message where the browser gives it, and otherwise inferred from the Resource Timing entry of the failed script fetch (same-origin only, and flagged as inferred). When nothing identifies the module, one fixed `<unknown module>` frame is used, so those occurrences still group. The report description adds the page route (without the query string), the online state and the scripts that had just loaded. A real stack, and the call site of a platform rejection, always take precedence.
+
+Nothing changes for the page. Bugsee does not call `preventDefault`, so the browser still logs the error to the console.
+
+On a framework with its own error handling, for example Vue, which catches component errors, add the matching adapter so that the errors reach Bugsee. See the framework pages, starting with [Frameworks](/sdk/javascript/frameworks/react).
+
+## Node.js and Bun
+
+Bugsee listens for `uncaughtException` and `unhandledRejection` on the process. The launch options decide what happens to the process afterwards.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `detectCrashes` | `boolean` | `true` | Install the two process listeners. |
+| `exitOnUncaught` | `boolean` | `true` | After an uncaught exception, flush the report and exit with code 1. |
+| `unhandledRejections` | `'preserve' \| 'warn' \| 'none'` | `'preserve'` | What to do with an unhandled rejection. See below. |
+| `shutdownTimeoutMs` | `number` | `3000` | How long to wait for the report to flush before exiting. |
+
+### Uncaught exceptions
+
+Bugsee writes the crash, waits up to `shutdownTimeoutMs` for the report to flush, then exits with code 1, as Node.js would have done. It prints the error to standard error first, because installing a listener removes Node.js's own message.
+
+Bugsee exits only when it is the sole `uncaughtException` listener. If your app or another library installed its own handler, that handler decides the outcome and Bugsee only reports.
+
+Set `exitOnUncaught: false` to keep the process alive after an uncaught exception.
+
+### Unhandled rejections
+
+Since Node.js 15, an unhandled rejection ends the process. A passive listener would silently turn a crashing service into one that runs on and exits with code 0, so Bugsee gives you three modes:
+
+| Mode | Behavior |
+| --- | --- |
+| `'preserve'` (default) | Reports the rejection, prints it, flushes, and then ends the process the way Node.js would. If you run with `--unhandled-rejections=warn` or `none`, the process stays alive. |
+| `'warn'` | Reports and prints the rejection, and keeps the process alive. |
+| `'none'` | Installs no rejection listener. In Node.js's default mode an unhandled rejection is then raised as an uncaught exception, which the `uncaughtException` listener (installed while `detectCrashes` is on) can still report as a crash. Turn `detectCrashes` off as well for Node.js to behave as if Bugsee were absent. |
+
+`exitOnUncaught` does not affect rejections that Bugsee handles. Use `unhandledRejections` for them. The one exception is `'none'`: Node.js then raises the rejection as an uncaught exception, so `exitOnUncaught` decides whether the process exits (and `false` keeps it alive).
+
+```ts
+import { launch } from '@bugsee/bugsee';
+
+launch('<your_app_token>', {
+  unhandledRejections: 'warn',
+  exitOnUncaught: true,
+});
+```
+
+### Delivery after a crash
+
+The capture buffer of a Node.js or Bun process is on disk by default. The report is stored before it is uploaded, so a crash that kills the process before the upload finishes is delivered on the next launch (`recover` is `true` by default). See [Node.js](/sdk/javascript/platforms/node) for the storage options.
+
+**Failed module loads.** An uncaught exception or unhandled rejection raised while loading a module names the module that failed, instead of being reported as an error at `node:internal/modules/...` (Node.js) or with no frames at all (Bun). The failed module is the first frame (`import()` or `require()`), and the report description adds the importer, how it was loaded, the error `code` and the CommonJS `require` stack. A syntax error becomes a frame at its file, line and column where the runtime gives them. Node.js gives no file for a syntax error in a dynamically imported ES module, so that case is reported as before. The runtime's own frames follow the new first frame.
+
+## Stack traces
+
+When the build carries debug IDs, each frame is stamped with the ID of the bundle it came from, and Bugsee maps it back to your source. See [Symbolication](/sdk/javascript/symbolication/overview).
+
+On Node.js and Bun, two [diagnostics](/sdk/javascript/issue-detection/diagnostics) options add more to the frames: `captureLocalVariables` and `captureSourceContext`.
+
+## Other runtimes
+
+Service workers, web workers, edge runtimes and Electron have their own detectors. See the page of your runtime under [Platforms](/sdk/javascript/platforms/browser).
+
+## Related pages
+
+- [Issue detection overview](/sdk/javascript/issue-detection/overview) — all detectors and their defaults
+- [Crash and error reporting](/sdk/javascript/manual/crash-error-reporting) — report errors you catch yourself
+- [Diagnostics](/sdk/javascript/issue-detection/diagnostics) — local variables and source context on crash frames
+- [Symbolication](/sdk/javascript/symbolication/overview) — readable stack traces from minified code

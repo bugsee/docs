@@ -1,0 +1,154 @@
+---
+title: "Vue"
+description: "Set up the Bugsee JavaScript SDK in a Vue 3 app with @bugsee/vue: the required error handler, vue-router route names and component names in minified builds."
+sidebar_position: 2
+slug: "/sdk/javascript/frameworks/vue"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/vue` adds Vue-specific error reporting to the [browser SDK](/sdk/javascript/platforms/browser). It reports errors from Vue's error handler and names navigations after the matched vue-router route.
+
+Using Nuxt? Use [`@bugsee/nuxt`](/sdk/javascript/frameworks/nuxt) instead. It wires this adapter for you.
+
+## Requirements
+
+- Vue 3 (peer dependency).
+- An app token. Create a JavaScript application in Bugsee and choose **Vue** as its target; see [Create your app](/sdk/javascript/installation#create-your-app).
+
+## Install
+
+Install the adapter. It pulls in `@bugsee/bugsee` and re-exports it, so `launch()` comes from the adapter and you do not add `@bugsee/bugsee` yourself.
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/vue
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/vue
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/vue
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/vue
+```
+
+  </TabItem>
+</Tabs>
+
+## Set up
+
+```ts title="main.ts"
+import { launch } from '@bugsee/vue';
+import { installBugseeErrorHandler } from '@bugsee/vue';
+import { createApp } from 'vue';
+import App from './App.vue';
+
+launch('<your_app_token>');
+
+const app = createApp(App);
+installBugseeErrorHandler(app);
+app.mount('#app');
+```
+
+In the browser `launch()` returns a `Promise` of the client. Await it only if you need the client right away.
+
+`installBugseeErrorHandler(app)` hooks `app.config.errorHandler` so Vue errors are reported to the launched client. It keeps any handler you set earlier: install it after your own handler and both run. If there is none, it keeps Vue's default behavior of logging the error to the console.
+
+:::caution[Required in production]
+Vue swallows errors thrown in components, hooks, watchers and event handlers. A production build only logs them with `console.error` and never rethrows, and in any build the rejection of an async hook is caught by Vue itself, so neither `window.onerror` nor `unhandledrejection` sees it. Without `installBugseeErrorHandler(app)` (or your own `app.config.errorHandler` that reports them), Bugsee receives nothing from those errors.
+:::
+
+### Route names (vue-router)
+
+Name the active navigation after the matched route pattern instead of the concrete URL. Call it once after `createRouter(...)`.
+
+```ts
+import { instrumentVueRouter } from '@bugsee/vue';
+
+instrumentVueRouter(router);
+```
+
+### Component names in minified builds
+
+The full setup is on [Component names](/sdk/javascript/frameworks/component-names).
+
+Register the mixin so clicks and errors are attributed to the Vue component that rendered them, even after minification. It stamps each component's root element with a `data-bugsee-component` attribute.
+
+```ts title="main.ts"
+import { createBugseeVueComponentMixin } from '@bugsee/vue';
+
+app.mixin(createBugseeVueComponentMixin());
+```
+
+## API
+
+`@bugsee/vue` installs `@bugsee/bugsee` for you and re-exports everything from it, so `launch`, the client types and the rest of the SDK API come from this one package. You do not install or import `@bugsee/bugsee` separately.
+
+| Export | Description |
+| --- | --- |
+| `installBugseeErrorHandler(app, options?)` | Installs Bugsee on `app.config.errorHandler`, chaining an existing handler. |
+| `reportVueError(error, options?)` | Reports an error you caught yourself. Accepts `info` and `instance`. |
+| `instrumentVueRouter(router, options?)` | Names navigations after the matched route. |
+| `createBugseeVueComponentMixin()` | Mixin that stamps component root elements with their names. |
+| `createBugseeVueRenderMixin()` | Mixin that records render timing for performance monitoring. |
+
+## Launch options
+
+`launch(appToken, options)` accepts all [browser options](/sdk/javascript/platforms/browser#browser-options). The most relevant:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `captureLogs` | `boolean` | `true` | Capture console output. |
+| `captureNetwork` | `boolean` | `true` | Capture network requests. |
+| `maxRecordingTime` | `number` | `60` | Seconds of recording to keep. |
+| `replay` | `boolean` or object | `true` | Session replay settings, or `false` to turn replay off. |
+| `captureInteractions` | `boolean` | `true` | Capture user interactions. |
+
+## Notes
+
+- **Source maps.** Upload source maps so Vue stacks are readable. The Vite plugin does it as part of the build. See [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) and [Symbolication](/sdk/javascript/symbolication/overview).
+- **Sensitive content.** Session replay masks text and inputs by default. See [Privacy](/sdk/javascript/privacy/overview).
+
+## Verify
+
+Throw from a component:
+
+```html title="Bomb.vue"
+<script setup lang="ts">
+throw new Error('Bugsee test error');
+</script>
+
+<template>
+  <p>Never shown</p>
+</template>
+```
+
+Render the component. The error shows up in the Bugsee dashboard.
+
+## Related pages
+
+- [Browser](/sdk/javascript/platforms/browser) — launch options, persistence and replay
+- [Nuxt](/sdk/javascript/frameworks/nuxt) — Vue with server rendering
+- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — upload source maps from Vite
+- [Symbolication](/sdk/javascript/symbolication/overview) — source maps and debug IDs

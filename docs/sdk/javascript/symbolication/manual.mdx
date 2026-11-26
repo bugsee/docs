@@ -1,0 +1,164 @@
+---
+title: "Manual upload with the CLI"
+description: "Stamp debug IDs and upload source maps with bugsee-cli after the build, for tsup, tsc, swc, Bun's bundler, Angular without ng add and any other toolchain without a plugin."
+sidebar_position: 3
+slug: "/sdk/javascript/symbolication/manual"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+The [bundler plugins](/sdk/javascript/symbolication/bundler-plugins) are a convenience around the Bugsee CLI. The CLI works on any finished output folder, whatever produced it. When your toolchain has no usable plugin hook, run it as a step after the build.
+
+This page covers the recipes. [Source maps](/cli/sourcemaps) in the CLI documentation has every command, flag and exit code.
+
+## Install the CLI
+
+The `@bugsee/cli` package installs the `bugsee-cli` binary into your project.
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm">
+
+```bash
+npm install --save-dev @bugsee/cli
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add -D @bugsee/cli
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add -D @bugsee/cli
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add -d @bugsee/cli
+```
+
+  </TabItem>
+</Tabs>
+
+The commands below assume `bugsee-cli` is on your `PATH`. Run them from an npm script, or prefix them with `npx` or `bunx`. For a build machine without Node.js, or other ways to install the CLI, see [CLI installation](/cli/installation).
+
+## The steps
+
+Three steps, in this order:
+
+```bash
+# 1. Build with external source maps.
+# 2. Stamp debug IDs into the bundles and their maps, before you deploy.
+bugsee-cli sourcemaps inject ./dist
+
+# 3. Upload the maps, keyed by the debug ID that step 2 wrote.
+BUGSEE_APP_TOKEN=<your_app_token> bugsee-cli debug-files upload ./dist \
+  --type sourcemaps --version "$APP_VERSION" --build "$APP_BUILD"
+```
+
+- **Build with external source maps.** For example `tsc --sourceMap`, `bun build --sourcemap=external` or `esbuild --sourcemap`.
+- **Run `inject` before you deploy.** The deployed bundle must carry the debug ID and the runtime stub that the SDK reads. Stamping is idempotent, so running it on every build is safe.
+- **Set the version and build.** `--version` and `--build` are required. Export `APP_VERSION` and `APP_BUILD` (the values your app launches with) before the build, so no recipe on this page sends an empty value.
+- **Export the token.** The CLI reads `BUGSEE_APP_TOKEN` from the environment. It does **not** read the `.env.bugsee-build-plugin` file that the plugins read.
+- **Delete the maps** from the folder you deploy, if you do not want them public. The plugins do it for you by default. A command such as `find dist -name "*.map" -delete` does it after a successful upload.
+
+Both commands take `--dry-run` to show what they would do without doing it.
+
+## Bun's bundler
+
+```bash
+bun build ./src/index.ts --outdir dist --sourcemap=external
+bugsee-cli sourcemaps inject ./dist
+bugsee-cli debug-files upload ./dist --type sourcemaps --version "$APP_VERSION" --build "$APP_BUILD"
+```
+
+## tsup
+
+tsup writes its files after esbuild has finished, so the esbuild plugin finds nothing on disk. Run the CLI from tsup's `onSuccess` hook instead. Set `sourcemap: true` and export `BUGSEE_APP_TOKEN`:
+
+```ts title="tsup.config.ts"
+import { defineConfig } from 'tsup';
+
+export default defineConfig({
+  entry: ['src/index.ts'],
+  sourcemap: true,
+  onSuccess:
+    'bugsee-cli sourcemaps inject dist && ' +
+    'bugsee-cli debug-files upload dist --type sourcemaps --version "${APP_VERSION:?set APP_VERSION}" --build "${APP_BUILD:?set APP_BUILD}" && ' +
+    'find dist -name "*.map" -delete',
+});
+```
+
+`--version` and `--build` are required by the upload. The `${VAR:?...}` parts stop the build with a message when a variable is not set, instead of uploading with an empty value. The same recipe applies to any tool that runs esbuild with `write: false`.
+
+This recipe needs a POSIX shell, because of the `${VAR:?...}` expansion and `find`. tsup runs `onSuccess` strings through the system shell, so on Windows run the build from Git Bash or WSL, or replace the string with an `async` `onSuccess` callback that calls the CLI with `execFileSync` and removes the maps with `fs`.
+
+The shipped bundles keep their `//# sourceMappingURL` comment, which then points at a file that is no longer there. This is harmless.
+
+## tsc and swc
+
+Neither has a plugin hook. Compile with source maps, then run the steps above on the output folder:
+
+```bash
+tsc --sourceMap
+bugsee-cli sourcemaps inject ./dist
+bugsee-cli debug-files upload ./dist --type sourcemaps --version "$APP_VERSION" --build "$APP_BUILD"
+```
+
+`tsc` does not embed your source in the map unless you turn on `inlineSources`. Without it, the frames resolve to your files and lines, but the map carries no source text.
+
+## Angular
+
+Angular's builder does not accept esbuild plugins, so there is no plugin for `ng build`. `ng add @bugsee/angular` sets up the whole flow, including the upload and the Subresource Integrity re-seal. See [Angular](/sdk/javascript/frameworks/angular#source-maps). To do it by hand, add the CLI after the build, for example as an npm script or a CI step:
+
+```bash
+ng build --source-map            # or "sourceMap": true in angular.json
+export BUGSEE_APP_TOKEN=<your_app_token>
+bugsee-cli sourcemaps inject dist/<project>/browser
+bugsee-cli debug-files upload dist/<project>/browser \
+  --type sourcemaps --version "$APP_VERSION" --build "$APP_BUILD"
+```
+
+The output folder depends on your project. For the application builder it is `dist/<project>/browser`.
+
+If you turn on `"subresourceIntegrity": true`, `inject` refuses to run, because stamping would invalidate the hashes that Angular writes into `index.html`. Turn the option off for the builds you symbolicate, pass `--allow-sri` only if your pipeline recomputes the hashes after the stamp, or use `bugsee-angular-upload`, which re-seals them for you.
+
+## Keep your source private
+
+Add `--strip-sources-content` to the upload to send the maps without the embedded source code:
+
+```bash
+bugsee-cli debug-files upload ./dist --type sourcemaps \
+  --version "$APP_VERSION" --build "$APP_BUILD" --strip-sources-content
+```
+
+File, line and column still resolve. Reports then show no source lines. The maps on disk are not changed.
+
+:::caution
+Stripping can fail open. If the CLI cannot process a map, it logs a warning and uploads the map unstripped, and the upload still succeeds (CLI 0.8.0 and later; see the [CLI release notes](/cli/release-notes)). If your policy forbids uploading source code, do not rely on this flag alone: strip the maps yourself and check that `sourcesContent` is absent from every map before you upload. A warning in the CLI output comes too late, because the unstripped map has already been sent.
+:::
+
+## Check the result
+
+- Look for the count of injected files in the `inject` output. A bundle whose extension is not `.js`, `.cjs` or `.mjs` is skipped without an error, and the problem appears later as a map with no debug ID, which fails the upload.
+- A bundle that another tool already stamped with a debug ID, such as Rollup 4 with `output.sourcemapDebugIds`, keeps that ID and only gains the registration that the SDK reads.
+- Use `--dry-run` to preview the pairings and the upload.
+
+## Related pages
+
+- [Symbolication overview](/sdk/javascript/symbolication/overview) — how debug IDs work
+- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — the same job, done by your bundler
+- [Environment and variables](/sdk/javascript/symbolication/environment) — tokens and versions
+- [Source map doctor](/sdk/javascript/symbolication/doctor) — check a build folder offline
+- [Source maps (CLI)](/cli/sourcemaps) — every command and flag

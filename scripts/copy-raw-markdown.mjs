@@ -87,7 +87,13 @@ function mdxToMarkdown(content) {
       continue;
     }
 
-    output.push(line);
+    // Convert <a href="URL" ...><code>name</code></a> → [`name`](URL), so the raw Markdown stays readable
+    output.push(
+      line.replace(
+        /<a\s[^>]*?href="([^"]+)"[^>]*>\s*<code>([^<]*)<\/code>\s*<\/a>/g,
+        (_m, href, name) => `[\`${name}\`](${href})`,
+      ),
+    );
   }
 
   return output.join('\n');

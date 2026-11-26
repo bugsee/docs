@@ -1,0 +1,170 @@
+---
+title: "Node.js"
+description: "Set up the Bugsee JavaScript SDK in a Node.js service: launch, crash capture, on-disk recovery, hang detection, profiling and the Node-specific launch options."
+sidebar_position: 2
+slug: "/sdk/javascript/platforms/node"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+On Node.js, `@bugsee/bugsee` captures uncaught exceptions and unhandled rejections, console output and `node:http` traffic, instruments incoming requests, and keeps its recording on disk so a crash report survives the crash. It can also detect event-loop hangs and attach a CPU profile.
+
+Running an HTTP framework? Start here, then add its adapter from [Backend](/sdk/javascript/backend/overview).
+
+## Requirements
+
+- Node.js 18 or newer.
+- An app token. Create a JavaScript application in Bugsee and choose **Node.js** as its target; see [Create your app](/sdk/javascript/installation#create-your-app).
+- A writable directory for the on-disk capture buffer. By default it is `<os tmpdir>/bugsee`.
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/bugsee
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/bugsee
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/bugsee
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/bugsee
+```
+
+  </TabItem>
+</Tabs>
+
+You install only `@bugsee/bugsee`. It selects the Node build through package `exports` conditions, for both ESM and CommonJS. `@bugsee/node` is an internal building block that you do not install.
+
+## Launch
+
+Call `launch()` at the top of your entry file, before the code you want to observe.
+
+<Tabs groupId="lang">
+  <TabItem value="ts" label="TypeScript" default>
+
+```ts title="server.ts"
+import { launch } from '@bugsee/bugsee';
+
+const bugsee = launch('<your_app_token>', { appVersion: '1.4.2' });
+```
+
+  </TabItem>
+  <TabItem value="js" label="CommonJS">
+
+```js title="server.js"
+const { launch } = require('@bugsee/bugsee');
+
+const bugsee = launch('<your_app_token>', { appVersion: '1.4.2' });
+```
+
+  </TabItem>
+</Tabs>
+
+On Node `launch()` returns the client directly, not a `Promise`. A second `launch()` in the same process is ignored with a warning and returns the existing client. Use `relaunch(options?)` to restart, or `stop()` to release the singleton. A missing or empty token does not throw: the SDK reports one error through `onError` (or `console.warn`) and returns a disabled client.
+
+Read the token from your environment rather than hard-coding it:
+
+```ts
+launch(process.env.BUGSEE_APP_TOKEN);
+```
+
+### App version and build
+
+The SDK picks the first usable value in this order:
+
+1. The `appVersion` and `appBuild` launch options.
+2. Build-time constants `__BUGSEE_APP_VERSION__` and `__BUGSEE_APP_BUILD__`.
+3. The `appIdentitySource` option, a function returning `{ version?, build? }`.
+4. For the version: the `BUGSEE_APP_VERSION` environment variable, then the `version` field of the nearest `package.json`, searched upward from `appRoot` or the working directory. If the working directory has none (a container with `WORKDIR /`, or a service manager's folder), the folder of the entry script is searched next (`Bun.main` on Bun, otherwise `process.argv[1]`). An entry script under `node_modules`, which is a tool's script and not your app, is not searched, and an explicit `appRoot` is never overridden.
+5. For the build: the `BUGSEE_APP_BUILD` environment variable, then the commit variable of your CI or host, such as `GITHUB_SHA` or `VERCEL_GIT_COMMIT_SHA`.
+
+If no version is found, reports show `0.0.0` and the SDK prints one warning.
+
+## What is exported
+
+| Export | Description |
+| --- | --- |
+| `launch(appToken, options?)` | Starts the SDK and returns the client synchronously. |
+| `relaunch(options?)` | Restarts the SDK, optionally with new options. |
+| `getStatus()` | Returns the current `BugseeStatus`. |
+| `BugseeStatus` | The status values `getStatus()` returns. |
+| `LifecycleEvents` | The lifecycle event names. See [Lifecycle](/sdk/javascript/lifecycle). |
+| `addReportAttachment(input)` | Adds an attachment to reports. |
+| `getDefaultNetworkSanitizer()` | The default network redaction, to compose with your own filter. |
+
+## Node options
+
+`launch(appToken, options)` accepts the [common options](/sdk/javascript/configuration). These apply to Node (and Bun):
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `appRoot` | `string` | working directory | Where to start looking for `package.json`. |
+| `unhandledRejections` | `'preserve'` \| `'warn'` \| `'none'` | `'preserve'` | `preserve` captures the rejection, then reproduces Node's outcome (print and exit 1). `warn` captures and prints but keeps the process alive. `none` installs no listener. |
+| `exitOnUncaught` | `boolean` | `true` | Call `process.exit(1)` after flushing an uncaught exception. Does not affect rejections. |
+| `shutdownTimeoutMs` | `number` | `3000` | Time budget to flush the crash report before exiting. |
+| `recover` | `boolean` | `true` | Persist each report before upload and re-upload leftovers from a crashed run on the next launch. |
+| `capturedDataStore` | `'disk'` \| `'memory'` | `'disk'` | Where the recording lives. `memory` disables crash recovery. |
+| `dataDir` | `string` | `<os tmpdir>/bugsee` | Directory for the on-disk buffer. |
+| `maxDataSize` | `number` | 50 MB | Size cap of the recording. |
+| `detectHangs` | `boolean` | `true` | Event-loop hang detection. See [Hangs](/sdk/javascript/issue-detection/hangs). |
+| `profiling` | `boolean` | `false` | Rolling V8 CPU profile attached to reports. |
+| `captureLocalVariables` | `boolean` or object | `false` | Local variables of the throwing frames. See [Diagnostics](/sdk/javascript/issue-detection/diagnostics). |
+| `captureSourceContext` | `boolean` or object | `false` | Source lines around each frame. |
+| `instrumentIncomingRequests` | `boolean` | `true` | Instrument incoming `node:http` requests automatically. |
+
+The remaining Node options (`deviceId`, `captureWriter`, `captureDiskSpace`, `diskProtection`, trace propagation) are in [Configuration](/sdk/javascript/configuration).
+
+## Behavior to know about
+
+- **Crashes end the process.** After an uncaught exception the SDK flushes the report and exits with code 1, as Node would. Set `exitOnUncaught: false` only if you handle process lifetime yourself.
+- **Crash recovery needs a persistent directory.** If the process is killed, the next launch uploads what the previous run left in `dataDir`. On a read-only or ephemeral filesystem, set `dataDir` to a writable path or accept in-memory capture.
+- **Several processes or worker threads can share one `dataDir`.** Each instance writes its own subdirectory, and a new launch recovers the data of dead siblings.
+- **Incoming requests are instrumented by default.** Each request gets its own context so logs and errors can be tied to it. See [Backend](/sdk/javascript/backend/overview).
+- **Serverless and short-lived scripts.** Call `await bugsee.flush()` before the process ends so pending uploads finish.
+
+## Source maps
+
+If you ship bundled or transpiled server code, upload source maps so stack traces are readable. See [Symbolication](/sdk/javascript/symbolication/overview).
+
+## Verify
+
+1. Launch the SDK with a real token.
+2. Report a test error:
+
+```ts
+const bugsee = launch('<your_app_token>');
+bugsee.logException(new Error('Bugsee test error'));
+await bugsee.flush();
+```
+
+3. Open the Bugsee dashboard. The report appears within a minute, with the process environment and the captured logs.
+
+## Related pages
+
+- [Quick start](/sdk/javascript/quick-start) — install and launch for every runtime
+- [Configuration](/sdk/javascript/configuration) — all launch options
+- [Backend](/sdk/javascript/backend/overview) — request context and framework adapters
+- [Hangs](/sdk/javascript/issue-detection/hangs) — event-loop hang detection
+- [Bun](/sdk/javascript/platforms/bun) — the Bun runtime

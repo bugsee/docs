@@ -1,0 +1,182 @@
+---
+title: "Browser"
+description: "Set up the Bugsee JavaScript SDK in a web app: install @bugsee/bugsee, launch it, and learn the browser-specific options, persistence, session replay and report dialog."
+sidebar_position: 1
+slug: "/sdk/javascript/platforms/browser"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+In the browser, `@bugsee/bugsee` captures global errors and unhandled rejections, console output, network requests, user interactions, the page URL and session replay. It keeps a rolling recording window and uploads it as a report when something goes wrong or when the user reports a bug.
+
+If you use a UI framework, start from its page under [Frameworks](/sdk/javascript/frameworks/react) instead. They all build on what is described here.
+
+## Requirements
+
+- A browser with ES2022 support.
+- An app token. Create a JavaScript application in Bugsee and choose **Browser** as its target; see [Create your app](/sdk/javascript/installation#create-your-app).
+- For persistence across reloads, IndexedDB and Web Locks (`navigator.locks`). Web Locks needs a secure context (`https://` or `localhost`). Without them the SDK keeps its data in memory.
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/bugsee
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/bugsee
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/bugsee
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/bugsee
+```
+
+  </TabItem>
+</Tabs>
+
+You install only `@bugsee/bugsee`. It selects the browser build through package `exports` conditions. `@bugsee/browser` is an internal building block that you do not install.
+
+## Launch
+
+Call `launch()` as early as possible, at the top of your entry module.
+
+```ts title="main.ts"
+import { launch } from '@bugsee/bugsee';
+
+launch('<your_app_token>', { appVersion: '1.4.2', appBuild: '381' });
+```
+
+In the browser `launch()` returns a `Promise` of the client. Await it only if you need the client right away:
+
+```ts
+const bugsee = await launch('<your_app_token>');
+
+bugsee.addBreadcrumb({ message: 'checkout started' });
+```
+
+A second `launch()` in the same page is ignored with a warning and returns the existing client. A missing or empty token does not throw: the SDK reports one error through `onError` (or `console.warn`) and returns a disabled client.
+
+### App version and build
+
+Reports carry your app's version and build. Bugsee resolves them in this order:
+
+1. The `appVersion` and `appBuild` launch options.
+2. The build-time constants `__BUGSEE_APP_VERSION__` and `__BUGSEE_APP_BUILD__`. The [Vite and webpack plugins](/sdk/javascript/symbolication/bundler-plugins) inject them when you give the plugin `appVersion` and `appBuild`, or set `BUGSEE_APP_VERSION` and `BUGSEE_APP_BUILD` in the build environment.
+3. Meta tags in the page:
+
+```html
+<meta name="bugsee:app-version" content="2.4.1">
+<meta name="bugsee:app-build" content="381">
+```
+
+A browser cannot read your `package.json` or environment at run time, so the version has to be baked in at build time. The Vite and webpack plugins do it for you. Without a plugin, define the two constants yourself. Angular's esbuild `application` builder takes a `define` map in `angular.json` (`projects.<app>.architect.build.options.define`):
+
+```json
+"define": {
+  "__BUGSEE_APP_VERSION__": "\"2.4.1\"",
+  "__BUGSEE_APP_BUILD__": "\"381\""
+}
+```
+
+Generate those two lines in CI from your own version and commit id. The same constants work with any bundler that can substitute globals: esbuild and Vite take `define`, webpack uses `DefinePlugin`, and Rollup has no `define` option, so use a replacement plugin such as `@rollup/plugin-replace`.
+
+If no version is found, the SDK logs one warning and reports version `0.0.0` and build `0`.
+
+## What is exported
+
+`@bugsee/bugsee` exports:
+
+| Export | Description |
+| --- | --- |
+| `launch(appToken, options?)` | Starts the SDK. In the browser it returns `Promise<Bugsee>`. |
+| `relaunch(options?)` | Restarts the SDK, optionally with new options. |
+| `getStatus()` | Returns the current `BugseeStatus`. |
+| `BugseeStatus` | The status values `getStatus()` returns. |
+| `LifecycleEvents` | The lifecycle event names. See [Lifecycle](/sdk/javascript/lifecycle). |
+| `addReportAttachment(input)` | Adds an attachment to reports. |
+| `getDefaultNetworkSanitizer()` | The default network redaction, to compose with your own filter. |
+
+The client has methods for [user data](/sdk/javascript/user-session-data), [breadcrumbs](/sdk/javascript/breadcrumbs), [events and traces](/sdk/javascript/events-and-traces) and [manual reports](/sdk/javascript/manual/bug-reporting).
+
+## Browser options
+
+`launch(appToken, options)` accepts the [common options](/sdk/javascript/configuration). These apply to the browser only:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `replay` | `boolean` or object | `true` | Session replay. `false` turns it off. See [Session replay](/sdk/javascript/session-replay). |
+| `captureInteractions` | `boolean` | `true` | Record clicks, key presses and other interactions. |
+| `captureViewHierarchy` | `boolean` | `true` | Record the DOM view hierarchy. |
+| `captureUrl` | `boolean` | `true` | Record the sanitized page URL as the `url` trace. |
+| `urlSanitizer` | `(url: string) => string \| null` | none | Runs after the default URL sanitizer. Return `null` to write nothing for that URL. |
+| `captureUserIdle` | `boolean` | `false` | Record user idle periods. |
+| `persist` | `boolean` | IndexedDB when available | Keep the capture window and the report queue in IndexedDB. `false` keeps everything in memory. |
+| `persistUserIdentifier` | `boolean` | `false` | Keep the user identifier across page loads. |
+| `startInBlackout` | `boolean` | `false` | Start with capture paused. See [Lifecycle](/sdk/javascript/lifecycle). |
+| `maxDataSize` | `number` | 20 MB (30 MB with IndexedDB) | Size cap of the recording, in megabytes. |
+| `diskProtection` | `boolean` | `true` | Stop writing when the origin's storage quota runs low. |
+| `captureDiskSpace` | `boolean` | `false` | Add low-disk telemetry to the `capture` system trace. |
+
+The report dialog has its own options: `reportSummaryRequired`, `reportDescriptionRequired`, `reportEmailRequired`, `reportLabelsEnabled`, `reportLabelsRequired` and `reportPrioritySelectorEnabled`, all `false` by default. Open the dialog with `client.showReportDialog()`; see [Bug reporting](/sdk/javascript/manual/bug-reporting).
+
+## Persistence
+
+By default the rolling capture window and the queue of reports waiting to upload live in IndexedDB. After a reload or browser restart the recent past is still there, and a report interrupted mid-upload is sent on the next visit.
+
+The default applies only when the page exposes both IndexedDB and Web Locks. Otherwise the SDK stays in memory. Pass `persist: true` to store anyway, or `persist: false` to force memory. If the browser refuses to store data (over quota, some private modes), writes fail best effort and the error goes to `onError`.
+
+When storage headroom drops below 50 MiB, the SDK stops writing replay, logs and network data to IndexedDB. Below 10 MiB it writes nothing. Set `diskProtection: false` to opt out.
+
+## Gotchas
+
+- **Content Security Policy.** Allow `connect-src https://api.bugsee.com` (or your own `endpoint`) so uploads can leave the page.
+- **Session replay records the DOM.** Text and inputs are masked by default. Review [Privacy](/sdk/javascript/privacy/overview) before you ship.
+- **Separate contexts.** A worker is a separate JavaScript context with its own launch; use [Web and Service Workers](/sdk/javascript/platforms/web-workers) for workers.
+- **Single page apps.** Route names make reports easier to read. The framework adapters set them for you; without one, call `client.setRoute('/orders/:id')` with the route pattern, not the concrete URL.
+
+## Source maps
+
+Minified stack traces need source maps. See [Symbolication](/sdk/javascript/symbolication/overview).
+
+## Verify
+
+1. Start your app with the launch call in place.
+2. Report a test error from your code:
+
+```ts
+const bugsee = await launch('<your_app_token>');
+bugsee.logException(new Error('Bugsee test error'));
+```
+
+3. Open the Bugsee dashboard. The report appears within a minute, with the console, network and replay data.
+
+If nothing arrives, pass an `onError` callback to `launch` and check the browser's network panel for blocked requests to `api.bugsee.com`.
+
+## Related pages
+
+- [Quick start](/sdk/javascript/quick-start) — install and launch for every runtime
+- [Configuration](/sdk/javascript/configuration) — all launch options
+- [Session replay](/sdk/javascript/session-replay) — DOM replay, masking and the canvas add-on
+- [Privacy](/sdk/javascript/privacy/overview) — what is masked and how to change it
+- [Symbolication](/sdk/javascript/symbolication/overview) — source maps and debug IDs
