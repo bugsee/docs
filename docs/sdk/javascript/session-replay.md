@@ -134,7 +134,7 @@ Electron records DOM replay by default, like the browser. It also offers an opt-
 
 - **Typed characters.** Input values are masked by default (`maskAllInputs: true`), and keystrokes are not recorded as text. If you set `maskAllInputs: false`, input values of ordinary fields are recorded as typed. Sensitive fields (password, tel, card and one-time-code) are always masked and their input events are ignored.
 - **The report dialog.** The recording is frozen before the dialog opens, so what the user types into it is not in the replay of that report.
-- **Iframes**, by default. A blocked iframe is an empty placeholder: its document is never recorded. Mark an iframe `bugsee-show` to record it. Its content is then masked like the rest of the page.
+- **Iframes**, by default. A blocked iframe is an empty placeholder: its document is never recorded. Mark a **same-origin** iframe `bugsee-show` to record it. Its content is then masked like the rest of the page. A cross-origin iframe is never recorded, even with `bugsee-show`: the browser does not let the parent page read its document, and the SDK does not record cross-origin frames, so it stays an empty placeholder.
 
 ## Related pages
 

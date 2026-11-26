@@ -171,9 +171,12 @@ With `propagateTrace`, Bugsee adds the W3C `traceparent` header to your outgoing
 ```ts
 launch('<your_app_token>', {
   propagateTrace: true,
-  tracePropagationTargets: ['https://api.example.com'],
+  // Anchored to the host boundary: only https://api.example.com and its paths
+  tracePropagationTargets: [/^https:\/\/api\.example\.com(?:[/?#]|$)/],
 });
 ```
+
+A string entry matches anywhere in the full URL, so `'https://api.example.com'` would also match `https://api.example.com.attacker.test/` and `https://attacker.test/?u=https://api.example.com`. Use an anchored regular expression so only the host you intend receives the trace headers.
 
 ## Filter or drop spans
 

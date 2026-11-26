@@ -90,7 +90,7 @@ export { onRouterTransitionStart } from '@bugsee/nextjs/client';
 
 ### Middleware (optional)
 
-Errors thrown in Next.js middleware are not delivered to `onRequestError`. Wrap your middleware to capture them:
+On the Edge runtime, Next.js catches an error thrown in middleware and calls `onRequestError` with `routeType: 'middleware'`, so it can reach Bugsee without a wrapper. It is not delivered on the Node.js middleware runtime (a [known Next.js limitation](https://github.com/vercel/next.js/issues/83404)). Wrapping your middleware with `withBugseeMiddleware` runs it inside a per-invocation context so capture correlates with the failing request, captures and rethrows a thrown error, and flushes the report with the fetch event's `waitUntil`:
 
 ```ts title="middleware.ts"
 import { withBugseeMiddleware } from '@bugsee/nextjs/middleware';

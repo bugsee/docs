@@ -50,7 +50,12 @@ const PATTERNS: Array<[RegExp, string]> = [
   [/\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi, '<auth>'],
   [/[\w.%+-]+@[\w-]+(?:\.[\w-]+)+/g, '<email>'],
   [/\b(?:\d[ -]?){13,19}\b/g, '<number>'],
-  [/(["']?(?:password|token|secret)["']?\s*[:=]\s*)["']?[^\s,"'}]+/gi, '$1<redacted>'],
+  // The whole value: a quoted string (spaces and escapes included), else a bare word.
+  // A quote that never closes redacts the rest of the line, so nothing is left behind.
+  [
+    /(["']?(?:password|token|secret)["']?\s*[:=]\s*)(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|["'][^\n]*|[^\s,"'}]+)/gi,
+    '$1<redacted>',
+  ],
 ];
 
 bugsee.setLogEventFilter((line) => {
@@ -74,7 +79,7 @@ import { launch } from '@bugsee/bugsee';
 export const bugsee = await launch('<your_app_token>');
 ```
 
-Import this module first in your entry file, before your app bootstraps, not lazily. Capture covers only what runs after `launch()`, and code that runs earlier is not recorded.
+Capture covers only what runs after `launch()`, and code that runs earlier is not recorded. Top-level `await` delays only the modules that import this one: an unrelated app module that your entry file imports next can still run while `launch()` is pending. Either import this module from every app module that needs the client or capture, or have the entry file load the app after launch settles, with `import './bugsee'; await import('./app');`. Install any filter in this module too, right after `launch` and before the export, so no application code runs before the filter exists.
 
 What to know:
 

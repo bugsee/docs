@@ -77,10 +77,12 @@ That is the entry of a plain Svelte app. SvelteKit does not load `src/main.ts`. 
 ```ts title="src/hooks.client.ts"
 import { launch, handleErrorWithBugsee } from '@bugsee/svelte';
 
-launch('<your_app_token>');
+await launch('<your_app_token>');
 
 export const handleError = handleErrorWithBugsee();
 ```
+
+The client error hook reports to the launched client and does nothing when none is registered yet, so a `load` error that happens before `launch()` settles would not reach Bugsee. Awaiting it at the top of the hooks module makes SvelteKit wait for the launch before it runs the first client `load`. This needs top-level `await`, so an ES2022 or newer build target.
 
 `handleErrorWithBugsee(appHandler?)` reports the error with its route id, then calls your own handler if you pass one, and returns what it returns. Errors with a status below 500, such as a 404, are treated as expected and are not reported.
 
@@ -159,12 +161,12 @@ Launch the browser SDK in the client hooks file, which runs only in the browser,
 import { PUBLIC_BUGSEE_TOKEN } from '$env/static/public';
 import { registerClient, handleErrorWithBugsee } from '@bugsee/sveltekit/client';
 
-registerClient(PUBLIC_BUGSEE_TOKEN);
+await registerClient(PUBLIC_BUGSEE_TOKEN);
 
 export const handleError = handleErrorWithBugsee();
 ```
 
-`registerClient` returns a `Promise` of the client. An application token is not a secret, so it is fine in a public variable.
+`registerClient` returns a `Promise` of the client. Await it at the top of the hooks module, as above: the client error hook does nothing until a client is registered, so a client `load` error that happens before registration completes is not reported. This needs top-level `await`, so an ES2022 or newer build target. An application token is not a secret, so it is fine in a public variable.
 
 ### Edge deployments
 

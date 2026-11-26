@@ -18,7 +18,7 @@ Without an app token, a plugin does nothing, so local builds are unaffected.
 
 ## Set up
 
-Turn on source maps in your bundler, add the plugin and give it your app token.
+Turn on source maps in your bundler, add the plugin and give it your app token. The plugin reads `BUGSEE_APP_TOKEN` from the environment itself, and fills a blank variable from `.env.bugsee-build-plugin`, so the examples pass no `appToken`. Passing `appToken: process.env.BUGSEE_APP_TOKEN` explicitly would override that file value with a blank one and disable the plugin.
 
 <Tabs groupId="bundler">
   <TabItem value="vite" label="Vite">
@@ -33,7 +33,7 @@ import { bugseeVitePlugin } from '@bugsee/vite-plugin';
 
 export default defineConfig({
   build: { sourcemap: true },
-  plugins: [bugseeVitePlugin({ appToken: process.env.BUGSEE_APP_TOKEN })],
+  plugins: [bugseeVitePlugin()],
 });
 ```
 
@@ -51,7 +51,7 @@ const { bugseeWebpackPlugin } = require('@bugsee/webpack-plugin');
 
 module.exports = {
   devtool: 'source-map',
-  plugins: [bugseeWebpackPlugin({ appToken: process.env.BUGSEE_APP_TOKEN })],
+  plugins: [bugseeWebpackPlugin()],
 };
 ```
 
@@ -72,7 +72,7 @@ import { bugseeRollupPlugin } from '@bugsee/bundler-plugin-core';
 export default {
   input: 'src/index.js',
   output: { dir: 'dist', sourcemap: true },
-  plugins: [bugseeRollupPlugin({ appToken: process.env.BUGSEE_APP_TOKEN })],
+  plugins: [bugseeRollupPlugin()],
 };
 ```
 
@@ -94,7 +94,7 @@ await build({
   bundle: true,
   outdir: 'dist',
   sourcemap: 'external',
-  plugins: [bugseeEsbuildPlugin({ appToken: process.env.BUGSEE_APP_TOKEN })],
+  plugins: [bugseeEsbuildPlugin()],
 });
 ```
 
@@ -112,7 +112,7 @@ const { bugseeRspackPlugin } = require('@bugsee/bundler-plugin-core');
 
 module.exports = {
   devtool: 'source-map',
-  plugins: [bugseeRspackPlugin({ appToken: process.env.BUGSEE_APP_TOKEN })],
+  plugins: [bugseeRspackPlugin()],
 };
 ```
 
