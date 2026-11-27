@@ -83,7 +83,7 @@ What the `scene` block holds:
 - **Convention.** glTF 2.0 axes: right-handed, +Y up, a camera looks along -Z, quaternions as `[x, y, z, w]`. The package converts them from Unity's left-handed space by mirroring Z.
 - **Limits.** At most 5000 objects and about 1 MB of JSON for the scene, and the time limits below. `objects_seen` counts the objects looked at, `objects_qualified` those that passed the selection and `objects_sent` those written. `truncated` is `true` when fewer objects were sent than qualified, or when the time limit cut the read (`objects_qualified` is then left out), and `skipped` (`no_camera`, `time_budget`, `size_budget` or `error`) says why none was sent.
 - **Not one instant.** The scene is read over several frames, so moving objects and cameras are not captured at the same moment.
-- **Not in it.** Names, colors, parents, lights, colliders and terrain. A lens shift or custom projection is sent only as its `projection_matrix`.
+- **Not in it.** Object names (the names the project gave its layers are sent, see the warning above), colors, parents, lights, colliders and terrain. A lens shift or custom projection is sent only as its `projection_matrix`.
 
 ## What is captured
 
