@@ -182,6 +182,7 @@ The `Report` you receive is mutable. The most commonly used members:
 - `setSeverity(IssueSeverity)` — one of `VeryLow`, `Medium`, `High`, `Critical`, `Blocker`.
 - `addLabel(String)` / `addLabels(List<String>)` / `setLabels(List<String>)` / `clearLabels()` — dashboard labels.
 - `getAttachments()` returns the current `List<Attachment>`; `createAndAddAttachment(name)` adds a new one (see [Attachments](/sdk/android/report-handler#attachments)).
+- `setScreenshot(Bitmap)` / `setScreenshotAsync(Bitmap, Runnable)` — replace the screenshot. `setScreenshot` encodes and writes the image on the calling thread; `setScreenshotAsync` does it in the background and calls the `Runnable` once the screenshot is stored. See [Replacing the screenshot](#replacing-the-screenshot) for which one to use in `onCreated` and when to upload.
 
 The same `Report` is what `ReportHandler.onBeforeReportCreated(...)` / `onAfterReportCreated(...)` hands you, so the same mutators apply there.
 
@@ -210,6 +211,44 @@ Bugsee.createReport { report ->
     report.severity = IssueSeverity.High
     report.addLabel("checkout")
     Bugsee.upload(report)
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### Replacing the screenshot
+
+`setScreenshot(Bitmap)` encodes the image and writes it to disk on the calling thread. For a screen-sized bitmap that takes over 100 ms, and `onCreated` runs on the main thread. Use `setScreenshotAsync(Bitmap, Runnable)` there, and upload the report from its callback:
+
+- `setScreenshotAsync` returns before the screenshot is stored, and calls the callback once it is.
+- A report uploaded before that can be sent without the new screenshot, so do not call `Bugsee.upload(report)` right after `setScreenshotAsync`.
+- The callback runs on the thread that called `setScreenshotAsync` when that thread has a `Looper` (here, the main thread), otherwise on the main thread.
+- The SDK reads the bitmap on a background thread after the call returns, and does not copy it, so do not recycle or change the bitmap until the callback runs. The report neither keeps nor recycles it: after the callback the bitmap is yours again.
+
+<Tabs groupId="lang-android">
+  <TabItem value="java" label="Java">
+
+```java
+Bugsee.createReport(report -> {
+    if (report == null) {
+        return; // SDK not launched, or creation failed
+    }
+    Bitmap bitmap = renderCheckoutScreen(); // a Bitmap your app produces
+    report.setSummary("Checkout frozen");
+    report.setScreenshotAsync(bitmap, () -> Bugsee.upload(report));
+});
+```
+
+  </TabItem>
+  <TabItem value="kotlin" label="Kotlin">
+
+```kotlin
+Bugsee.createReport { report ->
+    report ?: return@createReport // SDK not launched, or creation failed
+    val bitmap = renderCheckoutScreen() // a Bitmap your app produces
+    report.summary = "Checkout frozen"
+    report.setScreenshotAsync(bitmap) { Bugsee.upload(report) }
 }
 ```
 

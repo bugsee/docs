@@ -1,0 +1,120 @@
+---
+title: "Fastify"
+description: "Report errors and trace requests in a Fastify app with the Bugsee JavaScript SDK: per-request context, http.server transactions and error capture."
+sidebar_position: 3
+slug: "/sdk/javascript/backend/fastify"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/fastify` adds a request context, an `http.server` transaction and error reporting to a Fastify app on Node.js. Read the [backend overview](/sdk/javascript/backend/overview) first for how context and trace correlation work.
+
+You need an app token. Create a JavaScript application in Bugsee and choose **Fastify** as its target; see [Create your app](/sdk/javascript/installation#create-your-app).
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm">
+
+```bash
+npm install @bugsee/fastify
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/fastify
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/fastify
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/fastify
+```
+
+  </TabItem>
+</Tabs>
+
+The adapter declares no peer dependency. It only relies on the shape of your Fastify instance.
+
+## Set up
+
+Call `launch()` at the top of your server entry, then pass the root Fastify instance to `setupFastify`:
+
+```ts title="server.ts"
+import { launch, setupFastify } from '@bugsee/fastify';
+import Fastify from 'fastify';
+
+launch('<your_app_token>');
+
+const app = Fastify();
+setupFastify(app);
+
+// ... your routes ...
+
+app.listen({ port: 3000 }).catch((error) => {
+  app.log.error(error);
+  process.exit(1);
+});
+```
+
+## What it does
+
+`setupFastify` installs lifecycle hooks:
+
+| Hook | What it does |
+| --- | --- |
+| `onRequest` | Opens a request context, continues an inbound `traceparent` and starts an `http.server` transaction. |
+| `onError` | Reports an unhandled route error, with the request context merged in. |
+| `onResponse` | Finishes the transaction with the route pattern, such as `/users/:id`, and the status. |
+| `onRequestAbort` | Finishes the transaction as cancelled when the client aborts. |
+
+Fastify hooks are encapsulated per scope. Call `setupFastify` on the root instance and the hooks cover it and its child plugins. The order relative to your routes does not matter.
+
+By default an error with no status, or with a status of 500 or higher, is reported, and a 4xx is skipped.
+
+## Options
+
+Pass options as the second argument of `setupFastify`.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `user` | `(req) => string \| undefined` | off | The end-user identity for reports raised during the request. |
+| `shouldReport` | `(error) => boolean` | 5xx or no status | Decides whether a thrown error is reported. |
+| `onError` | `(error) => void` | none | Receives a failure of the adapter itself. It never reaches the request. |
+
+`req` is a structural view of the Fastify request: `method`, `url`, `headers` and `routeOptions`.
+
+## Launch options
+
+The adapter does not change the launch options. These are the ones that matter most on a server:
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `instrumentIncomingRequests` | `true` | Automatic per-request context and `http.server` transaction. See the [backend overview](/sdk/javascript/backend/overview#incoming-request-instrumentation). |
+| `captureLocalVariables` | `false` | Attach local variables to the stack frames of a reported error. See [Diagnostics](/sdk/javascript/issue-detection/diagnostics). |
+| `captureSourceContext` | `false` | Attach the source lines around each stack frame. See [Diagnostics](/sdk/javascript/issue-detection/diagnostics). |
+| `detectHangs` | `true` | Report event-loop hangs. See [Hangs](/sdk/javascript/issue-detection/hangs). |
+| `profiling` | `false` | Attach a rolling CPU profile to reports. See [Diagnostics](/sdk/javascript/issue-detection/diagnostics). |
+
+`@bugsee/fastify` installs `@bugsee/bugsee` for you and re-exports everything from its Node entry, so `launch` and the SDK types come from this one package. You do not install or import `@bugsee/bugsee` separately. On Bun, see [Running on Bun](/sdk/javascript/backend/overview#running-on-bun).
+
+## Related pages
+
+- [Backend overview](/sdk/javascript/backend/overview) — request context, trace correlation and incoming-request instrumentation
+- [Issue detection](/sdk/javascript/issue-detection/overview) — what else is detected on a server
+- [Performance](/sdk/javascript/performance) — transactions and spans

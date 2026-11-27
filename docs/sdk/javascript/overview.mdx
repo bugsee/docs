@@ -1,0 +1,75 @@
+---
+title: "Overview"
+description: "What the Bugsee JavaScript SDK records and detects, how one package covers browsers, Node.js, Bun, Electron, edge and worker runtimes, and what your app needs to run it."
+sidebar_position: 0
+slug: "/sdk/javascript/overview"
+---
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+The Bugsee JavaScript SDK captures what happened before a bug: console logs, network traffic, breadcrumbs and, in the browser, a replay of the page. It attaches that timeline to crash, error and bug reports you can inspect in the Bugsee dashboard.
+
+One SDK covers every JavaScript runtime: browsers, Node.js, Bun, Electron, Cloudflare Workers, Vercel Edge, and Web and Service Workers. In most projects you install `@bugsee/bugsee` and call `launch()`. Runtimes and frameworks that need more have their own package; see [Packages](/sdk/javascript/packages).
+
+## What Bugsee records
+
+Every report carries a synchronized timeline of the session that led up to it:
+
+- **Console logs**: `console.*` output is captured and still prints as before; see [Console logs](/sdk/javascript/logs).
+- **Network**: `fetch`, `XMLHttpRequest`, WebSocket, server-sent events and WebTransport requests, plus `node:http` on servers. URLs, headers and bodies pass through a default redaction first; see [Network events](/sdk/javascript/network) and [Privacy: Network](/sdk/javascript/privacy/network).
+- **Breadcrumbs**: automatic UI-interaction breadcrumbs in the browser, plus breadcrumbs you add; see [Breadcrumbs](/sdk/javascript/breadcrumbs).
+- **Session replay (browser and Electron)**: a replay of the page DOM, on by default and masked by default. An opt-in add-on records canvas content, and Electron can record pixel video; see [Session replay](/sdk/javascript/session-replay) and [Privacy: Session replay](/sdk/javascript/privacy/replay).
+- **System traces and events**: memory, CPU, event-loop and other runtime state, and events such as process start and page hide.
+- **Custom events, traces and attributes**: see [Custom events & traces](/sdk/javascript/events-and-traces) and [User & session data](/sdk/javascript/user-session-data).
+- **Performance (APM)**: web vitals, page-load and navigation transactions, and spans you start yourself; see [Performance](/sdk/javascript/performance).
+
+## What Bugsee detects
+
+The SDK turns problems into reports automatically:
+
+- **Uncaught errors and unhandled promise rejections** in every runtime. See [Errors & crashes](/sdk/javascript/issue-detection/errors-and-crashes).
+- **Hangs** on Node.js and Bun: a watchdog reports a blocked event loop as an `AppHang` report; see [Hangs](/sdk/javascript/issue-detection/hangs).
+- **HTTP errors**: opt-in reporting of 5xx responses; see [HTTP errors](/sdk/javascript/issue-detection/http-errors).
+- **Native crashes in Electron**, collected through Electron's built-in `crashReporter`; see [Electron](/sdk/javascript/platforms/electron).
+- **Handled errors** you report yourself with `logException`; see [Crash & error reporting](/sdk/javascript/manual/crash-error-reporting).
+- **Manual reports** you send with `upload()`, or collect with the browser report dialog; see [Bug reporting](/sdk/javascript/manual/bug-reporting).
+
+## How it works
+
+- **One package, the right build.** `@bugsee/bugsee` resolves to the browser, Node.js, Bun, Cloudflare, Vercel Edge or worker build through package `exports` conditions, so the same import works everywhere.
+- **Launch once, early.** `launch(appToken, options)` starts the SDK; see [Quick start](/sdk/javascript/quick-start) and [Lifecycle & status](/sdk/javascript/lifecycle). In the browser it returns a `Promise` of the client; on servers, edge and workers it returns the client directly.
+- **Adapters for your framework.** Frontend adapters report render errors and name routes, meta-framework adapters cover the server and the browser in one install, and backend adapters add per-request context and trace correlation. Each has its own page: [Platforms](/sdk/javascript/platforms/browser), [Frameworks](/sdk/javascript/frameworks/react) and [Backend](/sdk/javascript/backend/overview).
+- **Privacy at capture time.** Replay masks text and inputs by default, network data is redacted by default, and you can filter or drop network, log and breadcrumb data before it is recorded; see [Privacy](/sdk/javascript/privacy/overview).
+- **Readable production stack traces.** The Vite and webpack plugins, or the `bugsee-cli` tool, stamp debug IDs into your bundles and upload source maps; see [Symbolication](/sdk/javascript/symbolication/overview).
+- **Reports survive failures.** Reports are queued durably where the runtime has storage (disk on Node.js and Bun, IndexedDB in the browser) and are re-uploaded with backoff on the next launch if an upload was interrupted. Edge runtimes buffer in memory and upload only when an incident happens.
+
+## Requirements
+
+| Runtime | Support |
+| --- | --- |
+| Browsers | Modern evergreen browsers. The package is built for ES2022. |
+| Node.js | 18 or later |
+| Bun | 1.1.13 or later; tested on 1.3 |
+| Electron | Main process, renderers and native crashes through one package |
+| Cloudflare Workers | With the `nodejs_compat` flag |
+| Vercel Edge | Edge functions and other Web-API-only isolates |
+| Web Workers, Service Workers | Dedicated, shared and service workers |
+
+The packages ship both ESM and CommonJS builds.
+
+Some features need a capability the runtime may lack. Persistence across reloads in the browser needs IndexedDB and Web Locks, session replay needs a DOM, and local variable capture needs the Node.js inspector (it is always off on Bun).
+
+## Get started
+
+Head to the [Quick start](/sdk/javascript/quick-start) to add the package, get an app token and send a first report, or to [Installation](/sdk/javascript/installation) to choose the package for your runtime or framework. [Configuration](/sdk/javascript/configuration) lists every launch option.
+
+## Related pages
+
+- [Quick start](/sdk/javascript/quick-start) — add the package, launch the SDK and verify a report.
+- [Installation](/sdk/javascript/installation) — choose the package for your runtime or framework.
+- [Configuration](/sdk/javascript/configuration) — launch options for every runtime.
+- [Lifecycle & status](/sdk/javascript/lifecycle) — launch, stop, relaunch and lifecycle events.
+- [Packages](/sdk/javascript/packages) — which packages to install and which are internal.
+- [Privacy](/sdk/javascript/privacy/overview) — what is masked and redacted by default.

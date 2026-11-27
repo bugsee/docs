@@ -6,7 +6,7 @@ slug: "/sdk/flutter/privacy/logs"
 ---
 
 :::warning[Beta]
-This page documents Bugsee Flutter SDK **10.x**, which is in beta, is not published on pub.dev yet and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
 :::
 
 Log lines often carry more than you meant to share: an access token in a URL, an e-mail address in a debug message, a payload dumped while a feature was being built. Bugsee records what Dart prints when you turn on [log capture](/sdk/flutter/logs), the native console of the app, and the lines you send with `Bugsee.log`. This page covers how to keep sensitive data out of them.

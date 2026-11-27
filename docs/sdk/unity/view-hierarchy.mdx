@@ -1,0 +1,125 @@
+---
+title: "View hierarchy"
+description: "How the Bugsee Unity SDK 7.x captures the Unity scene hierarchy for reports: what each node holds, node and depth caps, truncation, deadlines, secure rectangles and the CaptureViewHierarchy option."
+sidebar_position: 12
+slug: "/sdk/unity/view-hierarchy"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+Bugsee captures the view hierarchy of the screen with reports, so you can inspect what was on screen behind the screenshot. The native SDKs capture the native view hierarchy. The Unity package adds the Unity scene: when the native SDK asks for it, the package answers with a tree of the active GameObjects, which is stored with the report next to the native hierarchy.
+
+In the Unity Editor, and on platforms other than Android and iOS, this capture does nothing.
+
+:::note[Beta coverage]
+The managed Unity hierarchy is new in 7.x and still being completed in this beta. How the dashboard viewer presents it, and which Unity versions and scenes it has been tried on, can change between betas. After you enable it, open a test report in the dashboard and check the hierarchy for your Unity version and scenes.
+:::
+
+## Option and API
+
+| Option | Platform | Type | Default | What it does |
+| --- | --- | --- | --- | --- |
+| `CaptureViewHierarchy` | Both | `bool` | `true` | Capture the view hierarchy for reports. Set it to `false` to turn the capture off. |
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+#if UNITY_ANDROID
+var options = new AndroidLaunchOptions { CaptureViewHierarchy = true };
+BugseeSdk.Launch("<your Android app token>", options);
+#elif UNITY_IOS
+var options = new IOSLaunchOptions { CaptureViewHierarchy = true };
+BugseeSdk.Launch("<your iOS app token>", options);
+#endif
+```
+
+The SDK takes a snapshot when it builds a report. To record the hierarchy at a moment of your choosing, for example before a scene transition you want to inspect, call `Bugsee.CaptureViewHierarchy()`.
+
+```csharp
+using BugseeSdk = Bugsee.Bugsee;
+
+BugseeSdk.CaptureViewHierarchy();
+```
+
+The iOS SDK documents these rules for the call: it does nothing while `CaptureViewHierarchy` is `false` or while the SDK is not fully launched, no hierarchy is captured during a blackout, and each snapshot adds to the size of the report. See [iOS events and traces](/sdk/ios/events-and-traces#view-hierarchy).
+
+## What is captured
+
+The tree starts at a root node whose `class_name` is `UnityPlayer`. The root has no name. Below it is one `Scene` node for each loaded scene, then each scene's root GameObjects and their children. Objects in the `DontDestroyOnLoad` scene are included. The SDK's own helper object is left out.
+
+Only GameObjects that are active in the hierarchy are captured. Each node holds:
+
+| Field | What it holds |
+| --- | --- |
+| `id` | The instance id of the GameObject. |
+| `class_name` | The type of the first component that says what the object is, such as `Image` or `Camera`. `RectTransform` or `GameObject` when there is none. |
+| `bounds` | A rectangle `[x, y, width, height]` in screen coordinates with the origin at the top left. On Android the unit is Unity's render pixels, which equal device pixels only when Unity does not use Resolution Scaling. On iOS the unit is points. |
+| `options.name` | The name of the GameObject. |
+| `options.components` | The names of the components on the object, at most 8, comma separated. `Transform` and `CanvasRenderer` are not listed. |
+| `subitems` | The child nodes. |
+| `truncated` | `true` when the walk stopped at this node and left some of its children out. |
+
+How the bounds are computed:
+
+- A UI element under a Screen Space - Overlay canvas uses its rectangle corners as screen pixels.
+- A UI element under a Screen Space - Camera or World Space canvas, and any object with an enabled `Renderer`, is projected to the screen through the canvas camera or `Camera.main`.
+- A box is clamped to one screen of margin on every side. A node whose box cannot be computed has no bounds of its own. Its box is then the union of its children's boxes, or `[0, 0, 0, 0]` when there are none.
+
+What is not captured:
+
+- **Text and values.** Only component type names are read. A `Text`, an input field or a TextMeshPro label contributes its class name and never what it shows.
+- **A 3D scene graph.** The hierarchy is a tree of named nodes with a 2D screen rectangle each. It does not carry meshes, transforms in world space or a 3D view of the scene.
+- **Inactive GameObjects.**
+
+## Caps and truncation
+
+The capture is limited so that a large scene cannot slow the game or delay the report.
+
+- **At most 1500 nodes.** The root counts as one.
+- **At most 24 levels deep.** The root is level 1.
+- **Deadlines counted from the request.** The walk stops taking nodes at 250 ms. Writing the result stops at 350 ms, and a timer answers with nothing at 400 ms if no reply was sent. The native SDK waits 500 ms from the request and ignores a later reply. The 400 ms is a target: a thread pool that the game has saturated can delay the reply, and the SDK then ignores it.
+
+When a cap or deadline stops the walk, the result is still valid JSON, and the nodes where it stopped carry `truncated: true`. The report keeps the native hierarchy either way.
+
+### How the scene is read
+
+Unity objects can be read only on the main thread. To keep the cost there small:
+
+- **Main thread: only the read.** The package copies names, component types, instance ids and geometry into plain arrays in short slices, at most 5% of a frame per slice and one slice per frame. At 60 Hz that is about 0.83 ms. When the game's real frames are longer than the display's, the slice is 5% of those, at most 5 ms.
+- **Worker thread: everything else.** Building the tree, the secure-rectangle test and the JSON run on a thread-pool thread. The main thread never waits for it.
+
+Because a large scene is read over several frames:
+
+- A large scene may be read only in part within the 250 ms walk, and comes back with `truncated` set.
+- An object that moves is not captured at one instant.
+- A scene loaded or unloaded during the read marks the tree `truncated`. Objects destroyed during the read are skipped.
+
+Other cases:
+
+- One capture runs at a time. A request made while one is running joins it and gets the same result.
+- When the app pauses, for example because a manual report opens a native screen, the rest of the walk is read at once, still within its deadline. When the player quits, the running capture is answered with nothing.
+- A request made while Unity's main thread is inside a synchronous SDK call, such as while it logs an exception, is answered with nothing at once. The report then carries the native hierarchy only.
+- On iOS, a scene of at most 48 nodes that the first slice completes is written and answered inside the request.
+
+In development builds, each capture writes one console line that starts with `[Bugsee] managed view hierarchy:` with the node count, the size of the result, whether it was truncated and how many nodes a secure rectangle protected.
+
+## Secure rectangles
+
+The hierarchy follows the same privacy rules as video and screenshots. A node whose box overlaps a secure rectangle registered with `Bugsee.AddSecureRectangle` or `Bugsee.AddSecureScreenRectangle` loses its `options.name` and `options.components`. Its `class_name` and bounds stay. Each node is judged by its own box, so a full-screen container is protected and its far-away children are not.
+
+A node with no usable bounds counts as covered while any secure rectangle is registered.
+
+:::caution[The test is exact only at native resolution]
+The overlap test compares the node boxes, which are in Unity's render pixels, with the secure rectangles as registered, in native pixels. It is exact only when Unity renders at the native resolution and fills the screen. With Resolution Scaling, `Screen.SetResolution` or a surface that is offset in the window, a node under a rectangle can keep its name and components. If the names of your GameObjects must not reach Bugsee, set `CaptureViewHierarchy = false`, which turns the view hierarchy capture off.
+:::
+
+See [Privacy: video](/sdk/unity/privacy/video) and [Video capture](/sdk/unity/video-capture#secure-rectangles) for how to register rectangles.
+
+## Related pages
+
+- [Video capture](/sdk/unity/video-capture)
+- [Privacy: video](/sdk/unity/privacy/video)
+- [Configuration](/sdk/unity/configuration)

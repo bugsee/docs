@@ -1,0 +1,120 @@
+---
+title: "Symbolication: iOS"
+description: "Upload dSYMs and the IL2CPP line map for a Unity iOS build with the Run Script phase the Bugsee Unity SDK 7.x adds to the exported Xcode project."
+sidebar_position: 3
+slug: "/sdk/unity/symbolication/ios"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+On iOS the debug files exist only after Xcode builds the app, so the upload runs inside Xcode, not in the Unity Editor. The Unity export adds a Run Script phase to the Xcode project. When you build or archive in Xcode, the phase uploads the dSYMs and the IL2CPP line map of that build. For the overview and the build token, see [Symbolication overview](/sdk/unity/symbolication/overview).
+
+## What the export adds
+
+Every iOS export from Unity:
+
+- Writes `BugseeScripts/upload-symbols.sh` into the Xcode project folder.
+- Adds a Run Script phase named `Bugsee Upload Symbols` to the `Unity-iPhone` target, last in the target's build phases. It runs the script through `/bin/sh`.
+- Sets `ENABLE_USER_SCRIPT_SANDBOXING = NO` on the `Unity-iPhone` target. With the sandbox on, Xcode refuses to start the script ("Operation not permitted") and nothing is uploaded.
+- Sets `DEBUG_INFORMATION_FORMAT = dwarf-with-dsym` on every configuration of `Unity-iPhone` and `UnityFramework`, so a Debug build has a dSYM too.
+
+An Append export refreshes the script and the phase an earlier package version added, so re-export with the current package after you update it.
+
+The script never fails your build. It reports each problem as a `warning:` line in the Xcode build log and always exits 0. It also rewrites the text `error:` in the CLI's own output to `error -`, because Xcode fails an archive whose log has an `error:` line, even when the script exits 0.
+
+## Give Xcode the token
+
+Set `BUGSEE_APP_TOKEN` where Xcode runs the build. The export never writes the token into the project. A build started from the Xcode GUI does not see your shell's environment, so use one of these:
+
+- **The environment (preferred).** In CI or Xcode Cloud, set it in the job. Locally, run `export BUGSEE_APP_TOKEN=...` before `xcodebuild`, or `launchctl setenv BUGSEE_APP_TOKEN ...` and restart Xcode.
+- **A user-defined build setting** named `BUGSEE_APP_TOKEN` on the `Unity-iPhone` target. Xcode exports build settings to Run Script phases as environment variables. The value is stored in the Xcode project, so do not commit the project after you add it. A Unity export in Replace mode regenerates `project.pbxproj`, so add the setting again after each export. Xcode prints build settings into the build log, so such a log holds the token.
+
+Without a token, an archive prints `warning: Bugsee: BUGSEE_APP_TOKEN unset` and uploads nothing. A build that is not an archive prints `note:` instead.
+
+## What the script uploads
+
+| Upload | What | `bugsee-cli` type |
+| --- | --- | --- |
+| dSYMs | Every dSYM in the build's `DWARF_DSYM_FOLDER_PATH`: the app's, `UnityFramework`'s, and the dSYMs of embedded xcframeworks such as `Bugsee.framework.dSYM` | `dsym` |
+| IL2CPP line map | `LineNumberMappings.json` of this export, with `MethodMap.tsv` and `il2cppFileRoot.txt` beside it when they are current, keyed by the Mach-O UUID of `UnityFramework` | `il2cpp-linemap` |
+
+The script uploads for every Xcode configuration, Debug included, so a crash from a development build is symbolicated. It runs on every build that has the token in its environment, not only on archives.
+
+If a configuration has no dSYM, the script prints `warning: Bugsee: no dSYM for <configuration>` and names `DEBUG_INFORMATION_FORMAT = dwarf-with-dsym` as the fix. The `dsymutil` step adds time to each Debug build. To keep Unity's own setting, choose **Bugsee > iOS > Keep Xcode Debug Info Format (skip dSYM force)** in the Unity menu, or set `BUGSEE_NO_DSYM_FORCE` in the Editor's environment for the export. A Debug build then has no dSYM to upload.
+
+The line map file comes from the IL2CPP arguments the package adds to every IL2CPP build (`--emit-source-mapping --emit-method-map`), with or without a token. Nothing to enable in Player Settings. The arguments add absolute source paths to the generated C++ in the Xcode export, so set `BUGSEE_NO_IL2CPP_MAPPING` if you hand the export to other people. See [Symbolication: C# code](/sdk/unity/symbolication/managed-code).
+
+### Version and build number
+
+The script passes `--version` and `--build` from, in order:
+
+1. `BUGSEE_VERSION` and `BUGSEE_BUILD`.
+2. The built app's `Info.plist` (`CFBundleShortVersionString` and `CFBundleVersion`), which is what the SDK reports.
+3. The `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` build settings.
+
+A flag with no value is left out, and the script says so.
+
+## Turn parts of it off
+
+| Variable | Effect on the Run Script |
+| --- | --- |
+| `BUGSEE_SKIP_UPLOAD_ON_DEBUG=1` | Skips the upload for the Debug configuration, for example for local Xcode runs. |
+| `BUGSEE_NO_SYMBOL_UPLOAD` (any value) | Uploads nothing, even with a token. Read when Xcode runs the script. |
+| `BUGSEE_NO_IL2CPP_MAPPING` (any value) | Skips the line map and still uploads the dSYMs. |
+| `BUGSEE_IL2CPP_UUIDS` | Uses this module UUID for the line map instead of reading it from `UnityFramework`. |
+
+Set these in the Xcode environment, not only in the Unity Editor: the script reads them when Xcode runs it.
+
+## How the Run Script finds bugsee-cli
+
+Xcode runs build phases with a minimal `PATH`, so the script cannot use the Editor's lookup. It never downloads a CLI. It uses the first of these:
+
+1. `BUGSEE_CLI_PATH`, as given.
+2. The CLI the Unity Editor found when it exported the project, baked into the script as an absolute path. This happens only on a macOS Editor, with `BUGSEE_APP_TOKEN` set and `BUGSEE_NO_SYMBOL_UPLOAD` unset.
+3. A CLI that runs, prints a version, and is 0.8.0 or newer, from the build phase's `PATH`; then `/opt/homebrew/bin`, `/usr/local/bin`, `~/.local/bin`, `~/.cargo/bin` and `~/.bugsee/bin`; then the package's cache (`~/Library/Caches/Bugsee/cli`, `$XDG_CACHE_HOME/bugsee/cli` or `~/.cache/bugsee/cli`).
+
+If none qualifies, the script prints `warning: Bugsee: bugsee-cli was not found`, names every path it tried and why it passed each over, uploads nothing, and the build continues. Install the CLI with `curl --proto '=https' --tlsv1.2 -sSfL https://download.bugsee.com/cli/install.sh | sh`, or see [Installation](/cli/installation).
+
+The baked path contains the exporting user's home directory. If you commit the exported Xcode project, unset `BUGSEE_APP_TOKEN` or set `BUGSEE_NO_SYMBOL_UPLOAD` before you export, and nothing is baked.
+
+## When an upload fails
+
+A failed upload prints one line and the build continues:
+
+```text
+warning: Bugsee: symbol upload failed (exit 31): the Bugsee server could not be reached (network). Not uploaded: <path> (the build continues).
+```
+
+| Exit code | Meaning |
+| --- | --- |
+| 1 | `bugsee-cli` hit an unexpected error |
+| 2 | `bugsee-cli` rejected its arguments (a CLI older or newer than the package expects) |
+| 10 | The file to upload was not found |
+| 11 | The file is not a usable symbol file |
+| 20 | `bugsee-cli` found its configuration invalid |
+| 21 | The server rejected the app token: check `BUGSEE_APP_TOKEN` |
+| 30 | The Bugsee server returned an error |
+| 31 | The Bugsee server could not be reached |
+| 50 | The CLI failed after it sent the request, so the upload may have been applied: check the dashboard and do not re-run blindly |
+| 126, 127 | `bugsee-cli` could not be run (shell exit codes: 126 is not executable, 127 is not found) |
+
+After any failure the script ends with `warning: Bugsee: some symbols were NOT uploaded; crashes from this build may stay unsymbolicated`. The codes other than 126 and 127 are the [CLI exit codes](/cli/exit-codes).
+
+## Upload by hand
+
+Upload a dSYM you kept, or the files of a build that had no token, with the CLI:
+
+```bash
+export BUGSEE_APP_TOKEN="your-app-token"
+
+bugsee-cli debug-files upload "/path/to/dSYMs" --type dsym \
+  --version <CFBundleShortVersionString> --build <CFBundleVersion>
+```
+
+For the line map, see [Upload the IL2CPP line map from CI](/sdk/unity/symbolication/managed-code#upload-the-il2cpp-line-map-from-ci). The native iOS SDK has the same instructions for dSYMs: [iOS symbolication](/sdk/ios/symbolication#manual-dsym-upload).
+
+## Script Debugging and dSYMs
+
+IL2CPP stack trace information and **Script Debugging** control how much file and line the managed stack text carries. The line map and the dSYM do a different job: the dSYM resolves a native address to C++ file and line, and the line map turns that into C# file and line. For C# file and line from a native crash, upload both. The Run Script does both when it has a token.

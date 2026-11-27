@@ -1,0 +1,164 @@
+---
+title: "Solid"
+description: "Set up the Bugsee JavaScript SDK in a SolidJS app with @bugsee/solid: error boundary reporting, @solidjs/router route names and component names in minified builds."
+sidebar_position: 5
+slug: "/sdk/javascript/frameworks/solid"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/solid` adds Solid-specific error reporting to the [browser SDK](/sdk/javascript/platforms/browser). It reports errors from Solid's error primitives and names navigations after the matched `@solidjs/router` route.
+
+## Requirements
+
+- `solid-js` 1.6 or newer, and `@solidjs/router` 0.10 or newer for route names (both optional peer dependencies).
+- An app token. Create a JavaScript application in Bugsee and choose **SolidJS** as its target; see [Create your app](/sdk/javascript/installation#create-your-app).
+
+## Install
+
+Install the adapter. It pulls in `@bugsee/bugsee` and re-exports it, so `launch()` comes from the adapter and you do not add `@bugsee/bugsee` yourself.
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/solid
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/solid
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/solid
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/solid
+```
+
+  </TabItem>
+</Tabs>
+
+## Set up
+
+Launch Bugsee as early as possible, at the top of your entry module. In the browser `launch()` returns a `Promise` of the client. Await it only if you need the client right away.
+
+```tsx title="index.tsx"
+import { launch } from '@bugsee/solid';
+
+launch('<your_app_token>');
+```
+
+Solid hands errors to a callback, so pass Bugsee's reporter to Solid's own error seam:
+
+```tsx title="App.tsx"
+import { ErrorBoundary } from 'solid-js';
+import { solidErrorHandler } from '@bugsee/solid';
+
+const report = solidErrorHandler();
+
+<ErrorBoundary
+  fallback={(err) => {
+    report(err);
+    return <Crashed />;
+  }}
+>
+  <App />
+</ErrorBoundary>;
+```
+
+`catchError(() => <App />, solidErrorHandler())` works the same way.
+
+:::note
+These seams catch synchronous render and reactive errors. The SDK's global error capture covers asynchronous and event-handler errors.
+:::
+
+### Route names (@solidjs/router)
+
+```ts
+import { useCurrentMatches } from '@solidjs/router';
+import { createEffect } from 'solid-js';
+import { setRouteNameFromSolidMatches } from '@bugsee/solid';
+
+const matches = useCurrentMatches();
+createEffect(() => setRouteNameFromSolidMatches(matches()));
+```
+
+### Component names in minified builds
+
+The full setup is on [Component names](/sdk/javascript/frameworks/component-names).
+
+Install the Babel plugin so clicks and errors are attributed to the component that rendered them, even after minification.
+
+```bash
+npm install --save-dev @bugsee/babel-plugin-component-annotate
+```
+
+```js title="babel.config.js"
+module.exports = {
+  plugins: [['@bugsee/babel-plugin-component-annotate']],
+};
+```
+
+See [Component names](/sdk/javascript/frameworks/component-names) for how to add it to your Babel or Vite config.
+
+## API
+
+`@bugsee/solid` installs `@bugsee/bugsee` for you and re-exports everything from it, so `launch`, the client types and the rest of the SDK API come from this one package. You do not install or import `@bugsee/bugsee` separately.
+
+| Export | Description |
+| --- | --- |
+| `solidErrorHandler(options?)` | Returns a reporter function `(error) => void` for `ErrorBoundary` or `catchError`. |
+| `reportSolidError(error, options?)` | Reports an error you caught yourself. |
+| `setRouteNameFromSolidMatches(matches)` | Names the active navigation after the matched route. |
+
+## Launch options
+
+`launch(appToken, options)` accepts all [browser options](/sdk/javascript/platforms/browser#browser-options). The most relevant:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `captureLogs` | `boolean` | `true` | Capture console output. |
+| `captureNetwork` | `boolean` | `true` | Capture network requests. |
+| `maxRecordingTime` | `number` | `60` | Seconds of recording to keep. |
+| `replay` | `boolean` or object | `true` | Session replay settings, or `false` to turn replay off. |
+| `captureInteractions` | `boolean` | `true` | Capture user interactions. |
+
+## Notes
+
+- **Source maps.** Upload source maps so Solid stacks are readable. See [Symbolication](/sdk/javascript/symbolication/overview).
+- **Sensitive content.** Session replay masks text and inputs by default. See [Privacy](/sdk/javascript/privacy/overview).
+
+## Verify
+
+Throw from a component inside the boundary:
+
+```tsx
+function Bomb(): never {
+  throw new Error('Bugsee test error');
+}
+```
+
+Render it. The fallback appears, and the error shows up in the Bugsee dashboard.
+
+## Related pages
+
+- [Browser](/sdk/javascript/platforms/browser) — launch options, persistence and replay
+- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — upload source maps from Vite
+- [Symbolication](/sdk/javascript/symbolication/overview) — source maps and debug IDs
+- [Privacy](/sdk/javascript/privacy/overview) — what replay masks

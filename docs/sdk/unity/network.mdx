@@ -1,0 +1,208 @@
+---
+title: "Network events"
+description: "What network traffic the Bugsee Unity SDK 7.x records, the options that control it, how to add your own network events with AddNetworkEvent, and how to filter events with SetNetworkEventFilter."
+sidebar_position: 7
+slug: "/sdk/unity/network"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+Bugsee attaches the app's network requests, with their headers, bodies and response codes, to every report. This page covers what the Unity SDK records, the options that control it, how to record requests the SDK does not see, and how to filter or redact events before they are stored.
+
+## What is recorded
+
+The Unity package wraps the native Bugsee Android and iOS SDKs. Network capture happens in those native SDKs, on the platform's own HTTP stacks. See their pages for what each one records:
+
+- [Android network events](/sdk/android/network)
+- [iOS network events](/sdk/ios/network)
+
+The Unity package has no network hook of its own. It does not patch `UnityWebRequest`, `System.Net.Http.HttpClient` or any other managed or Unity networking API. Do not rely on automatic capture for requests made through those APIs: record them yourself with [`AddNetworkEvent`](#record-your-own-network-events). To see what your build records, send a test report and open its network timeline in the dashboard.
+
+On Android, the package declares only the core Bugsee Android SDK and its NDK extension. It does not declare the HTTP client extension modules. Their setup is described on the Android page.
+
+In the Unity Editor, and on platforms other than Android and iOS, network calls do nothing.
+
+## Options
+
+Set these launch options on `AndroidLaunchOptions` or `IOSLaunchOptions`. See [Configuration](/sdk/unity/configuration) for the full tables. The defaults are those of the native SDKs the package pins.
+
+| Option | Platform | Type | Default | What it does |
+| --- | --- | --- | --- | --- |
+| `CaptureNetwork` | Both | `bool` | `true` | Master switch for network capture. |
+| `CaptureNetworkBodySizeLimit` | Both | `int` (bytes) | `20480` | Largest request or response body the SDK keeps. |
+| `CaptureNetworkBodyWithoutType` | Both | `bool` | `false` | Keep bodies that declare no content type. |
+| `CaptureNetworkUseDefaultSanitizer` | Both | `bool` | `true` | Built-in redaction of sensitive values. See [Filters and the built-in redaction](#filters-and-the-built-in-redaction). |
+| `CaptureNetworkOnLaunch` | Android property | `bool` | `false` | Install capture during launch instead of when capture starts, so requests made during app startup are not missed. |
+| `CaptureWebSocket` | iOS | `bool` | `true` | Record WebSocket traffic. Needs `CaptureNetwork` too. |
+
+`CaptureNetworkOnLaunch` exists on both native SDKs, but the Unity package has a typed property for it on `AndroidLaunchOptions` only. On iOS, set the key with `SetCustomOption`.
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+#if UNITY_ANDROID
+var options = new AndroidLaunchOptions
+{
+    CaptureNetwork = true,
+    CaptureNetworkBodySizeLimit = 64 * 1024,
+    CaptureNetworkOnLaunch = true,
+};
+BugseeSdk.Launch("<your Android app token>", options);
+#elif UNITY_IOS
+var options = new IOSLaunchOptions
+{
+    CaptureNetwork = true,
+    CaptureNetworkBodySizeLimit = 64 * 1024,
+};
+options.SetCustomOption(Options.CaptureNetworkOnLaunch, true);
+BugseeSdk.Launch("<your iOS app token>", options);
+#endif
+```
+
+To turn network capture off, set `CaptureNetwork = false`. See [Privacy: network](/sdk/unity/privacy/network).
+
+## Record your own network events
+
+`Bugsee.AddNetworkEvent(INetworkEvent)` records an exchange the SDK did not see, such as a request made with `UnityWebRequest`. The event appears in the report next to the captured traffic.
+
+Build the event with the exchange factory, fill in its fields, and add it. A request usually produces two events with the same `id`: one when it starts and one when it completes.
+
+```csharp
+using System;
+using System.Collections.Generic;
+using Bugsee.Contracts.Exchange;
+using BugseeSdk = Bugsee.Bugsee;
+
+var factory = BugseeSdk.GetExchangeFactory();
+var id = Guid.NewGuid().ToString("N");
+
+// When the request starts.
+var started = factory.CreateNetworkEvent(
+    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+    NetworkEventStage.RequestStarted,
+    id,
+    "UnityWebRequest",
+    "POST");
+started.Url = "https://api.example.com/orders";
+started.Headers = new Dictionary<string, string> { ["Content-Type"] = "application/json" };
+started.Body = "{\"sku\":\"A-100\"}";
+BugseeSdk.AddNetworkEvent(started);
+
+// When the response arrives.
+var completed = factory.CreateNetworkEvent(
+    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+    NetworkEventStage.RequestCompleted,
+    id,
+    "UnityWebRequest",
+    "POST");
+completed.Url = "https://api.example.com/orders";
+completed.ResponseCode = 201;
+completed.Body = "{\"order\":\"1042\"}";
+BugseeSdk.AddNetworkEvent(completed);
+```
+
+`CreateNetworkEvent(timestamp, stage, id, mechanism, method)` takes the Unix time in milliseconds, the stage, an id that ties the events of one request together (pass `null` for a generated one), a free-text mechanism name, and the HTTP method. The id, mechanism, method and stage are read-only after creation. Set the other fields on the returned event.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `Url` | `string` | The request URL. |
+| `Headers` | `IDictionary<string, string>` | Request or response headers. |
+| `Body` | `string` | The body as text. |
+| `Size` | `long` | The body size in bytes. |
+| `ResponseCode` | `int` | The HTTP status code. |
+| `StatusText` | `string` | The status text. |
+| `ErrorShortMessage`, `ErrorDescription` | `string` | Error details for a failed request. |
+| `IsOverride` | `bool` | Android only. The value is kept on the managed event and not sent to iOS. Default `false`. |
+
+### Stages
+
+| `NetworkEventStage` | Android | iOS |
+| --- | --- | --- |
+| `RequestStarted` | Recorded | Recorded |
+| `RequestCompleted` | Recorded | Recorded |
+| `RequestErrored` | Recorded | Recorded |
+| `RequestAborted` | Recorded | Recorded |
+| `Redirect` | Recorded | Dropped with a warning |
+| `RequestTimingsReceived` | Recorded | Dropped with a warning |
+| `WebSocket` | Recorded | Dropped with a warning |
+
+### When to add events
+
+Add events after the SDK is launched (`Bugsee.IsLaunched` is `true`).
+
+- **Android:** `GetExchangeFactory()` returns `null`, and `CreateNetworkEvent` returns `null`, while the SDK has no network consumer: before launch, or with `CaptureNetwork` off. Check for `null` before you use the event.
+- **iOS:** events added before the launch completes are held and sent once it does. Events added after `Stop` are dropped.
+
+Events you add go through your [network filter](#filter-network-events), so a filter that redacts captured traffic redacts them too.
+
+## Filter network events
+
+`Bugsee.SetNetworkEventFilter` installs a filter that sees each network event before it is stored. Change the event and return it to keep it, or return `null` to drop it. Pass `null` to remove the filter.
+
+```csharp
+using System.Collections.Generic;
+using Bugsee.Contracts.Exchange;
+using BugseeSdk = Bugsee.Bugsee;
+
+BugseeSdk.SetNetworkEventFilter(e =>
+{
+    // Keep the built-in redaction (see below), then add your own rules.
+    if (!BugseeSdk.ApplyDefaultNetworkSanitizer(e)) return null;
+
+    // Drop health checks.
+    if (e.Url != null && e.Url.Contains("/health")) return null;
+
+    // Edit the headers, then assign the dictionary back.
+    var headers = new Dictionary<string, string>(e.Headers);
+    if (headers.ContainsKey("X-Session")) headers["X-Session"] = "<redacted>";
+    e.Headers = headers;
+
+    return e;
+});
+```
+
+Keep these rules in mind:
+
+- **Do not keep the event.** The event is valid only inside the callback. Using it afterward throws `ObjectDisposedException` on Android.
+- **Assign `Headers` back.** On Android, `Headers` returns a copy, so editing the returned dictionary in place does not change the event. On iOS it is live. Assign the edited dictionary to `e.Headers` on both.
+- **A filter that throws drops the event.** The SDK records nothing for that event.
+- **The filter runs on the Unity main thread.** On Android the SDK calls it on its own threads and the package hands each call to the main thread, which processes its queue in `Update`. While the app is in the background Unity's loop is paused, so the call waits until the app resumes.
+- **A filter that blocks forever blocks the main thread.** Keep it short.
+
+### Filters and the built-in redaction
+
+With `CaptureNetworkUseDefaultSanitizer` on (the default), the SDK redacts sensitive values in captured events: sensitive URL query values, sensitive header values such as `Authorization` and `Cookie`, and sensitive body fields such as `password`.
+
+On Android and iOS, setting a filter with `SetNetworkEventFilter` turns the built-in redaction off. Everything your filter does not redact is then recorded as is. To keep the built-in redaction, call `Bugsee.ApplyDefaultNetworkSanitizer(e)` first in your filter, then add your own rules:
+
+```csharp
+using BugseeSdk = Bugsee.Bugsee;
+
+BugseeSdk.SetNetworkEventFilter(e =>
+{
+    // Run the SDK's built-in redaction, in place. If it could not run, drop the event
+    // rather than record it unredacted.
+    if (!BugseeSdk.ApplyDefaultNetworkSanitizer(e)) return null;
+
+    if (e.Url != null) e.Url = e.Url.Replace("/internal/", "/x/");
+    return e;
+});
+```
+
+`ApplyDefaultNetworkSanitizer` returns `true` when it ran. It returns `false` in the Editor, for a `null` event, and when the sanitizer could not run.
+
+- Inside the filter it needs nothing else and works on any thread.
+- The redaction rules belong to each native SDK. On Android, the sanitizer also redacts error texts and `user:password@` credentials in URLs. On iOS it does not remove `user:password@` credentials from URLs, so do not rely on it for those.
+- On an event you built yourself, Android sanitizes a native copy, and the SDK hands that copy out only while it is launched with network capture on. Outside that, nothing is redacted and the call returns `false`. Check the result.
+
+For the redaction rules and what each native SDK treats as sensitive, see [Privacy: network](/sdk/unity/privacy/network).
+
+## Related pages
+
+- [Console logs](/sdk/unity/logs)
+- [Breadcrumbs](/sdk/unity/breadcrumbs)
+- [Privacy: network](/sdk/unity/privacy/network)
+- [Configuration](/sdk/unity/configuration)

@@ -6,7 +6,7 @@ slug: "/sdk/flutter/symbolication/ios"
 ---
 
 :::warning[Beta]
-This page documents Bugsee Flutter SDK **10.x**, which is in beta, is not published on pub.dev yet and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
 :::
 
 Native iOS frames (your app, `Flutter.framework`, other plugins) show as addresses until Bugsee has the dSYMs of the build that produced them. In a Flutter app nothing uploads them for you: the Flutter build does not call the Bugsee uploader, and the plugin has no hook into Xcode.

@@ -1,0 +1,205 @@
+---
+title: "Report handler"
+description: "Inspect and change every Bugsee report before it is uploaded from a Unity game: the IReportHandler callbacks, threading and timeouts per platform, attachments and screenshots."
+sidebar_position: 6
+slug: "/sdk/unity/report-handler"
+---
+
+:::warning[Beta]
+This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
+:::
+
+A **report handler** is the one place to inspect or rewrite a report before Bugsee uploads it. It runs for the reports the SDK is about to upload, except those it files while the process is exiting (see below). Use it to tag reports with your build, raise the severity of a subset, attach a file, or remove text a player typed into the form.
+
+The handler wraps the report handler of the native SDK. See the native pages for the parts that are not Unity specific: [Android report handler](/sdk/android/report-handler) and [iOS report handler](/sdk/ios/report-handler).
+
+## Register a handler
+
+Implement `IReportHandler`, or derive from `ReportHandlerBase`, which implements both callbacks as "continue unchanged". Register one handler for the whole app with `Bugsee.SetReportHandler`:
+
+```csharp
+using System;
+using Bugsee.Contracts.Reporting;
+using UnityEngine;
+using BugseeSdk = Bugsee.Bugsee;
+
+sealed class MyReportHandler : ReportHandlerBase
+{
+    public override void OnBeforeReportCreated(IReport report, bool isTerminating, Action completionCallback)
+    {
+        report.AddLabel(Debug.isDebugBuild ? "debug" : "release");
+        report.SetAttribute("app_version", Application.version);
+        completionCallback();
+    }
+}
+
+// At startup:
+BugseeSdk.SetReportHandler(new MyReportHandler());
+```
+
+- A new handler replaces the previous one. `SetReportHandler(null)` removes it.
+- Register the handler before you call `Bugsee.Launch`. The native iOS SDK files the crash of the previous run while it launches, and a handler registered later does not see that report. With iOS early launch on, a handler registered from C# never sees it, so do not rely on a report handler to redact it. See [Crash Report Extension](/sdk/unity/issue-detection/crash-report-extension#ios-native-early-launch).
+- In the Unity Editor there is no report handler, so nothing calls yours.
+
+`IReportHandler` has two methods, and both have the signature `(IReport report, bool isTerminating, Action completionCallback)`:
+
+| Callback | When it runs |
+| --- | --- |
+| `OnBeforeReportCreated` | First, before the report is assembled. For a report from the dialog, before the dialog opens on iOS. |
+| `OnAfterReportCreated` | Later in the pipeline, before upload. For a dialog report on iOS, after the player sends it. |
+
+The exact order differs a little between platforms: see the native pages above. Use the "before" callback to change severity and attributes. Use the "after" callback to add attachments and to redact the summary, description, labels and email: for a dialog report on iOS, what the player typed exists only there.
+
+## Complete the callback
+
+The pipeline waits for you. **Call `completionCallback` exactly once** when you are done, also on the paths where you change nothing. If you override a method of `ReportHandlerBase` and do not call the base method, call `completionCallback` yourself.
+
+- The wrapper honors the first call and ignores later ones.
+- Call `completionCallback` from Unity's main thread. If you do work on another thread, return to the main thread before you call it.
+- Changes you make after the callback has completed are ignored. On Android the report object stops accepting edits.
+
+### Threading
+
+Both callbacks run on Unity's main thread, on Android and on iOS. On Android the SDK calls the handler on its own thread, and the wrapper hands the call to the main thread. Keep the callbacks short. Slow work (file reads, compression, network calls) belongs on your own thread, with the completion called when it is done.
+
+While the game is in the background, Unity's main loop is paused. On Android a handler then waits until the loop resumes, and can miss its deadline: see below.
+
+### Reports that are not handled
+
+When `isTerminating` would be `true`, which means the process is about to exit, the wrapper does not call your handler. It completes the report unchanged at once. `isTerminating` is therefore always `false` in your callbacks.
+
+### Timeouts
+
+The native SDK carries on with the report unchanged when a handler is too slow. The wrapper follows the same clock, which starts when the SDK calls it.
+
+| | Android | iOS |
+| --- | --- | --- |
+| Time allowed per callback | `ReportHandlerCallbackTimeout` seconds, default 30. | 30 seconds. The option is not read. |
+| Value `0` | Disables the per-handler timer. The SDK still ends the chain after 60 seconds. | Not applicable. |
+| A callback that cannot start in time | A "before" callback is skipped, with a warning in the Unity log. An "after" callback still runs, with a completion that only acknowledges. | The callback is skipped. |
+| A reply after the deadline | Acknowledged without applying your edits. | Acknowledged without applying your edits. |
+| A handler that never completes | Abandoned one second after the deadline, with a warning. The report continues unchanged. | The same. |
+
+All callbacks for one report share an overall budget of 60 seconds on iOS.
+
+`ReportHandlerCallbackTimeout` is an Android option. Set it in the launch options:
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+var options = new AndroidLaunchOptions { ReportHandlerCallbackTimeout = 10 };
+BugseeSdk.Launch("<your Android app token>", options);
+```
+
+### If your handler throws
+
+An exception thrown from a callback is logged with `Debug.LogException`, and the report continues. On Android, the edits you made before the exception stay, and later edits are blocked. On iOS, edits other than screenshots travel in the callback's result and are dropped. A handler that throws before its first edit therefore uploads the report unredacted on both platforms: make the edits inside `try` and call the completion in `finally`. See [bugsee-unity#293](https://github.com/bugsee/bugsee-unity/issues/293).
+
+An `async void` handler is not covered. An exception thrown after an `await` is not caught by the package, the completion never runs, and the report waits for the abandon timeout (about 31 seconds with the default timeout) before it continues unchanged.
+
+## What you can change
+
+`IReport` is the report about to be uploaded:
+
+| Area | Members |
+| --- | --- |
+| Identity | `Id`, `Type` (`Bug`, `Crash` or `Error`) |
+| Text | `Summary`, `Description`, `Email` (get and set) |
+| Severity | `Severity` (`IssueSeverity?`, get and set) |
+| Labels | `Labels`, `AddLabel`, `SetLabels`, `ClearLabels` |
+| Attributes | `Attributes`, `GetAttribute`, `SetAttribute`, `RemoveAttribute`, `ClearAllAttributes` |
+| Attachments | `Attachments`, `AddAttachmentFile`, `AddAttachmentBytes`, `ClearAttachments` |
+| Screenshots | `ScreenshotDisplayIds`, `GetScreenshotPng`, `SetScreenshotPng`, `IsScreenshotChanged` |
+
+Attributes you set here apply to this report only. For values that belong on every report, see [User & session data](/sdk/unity/user-session-data). Use `report.Type` to limit a change to one kind of report:
+
+```csharp
+using System;
+using Bugsee.Contracts.Options;
+using Bugsee.Contracts.Reporting;
+
+public override void OnBeforeReportCreated(IReport report, bool isTerminating, Action completionCallback)
+{
+    if (report.Type == IssueType.Error && report.Severity == null)
+        report.Severity = IssueSeverity.Medium;
+
+    completionCallback();
+}
+
+public override void OnAfterReportCreated(IReport report, bool isTerminating, Action completionCallback)
+{
+    // Remove text a player typed into the form. On iOS, a dialog report holds it only in this callback.
+    if (report.Description != null)
+        report.Description = System.Text.RegularExpressions.Regex.Replace(report.Description, @"\b\d(?:[ -]?\d){12,18}\b", "[CARD]");
+
+    completionCallback();
+}
+```
+
+`Severity` is `null` when it is unset. `Email` on a report from `CreateReport` is only used on Android: see [Bug reporting](/sdk/unity/manual/bug-reporting#build-a-report-in-code).
+
+## Attachments
+
+Add attachments from `OnAfterReportCreated`:
+
+```csharp
+using System;
+using System.Text;
+using Bugsee.Contracts.Reporting;
+
+public override void OnAfterReportCreated(IReport report, bool isTerminating, Action completionCallback)
+{
+    var settings = Encoding.UTF8.GetBytes("{\"quality\":\"high\"}");
+    report.AddAttachmentBytes(settings, "settings.json", "application/json");
+
+    // An existing file:
+    // report.AddAttachmentFile(path, "save-slot-2", "application/octet-stream");
+
+    completionCallback();
+}
+```
+
+- `AddAttachmentBytes(data, name, mimeType)` returns `null` when `data` is `null`.
+- `AddAttachmentFile(path, name, mimeType)` returns `null` when `path` is empty. On iOS it also returns `null` when the file does not exist or cannot be copied: there the wrapper copies the file into the app's private cache when you call it, and deletes the copy after the report is handled.
+- The `IAttachment` you get back has `Name`, `Filename` and `MimeType` properties and `SetData(byte[])` and `SetData(string)` methods.
+- The size and count limits are those of the native SDKs and differ per platform: Android holds at most 1000 attachments per report, and iOS accepts up to three attachments of at most 3 MB each per source. See [Android report handler](/sdk/android/report-handler#attachments) and [iOS report handler](/sdk/ios/report-handler#attachments). Keep attachments small: they travel with the report on the player's connection.
+- An attachment cannot remove, replace or redact the screenshot of the report.
+
+## Screenshots
+
+In a handler, you can list, read, replace and remove the per-display screenshots of the report as PNG bytes:
+
+```csharp
+using System;
+using Bugsee.Contracts.Reporting;
+
+public override void OnBeforeReportCreated(IReport report, bool isTerminating, Action completionCallback)
+{
+    foreach (int display in report.ScreenshotDisplayIds)   // usually 0
+    {
+        byte[] png = report.GetScreenshotPng(display);
+        // report.SetScreenshotPng(display, redactedPng);  // replace
+        // report.SetScreenshotPng(display, null);         // remove
+    }
+    completionCallback();
+}
+```
+
+- It works in both callbacks, on Android and on iOS, on the report a handler receives. A report from `Bugsee.CreateReport` holds no screenshots.
+- Call these members on Unity's main thread, inside the callback. After the callback has completed, the getters return nothing and `SetScreenshotPng` returns `false`, with a one-time warning.
+- `GetScreenshotPng` blocks the main thread while the SDK produces the PNG, and has no timeout of its own.
+- `GetScreenshotPng` returns `null` in two cases: the display is not in `ScreenshotDisplayIds`, or it is listed and its screenshot cannot be read (over 32 MiB as PNG, or the platform cannot encode it). In the second case a warning says so. A `null` for a listed display does not mean there is nothing to redact: replace or remove it.
+- `SetScreenshotPng(display, png)` returns `true` when the report took the change. It returns `false`, with a warning, for data that is not a PNG, a PNG over 32 MiB, a PNG with a side over 8192 pixels or more than 33,554,432 pixels in total, or a PNG the platform cannot decode. `null` removes the screenshot.
+- `IsScreenshotChanged` becomes `true` once a screenshot the report held is replaced or removed. Adding a screenshot to a display that held none does not set it.
+- On iOS a screenshot edit reaches the native report at once, so it stays even if the handler later throws or answers after the deadline.
+
+:::warning[Screenshots can contain personal data]
+A screenshot is the screen as captured. It can show personal data and content you marked secure. A screenshot you set replaces the captured one, and nothing redacts it for you. Do not log the bytes or send them anywhere the report does not go. To send no screenshot at all, set the launch option `CaptureScreenshot` to `false`. See [Privacy: Report](/sdk/unity/privacy/report).
+:::
+
+## Related pages
+
+- [Bug reporting](/sdk/unity/manual/bug-reporting): the reports a handler receives.
+- [Crash & error reporting](/sdk/unity/manual/crash-error-reporting): severity defaults for crashes and errors.
+- [Privacy: Report](/sdk/unity/privacy/report): what a report contains and how to limit it.

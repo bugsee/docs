@@ -6,16 +6,16 @@ slug: "/sdk/flutter/migration"
 ---
 
 :::warning[Beta]
-This page documents Bugsee Flutter SDK **10.x**, which is in beta, is not published on pub.dev yet and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
 :::
 
-This guide walks through every public-API change between `bugsee_flutter` 9.x (which wraps the 6.x native SDKs) and 10.x, version 10.0.0-beta.1 (which wraps the 7.x native SDKs: Android 7.6.0, iOS 7.1.0). If you are setting up a new project, start from [Installation](/sdk/flutter/installation) instead.
+This guide walks through every public-API change between `bugsee_flutter` 9.x (which wraps the 6.x native SDKs) and 10.x, version 10.0.0-beta.1 (which wraps the 7.x native SDKs: Android 7.6.1, iOS 7.1.0). If you are setting up a new project, start from [Installation](/sdk/flutter/installation) instead.
 
 :::note[TL;DR]
 10.x is a rewrite and a clean break, not an in-place upgrade. The package name and the `Bugsee` facade stay, but the launch call, the options, the data calls, the exceptions, the lifecycle events, the report handler and the build setup all change, and `dart:io` network, `print` and Dart error capture are now opt-in. Expect code changes in every file that touches Bugsee. There is **no 9.x compatibility layer**: whether one will be offered is undecided and nothing here promises it. If you cannot change your code, stay on 9.x.
 :::
 
-The package is in beta and not published on pub.dev yet, so you cannot try it with a plain version constraint. [Installation](/sdk/flutter/installation) shows the git dependency.
+The package is a prerelease on pub.dev, so a plain `^9.0.0` constraint does not select it: ask for `^10.0.0-beta.1` explicitly, see [Installation](/sdk/flutter/installation).
 
 ---
 
@@ -24,7 +24,7 @@ The package is in beta and not published on pub.dev yet, so you cannot try it wi
 | | 9.x | 10.x |
 | --- | --- | --- |
 | Flutter / Dart | 3.0.0 or newer / 3.0 or newer | **Flutter 3.50.0 or newer / Dart 3.14 or newer** |
-| Native SDKs | Android 6.x, iOS 6.x | Android **7.6.0**, iOS **7.1.0** |
+| Native SDKs | Android 6.x, iOS 6.x | Android **7.6.1**, iOS **7.1.0** |
 | Android | `minSdk` 21 | `minSdk` 21. The **Bugsee Gradle plugin 4.1.1 is mandatory** and applied by the app. JDK 17 or 21. |
 | iOS | CocoaPods podspec (and a Swift Package Manager package), deployment target 11.0 | **Swift Package Manager only: no podspec, no CocoaPods.** Deployment target **15.0**. |
 | Import | `package:bugsee_flutter/bugsee_flutter.dart` (also `bugsee.dart`) | `package:bugsee_flutter/bugsee_flutter.dart` only |

@@ -1,0 +1,197 @@
+---
+title: "Lifecycle & status"
+description: "Launching, stopping, flushing and relaunching the Bugsee JavaScript SDK, reading its status, pausing visual capture with blackout, and observing lifecycle events."
+sidebar_position: 3
+slug: "/sdk/javascript/lifecycle"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+The SDK can be launched, flushed, stopped and relaunched at runtime. You can read its status at any time and observe its lifecycle events, such as launch, stop, blackout and report upload.
+
+## Launch
+
+`launch(appToken, options?)` starts the SDK and returns the client.
+
+| Runtime | Returns |
+| --- | --- |
+| Browser | `Promise<Bugsee>` |
+| Node.js, Bun, Electron main, Cloudflare Workers, Vercel Edge, Web and Service Workers | the client, directly |
+| Electron renderer | `Promise` of the client |
+
+Bugsee is a per-process singleton, so launch it once:
+
+- A second `launch()` is ignored. It returns the existing client, and reports "called more than once in this process" through `onError`. Its options are not applied; use [`relaunch()`](#relaunch) for that.
+- A missing, empty or non-string token does not throw. `launch()` returns a disabled client, reports the problem once through `onError` (or `console.warn` when you gave none), and captures nothing. A later `launch()` with a valid token still works.
+
+## Status
+
+Read the state of the SDK with `getStatus()`, or ask a client with `bugsee.getStatus()` and `bugsee.isLaunched()`. The top-level `getStatus()` works at any time, including while a launch is still in progress and after the client is gone.
+
+```ts
+import { BugseeStatus, getStatus } from '@bugsee/bugsee';
+
+if (getStatus() === BugseeStatus.Launched) {
+  // capture is running
+}
+```
+
+| `BugseeStatus` | Value | Meaning |
+| --- | --- | --- |
+| `Stopped` | `0` | Not running, or stopped. |
+| `Launching` | `1` | A launch is in flight. Observable in the browser, where the launch is asynchronous. |
+| `Launched` | `2` | Running. |
+| `Stopping` | `3` | `stop()` is draining pending uploads. |
+
+`isLaunched()` is the quick check; `getStatus()` also tells you about the two transitions.
+
+## Flush and stop
+
+```ts
+await bugsee.flush();   // wait for pending uploads
+await bugsee.stop();    // stop capture and detection, then drain uploads
+```
+
+| Method | Resolves to | Description |
+| --- | --- | --- |
+| `flush(timeout?)` | `Promise<boolean>` | Waits for pending uploads, including reports being assembled. `true` when everything drained within `timeout` milliseconds. |
+| `stop(timeout?)` | `Promise<boolean>` | Stops capture and detection, removes the handlers the SDK installed (process handlers, page-hide flush, server instrumentation), then drains pending uploads. `true` when they drained within `timeout`. |
+
+After `stop()`, the client is finished: `logException` and other manual capture calls do nothing, and the stopped client cannot be restarted. The process singleton is released, so calling `launch()` again builds a fresh client.
+
+Typical uses:
+
+- **Short-lived scripts:** `await bugsee.flush()` before the process exits, so the last report is uploaded.
+- **Consent:** the SDK has no separate consent switch. Call `launch()` only after the user consents, and `stop()` to withdraw consent.
+- **Tests:** `stop()` between tests releases the singleton.
+
+There is no pause and resume. To stop recording what is on screen for a while, use [blackout](#blackout).
+
+## Relaunch
+
+`relaunch(options?)` stops the running client and launches again with the same app token.
+
+```ts
+import { relaunch } from '@bugsee/bugsee';
+
+await relaunch({ captureNetworkBodies: false });
+```
+
+- It returns a `Promise` of the new client on every runtime.
+- Like the mobile SDKs, a relaunch starts from the defaults: the options you pass are the new options, and omitted options go back to their default. A few settings are kept from the previous launch: your `endpoint`, `appId`, `appVersion` and `appBuild`, `appRoot`, `dataDir`, `onError` and `urlSanitizer`. The network, log and breadcrumb filters and the report handler are not launch options but are installed on the client, so they are not kept: install them again on the client that `relaunch()` returns. See [Configuration](/sdk/javascript/configuration#options-kept-by-relaunch).
+- A launch that is still in progress is waited for first.
+- The previous client is drained for up to 5 seconds, so a stuck upload cannot hang the relaunch.
+- It rejects when nothing has been launched yet, because there is no token to reuse.
+- Your lifecycle listener survives the relaunch.
+
+`relaunch` is exported by the packages you install directly (`@bugsee/bugsee`, `@bugsee/bun`, `@bugsee/cloudflare`, `@bugsee/vercel-edge`, `@bugsee/webworker`). It is not available in `@bugsee/electron`, whose main process needs the Electron objects again; stop and call `launchMain` instead.
+
+## Blackout
+
+A blackout suppresses visual and interaction capture while a sensitive view is on screen: session replay, input presses, UI-interaction breadcrumbs and the view hierarchy. Logs, network, traces and events carry on.
+
+```ts
+bugsee.startBlackout();
+try {
+  // ... the user is on a screen that must not be recorded; remove it when done
+} finally {
+  bugsee.endBlackout();
+}
+
+bugsee.isBlackout(); // true while a blackout is in force
+```
+
+- `startBlackout()` is idempotent and not counted: one `endBlackout()` ends any number of calls.
+- Both calls do nothing while the client is not launched, and they are not remembered. To be dark from the first moment, use the `startInBlackout` launch option in the browser.
+- Call `endBlackout()` only after the sensitive view is gone. Replay resumes with a fresh snapshot taken from the live page, so a view still on screen would be recorded.
+- `BlackoutStarted` and `BlackoutEnded` lifecycle events fire when it begins and ends.
+
+## Lifecycle events
+
+Lifecycle events are coarse milestones of the SDK. You observe them through one listener. Set it at launch to see the very first event, or later. In the browser `launch()` returns a `Promise`, so await it before using the client. On Node.js and Bun it returns the client directly, and `await` is harmless.
+
+<Tabs groupId="lang">
+  <TabItem value="ts" label="TypeScript">
+
+```ts
+import { launch, LifecycleEvents } from '@bugsee/bugsee';
+
+const bugsee = await launch('<your_app_token>', {
+  lifecycleEventsListener: (eventType, data) => {
+    if (eventType === LifecycleEvents.AfterReportUploaded) {
+      console.log('uploaded', data);
+    }
+  },
+});
+
+// or later; pass null to remove it
+bugsee.setLifecycleEventsListener((eventType, data) => {
+  /* ... */
+});
+```
+
+  </TabItem>
+  <TabItem value="js" label="JavaScript">
+
+```js
+import { launch, LifecycleEvents } from '@bugsee/bugsee';
+
+const bugsee = await launch('<your_app_token>', {
+  lifecycleEventsListener: (eventType, data) => {
+    if (eventType === LifecycleEvents.AfterReportUploaded) {
+      console.log('uploaded', data);
+    }
+  },
+});
+
+// or later; pass null to remove it
+bugsee.setLifecycleEventsListener((eventType, data) => {
+  /* ... */
+});
+```
+
+  </TabItem>
+</Tabs>
+
+The event names are the constants of `LifecycleEvents`, and they match the names used on the Bugsee mobile SDKs, so a handler can be shared across platforms.
+
+| Event | When |
+| --- | --- |
+| `Launching` | A launch begins. |
+| `Launched` | The SDK is running. |
+| `Stopping` | `stop()` begins draining. |
+| `Stopped` | The SDK has stopped. |
+| `BlackoutStarted`, `BlackoutEnded` | A blackout begins or ends. |
+| `RelaunchedAfterCrash` | A launch found evidence that the previous run did not end cleanly. See the note below. |
+| `BeforeReportShown`, `AfterReportShown` | The browser report dialog is shown and closed. `AfterReportShown` carries `{ sent }`. |
+| `BeforeReportAssembled`, `AfterReportAssembled`, `ReportAssemblyFailed` | A report is being built from the captured data. The data carries `{ reportId }`; a failure also carries `error`. |
+| `BeforeReportUploaded` | An assembled report is handed to the uploader. |
+| `AfterReportUploaded` | The upload succeeded. The data carries `{ reportId, result }`. |
+| `ReportUploadFailed` | The upload failed and will not be retried. |
+| `ReportUploadFailedWithFutureRetry` | The upload failed, but the report is stored and the next launch retries it. |
+
+How the listener behaves:
+
+- It observes only. It cannot veto or change anything.
+- A listener that throws, or returns a rejecting promise, is routed to `onError` and otherwise ignored.
+- It is safe to call `launch()`, `stop()` or `startBlackout()` from inside it. Events caused that way are queued and delivered in order after the listener returns.
+- There is one listener per process, and it applies to every client the process builds.
+
+Report events follow reports that go through the live path of the running client: detected errors, `logException`, `upload` and the report dialog. A report delivered another way is not announced: one re-uploaded from the durable queue on the next launch, a native crash collected by Electron, a queue overflow, or a hand-off from an Electron renderer.
+
+:::caution[RelaunchedAfterCrash is a hint]
+The SDK emits `RelaunchedAfterCrash` only when a launch finds evidence on storage that the previous run did not end cleanly. It can be wrong in both directions. On Node.js, the commonest crash, an uncaught exception, uploads its report before the process exits and leaves no evidence, so the next launch stays silent. A script that exits normally while a report upload is still in flight, without calling `stop()`, looks like a crash. In the browser, closing a tab normally after a failed upload leaves the same evidence. The event is not sent on edge runtimes or anywhere else that keeps nothing durable across runs. If you need certainty, keep your own "clean exit" flag.
+:::
+
+## Related pages
+
+- [Quick start](/sdk/javascript/quick-start) — launch the SDK for the first time.
+- [Configuration](/sdk/javascript/configuration) — every launch option.
+- [Report handler](/sdk/javascript/report-handler) — change or veto a report before it is assembled.
+- [Bug reporting](/sdk/javascript/manual/bug-reporting) — upload reports and show the report dialog.
+- [Privacy](/sdk/javascript/privacy/overview) — what is masked by default.

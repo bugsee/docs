@@ -6,7 +6,7 @@ slug: "/sdk/flutter/overview"
 ---
 
 :::warning[Beta]
-This page documents Bugsee Flutter SDK **10.x**, which is in beta, is not published on pub.dev yet and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
 :::
 
 The Bugsee Flutter SDK (`bugsee_flutter`) captures what happened before a bug: a video of the screen, network traffic, console logs and the steps that led to it. It attaches that timeline to crash, error and bug reports you can replay in the Bugsee dashboard.
@@ -69,7 +69,7 @@ This beta, `10.0.0-beta.1`, is built on these native SDKs:
 
 | Platform | Native SDK | Notes |
 | --- | --- | --- |
-| Android | `com.bugsee:bugsee-android` 7.6.0 | Bugsee Gradle plugin 4.1.1 is mandatory |
+| Android | `com.bugsee:bugsee-android` 7.6.1 | Bugsee Gradle plugin 4.1.1 is mandatory |
 | iOS | Bugsee iOS SDK 7.1.0 | Distributed through Swift Package Manager |
 
 ## Platform notes

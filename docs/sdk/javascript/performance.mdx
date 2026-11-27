@@ -1,0 +1,191 @@
+---
+title: "Performance monitoring"
+description: "Application performance monitoring in the Bugsee JavaScript SDK: Core Web Vitals, page-load, navigation and request transactions, the manual transaction and span API, and sampling."
+sidebar_position: 20
+slug: "/sdk/javascript/performance"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+Application performance monitoring (APM) records how long your app's work takes, as a tree of transactions and spans. Bugsee attaches the transactions to reports and uploads them continuously.
+
+APM is on by default when you launch through the `@bugsee/bugsee` package. It is not part of the bare platform packages. `performanceMonitoring` is its master switch: with `false`, nothing is recorded, and the manual API returns a no-op object that is safe to call.
+
+## Concepts
+
+- A **transaction** is the root of a trace. It has a name, such as `checkout`, an operation, such as `ui.action`, attributes and a status.
+- A **span** is a unit of work inside a transaction. Spans form a tree. Each one has an operation, an optional description, attributes and a status.
+
+A span ends with one of these statuses: `OK`, `ERROR`, `TIMEOUT`, `CANCELLED`, `DEADLINE_EXCEEDED` or `UNKNOWN`.
+
+## Automatic instrumentation
+
+### In a browser
+
+| What | Operation | Details |
+| --- | --- | --- |
+| Page load | `pageload` | One transaction per page load, named after the path of the page. It carries the Core Web Vitals, the navigation timing and a child span per resource, and finishes when the page is hidden. |
+| Route change | `navigation` | One transaction per route change of a single-page app, detected through the History and Navigation APIs. It finishes after a period without activity, or when the next navigation starts. Needs `traceNavigations`. |
+| Interaction | `ui.interaction` | One short transaction per user interaction slower than 40 ms, the unit of Interaction to Next Paint. An interaction that triggers a navigation is not counted twice. Needs `traceInteractions`. |
+| Requests | `http.client` | A child span for each `fetch` and XHR request made while a transaction is active. |
+
+A pageload transaction carries these attributes:
+
+| Attribute | Content |
+| --- | --- |
+| `web_vital.<name>.value` and `web_vital.<name>.rating` | Time to First Byte (`ttfb`), First Contentful Paint (`fcp`), Largest Contentful Paint (`lcp`), Cumulative Layout Shift (`cls`) and Interaction to Next Paint (`inp`), each with its rating. |
+| `nav.<phase>_ms` | The phases of the navigation timing: redirect, DNS, connect, TLS, request, response, DOM interactive, DOM content loaded and load. A phase that did not happen is left out. |
+
+Child spans of a pageload:
+
+| Operation | Content |
+| --- | --- |
+| `resource.<initiator>` | One span per loaded asset, with the query and fragment removed from its URL. At most 100 per page. `fetch` and XHR are covered by `http.client`. |
+| `ui.long-task` | One span per main-thread task longer than 50 ms. |
+
+Each transaction gets at most 100 `http.client` spans.
+
+### On a server
+
+| What | Operation | Details |
+| --- | --- | --- |
+| Startup | `app.start` | One transaction from process start to `launch()`. Set `appStartTimeMs` to override the start time. |
+| Incoming request | `http.server` | One transaction per request, created by the backend instrumentation. See the [backend overview](/sdk/javascript/backend/overview). |
+| Outgoing requests | `http.client` | A child span for each outgoing request made while a request transaction is active. |
+
+On a server the active transaction is tracked per request, so concurrent requests never share a trace and an outgoing call is attached to the request that issued it.
+
+## Transactions and spans
+
+Wrap a flow in a transaction to measure it end to end, and break it into spans for detail. Finish every span and transaction you start.
+
+<Tabs groupId="runtime">
+  <TabItem value="browser" label="Browser">
+
+```ts
+import { launch } from '@bugsee/bugsee';
+
+const bugsee = await launch('<your_app_token>');
+
+const transaction = bugsee.startTransaction('checkout', 'ui.action', { cart_size: 3 });
+
+const load = bugsee.startSpan('db.query', 'Load cart');
+// ... load the cart ...
+load.finish();
+
+const charge = bugsee.startSpan('http.client', 'POST /charge');
+// ... call the payment endpoint ...
+charge.finish('ERROR');
+
+transaction.finish();
+```
+
+  </TabItem>
+  <TabItem value="server" label="Node.js and Bun">
+
+```ts
+import { launch } from '@bugsee/bugsee';
+
+const bugsee = launch('<your_app_token>');
+
+const transaction = bugsee.startTransaction('nightly-sync', 'job', { source: 'crm' });
+
+const load = bugsee.startSpan('db.query', 'Load customers');
+// ... load the customers ...
+load.finish();
+
+transaction.finish();
+```
+
+  </TabItem>
+</Tabs>
+
+| Call | Description |
+| --- | --- |
+| `startTransaction(name, operation, attributes?)` | Starts a transaction. `attributes` is an object of initial attributes. |
+| `startSpan(operation, description?)` | Starts a span. When a span is active, the new one is its child. Otherwise it becomes the root of a new transaction named after the description, or the operation. |
+| `getActiveSpan()` | Returns the active span, or `undefined`. |
+
+A transaction or span has these methods:
+
+| Method | Description |
+| --- | --- |
+| `setName(name)` | Renames it. |
+| `setDescription(description)` | Sets the description. |
+| `setAttribute(key, value)` | Sets an attribute. |
+| `setStatus(status)` | Sets the status. |
+| `startChildSpan(operation, description?)` | Starts a child span of this one. |
+| `recordChildSpan(operation, options)` | Records a child span that already ended, with `startTimestampMs`, `endTimestampMs`, and optionally `description` and `attributes`. |
+| `finish(status?)` | Ends it, optionally with a final status. Calling it twice is harmless. |
+| `getSpanId()`, `getTraceId()`, `getStatus()`, `getOperation()`, `getDescription()`, `getAttributes()`, `isFinished()` | Read its state. |
+
+A transaction adds `getName()` and `isSampled()`.
+
+## Sampling
+
+`performanceSampleRate` is a head sampling rate from 0 to 1. The decision is made once for each transaction when it starts. A transaction that is not sampled is not recorded.
+
+- `1`, the default, records every transaction. `0` records none.
+- A transaction that continues an inbound trace follows the sampling decision of the caller, so both sides of a distributed trace keep or drop it together.
+
+Sampling applies only to transactions. Errors and crashes are never sampled.
+
+## Upload
+
+Finished transactions are buffered and uploaded in the background.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `performanceMonitoring` | `boolean` | `true` | Master switch for transactions and Web Vitals. |
+| `performanceSampleRate` | `number` | `1` | Head sampling rate, from 0 to 1. |
+| `performanceUploadMode` | `'batched' \| 'realtime'` | `'batched'` | Upload every flush interval, or each transaction as it finishes. |
+| `performanceFlushIntervalMs` | `number` | `30000` | The interval of batched uploads, in milliseconds. |
+| `traceNavigations` | `boolean` | `true` | Browser. A transaction per route change. |
+| `traceInteractions` | `boolean` | `true` | Browser. A transaction per slow interaction. |
+| `pageName` | `string` | the current path | Browser. The name of the pageload transaction. |
+| `appStartTimeMs` | `number` | process start | Server. The start time of the `app.start` transaction. |
+| `propagateTrace` | `boolean` | off in a browser, on on a server | Add `traceparent` to outgoing requests. |
+| `tracePropagationTargets` | `(string \| RegExp)[]` | none | Outgoing URLs allowed to receive the trace headers. |
+| `tracePropagationOrigin` | `string` | `location.origin` | Browser. The origin treated as same-origin. |
+
+```ts
+launch('<your_app_token>', {
+  performanceSampleRate: 0.25,
+  performanceUploadMode: 'realtime',
+});
+```
+
+## Link frontend and backend traces
+
+With `propagateTrace`, Bugsee adds the W3C `traceparent` header to your outgoing requests, and the backend transaction continues the trace of the frontend.
+
+- In a browser, `propagateTrace` is off by default, so no header is sent until you enable it. When you do, same-origin requests receive the header, and cross-origin requests only when their URL matches `tracePropagationTargets`.
+- In a browser, a cross-origin request that carries `traceparent` triggers a CORS preflight. The target API must list `traceparent` in `Access-Control-Allow-Headers`, otherwise the browser blocks the request.
+- On a server, `propagateTrace` is on by default, but nothing is sent until you set `tracePropagationTargets`. See the [backend overview](/sdk/javascript/backend/overview#trace-correlation).
+
+```ts
+launch('<your_app_token>', {
+  propagateTrace: true,
+  // Anchored to the host boundary: only https://api.example.com and its paths
+  tracePropagationTargets: [/^https:\/\/api\.example\.com(?:[/?#]|$)/],
+});
+```
+
+A string entry matches anywhere in the full URL, so `'https://api.example.com'` would also match `https://api.example.com.attacker.test/` and `https://attacker.test/?u=https://api.example.com`. Use an anchored regular expression so only the host you intend receives the trace headers.
+
+## Filter or drop spans
+
+`setSpanFilter` runs over every finished transaction, your own and any consumed from OpenTelemetry. Return the span, changed or not, to keep it, or `null` to drop it. A filter that throws drops the span it threw on.
+
+A span filter replaces the built-in span sanitizer. See [Privacy](/sdk/javascript/privacy/overview).
+
+## Related pages
+
+- [OpenTelemetry](/sdk/javascript/opentelemetry) — export transactions to your own backend, or feed in your OpenTelemetry spans
+- [Backend overview](/sdk/javascript/backend/overview) — request transactions and trace propagation on a server
+- [Privacy](/sdk/javascript/privacy/overview) — what is redacted by default

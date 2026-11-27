@@ -1,0 +1,130 @@
+---
+title: "Bun"
+description: "Set up the Bugsee JavaScript SDK in a Bun app with @bugsee/bun: launch, Bun.serve instrumentation, crash recovery, and the differences from Node.js."
+sidebar_position: 3
+slug: "/sdk/javascript/platforms/bun"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/bun` is the SDK for Bun. It runs the same pipeline as the [Node.js](/sdk/javascript/platforms/node) SDK (crash and error capture, console and network capture, on-disk capture with crash recovery, hang detection and profiling) and adds automatic instrumentation of `Bun.serve` requests. It only changes how the runtime is identified in reports: `bun` and its version.
+
+## Requirements
+
+- Bun 1.1.13 or newer. The SDK is tested on Bun 1.3.
+- An app token. Create a JavaScript application in Bugsee and choose **Bun** as its target; see [Create your app](/sdk/javascript/installation#create-your-app).
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/bun
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/bun
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/bun
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/bun
+```
+
+  </TabItem>
+</Tabs>
+
+Install `@bugsee/bun` in a Bun project. It does not include the umbrella's extensions (performance monitoring and OpenTelemetry). If you also use a backend framework adapter, install `@bugsee/bun` next to it and import `launch` from `@bugsee/bun`; see [Running on Bun](/sdk/javascript/backend/overview#running-on-bun).
+
+## Launch
+
+Call `launch()` at the top of your entry file. It returns the client directly, not a `Promise`.
+
+```ts title="index.ts"
+import { launch } from '@bugsee/bun';
+
+const bugsee = launch('<your_app_token>', { appVersion: '1.4.2' });
+
+Bun.serve({
+  port: 3000,
+  fetch() {
+    return new Response('ok');
+  },
+});
+```
+
+Incoming `Bun.serve` requests are instrumented automatically. Each request gets its own request context. Pass `instrumentIncomingRequests: false` to opt out. Frameworks that run on `node:http` are covered by the `node:http` instrumentation; see [Backend](/sdk/javascript/backend/overview).
+
+## What is exported
+
+`@bugsee/bun` re-exports everything from the Node build (`@bugsee/node`) and adds the following:
+
+| Export | Description |
+| --- | --- |
+| `launch(appToken, options?)` | Starts the SDK and returns the client synchronously. |
+| `relaunch(options?)` | Restarts the SDK, optionally with new options. |
+| `launchCore` | The composition root behind `launch`. Returns more than the client. |
+| `createBunServeInterceptor` | The `Bun.serve` instrumentation that `launch` installs. |
+| `bunSystemProbe`, `createBunSystemProbe` | The probe that identifies the runtime as `bun`. |
+
+## Options
+
+`launch(appToken, options)` takes the same options as on Node.js. See [Node.js options](/sdk/javascript/platforms/node#node-options) and [Configuration](/sdk/javascript/configuration). Common ones:
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `appVersion`, `appBuild`, `appId` | `string` | resolved | Identify your release in reports. |
+| `captureLogs`, `captureNetwork`, `captureNetworkBodies` | `boolean` | `true` | Capture streams. |
+| `maxRecordingTime` | `number` | `60` | Rolling recording window, in seconds. |
+| `dataDir` | `string` | `<os tmpdir>/bugsee` | Directory for the on-disk buffer. |
+| `detectHangs` | `boolean` | `true` | Event-loop hang detection. |
+| `profiling` | `boolean` | `false` | Rolling CPU profile attached to reports. |
+| `instrumentIncomingRequests` | `boolean` | `true` | Automatic `Bun.serve` request instrumentation. |
+
+## Differences from Node.js
+
+- **`captureLocalVariables` is always off.** Bun refuses the debugger API that the feature needs unless an inspector is open, so the SDK forces the option off even if you set it.
+- **Some system traces are omitted rather than reported as zero.** On Bun, the event-loop utilization and garbage-collection data are not reliable, and V8 heap figures do not apply, so the SDK leaves those traces out of Bun reports.
+- **Both `Bun.serve` and `node:http` are instrumented.** The Node `node:http` instrumentation also runs under Bun when `instrumentIncomingRequests` is on.
+
+## Source maps
+
+If you bundle with `bun build`, inject debug IDs and upload the maps yourself. See [Manual source map upload](/sdk/javascript/symbolication/manual).
+
+## Verify
+
+1. Launch the SDK with a real token.
+2. Report a test error:
+
+```ts
+const bugsee = launch('<your_app_token>');
+bugsee.logException(new Error('Bugsee test error'));
+await bugsee.flush();
+```
+
+3. Open the Bugsee dashboard. The report appears within a minute, with `bun` and its version in the environment.
+
+## Related pages
+
+- [Node.js](/sdk/javascript/platforms/node) — the options and behavior Bun shares
+- [Backend](/sdk/javascript/backend/overview) — request context and framework adapters
+- [Configuration](/sdk/javascript/configuration) — all launch options
+- [Symbolication](/sdk/javascript/symbolication/overview) — source maps and debug IDs

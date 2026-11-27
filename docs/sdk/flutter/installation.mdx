@@ -9,7 +9,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
 :::warning[Beta]
-This page documents Bugsee Flutter SDK **10.x**, which is in beta, is not published on pub.dev yet and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
 :::
 
 :::caution[Replacing 9.x]
@@ -23,33 +23,23 @@ This page documents Bugsee Flutter SDK **10.x**, which is in beta, is not publis
 | Flutter / Dart | 3.50.0 or later / 3.14 or later |
 | Android | `minSdk` 21; JDK 17 or 21 for the build; the Bugsee Gradle plugin **4.1.1** (mandatory, see [Android](#android)) |
 | iOS | 15.0 or later; Swift Package Manager only (no CocoaPods: Bugsee publishes no pod and the plugin has no podspec) |
-| Native SDKs | Android 7.6.0, iOS 7.1.0 |
+| Native SDKs | Android 7.6.1, iOS 7.1.0 |
 | Not covered | web, desktop (the calls do nothing there), tvOS, visionOS |
 
 The Flutter floor is 3.50.0: the 10.x line builds on the release that ships Direct Interop, Android Gradle Plugin 9 and `material_ui`. The plugin is also Swift Package Manager only, so `flutter pub get` fails on Linux and Windows before Flutter 3.41.0.
 
 ## Add the package
 
-The package is a beta and is not on pub.dev yet, so the git dependency is the only one that resolves today. Add `bugsee_flutter` to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  bugsee_flutter:
-    git:
-      url: https://github.com/bugsee/bugsee-flutter.git
-      ref: main
-```
-
-Then run `flutter pub get`.
-
-Once the package is published, depend on it from pub.dev instead:
+The package is a prerelease, so a plain `^9.0.0` constraint (or `flutter pub add bugsee_flutter`) does not pick it: ask for the beta explicitly. Add `bugsee_flutter` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
   bugsee_flutter: ^10.0.0-beta.1
 ```
 
-The [feedback chat](/sdk/flutter/feedback) is a separate package, `bugsee_flutter_feedback`. While the core is unpublished, it needs its own git entry (`path: packages/bugsee_flutter_feedback`, with the same `url` and `ref`) and a `dependency_overrides:` entry for `bugsee_flutter` with the same git source, because its hosted constraint on the core cannot resolve yet.
+Then run `flutter pub get`.
+
+The [feedback chat](/sdk/flutter/feedback) is a separate package, `bugsee_flutter_feedback`, released with the core. It is not on pub.dev yet, so it takes a git entry for now, see [Feedback](/sdk/flutter/feedback#installation).
 
 ## Android
 
@@ -61,7 +51,7 @@ The [feedback chat](/sdk/flutter/feedback) is a separate package, `bugsee_flutte
    ```kotlin
    plugins {
        id("dev.flutter.flutter-plugin-loader") version "1.0.0"
-       id("com.android.application") version "9.1.1" apply false   // Flutter 3.50 requires AGP 9
+       id("com.android.application") version "9.3.1" apply false   // what the Flutter 3.50 template generates (AGP 9); keep your own version
        id("com.bugsee.android.gradle") version "4.1.1" apply false
    }
    ```

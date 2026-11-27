@@ -1,0 +1,116 @@
+---
+title: "Source map doctor"
+description: "Check a build output folder offline with bugsee-sourcemaps-doctor to find out why a crash from that build would not symbolicate: check ids, options, exit codes and the JSON report."
+sidebar_position: 5
+slug: "/sdk/javascript/symbolication/doctor"
+---
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`bugsee-sourcemaps-doctor` checks a build output folder and answers one question: why would a crash from this build not symbolicate? It makes no network call and does not need a token. A missing token is only a warning, because uploading by hand is legitimate.
+
+## Run it
+
+The command ships in `@bugsee/bundler-plugin-core`, not in a package of its own name, so always name the package:
+
+```bash
+npx --package=@bugsee/bundler-plugin-core bugsee-sourcemaps-doctor dist            # human report
+npx --package=@bugsee/bundler-plugin-core bugsee-sourcemaps-doctor dist --json     # machine-readable report
+npx --package=@bugsee/bundler-plugin-core bugsee-sourcemaps-doctor dist --strict   # exit 1 on warnings too
+```
+
+A bare `npx bugsee-sourcemaps-doctor` asks the public npm registry for an unrelated package name unless the command is already linked into `node_modules/.bin`. pnpm and Yarn link only the commands of direct dependencies. With `@bugsee/bundler-plugin-core` as a direct dependency, `pnpm exec bugsee-sourcemaps-doctor dist` works too.
+
+## Options
+
+| Option | Description |
+| --- | --- |
+| `--json` | Print the machine-readable report instead of text. |
+| `--strict` | Exit 1 when there are warnings and no errors. |
+| `--project-root <dir>` | Where `.env.bugsee-build-plugin` and `package.json` are looked up. Default: the working directory. |
+| `--max-map-mb <n>` | Flag source maps larger than `n` MiB. Default: 50. |
+| `--no-env` | Skip the token, version, build and `NODE_ENV` checks, for an output-only audit. |
+| `--deployed` | The folder is, or is about to be, served to the public. Leftover `.map` files become a warning instead of a note. |
+| `--exclude <glob>` | Skip files the build did not emit, such as `sw.js` copied in from Vite's `publicDir` or by a copy plugin. Relative to the checked folder. Repeatable. `*` stays within a folder and `**` crosses folders. Skipped files are listed as `output.excluded`, and a pattern that matches nothing is reported as `output.exclude-unmatched`. |
+| `--ignore <id>` | Drop a check id from the report. Repeatable. `output.dir-missing`, `output.no-js` and `doctor.internal-error` cannot be ignored, because they mean nothing was checked. |
+| `--` | End of options. |
+
+`--key=value` works for options that take a value. A flag that takes no value, such as `--strict=false`, is refused.
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | No errors, and no warnings when `--strict` is set. |
+| `1` | Warnings only, with `--strict`. |
+| `2` | Errors, or a usage error. |
+
+Straight after a default plugin run, `--strict` passes for a build whose output folder holds only what the build emitted. Add `--exclude` for scripts that were copied in. Leftover maps are a note unless you pass `--deployed`, so add that flag only when you check the folder you serve.
+
+## What it checks
+
+Every finding has a stable id, a severity (`error`, `warning` or `info`), a message and, where there is something to do, a fix hint. Match on the id in tooling.
+
+| Area | Ids | What they catch |
+| --- | --- | --- |
+| Output folder | `output.dir-missing`, `output.no-js`, `output.unreadable`, `output.dir-unreadable`, `output.excluded`, `output.exclude-unmatched`, `output.walk-fenced` | A missing or empty folder, files or folders that could not be read, and what `--exclude` and the project-folder fence skipped. |
+| Stamp | `stamp.missing-debug-id`, `stamp.missing-registration`, `stamp.map-id-mismatch`, `stamp.map-no-debug-id`, `stamp.mixed`, `stamp.duplicate-debug-id` | Bundles without the debug ID comment or the `_bugseeDebugIds` registration, a map whose ID differs from its bundle's, a mix of stamped and unstamped bundles, and one ID on different contents. |
+| Maps | `map.pointer-dangling`, `map.ambiguous`, `map.hidden`, `map.inline`, `map.invalid`, `map.no-sources`, `map.sources-content`, `map.sources-unresolvable`, `map.too-large`, `map.unreadable`, `map.pointer-outside-dir`, `map.public-leftover` | `sourceMappingURL` pointers that dangle, are hidden or inline, invalid maps, missing `sourcesContent`, oversized maps, and `.map` files a deploy would serve. |
+| Subresource Integrity | `sri.unstamped-hazard`, `sri.mismatch`, `sri.html-skipped`, `sri.pin-unreadable`, `sri.manifest-hashes` | Pages and `*manifest*.json` files inside the folder that pin a hash the stamp would invalidate, or that no longer match the stamped bytes. A page larger than 8 MiB is reported, not scanned. |
+| Build mode | `build.dev-bundle` | Development bundles. |
+| Environment | `env.token-source`, `env.token-missing`, `env.version-unresolved`, `env.build-unresolved`, `env.node-env-development` | Whether a token, version and build can be resolved, and `NODE_ENV`. The token value is never printed. The report says only where it came from: an option, an environment variable or `.env.bugsee-build-plugin`. |
+| The doctor itself | `doctor.internal-error` | An internal failure. The doctor never throws. It reports one. |
+
+A map for a facade or empty chunk, with no sources and no mappings, is a note, not an error.
+
+The doctor reads only inside the checked folder, and only regular files. It reports a FIFO, socket or device named like a script instead of reading it. It follows a symbolic link only when the real path stays inside the folder. When the checked folder is a project folder (it has a `package.json`) and is, or contains, the working directory, the walk skips `src`, `test` and dot folders and stops below depth 6, so it stays out of your source tree. The skipped folders are listed as `output.walk-fenced`.
+
+The checks that need the backend, such as whether the map of a given ID is uploaded, are not part of this command.
+
+## JSON report
+
+`--json` prints one report with `schemaVersion: 1`:
+
+```json
+{
+  "schemaVersion": 1,
+  "tool": "bugsee-sourcemaps-doctor",
+  "dir": "/path/to/dist",
+  "summary": { "errors": 0, "warnings": 1, "infos": 2, "bundles": 12, "maps": 12 },
+  "passed": ["stamp.missing-debug-id"],
+  "findings": [
+    {
+      "id": "env.token-missing",
+      "severity": "warning",
+      "message": "…",
+      "fix": "…",
+      "file": "…",
+      "details": {}
+    }
+  ],
+  "ignored": []
+}
+```
+
+`passed` lists the checks that ran and found nothing. `file` and `details` appear only on findings that have them, and `ignored` appears only when you passed `--ignore`. The schema version changes only on an incompatible change.
+
+## From code
+
+`@bugsee/bundler-plugin-core` exports the same check as `diagnoseBuildOutput(dir, options)`. It returns the report above.
+
+```ts
+import { diagnoseBuildOutput } from '@bugsee/bundler-plugin-core';
+
+const report = await diagnoseBuildOutput('dist', { skipEnv: true });
+if (report.summary.errors > 0) {
+  process.exitCode = 2;
+}
+```
+
+## Related pages
+
+- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — stamp and upload during the build
+- [Symbolication overview](/sdk/javascript/symbolication/overview) — how debug IDs work
+- [Environment and variables](/sdk/javascript/symbolication/environment) — tokens, versions and the `.env.bugsee-build-plugin` file

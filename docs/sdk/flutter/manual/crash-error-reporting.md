@@ -6,7 +6,7 @@ slug: "/sdk/flutter/manual/crash-error-reporting"
 ---
 
 :::warning[Beta]
-This page documents Bugsee Flutter SDK **10.x**, which is in beta, is not published on pub.dev yet and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
 :::
 
 Bugsee detects native crashes on its own (see [Overview](/sdk/flutter/overview)). A Dart error is different: it never ends the app, so nothing crashes and nothing is reported unless you say so. This page covers the calls you make yourself. To report the errors nobody handled, without wrapping every call, see [Dart errors](/sdk/flutter/dart-errors).

@@ -6,7 +6,7 @@ slug: "/sdk/flutter/manual/bug-reporting"
 ---
 
 :::warning[Beta]
-This page documents Bugsee Flutter SDK **10.x**, which is in beta, is not published on pub.dev yet and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
 :::
 
 Bug reports cover something that is wrong but did not crash the app. Your users can raise one with a gesture, or you can open the report dialog, or submit a report silently, from your own code. Handled and unhandled Dart errors are covered separately, in [Crash & error reporting](/sdk/flutter/manual/crash-error-reporting).

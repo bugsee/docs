@@ -1,0 +1,185 @@
+---
+title: "Backend overview"
+description: "How the Bugsee JavaScript SDK instruments Node.js and Bun servers: per-request context, trace correlation, automatic incoming-request instrumentation and the framework adapters."
+sidebar_position: 1
+slug: "/sdk/javascript/backend/overview"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+On a server, Bugsee records what your process was doing around a failure and ties it to the request that was running. Each request gets a context and an `http.server` transaction, and an error reported while the request runs carries both.
+
+## What Bugsee records
+
+- **Per-request context.** A request context holds an id, the trace of the request and, if you provide it, the end-user identity. Everything Bugsee captures while the request runs (logs, network calls, breadcrumbs) is tagged with it.
+- **An `http.server` transaction per request** (Node.js; not on Bun with `@bugsee/bun`, see [Running on Bun](#running-on-bun)). It is named after the route, carries the method and the response status, and continues the trace of the caller when the request has a `traceparent` header. See [Performance](/sdk/javascript/performance).
+- **Errors.** A framework adapter reports an error your route throws, with the request context merged into the report.
+- **Process-level signals.** Uncaught exceptions, unhandled rejections and event-loop hangs are detected for the whole process. See [Issue detection](/sdk/javascript/issue-detection/overview).
+
+## How it works
+
+Two layers cooperate:
+
+1. **Incoming-request instrumentation** is part of the SDK and needs no adapter. It is on by default and covers any server built on `node:http` or `Bun.serve`.
+2. **A framework adapter** adds what the SDK cannot see from outside: reporting of errors that the framework catches, the route pattern as the transaction name, and your `user` getter.
+
+When both run, the first one to see a request owns its context and transaction. The other one refines them (route name, user, error report), so a request gets exactly one context and one transaction.
+
+## Request context
+
+A request context lives in Node's `AsyncLocalStorage`, so it follows the request through every `await`, timer and callback it starts. Concurrent requests each see their own context.
+
+Bugsee tags; it does not isolate. There is one capture buffer for the process. Every entry recorded while a context is active is stamped with the context id, and with the trace id and span id when the request has a trace. The entries of concurrent requests are interleaved in the same recording, and the stamp is what tells them apart. An entry recorded outside any request, such as a timer or a startup log, carries no stamp.
+
+When a report is created inside a context, it records the context id. The context's `user` and attributes are merged over the global ones for that report only, so a user set for one request never leaks into another.
+
+You do not create or enter a context yourself. The incoming-request instrumentation or the adapter does it.
+
+## Incoming-request instrumentation
+
+`instrumentIncomingRequests` is `true` by default. Set it to `false` to turn it off.
+
+```ts
+import { launch } from '@bugsee/express'; // or the adapter for your framework
+
+launch('<your_app_token>', {
+  instrumentIncomingRequests: false,
+});
+```
+
+When it is on:
+
+- On Node.js and Bun, Bugsee patches `emit` on the `node:http` and `node:https` server prototypes. Every `request` event runs inside a context and, when the performance extension is present, a transaction. `@bugsee/bun` has no performance extension, so there is a context but no transaction on Bun.
+- On Bun with `@bugsee/bun`, it also wraps `Bun.serve` when you pass it a `fetch` handler. The Node.js build that an adapter re-exports does not wrap `Bun.serve`.
+- Where there is a transaction, it is named `<METHOD> <path>`, with the query string removed, until an adapter refines it to the route pattern, for example `/users/:id`.
+- No headers and no bodies of the incoming request are captured by this layer.
+
+:::note
+A framework that catches a thrown error and turns it into a 500 response hides it from `node:http`, so automatic instrumentation cannot report it. That is what the adapters are for. An error nobody catches is still detected as a crash.
+:::
+
+## Trace correlation
+
+**Inbound.** When a request carries a valid W3C `traceparent` header, the `http.server` transaction continues that trace: it adopts the trace id, becomes a child of the caller's span and follows the caller's sampling decision. Entries recorded during the request are stamped with that trace id.
+
+**Outbound.** Bugsee adds `traceparent` to the outgoing requests your server makes, so the downstream service continues the same trace. `propagateTrace` is `true` by default, but a server has no same-origin concept, so nothing is sent until you list your own services in `tracePropagationTargets`. This keeps the trace from leaking to third-party APIs.
+
+```ts
+launch('<your_app_token>', {
+  tracePropagationTargets: [
+    // One host, any port, path or query
+    /^https?:\/\/billing\.internal\.example\.com(?::\d+)?(?:[/?#]|$)/,
+    // Any subdomain of your internal domain
+    /^https?:\/\/[^/?#:@]+\.internal\.example\.com(?::\d+)?(?:[/?#]|$)/,
+  ],
+});
+```
+
+A target is a string or a regular expression; functions are not accepted. Each is tested against the full request URL, including scheme, port, path and query. A string matches anywhere in the URL, so `'https://billing.internal.example.com'` also matches `https://billing.internal.example.com.attacker.test/` and `https://attacker.test/?u=https://billing.internal.example.com`. Use a string only for a complete URL prefix you control. For hosts, use regular expressions anchored with `^` that end at the host boundary, as above: the scheme is `http` or `https`, an optional port follows the host, and the next character must be `/`, `?`, `#` or the end of the URL.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `instrumentIncomingRequests` | `boolean` | `true` | Open a context and an `http.server` transaction for each incoming request. |
+| `propagateTrace` | `boolean` | `true` | Add `traceparent` to outgoing requests. Needs `tracePropagationTargets`. `false` turns it off. |
+| `tracePropagationTargets` | `(string \| RegExp)[]` | none | Outgoing URLs allowed to receive the trace headers. A string matches as a substring. |
+| `traceResponse` | `{ traceresponse?: boolean, serverTiming?: boolean }` | both off | Return the trace to the caller in a `traceresponse` header, a `Server-Timing` entry, or both. |
+
+`traceResponse` also accepts `timingAllowOrigin` and `exposeTraceresponse` for cross-origin browsers.
+
+## Framework adapters
+
+Install only the adapter for your framework. It installs `@bugsee/bugsee` for you and re-exports the Node entry of it, so you import `launch` and the adapter's setup function from the same package.
+
+| Framework | Package | Setup call | Page |
+| --- | --- | --- | --- |
+| Express | `@bugsee/express` | `setupExpress(app)` | [Express](/sdk/javascript/backend/express) |
+| Fastify | `@bugsee/fastify` | `setupFastify(app)` | [Fastify](/sdk/javascript/backend/fastify) |
+| NestJS | `@bugsee/nestjs` | `setupNest(app)` | [NestJS](/sdk/javascript/backend/nestjs) |
+| Hono | `@bugsee/hono` | `setupHono(app)` | [Hono](/sdk/javascript/backend/hono) |
+| Koa | `@bugsee/koa` | `setupKoa(app)` | [Koa](/sdk/javascript/backend/koa) |
+| hapi | `@bugsee/hapi` | `setupHapi(server)` | [hapi](/sdk/javascript/backend/hapi) |
+| Elysia | `@bugsee/elysia` | `setupElysia(app)` | [Elysia](/sdk/javascript/backend/elysia) |
+
+Call `launch()` first, at the top of your server entry. If no client is launched, an adapter does nothing and passes every request through.
+
+### Adapter options
+
+Every adapter takes an options object as its second argument.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `user` | `(request) => string \| undefined` | off | The end-user identity for reports raised during the request. Nothing identifying is read unless you provide it. The argument is the framework's request or context object. |
+| `shouldReport` | `(error) => boolean` | status-based | Decides whether a thrown error is reported. |
+| `onError` | `(error) => void` | none | Receives a failure of the adapter itself. It never reaches the request. |
+
+The default `shouldReport` reports an error that has no HTTP status or a status of 500 or higher, and skips a 4xx. It reads the status from `getStatus()`, `status`, `statusCode` or `output.statusCode`. Some adapters add framework rules on top, described on their pages.
+
+An adapter never throws into your request pipeline.
+
+## Running on Bun
+
+The `launch` that an adapter re-exports is the Node.js build. On Bun it works, but reports name the runtime `node`, and `Bun.serve` requests are not instrumented. On Bun, install `@bugsee/bun` next to the adapter and import `launch` from it:
+
+```bash
+bun add @bugsee/elysia @bugsee/bun
+```
+
+```ts
+import { launch } from '@bugsee/bun';
+import { setupElysia } from '@bugsee/elysia';
+```
+
+The adapter's setup function and the rest of its API are the same, with two differences. `@bugsee/bun` does not include the performance extension, so there is no `http.server` transaction on Bun; the request context, error reporting and trace tagging still work. And `captureLocalVariables` is always off on Bun. See [Bun](/sdk/javascript/platforms/bun).
+
+## Requirements
+
+- Node.js 18 or newer, or Bun 1.1.13 or newer.
+- The adapter package for your framework. It brings `@bugsee/bugsee` with it. On a server, `launch()` returns the client directly and does not return a promise.
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm">
+
+```bash
+npm install @bugsee/express
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/express
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/express
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/express
+```
+
+  </TabItem>
+</Tabs>
+
+Replace `@bugsee/express` with the adapter for your framework.
+
+## Related pages
+
+- [Express](/sdk/javascript/backend/express) — the first adapter to read, with the most detail on error-handler placement
+- [Issue detection](/sdk/javascript/issue-detection/overview) — crashes, hangs and HTTP errors on a server
+- [Performance](/sdk/javascript/performance) — the transactions and spans the adapters create
+- [OpenTelemetry](/sdk/javascript/opentelemetry) — export transactions to your own backend
+- [Node.js platform](/sdk/javascript/platforms/node) — the options that apply to every Node process

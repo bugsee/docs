@@ -6,16 +6,16 @@ slug: "/sdk/flutter/release-notes"
 ---
 
 :::warning[Beta]
-This page documents Bugsee Flutter SDK **10.x**, which is in beta, is not published on pub.dev yet and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
 :::
 
 Release history for Bugsee Flutter SDK 10.x: `bugsee_flutter` and `bugsee_flutter_feedback`, which are released together at the same version. Looking for the stable release? See the [9.x release notes](/sdk/flutter/v9/release-notes). Upgrading from 9.x? See the [migration guide](/sdk/flutter/migration).
 
 Each release lists the native SDKs it is built on. Their own changes are in the native SDK release notes: [Android](/sdk/android/release-notes) and [iOS](/sdk/ios/release-notes).
 
-## 10.0.0-beta.1 (prerelease, not published yet)
+## 10.0.0-beta.1 (prerelease, 2026-11-27)
 
-A rewrite for the Bugsee 7.x native SDKs (Android 7.6.0, iOS 7.1.0). **A prerelease, not published on pub.dev yet.** Existing 9.x apps should stay on 9.x: there is no compatibility layer: stay on 9.x or follow the migration guide. See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+A rewrite for the Bugsee 7.x native SDKs (Android 7.6.1, iOS 7.1.0). **A prerelease**: a plain `^9.0.0` constraint does not select it; ask for `^10.0.0-beta.1` explicitly. Existing 9.x apps should stay on 9.x: there is no compatibility layer: stay on 9.x or follow the migration guide. See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
 
 **Features**
 
@@ -49,7 +49,7 @@ A rewrite for the Bugsee 7.x native SDKs (Android 7.6.0, iOS 7.1.0). **A prerele
 
 **Compatibility**
 
-- Android: Bugsee Android SDK 7.6.0, Bugsee Gradle plugin 4.1.1.
+- Android: Bugsee Android SDK 7.6.1, Bugsee Gradle plugin 4.1.1.
 - iOS: Bugsee iOS SDK 7.1.0.
 
 ### Known limitations

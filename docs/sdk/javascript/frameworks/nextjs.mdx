@@ -1,0 +1,220 @@
+---
+title: "Next.js"
+description: "Set up the Bugsee JavaScript SDK in a Next.js app with @bugsee/nextjs: instrumentation.ts for Node.js and Edge, instrumentation-client.ts, middleware errors, source maps with withBugsee and trace correlation."
+sidebar_position: 6
+slug: "/sdk/javascript/frameworks/nextjs"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/nextjs` reports server errors through `instrumentation.ts` (Node.js and Edge runtimes), captures the browser through `instrumentation-client.ts`, and reports errors thrown in middleware. It is a single install: it bundles the browser, Node.js and Edge SDKs and re-exports the React adapter from `@bugsee/nextjs/client`.
+
+## Requirements
+
+- Next.js 15 or newer for server-error reporting: the `onRequestError` hook that `instrumentation.ts` re-exports was introduced in Next.js 15 and is never called by Next.js 14. The client file `instrumentation-client.ts` needs Next.js 15.3 or newer.
+- Node.js 18 or newer for server code.
+- `react` 18 or newer (optional peer dependency).
+- An app token. Create a JavaScript application in Bugsee and choose **Next.js** as its target; see [Create your app](/sdk/javascript/installation#create-your-app).
+
+For the automatic OpenTelemetry bridge, `@opentelemetry/api` plus your OpenTelemetry SDK are optional peer dependencies: `@opentelemetry/sdk-trace-base` (OTel JS 1.x and 2.x) or `@opentelemetry/sdk-trace` (OTel JS 2.9 or newer, required on 3.x).
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/nextjs
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/nextjs
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/nextjs
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/nextjs
+```
+
+  </TabItem>
+</Tabs>
+
+## Set up
+
+### Server
+
+`register()` picks the Node.js or Edge SDK by runtime. Re-export `onRequestError` so Next.js reports server errors.
+
+```ts title="instrumentation.ts"
+import { register as bugsee } from '@bugsee/nextjs';
+
+export function register() {
+  return bugsee(process.env.BUGSEE_TOKEN!);
+}
+
+export { onRequestError } from '@bugsee/nextjs';
+```
+
+### Client
+
+Next.js 15.3 and later load `instrumentation-client.ts` in the browser before your app code. Export `onRouterTransitionStart` to record a breadcrumb for each client-side navigation.
+
+```ts title="instrumentation-client.ts"
+import { registerClient } from '@bugsee/nextjs/client';
+
+registerClient(process.env.NEXT_PUBLIC_BUGSEE_TOKEN!);
+
+export { onRouterTransitionStart } from '@bugsee/nextjs/client';
+```
+
+`registerClient` returns a `Promise` of the client. An application token is not a secret, so it is fine in a `NEXT_PUBLIC_` variable.
+
+`@bugsee/nextjs/client` also re-exports the React adapter, so you can import `BugseeErrorBoundary` from there. See [React](/sdk/javascript/frameworks/react).
+
+### Middleware (optional)
+
+On the Edge runtime, Next.js catches an error thrown in middleware and calls `onRequestError` with `routeType: 'middleware'`, so it can reach Bugsee without a wrapper. It is not delivered on the Node.js middleware runtime (a [known Next.js limitation](https://github.com/vercel/next.js/issues/83404)). Wrapping your middleware with `withBugseeMiddleware` runs it inside a per-invocation context so capture correlates with the failing request, captures and rethrows a thrown error, and flushes the report with the fetch event's `waitUntil`. On the Edge runtime you can use it together with `onRequestError`: both report through `logException`, which skips an error object it has already captured, so the same thrown error is expected to be reported once.
+
+```ts title="middleware.ts"
+import { withBugseeMiddleware } from '@bugsee/nextjs/middleware';
+
+export const middleware = withBugseeMiddleware((request, event) => {
+  // ...
+});
+```
+
+### One trace for server and browser (optional)
+
+`getBugseeTraceData()` returns the active server request's trace. Spread it into `generateMetadata()` so Next.js renders a `<meta name="traceparent">` tag. The browser client reads it on page load, so the server request and the initial page session become one trace.
+
+```ts title="app/layout.tsx"
+import { getBugseeTraceData } from '@bugsee/nextjs';
+
+export function generateMetadata() {
+  return { other: getBugseeTraceData() };
+}
+```
+
+It returns `{}` when no trace is active.
+
+## Entry points
+
+| Entry | Exports |
+| --- | --- |
+| `@bugsee/nextjs` | `register`, `onRequestError`, `createOnRequestError`, `getBugseeTraceData` |
+| `@bugsee/nextjs/client` | `registerClient`, `onRouterTransitionStart`, plus the React adapter |
+| `@bugsee/nextjs/middleware` | `withBugseeMiddleware` |
+| `@bugsee/nextjs/config` | `withBugsee`. Build time only: import it from `next.config`, never from app code. |
+| `@bugsee/nextjs/server` | `registerServer` and the shared client exports. The Node.js composition that `register()` loads for you. |
+| `@bugsee/nextjs/edge` | `registerEdge` and the shared client exports. The Edge composition that `register()` loads for you. |
+
+## Options
+
+`register(appToken, options)` and `registerClient(appToken, options)` accept the SDK launch options. The most relevant:
+
+| Where | Option | Default | Description |
+| --- | --- | --- | --- |
+| Server | `instrumentIncomingRequests` | `true` | Instrument incoming requests. |
+| Server | `captureLocalVariables` | `false` | Capture local variables on errors. |
+| Server | `detectHangs` | `true` | Event-loop hang detection. |
+| Server | `setupOtelProvider` | `true` | Install Bugsee's OpenTelemetry provider when no provider is registered yet. An existing provider is never replaced. Set `false` if you manage OpenTelemetry yourself. |
+| Client | `captureLogs`, `captureNetwork` | `true` | Console and network capture. |
+| Client | `maxRecordingTime` | `60` | Seconds of recording to keep. |
+| Client | `replay` | `true` | Session replay. Pass `false` to turn it off. |
+
+See [Browser](/sdk/javascript/platforms/browser#browser-options) and [Node.js](/sdk/javascript/platforms/node#node-options) for the full lists.
+
+## Source maps
+
+`withBugsee` makes `next build` stamp debug IDs and upload source maps, so a minified browser, server or edge stack trace is shown against your original source. It handles both webpack (`next build --webpack`, the default up to Next.js 15) and Turbopack (the default in Next.js 16).
+
+```js title="next.config.mjs"
+import { withBugsee } from '@bugsee/nextjs/config';
+
+export default withBugsee(
+  {
+    // your Next.js config: an object, a (phase) function, or an async function
+  },
+  {
+    // BUGSEE_APP_TOKEN in the environment (or .env.bugsee-build-plugin) works too
+    appToken: process.env.BUGSEE_APP_TOKEN,
+  },
+);
+```
+
+With CommonJS, use `const { withBugsee } = require('@bugsee/nextjs/config');` in `next.config.js`. Without a token the integration changes nothing about what Next.js emits and uploads nothing.
+
+For a production build it does this:
+
+- Turns on `productionBrowserSourceMaps` when you did not set it, and only when the build can actually upload, so the browser bundles have maps. Where it cannot upload, it leaves the option as you set it and says so.
+- **webpack:** adds one Bugsee plugin to each of the client, server and edge compilations. Each stamps a debug ID into its bundles inside the build, before Subresource Integrity hashes are taken, and uploads the maps of exactly the files that compilation wrote.
+- **Turbopack:** has no plugin API, so the upload runs from the `compiler.runAfterProductionCompile` hook (Next.js 15.4.0 or newer). After Turbopack writes `.next` and before Next.js generates the static pages, it stamps the written bundles, verifies the stamp (and undoes it if it does not verify), uploads the maps and removes them.
+- Deletes the browser maps in `.next/static`, which `next start` and CDNs serve publicly, after a confirmed upload. Server and edge maps stay on disk.
+- Bakes the app version and build into every bundle for the runtime SDK (needs Next.js 15.1.0 or newer).
+
+Your own config is kept. Your `webpack` function runs first and its result is extended, your `compiler.runAfterProductionCompile` runs before Bugsee's, `compiler.define` keys you set win, and `productionBrowserSourceMaps: false` is respected. `next dev`, `next start` and `next export` are not touched.
+
+The options are those of the [bundler plugins](/sdk/javascript/symbolication/bundler-plugins#options): `appToken`, `appVersion`, `appBuild`, `endpoint`, `deleteMaps`, `dryRun`, `failOnError`, `stripSourcesContent`, `disabled`, `vcs`, `commit`, `registerBuild`, `onError` and `onNotice`. Three more are specific to Next.js:
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `serverSourceMaps` | `true` | Emit and upload server and edge maps. With webpack, the server and edge compilations get `devtool: "source-map"` if you left it unset. Next.js's own `experimental.serverSourceMaps` is never changed. |
+| `deleteServerMaps` | `false` | Delete server and edge maps after a confirmed upload. |
+| `silent` | `false` | Suppress configuration notices. Failures are still reported. |
+
+Things to know:
+
+- Run `next build` from the project folder. The config is resolved once, at load, from the working directory, which decides where the token file, the app version and the installed Next.js version are looked up.
+- The browser maps are written to `.next/static`, which is served publicly, and deleted after a confirmed upload. If the upload fails and `failOnError` is off, they stay there so you can retry. If that is not acceptable, set `failOnError: true` so a failed upload stops the build, or delete `.next/static/**/*.map` in your deploy step.
+- **Subresource Integrity.** Turbopack hashes its output (`experimental.sri`) before the hook runs, so stamping afterwards would make the browser refuse your scripts. A Turbopack SRI build is therefore left exactly as Next.js wrote it, with a notice, and no maps are uploaded. Build with `--webpack` to upload maps for an SRI build.
+- On Next.js 15, Turbopack points two runtime chunks at one shared map. Those chunks are left unstamped, and that map is neither uploaded nor deleted. It contains Turbopack's runtime source, not your code.
+- A build with source maps turned off, so nothing is stamped, registers no build.
+
+See [Symbolication](/sdk/javascript/symbolication/overview) for how debug IDs work, and the [source map doctor](/sdk/javascript/symbolication/doctor) to check a build.
+
+## Navigation breadcrumbs
+
+`onRouterTransitionStart` writes one `navigation` breadcrumb per soft navigation. The address in it is sanitized first, so values such as `?code=...`, `?state=...` and `#access_token=...` never reach the report. Ids, emails and other values in a path segment are not redacted.
+
+## Notes
+
+- **Edge runtime.** `register()` picks the Edge SDK there. Edge capture is incident-driven: it uploads only when something goes wrong. See [Vercel Edge](/sdk/javascript/platforms/vercel-edge).
+- **Source maps.** `withBugsee` uploads them from `next build`. See [Source maps](#source-maps).
+- **Backend context.** Each server request gets a context so logs and errors tie to it. See [Backend](/sdk/javascript/backend/overview).
+
+## Verify
+
+Throw from a route handler or server component:
+
+```ts title="app/api/test/route.ts"
+export function GET() {
+  throw new Error('Bugsee test error');
+}
+```
+
+Request `/api/test`. The error shows up in the Bugsee dashboard.
+
+## Related pages
+
+- [React](/sdk/javascript/frameworks/react) — the error boundary and route naming
+- [Vercel Edge](/sdk/javascript/platforms/vercel-edge) — the Edge runtime build
+- [Backend](/sdk/javascript/backend/overview) — request context and trace correlation
+- [Symbolication](/sdk/javascript/symbolication/overview) — source maps and debug IDs
+- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — the options that `withBugsee` shares

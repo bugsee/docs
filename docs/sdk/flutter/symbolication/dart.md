@@ -6,7 +6,7 @@ slug: "/sdk/flutter/symbolication/dart"
 ---
 
 :::warning[Beta]
-This page documents Bugsee Flutter SDK **10.x**, which is in beta, is not published on pub.dev yet and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
 :::
 
 A Dart error from a debug build carries a readable stack. A release build made with `--split-debug-info`, with or without `--obfuscate`, does not: the stack is in the VM's non-symbolic format, and Bugsee needs the symbols file that the build wrote.

@@ -1,0 +1,84 @@
+---
+title: "Component names"
+description: "Keep component names in the Bugsee JavaScript SDK's reports when minification mangles them: the Babel plugin for React, Preact and Solid, the Svelte preprocessor, and the Vue mixin."
+sidebar_position: 10
+slug: "/sdk/javascript/frameworks/component-names"
+---
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+Minification renames your components, so a click or an error that happens inside `UserCard` can end up attributed to something like `t` or `e`. The component name plugins fix that at build time. They label the DOM elements a component renders with the component's name, in a `data-bugsee-component` attribute. Bugsee reads that attribute in the browser to attribute clicks and errors to the component, even in a minified build.
+
+The plugins are optional and have nothing to do with source maps. Without them, everything is still captured and your stack traces are still readable once you [upload source maps](/sdk/javascript/symbolication/overview). They only add the component name.
+
+| Framework | How | Package |
+| --- | --- | --- |
+| React, Preact, Solid | A Babel plugin with no options. Needs `@babel/core` 7. | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/babel-plugin-component-annotate" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/babel-plugin-component-annotate</code></a> |
+| Svelte, SvelteKit | A Svelte preprocessor. Needs `svelte` 4 or newer. | <a class="external-link external-link-icon" href="https://www.npmjs.com/package/@bugsee/svelte-plugin-component-annotate" target="_blank" rel="noopener noreferrer nofollow"><code>@bugsee/svelte-plugin-component-annotate</code></a> |
+| Vue | A runtime mixin, not a build plugin. | Included in [`@bugsee/vue`](/sdk/javascript/frameworks/vue#component-names-in-minified-builds) |
+
+## React, Preact and Solid
+
+Install the plugin as a development dependency:
+
+```bash
+npm install --save-dev @bugsee/babel-plugin-component-annotate
+```
+
+Add it to your Babel configuration:
+
+```js title="babel.config.cjs"
+module.exports = {
+  plugins: [['@bugsee/babel-plugin-component-annotate']],
+};
+```
+
+The plugin adds `data-bugsee-component="<ComponentName>"` to each host element, such as a `<button>` or `<div>`, that a PascalCase function or class component renders. It does not annotate component elements.
+
+If you build with Vite and `@vitejs/plugin-react`, pass the plugin through that plugin's Babel option. For Solid, use `vite-plugin-solid`'s Babel option.
+
+## Svelte and SvelteKit
+
+Install the preprocessor as a development dependency:
+
+```bash
+npm install --save-dev @bugsee/svelte-plugin-component-annotate
+```
+
+Add it to the `preprocess` list in `svelte.config.js`:
+
+```js title="svelte.config.js"
+import { componentAnnotatePreprocessor } from '@bugsee/svelte-plugin-component-annotate';
+
+export default {
+  preprocess: [componentAnnotatePreprocessor()],
+};
+```
+
+On SvelteKit 3 there is no `svelte.config.js`. Pass `preprocess` to the `sveltekit()` Vite plugin instead:
+
+```ts title="vite.config.ts"
+import { componentAnnotatePreprocessor } from '@bugsee/svelte-plugin-component-annotate';
+import { sveltekit } from '@sveltejs/kit/vite';
+
+export default {
+  plugins: [sveltekit({ preprocess: [componentAnnotatePreprocessor()] })],
+};
+```
+
+The name comes from the file name, so `UserCard.svelte` becomes `UserCard`. For `index.svelte` and SvelteKit route files, the folder name is used.
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `renderSpans` | `boolean` | `false` | Also record a render span for each component's initialization in your performance data. Needs `@bugsee/svelte`. |
+
+## Vue
+
+Vue does not need a build plugin. Register the component mixin that `@bugsee/vue` provides; see [Vue](/sdk/javascript/frameworks/vue#component-names-in-minified-builds).
+
+## Related pages
+
+- [React](/sdk/javascript/frameworks/react), [Solid](/sdk/javascript/frameworks/solid), [Svelte](/sdk/javascript/frameworks/svelte) and [Vue](/sdk/javascript/frameworks/vue) — the framework setup pages
+- [Symbolication overview](/sdk/javascript/symbolication/overview) — readable stack traces, which is a separate step

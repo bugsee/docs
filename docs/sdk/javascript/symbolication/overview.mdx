@@ -1,0 +1,77 @@
+---
+title: "Symbolication overview"
+description: "How Bugsee turns minified JavaScript stack traces back into your source with debug IDs and source maps, which build step does what, and how to choose a setup."
+sidebar_position: 1
+slug: "/sdk/javascript/symbolication/overview"
+---
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+A production JavaScript build is bundled and minified. A crash from that build carries frames such as `a.js:1:48210` and function names like `t`. To show you your own files, functions and lines, Bugsee needs the source map of the exact bundle that ran.
+
+Symbolication has to survive two problems: the map is uploaded at build time, long before the crash, and many versions of your app run at once. Bugsee solves both with a **debug ID**.
+
+## How debug IDs work
+
+A debug ID is a UUID that names one bundle and its source map. It is derived from the content of the files, so the same build always gets the same ID.
+
+1. **At build time**, the build is stamped. Bugsee appends the ID to each bundle as a `//# debugId=<uuid>` comment and a small runtime stub, and writes the same ID into the paired source map.
+2. **At build time**, the source maps are uploaded, keyed by their debug ID. By default the local `.map` files are deleted afterwards, so they are not deployed.
+3. **At run time**, the SDK reads the stub. When it builds a crash or error report, it stamps each stack frame with the debug ID of the bundle the frame came from.
+4. **On the server**, Bugsee looks up the map by debug ID and resolves each frame to your original file, line and function.
+
+You never choose which map applies to a crash. The ID of the code that actually ran does it. A build with several bundles or chunks has one ID per file.
+
+The version and build you give the upload are only a fallback key. See [Environment and variables](/sdk/javascript/symbolication/environment).
+
+## What you need
+
+- **Source maps from your build.** Turn them on in the bundler. They must be external files, not inline.
+- **The stamp and upload step**, run once per production build. A bundler plugin does it for you, or you run the Bugsee CLI after the build.
+- **Your app token** at build time.
+
+Nothing changes in your runtime code. The SDK reads the debug IDs by itself.
+
+## Choose a setup
+
+| Your build | Use | Page |
+| --- | --- | --- |
+| Vite, or a framework built on Vite | `@bugsee/vite-plugin` | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
+| webpack | `@bugsee/webpack-plugin` | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
+| Rollup, esbuild, Rspack | The plugins exported by `@bugsee/bundler-plugin-core` | [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) |
+| Angular | `ng add @bugsee/angular` | [Angular](/sdk/javascript/frameworks/angular#source-maps) |
+| Next.js | `withBugsee` from `@bugsee/nextjs/config` | [Next.js](/sdk/javascript/frameworks/nextjs#source-maps) |
+| tsup, `tsc`, Bun's bundler, any other tool | The `bugsee-cli` commands after the build | [Manual upload with the CLI](/sdk/javascript/symbolication/manual) |
+
+The plugins run the same CLI that you can run by hand. The CLI works on any finished output folder, whatever produced it. See [Source maps](/cli/sourcemaps) for every command and flag, and [CLI installation](/cli/installation) to install it.
+
+## Requirements and limits
+
+- **Composed maps.** If your build has several transform steps, such as a separate minifier after the bundler, the map you upload must map the shipped code straight to your original sources. The CLI uploads the map it finds on disk and does not compose layers itself.
+- **The stamp rewrites your bundles.** It appends bytes to each `.js`, `.cjs` and `.mjs` file. A build that pins script hashes with Subresource Integrity breaks if the hashes are computed before the stamp. The Vite, Rollup, webpack and Rspack plugins stamp inside the build, before later hashes are taken, so list the Bugsee plugin before any SRI plugin. When the plugin stamps after the build (esbuild, the CLI), it refuses to stamp a build that pins hashes. When an in-build stamp is followed by a hash that no longer matches, the plugin detects it but only warns by default: the emitted files are not restored and the build is not stopped, so the deployed scripts can be rejected by browsers. Compute integrity hashes after the stamp, or set `failOnError: true` to fail the build on a detected mismatch. The Angular tool re-seals the hashes for you after stamping.
+- **Bytecode targets are not covered.** This SDK is for web, Node.js and Bun. It does not symbolicate JavaScript compiled to bytecode.
+- **Unbundled code.** Plain `tsc` or `tsx` output has no bundler hook, so use the CLI.
+
+### Node.js and Bun
+
+The SDK also stamps frames of server code. Two details:
+
+- With `node --enable-source-maps`, Node.js rewrites stack traces to your original files before the SDK reads them. The SDK checks that a stamp belongs to the bundle it was read from, so it does not attach a wrong debug ID. With the plugin's default of deleting the maps, nothing is rewritten.
+- Bun does not rewrite stack traces, so the flag is not relevant there.
+
+## Verify it works
+
+- Run the [source map doctor](/sdk/javascript/symbolication/doctor) on the output folder. It checks offline why a crash from this build would not symbolicate.
+- Run the build with `dryRun: true` in the plugin, or `--dry-run` in the CLI. Nothing is uploaded or deleted, and the log shows what would be.
+- Check that the log says files were stamped. A bundle with an extension other than `.js`, `.cjs` or `.mjs` is skipped silently by the CLI.
+- Trigger a test error from a production build and open the report. Frames should show your file names and lines.
+
+## Related pages
+
+- [Bundler plugins](/sdk/javascript/symbolication/bundler-plugins) — Vite, webpack, Rollup, esbuild and Rspack, with all options
+- [Manual upload with the CLI](/sdk/javascript/symbolication/manual) — tsup, `tsc` and Bun
+- [Environment and variables](/sdk/javascript/symbolication/environment) — tokens, versions and the `.env.bugsee-build-plugin` file
+- [Source map doctor](/sdk/javascript/symbolication/doctor) — check a build folder offline
+- [Errors and crashes](/sdk/javascript/issue-detection/errors-and-crashes) — the reports that carry debug IDs

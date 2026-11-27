@@ -1,0 +1,185 @@
+---
+title: "Electron"
+description: "Set up the Bugsee JavaScript SDK in an Electron app with @bugsee/electron: main process, preload bridge, renderers, native crashes, sandboxed renderers and video capture."
+sidebar_position: 4
+slug: "/sdk/javascript/platforms/electron"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents the Bugsee JavaScript SDK, which is in beta (0.1.x) and can change between betas.
+:::
+
+`@bugsee/electron` joins the main process (Node.js), the renderer processes (Chromium) and native crashes into one Bugsee session. A report carries console output, network calls, logs and session replay from every process.
+
+The main process owns the session and uploads reports. Renderers stream their capture up to it over IPC, and the main process drives them back down with a control channel. Native crashes are collected through Electron's built-in `crashReporter` and attached to the same session.
+
+## Requirements
+
+- Electron with Node.js 18 or newer in the main process.
+- An app token. Create a JavaScript application in Bugsee and choose **Electron** as its target; see [Create your app](/sdk/javascript/installation#create-your-app).
+- A preload script in every window that should be recorded.
+
+The package has no dependency on `electron`. You pass Electron objects in, so it works with whichever Electron version you use.
+
+## Install
+
+<Tabs groupId="package-manager">
+  <TabItem value="npm" label="npm" default>
+
+```bash
+npm install @bugsee/electron
+```
+
+  </TabItem>
+  <TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @bugsee/electron
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @bugsee/electron
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```bash
+bun add @bugsee/electron
+```
+
+  </TabItem>
+</Tabs>
+
+Install `@bugsee/electron` directly. You do not need `@bugsee/bugsee`.
+
+## Set up
+
+There are three entry points, one for each process type.
+
+### 1. Main process
+
+Launch it early. Pass `ipcMain` (required), `app` (to catch renderer processes that die) and `crashReporter` (for native crashes).
+
+```ts title="main.ts"
+import { launchMain } from '@bugsee/electron/main';
+import { app, crashReporter, ipcMain } from 'electron';
+
+launchMain('<your_app_token>', { ipcMain, app, crashReporter });
+```
+
+`launchMain` returns the client directly.
+
+### 2. Preload script
+
+The preload exposes the IPC bridge through `contextBridge`, so it works with context isolation.
+
+```ts title="preload.ts"
+import { registerBugseePreload } from '@bugsee/electron/preload';
+import electron from 'electron';
+
+registerBugseePreload(electron);
+```
+
+### 3. Renderer
+
+```ts title="renderer.ts"
+import { launchRenderer } from '@bugsee/electron/renderer';
+
+launchRenderer('<your_app_token>');
+```
+
+`launchRenderer` returns a `Promise` of the client. Session replay is on by default and streams to the main process.
+
+## What is exported
+
+| Entry | Exports |
+| --- | --- |
+| `@bugsee/electron/main` | `launchMain`, the Electron tracker and crash helpers, the shared client exports (`getStatus`, `BugseeStatus`, `LifecycleEvents`, `addReportAttachment`, `getDefaultNetworkSanitizer`) and the video source helpers. |
+| `@bugsee/electron/preload` | `registerBugseePreload` and the bridge constants and types. |
+| `@bugsee/electron/renderer` | `launchRenderer` and the shared client exports. |
+
+`@bugsee/electron/main` has no `relaunch`: `launchMain` needs the app's `ipcMain`, so launch again from your own code if you must.
+
+## Options
+
+`launchMain(appToken, options)` takes these Electron options, plus every [Node.js option](/sdk/javascript/platforms/node#node-options) (`appVersion`, `captureLogs`, `captureNetwork`, `maxRecordingTime`, `dataDir` and others).
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `ipcMain` | Electron `ipcMain` | required | Carries capture from renderers and control messages back. |
+| `app` | Electron `app` | none | Watches for renderer processes that die, reports window and renderer events, and supplies `app.getVersion()` as the app version. |
+| `crashReporter` | Electron `crashReporter` | none | Collects native crashes (minidumps) into the session. |
+| `crashReporterExtra` | `Record<string, string>` | none | Extra fields sent with native crash dumps. |
+| `powerMonitor` | Electron `powerMonitor` | none | Records power events, thermal state and CPU speed limit. |
+| `screen` | Electron `screen` | none | Records display events and the `displays` trace. Pass it after the app is ready. |
+| `BrowserWindow` | Electron `BrowserWindow` | none | Lets the SDK track windows that already exist. |
+| `gpuInfoType` | `'basic'` \| `'complete'` | `'basic'` | The `app.getGPUInfo` argument used for hardware information. |
+| `captureWindowEvents` | `boolean` | `true` | Record window focus, show and hide events, and renderer hang events. Needs `app`. |
+| `video` | object | none | Opt-in pixel video capture. See [Video capture](#video-capture). |
+
+`launchRenderer(appToken, options)` takes the browser launch options. Pass `replay: false` to turn replay off. See [Browser](/sdk/javascript/platforms/browser#browser-options).
+
+## Sandboxed renderers
+
+A window with `sandbox: true` loads its preload as CommonJS, and that preload's `require` can load only Electron's built-in modules. It cannot load an external package or a sibling file. Bundle `@bugsee/electron/preload` into your single preload file with esbuild, webpack or Vite. Copying `dist/preload.cjs` next to your preload does not work.
+
+```ts title="preload.ts (bundled to one file)"
+import { registerBugseePreload } from '@bugsee/electron/preload';
+import electron from 'electron';
+
+registerBugseePreload(electron);
+```
+
+:::caution[One file]
+A preload that does `require('./other.cjs')` fails with "module not found" in a sandboxed renderer. Bundle everything the preload needs into one file.
+:::
+
+## Native crashes
+
+Pass Electron's `crashReporter` to `launchMain`. Crash dumps are attached to the session with session-correlated extra fields, so a native crash shows up next to the console and replay data of the same run.
+
+On Windows, Electron 45 adds a Windows Error Reporting helper (`<app>_wer.dll`, next to the executable) so that `crashReporter` also sees crashes such as `__fastfail`. Make sure your packager keeps that file in the install directory. If you rename `electron.exe`, rename the helper to match.
+
+## Video capture
+
+Session replay (DOM replay) is the default visual capture and needs nothing extra. To add pixel video next to it, pass `video: { source }` to `launchMain`. You supply the capture source; the SDK records the one you give it. The package provides helpers for the two source kinds: `capturePage` (`createCapturePageVideoSource`) and `MediaRecorder` (`createMediaRecorderVideoSource`). `hasPermission` is an optional gate that returns `false` to keep video inert, for example when macOS Screen Recording permission is missing.
+
+From Electron 45, screen, window and tab capture requests (`getDisplayMedia()` and `getUserMedia()` with `chromeMediaSource`) reach `session.setPermissionRequestHandler` as `display-capture`, not `media`. If your app allows only `media`, a `getDisplayMedia`-based source is denied. Allow `display-capture` for the window that hosts your source, and in `session.setPermissionCheckHandler` too if you install one. The `capturePage` source needs no permission.
+
+See [Session replay](/sdk/javascript/session-replay) for the replay options.
+
+## App version and build
+
+If you pass `app` to `launchMain`, the SDK reports `app.getVersion()` as the app version, so a packaged app shows the version from its `package.json` without extra setup. The `appVersion` and `appBuild` options always win.
+
+## Source maps
+
+Upload source maps for your renderer and main bundles so stack traces are readable. See [Symbolication](/sdk/javascript/symbolication/overview).
+
+## Verify
+
+1. Start the app with all three entry points in place.
+2. Log from a renderer and report a test error from the main process:
+
+```ts
+const bugsee = launchMain('<your_app_token>', { ipcMain, app, crashReporter });
+bugsee.logException(new Error('Bugsee test error'));
+```
+
+3. Open the Bugsee dashboard. The report appears with the main process data and the renderer console output in one session.
+
+If renderer data is missing, check that the preload ran in that window (no `preload-error` in the main process log) and, in a sandboxed window, that the preload is a single bundled file.
+
+## Related pages
+
+- [Node.js](/sdk/javascript/platforms/node) — options the main process shares with Node
+- [Browser](/sdk/javascript/platforms/browser) — options the renderers share with the browser
+- [Session replay](/sdk/javascript/session-replay) — DOM replay and video
+- [Symbolication](/sdk/javascript/symbolication/overview) — source maps and debug IDs
