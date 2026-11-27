@@ -206,8 +206,8 @@ With your root component wrapped in [`Bugsee.wrap`](/sdk/react_native/installati
 | `captureVideoFrameRate` | `com.bugsee.option.capture.video.frame-rate` | `FrameRate.High` | How often frames are captured. |
 | `captureViewHierarchy` | `com.bugsee.option.capture.view-hierarchy` | `true` | Capture the view hierarchy. |
 | `videoMode` (Android) | `com.bugsee.option.capture.video.mode` | `VideoMode.V2` | Android screen-capture strategy. |
-| `captureRespectFlagSecure` | `com.bugsee.option.capture.respect-flag-secure` | `true` | Blank windows with `FLAG_SECURE`. |
-| `captureVideoPrivacyBlur` | `com.bugsee.option.capture.video.privacy-blur` | `true` | Blur transition frames instead of skipping them; off, the video freezes for the transition. |
+| `captureRespectFlagSecure` (Android) | `com.bugsee.option.capture.respect-flag-secure` | `true` | Blank windows with `FLAG_SECURE`. |
+| `captureVideoPrivacyBlur` (iOS) | `com.bugsee.option.capture.video.privacy-blur` | `true` | Blur transition frames instead of skipping them; off, the video freezes for the transition. |
 
 The defaults are the same on both platforms; read the values in effect with [`Bugsee.getLaunchOptions()`](/sdk/react_native/configuration#reading-the-effective-options). See [Configuration](/sdk/react_native/configuration) for setting keys without an accessor.
 

@@ -140,7 +140,7 @@ These keys are accepted by both native SDKs. Each has an accessor on the options
 ### Detection
 
 | Accessor | Key | Type | Default | Description |
-| --- | | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | `detectAndReportEarlyCrash` | `com.bugsee.option.detect.early-crash` | boolean | `true` | Also catch crashes very early in startup. |
 | `detectAndReportExit` | `com.bugsee.option.detect.exit` | boolean | `true` | Detect and report application exits. |
 | `detectAndReportHangFairLevel` | `com.bugsee.option.detect.hang.level.fair` | number (ms) | `3000` | Main-thread block that counts as a "Fair" hang. |
@@ -154,7 +154,7 @@ These keys are accepted by both native SDKs. Each has an accessor on the options
 ### Capture
 
 | Accessor | Key | Type | Default | Description |
-| --- | | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | `captureScreenshot` | `com.bugsee.option.capture.screenshot` | boolean | `true` | Take a screenshot when a report is created. |
 | `captureScreenshotScale` | `com.bugsee.option.capture.screenshot.scale` | number | `1` | Down-then-up scaling of the screenshot, which destroys fine detail; `1` turns it off. |
 | `captureViewHierarchy` | `com.bugsee.option.capture.view-hierarchy` | boolean | `true` | Capture the view hierarchy for reports (also needs [`Bugsee.wrap`](/sdk/react_native/installation#4-launch-bugsee)). |
@@ -171,7 +171,7 @@ These keys are accepted by both native SDKs. Each has an accessor on the options
 ### Reporting
 
 | Accessor | Key | Type | Default | Description |
-| --- | | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | `triggerByShake` | `com.bugsee.option.reporting.triggers.shake` | boolean | `false` | Open the report UI when the device is shaken. Off by default since iOS SDK 7.1.0 and Android SDK 7.6.0. |
 | `triggerByScreenshot` | `com.bugsee.option.reporting.triggers.screenshot` | boolean | `false` | Open the report UI when the user takes a screenshot. |
 | `reportingDefaultCrashPriority` | `com.bugsee.option.reporting.defaults.crash-priority` | `IssueSeverity` | `Blocker` | Severity of crash reports. |
@@ -187,7 +187,7 @@ These keys are accepted by both native SDKs. Each has an accessor on the options
 ### Upload and performance
 
 | Accessor | Key | Type | Default | Description |
-| --- | | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | `notifyFlushDelay` | `com.bugsee.option.config.notify-flush-delay` | number (ms) | `0` | Coalescing window before queued `Bugsee.notify` items are sent. |
 | `performanceMonitoring` | `com.bugsee.option.performance.enabled` | boolean | `true` | Master switch for performance monitoring; see [Performance monitoring](/sdk/react_native/performance). |
 | `performanceSampleRate` | `com.bugsee.option.performance.sample-rate` | number `[0, 1]` | `0.01` | Probability that a transaction is sampled for a standalone upload, which is not active in this beta; see [Sampling](/sdk/react_native/performance#sampling). |
@@ -202,7 +202,7 @@ Some keys are accepted by one SDK only; the other SDK does not recognize them. T
 **Android only.** These are accessors on `AndroidLaunchOptions`. Native SDK reference: [Android configuration](/sdk/android/configuration).
 
 | Accessor | Key | Type | Default | Description |
-| --- | | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | `captureRespectFlagSecure` | `com.bugsee.option.capture.respect-flag-secure` | boolean | `true` | Protect windows that set `FLAG_SECURE`: they are blanked in the video and screenshots and left out of the view hierarchy. See [Privacy: Video](/sdk/react_native/privacy/video). |
 | `captureVideoUsingCustomMuxer` | `com.bugsee.option.capture.video.custom-muxer` | boolean | `false` | Encode the video with Bugsee's own MP4 muxer instead of the system one. |
 | `captureVideoFullscreenKeepRunning` | `com.bugsee.option.capture.video.fullscreen-keep-running` | boolean | `true` | With `VideoMode.Fullscreen`, keep screen capture running in the background, rather than stopping it and asking the user again on return. |
@@ -221,7 +221,7 @@ Some keys are accepted by one SDK only; the other SDK does not recognize them. T
 **iOS only**, beyond the accessors above. These are accessors on `IOSLaunchOptions`. Native SDK reference: [iOS configuration](/sdk/ios/configuration), which lists every option key with its type and default.
 
 | Accessor | Key | Type | Default | Description |
-| --- | | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | `captureBluetoothStatus` | `com.bugsee.option.capture.bluetooth-status` | boolean | `false` | Monitor the Bluetooth state. Needs `NSBluetoothAlwaysUsageDescription` in `Info.plist`. |
 | `captureCameraPreview` | `com.bugsee.option.capture.camera-preview` | boolean | `false` | Record the live camera image shown in an `AVCaptureVideoPreviewLayer`. This records whatever the camera sees, and adds work to your camera session. Off, a camera preview records as an empty rectangle. |
 | `captureDeviceAndNetworkNames` | `com.bugsee.option.capture.device-network-names` | boolean | `false` | Capture the device name, the Wi-Fi network name and the mobile carrier name. |
