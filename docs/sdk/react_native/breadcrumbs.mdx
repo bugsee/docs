@@ -27,7 +27,7 @@ Bugsee.launch('<your app token>', options);
 | Option | Key | Default | Description |
 | --- | --- | --- | --- |
 | `captureBreadcrumbs` | `com.bugsee.option.capture.breadcrumbs` | `false` | Record breadcrumbs. While off, `Bugsee.addBreadcrumb` records nothing, and the filter is not offered any breadcrumb. |
-| (no accessor) | `com.bugsee.option.capture.breadcrumbs.extras` | `false` | Attach raw system data to the automatic breadcrumbs of system events. Android: the `Intent` extras of system broadcasts. iOS: the notification `userInfo` of device events. |
+| `captureBreadcrumbsExtras` | `com.bugsee.option.capture.breadcrumbs.extras` | `false` | Attach raw system data to the automatic breadcrumbs of system events. Android: the `Intent` extras of system broadcasts. iOS: the notification `userInfo` of device events. |
 
 See [Configuration](/sdk/react_native/configuration) for every option.
 

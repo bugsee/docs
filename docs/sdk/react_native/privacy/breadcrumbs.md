@@ -18,7 +18,7 @@ Breadcrumb capture is **off by default**, on both platforms. Leaving it off is t
 | Option | Key | Default | Description |
 | --- | --- | --- | --- |
 | `captureBreadcrumbs` | `com.bugsee.option.capture.breadcrumbs` | `false` | Record breadcrumbs. |
-| (no accessor) | `com.bugsee.option.capture.breadcrumbs.extras` | `false` | Attach raw system data to the breadcrumbs the native SDK records for system events: the `Intent` extras of system broadcasts on Android, the notification `userInfo` of device events on iOS. That data is not yours to vet, so leave it off unless you need it. |
+| `captureBreadcrumbsExtras` | `com.bugsee.option.capture.breadcrumbs.extras` | `false` | Attach raw system data to the breadcrumbs the native SDK records for system events: the `Intent` extras of system broadcasts on Android, the notification `userInfo` of device events on iOS. That data is not yours to vet, so leave it off unless you need it. |
 
 ```ts
 import Bugsee, { createDefaultLaunchOptions } from '@bugsee/react-native';
