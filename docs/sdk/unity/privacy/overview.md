@@ -35,6 +35,7 @@ You set every option below on the launch options you pass to `Bugsee.Launch`. Se
 | Screen video and touches | `CaptureVideo` | on | [Privacy: Video](/sdk/unity/privacy/video) |
 | Report screenshot | `CaptureScreenshot` | on | Separate from the video option. |
 | Unity scene tree (names and component types, no text) | `CaptureViewHierarchy` | on | [View hierarchy](/sdk/unity/view-hierarchy). Secure rectangles can miss a node on a scaled or offset surface: see [Privacy: Video](/sdk/unity/privacy/video). |
+| Unity scene positions: 2D bounds of the tree nodes, and the cameras and 3D boxes of the visible objects | `CaptureSceneGraph` | `All` | Needs `CaptureViewHierarchy`. An AR app sends the device pose and the geometry it renders. Set `NamesOnly` or `None` to send no positions. See [View hierarchy](/sdk/unity/view-hierarchy#how-much-of-the-scene-is-sent). |
 | Console logs | `CaptureLogs` | on | Includes the Unity console output the package forwards. [Privacy: Console logs](/sdk/unity/privacy/logs) |
 | Network traffic | `CaptureNetwork` | on | [Privacy: Network](/sdk/unity/privacy/network) |
 | WebSocket traffic (iOS) | `CaptureWebSocket` | on | Set on `IOSLaunchOptions`. |

@@ -1,6 +1,6 @@
 ---
 title: "View hierarchy"
-description: "How the Bugsee Unity SDK 7.x captures the Unity scene hierarchy for reports: what each node holds, node and depth caps, truncation, deadlines, secure rectangles and the CaptureViewHierarchy option."
+description: "How the Bugsee Unity SDK 7.x captures the Unity scene hierarchy for reports: what each node holds, node and depth caps, truncation, deadlines, secure rectangles and the CaptureViewHierarchy and CaptureSceneGraph options."
 sidebar_position: 12
 slug: "/sdk/unity/view-hierarchy"
 ---
@@ -9,7 +9,7 @@ slug: "/sdk/unity/view-hierarchy"
 This page documents Bugsee Unity SDK **7.x**, which is in beta and can change between betas. The stable release is **6.x**: see the [6.x documentation](/sdk/unity/v6/installation). Upgrading? See [Migrating from 6.x to 7.x](/sdk/unity/migration).
 :::
 
-Bugsee captures the view hierarchy of the screen with reports, so you can inspect what was on screen behind the screenshot. The native SDKs capture the native view hierarchy. The Unity package adds the Unity scene: when the native SDK asks for it, the package answers with a tree of the active GameObjects, which is stored with the report next to the native hierarchy.
+Bugsee captures the view hierarchy of the screen with reports, so you can inspect what was on screen behind the screenshot. The native SDKs capture the native view hierarchy. The Unity package adds the Unity scene: when the native SDK asks for it, the package answers with a tree of the active GameObjects, which is stored with the report next to the native hierarchy. By default the answer also carries a `scene` block with the position of the cameras and the 3D boxes of the visible objects: see [How much of the scene is sent](#how-much-of-the-scene-is-sent).
 
 In the Unity Editor, and on platforms other than Android and iOS, this capture does nothing.
 
@@ -21,7 +21,8 @@ The managed Unity hierarchy is new in 7.x and still being completed in this beta
 
 | Option | Platform | Type | Default | What it does |
 | --- | --- | --- | --- | --- |
-| `CaptureViewHierarchy` | Both | `bool` | `true` | Capture the view hierarchy for reports. Set it to `false` to turn the capture off. |
+| `CaptureViewHierarchy` | Both | `bool` | `true` | Capture the view hierarchy for reports. Set it to `false` to turn the capture off. It gates everything on this page: with it off, the SDK never asks for the Unity scene. |
+| `CaptureSceneGraph` | Both (Unity package option) | `SceneGraphCapture` | `All` | How much of the Unity scene the report carries: `All`, `NamesOnly` or `None`. See [How much of the scene is sent](#how-much-of-the-scene-is-sent). |
 
 ```csharp
 using Bugsee.Contracts.Options;
@@ -46,6 +47,44 @@ BugseeSdk.CaptureViewHierarchy();
 
 The iOS SDK documents these rules for the call: it does nothing while `CaptureViewHierarchy` is `false` or while the SDK is not fully launched, no hierarchy is captured during a blackout, and each snapshot adds to the size of the report. See [iOS events and traces](/sdk/ios/events-and-traces#view-hierarchy).
 
+## How much of the scene is sent
+
+`CaptureSceneGraph` is an option of the Unity package, not of the native SDKs. Its key is `com.bugsee.option.unity.capture-scene-graph`, and the package stores the value by its name (`"None"`, `"NamesOnly"` or `"All"`). It takes a `SceneGraphCapture`:
+
+| Value | What the report carries |
+| --- | --- |
+| `All` (default) | The tree with object names, component type names and 2D `bounds`, plus a `scene` block: the cameras and the 3D bounding boxes of the visible scene objects. |
+| `NamesOnly` | The tree with names and component type names and no positions of any kind: no `bounds` on any node and no `scene` block. Names are still withheld under secure rectangles. |
+| `None` | No managed tree. The report carries the native view hierarchy only. |
+
+```csharp
+using Bugsee.Contracts.Options;
+using BugseeSdk = Bugsee.Bugsee;
+
+#if UNITY_ANDROID
+var options = new AndroidLaunchOptions { CaptureSceneGraph = SceneGraphCapture.NamesOnly };
+BugseeSdk.Launch("<your Android app token>", options);
+#elif UNITY_IOS
+var options = new IOSLaunchOptions { CaptureSceneGraph = SceneGraphCapture.NamesOnly };
+BugseeSdk.Launch("<your iOS app token>", options);
+#endif
+```
+
+A value that is none of the three names, such as a typo set with `SetCustomOption`, is treated as `None` and logged: an option that asks for less never sends more. A `Relaunch` that leaves the option out goes back to `All`.
+
+:::warning[The default sends positions and 3D geometry]
+With `All`, the `scene` block holds the position and orientation of every camera and the oriented bounding box of every renderer that was drawn and of every World Space and Screen Space - Camera canvas, in metres. In an AR app the camera pose is the real movement of the device, and the boxes include the planes and meshes of the AR session when the app renders them. The block holds no mesh, material or texture data, and no object names. It does hold the names the project gave its layers, whether or not an object uses them. Set `NamesOnly` or `None` to send no positions. Secure rectangles hide the names and components of a node, not the geometry: a box can sit in or behind a secured area of the screen.
+:::
+
+What the `scene` block holds:
+
+- **Cameras.** Every enabled camera, including cameras that draw into a texture (`target` is `texture`), with its pose, projection (`fov_y` or `ortho_height`), aspect, clip distances, viewport, draw order and whether it is `Camera.main`.
+- **Objects.** The renderers that Unity drew in the last frame and whose box is inside the view volume of a camera that draws their layer, and the World Space and Screen Space - Camera canvases as flat planes (`kind` is `ui`). Meshes and sprites are oriented boxes. Skinned meshes, particle systems, lines and trails are the engine's world-space box, not rotated. A Screen Space - Overlay canvas has no position in the world and stays in the tree with its `bounds`. An object shares its `id` with the tree node of the same GameObject. Objects are sorted largest on screen first.
+- **Convention.** glTF 2.0 axes: right-handed, +Y up, a camera looks along -Z, quaternions as `[x, y, z, w]`. The package converts them from Unity's left-handed space by mirroring Z.
+- **Limits.** At most 5000 objects and about 1 MB of JSON for the scene, and the time limits below. `objects_seen` counts the objects looked at, `objects_qualified` those that passed the selection and `objects_sent` those written. `truncated` is `true` when fewer objects were sent than qualified, or when the time limit cut the read (`objects_qualified` is then left out), and `skipped` (`no_camera`, `time_budget`, `size_budget` or `error`) says why none was sent.
+- **Not one instant.** The scene is read over several frames, so moving objects and cameras are not captured at the same moment.
+- **Not in it.** Names, colors, parents, lights, colliders and terrain. A lens shift or custom projection is sent only as its `projection_matrix`.
+
 ## What is captured
 
 The tree starts at a root node whose `class_name` is `UnityPlayer`. The root has no name. Below it is one `Scene` node for each loaded scene, then each scene's root GameObjects and their children. Objects in the `DontDestroyOnLoad` scene are included. The SDK's own helper object is left out.
@@ -56,7 +95,7 @@ Only GameObjects that are active in the hierarchy are captured. Each node holds:
 | --- | --- |
 | `id` | The instance id of the GameObject. |
 | `class_name` | The type of the first component that says what the object is, such as `Image` or `Camera`. `RectTransform` or `GameObject` when there is none. |
-| `bounds` | A rectangle `[x, y, width, height]` in screen coordinates with the origin at the top left. On Android the unit is Unity's render pixels, which equal device pixels only when Unity does not use Resolution Scaling. On iOS the unit is points. |
+| `bounds` | A rectangle `[x, y, width, height]` in screen coordinates with the origin at the top left. On Android the unit is Unity's render pixels, which equal device pixels only when Unity does not use Resolution Scaling. On iOS the unit is points. Not written with `CaptureSceneGraph = NamesOnly`. |
 | `options.name` | The name of the GameObject. |
 | `options.components` | The names of the components on the object, at most 8, comma separated. `Transform` and `CanvasRenderer` are not listed. |
 | `subitems` | The child nodes. |
@@ -71,7 +110,7 @@ How the bounds are computed:
 What is not captured:
 
 - **Text and values.** Only component type names are read. A `Text`, an input field or a TextMeshPro label contributes its class name and never what it shows.
-- **A 3D scene graph.** The hierarchy is a tree of named nodes with a 2D screen rectangle each. It does not carry meshes, transforms in world space or a 3D view of the scene.
+- **Meshes and transforms.** The tree is named nodes with a 2D screen rectangle each. The 3D boxes and cameras of the `scene` block are all the package sends of the 3D scene: no meshes, materials, textures, lights, colliders or terrain.
 - **Inactive GameObjects.**
 
 ## Caps and truncation
@@ -80,7 +119,8 @@ The capture is limited so that a large scene cannot slow the game or delay the r
 
 - **At most 1500 nodes.** The root counts as one.
 - **At most 24 levels deep.** The root is level 1.
-- **Deadlines counted from the request.** The walk stops taking nodes at 250 ms. Writing the result stops at 350 ms, and a timer answers with nothing at 400 ms if no reply was sent. The native SDK waits 500 ms from the request and ignores a later reply. The 400 ms is a target: a thread pool that the game has saturated can delay the reply, and the SDK then ignores it.
+- **A `scene` block of at most 5000 objects.** See [How much of the scene is sent](#how-much-of-the-scene-is-sent).
+- **Deadlines counted from the request.** The walk stops taking nodes at 250 ms, and the scene is read until 290 ms. Writing the result stops at 370 ms, and a timer answers with nothing at 400 ms if no reply was sent. The native SDK waits 500 ms from the request and ignores a later reply. The 400 ms is a target: a thread pool that the game has saturated can delay the reply, and the SDK then ignores it.
 
 When a cap or deadline stops the walk, the result is still valid JSON, and the nodes where it stopped carry `truncated: true`. The report keeps the native hierarchy either way.
 
@@ -108,7 +148,7 @@ In development builds, each capture writes one console line that starts with `[B
 
 ## Secure rectangles
 
-The hierarchy follows the same privacy rules as video and screenshots. A node whose box overlaps a secure rectangle registered with `Bugsee.AddSecureRectangle` or `Bugsee.AddSecureScreenRectangle` loses its `options.name` and `options.components`. Its `class_name` and bounds stay. Each node is judged by its own box, so a full-screen container is protected and its far-away children are not.
+The hierarchy follows the same privacy rules as video and screenshots. A node whose box overlaps a secure rectangle registered with `Bugsee.AddSecureRectangle` or `Bugsee.AddSecureScreenRectangle` loses its `options.name` and `options.components`. Its `class_name` and bounds stay (with `NamesOnly` no node has bounds). Each node is judged by its own box, so a full-screen container is protected and its far-away children are not.
 
 A node with no usable bounds counts as covered while any secure rectangle is registered.
 

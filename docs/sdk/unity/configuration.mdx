@@ -66,7 +66,7 @@ public static class BugseeSetup
 }
 ```
 
-The `OptionsBuilder` form works on both platforms from one code path. Its `Set` overloads take a key and a `bool`, `int`, `float`, `string` or `object`, and it has helpers for enum options (`SetVideoMode`, `SetVideoQuality`, `SetFrameRate`, `SetLogLevel`, `SetDefaultCrashPriority`, `SetDefaultErrorPriority`, `SetDefaultBugPriority`, `SetCrashHandlerType`, `SetCrashSignals`, `SetReportingUIStyle`) and for common switches (`Duration`, `CaptureVideo`, `CaptureNetwork`, `CaptureLogs`, `DetectAndReportCrash`, `CaptureManagedExceptions`, `CaptureUnobservedTaskExceptions`, `DetectAndReportHang`, `DetectAndReportExitNotResponding`, `DetectAndReportExitLowMemory`).
+The `OptionsBuilder` form works on both platforms from one code path. Its `Set` overloads take a key and a `bool`, `int`, `float`, `string` or `object`, and it has helpers for enum options (`SetVideoMode`, `SetVideoQuality`, `SetFrameRate`, `SetLogLevel`, `SetDefaultCrashPriority`, `SetDefaultErrorPriority`, `SetDefaultBugPriority`, `SetCrashHandlerType`, `SetCrashSignals`, `SetDataEncryption`, `SetReportingUIStyle`) and for common switches (`Duration`, `CaptureVideo`, `CaptureNetwork`, `CaptureLogs`, `DetectAndReportCrash`, `CaptureManagedExceptions`, `CaptureUnobservedTaskExceptions`, `DetectAndReportHang`, `DetectAndReportExitNotResponding`, `DetectAndReportExitLowMemory`). `CaptureSceneGraph(SceneGraphCapture level)` takes the enum, not a `bool`.
 
 ```csharp
 using Bugsee.Contracts.Options;
@@ -94,7 +94,7 @@ A [`Relaunch`](/sdk/unity/lifecycle) replaces the whole option set rather than m
 
 Every property below is available on both `AndroidLaunchOptions` and `IOSLaunchOptions`. The Platform column says where the native SDK reads it.
 
-Defaults are those shipped with this release, which come from the option manifests of the native SDKs the package pins, except the three Unity-specific options, which the package defines. For what each option does in depth, see the native configuration pages: [Android](/sdk/android/configuration) and [iOS](/sdk/ios/configuration).
+Defaults are those shipped with this release, which come from the option manifests of the native SDKs the package pins, except the four Unity-specific options, which the package defines. For what each option does in depth, see the native configuration pages: [Android](/sdk/android/configuration) and [iOS](/sdk/ios/configuration).
 
 ### Session and storage
 
@@ -106,7 +106,7 @@ Defaults are those shipped with this release, which come from the option manifes
 | `MaxPendingReports` | Both | `int` | `30` | `config.max-pending-reports` | Number of reports that may wait to be sent. A value below 1 is raised to 1. Eviction follows the same order as `MaxDataSize`. |
 | `MaxPendingReportAge` | Both | `int` | `30` | `config.max-pending-report-age` | Age in days after which a waiting report is deleted. `0` or a negative value turns aging off. |
 | `NotifyFlushDelay` | Both | `int` | `0` | `config.notify-flush-delay` | Milliseconds the [notification relay](/sdk/unity/notification-relay) waits before it drains its queue. `0` posts as soon as an item is on disk. |
-| `ReportHandlerCallbackTimeout` | Android | `int` | `30` | `config.report-handler-callback-timeout` | Seconds to wait for a report handler to finish before the SDK continues without it. The iOS launch drops this option. |
+| `ReportHandlerCallbackTimeout` | Android | `int` | `30` | `config.report-handler-callback-timeout` | Seconds to wait for a report handler to finish before the SDK continues without it. `0` disables only the per-handler timer: the SDK still ends the chain after 60 seconds. The iOS launch drops this option. |
 
 ### Issue detection
 
@@ -123,13 +123,14 @@ Defaults are those shipped with this release, which come from the option manifes
 | `DetectAndReportAnomaly` | Both | `bool` | `false` | `detect.anomaly` | Report statistical performance anomalies. |
 | `DetectFrustration` | Both | `bool` | `false` | `detect.frustration` | Report user-frustration patterns such as rage taps. |
 
-### Unity managed exceptions
+### Unity managed exceptions and scene
 
 | Property | Platform | Type | Default | Key suffix | What it does |
 |---|---|---|---|---|---|
 | `CaptureManagedExceptions` | Both | `bool` | `true` | `unity.capture-managed-exceptions` | Report managed Unity exceptions. Independent of `DetectAndReportCrash`. |
 | `CaptureUnobservedTaskExceptions` | Both | `bool` | `true` | `unity.capture-unobserved-task-exceptions` | Report `TaskScheduler.UnobservedTaskException` as a handled error. Needs `CaptureManagedExceptions`. Unity raises the event only after the faulted `Task` is garbage-collected, so the report arrives late. |
 | `TreatUnityLogExceptionsAsFatal` | Both | `bool` | `false` | `unity.treat-log-exceptions-as-fatal` | Report an exception that Unity routes through its log (`LogType.Exception`) as unhandled instead of handled. |
+| `CaptureSceneGraph` | Both | `SceneGraphCapture` | `All` | `unity.capture-scene-graph` | How much of the Unity scene the managed view hierarchy sends: `All`, `NamesOnly` or `None`. With `All` a report carries the position of the cameras and the 3D boxes of the visible objects. See [View hierarchy](/sdk/unity/view-hierarchy#how-much-of-the-scene-is-sent). |
 
 ### Capture
 
@@ -213,7 +214,7 @@ These properties exist on `AndroidLaunchOptions` only. An iOS launch drops the k
 | `CaptureLogsUseAllSources` | Android | `bool` | `false` | `capture.logs.allsources` | Read all logcat buffers, not only the default ones. |
 | `CaptureRespectFlagSecure` | Android | `bool` | `true` | `capture.respect-flag-secure` | Blank windows that set `FLAG_SECURE` in video and screenshots. |
 | `AdvancedWebViewCapture` | Android | `bool` | `true` | `capture.webview.advanced` | Advanced WebView capture. The iOS SDK also reads this key. |
-| `WebViewDomainAllowlist` | Android | `string` | `""` | `capture.webview.domain-allowlist` | Domains the WebView capture may record. |
+| `WebViewDomainAllowlist` | Android | `string` | `""` | `capture.webview.domain-allowlist` | Domains the WebView capture may record. Deprecated in the Android SDK since 7.1.2. |
 | `WebViewReportTrigger` | Android | `bool` | `false` | `capture.webview.report-trigger` | Let WebView content trigger a report. The iOS SDK also reads this key. |
 | `CaptureVideoMode` | Android | `VideoMode` | `V2` | `capture.video.mode` | How the screen is captured. See [VideoMode](#enums). |
 | `CaptureVideoAdaptive` | Android | `bool` | `false` (iOS: `true`) | `capture.video.adaptive` | Skip frames while nothing on screen changes. |
@@ -257,6 +258,7 @@ These properties exist on `IOSLaunchOptions` only. An Android launch drops the k
 | `CaptureVideoPrivacyBlur` | iOS | `bool` | `true` | `capture.video.privacy-blur` | Blur transition frames in the video. Off, the video freezes during a transition instead. |
 | `CaptureVideoMinFrameRate` | iOS | `int` | `0` | `capture.video.min-frame-rate` | Minimum video frame rate. The SDK clamps it to 0..30 and drops it unless a maximum at or above it is set. `0` derives it from `CaptureVideoFrameRate`. |
 | `CaptureVideoMaxFrameRate` | iOS | `int` | `0` | `capture.video.max-frame-rate` | Maximum video frame rate. The SDK clamps it to 0..30. `0` derives it from `CaptureVideoFrameRate`. |
+| `DataEncryption` | iOS | `DataEncryptionMode` | `None` | `config.data-encryption` | Encryption of the data the SDK stores. See [DataEncryptionMode](#enums). |
 | `BuildTarget` | iOS | `string` | none | `config.build-target` | The Xcode target name, reported with the session. |
 | `BuildType` | iOS | `string` | none | `config.build-type` | The build type (for example debug or release), reported with the session. |
 | `ReportingUIStyle` | iOS | `ReportingUIStyle` | `System` | `reporting.ui.style` | Look of the report screen. See [ReportingUIStyle](#enums). |
@@ -304,6 +306,10 @@ A mask meant for iOS, such as `CrashSignals.None`, also narrows or switches off 
 | `IssueSeverity` | `VeryLow` (1), `Medium` (2), `High` (3), `Critical` (4), `Blocker` (5) |
 | `CrashHandlerType` (iOS) | `BSD` (1), `Mach` (2), `MachAndBSD` (3, default) |
 | `ReportingUIStyle` (iOS) | `Light` (0), `Dusk` (1), `BasedOnStatusBar` (2), `System` (3, default) |
+| `DataEncryptionMode` (iOS) | `None` (0, default), `OnDevice` (1), `EndToEnd` (2) |
+| `SceneGraphCapture` (Unity package) | `None` (0), `NamesOnly` (1), `All` (2, default). Stored in the launch options by its name, not its number. |
+
+`DataEncryptionMode.OnDevice` keeps the encryption keys in the Secure Enclave of the device, so they cannot be extracted. `EndToEnd` encrypts the data at rest and in transit with a one-time key that exists only in memory while recording and is never stored on the device. Only the server can decrypt it, so some functionality, such as the video preview, can be missing.
 
 `CrashHandlerType.BSD` installs BSD signal handlers. `Mach` installs a Mach exception handler plus a BSD handler for `SIGABRT`, so signals raised by software (`raise()`, `kill()`) are not reported. `MachAndBSD` reports both.
 
