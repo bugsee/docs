@@ -54,7 +54,7 @@ The iOS SDK documents these rules for the call: it does nothing while `CaptureVi
 | Value | What the report carries |
 | --- | --- |
 | `All` (default) | The tree with object names, component type names and 2D `bounds`, plus a `scene` block: the cameras and the 3D bounding boxes of the visible scene objects. |
-| `NamesOnly` | The tree with names and component type names and no positions of any kind: no `bounds` on any node and no `scene` block. Names are still withheld under secure rectangles. |
+| `NamesOnly` | The tree with names and component type names and no positions of any kind: no `bounds` on any node and no `scene` block. The secure-rectangle test still runs on the boxes the package computes, so names are withheld exactly as with `All`: see [Secure rectangles](#secure-rectangles). |
 | `None` | No managed tree. The report carries the native view hierarchy only. |
 
 ```csharp
@@ -148,9 +148,9 @@ In development builds, each capture writes one console line that starts with `[B
 
 ## Secure rectangles
 
-The hierarchy follows the same privacy rules as video and screenshots. A node whose box overlaps a secure rectangle registered with `Bugsee.AddSecureRectangle` or `Bugsee.AddSecureScreenRectangle` loses its `options.name` and `options.components`. Its `class_name` and bounds stay (with `NamesOnly` no node has bounds). Each node is judged by its own box, so a full-screen container is protected and its far-away children are not.
+The hierarchy follows the same privacy rules as video and screenshots. A node whose box overlaps a secure rectangle registered with `Bugsee.AddSecureRectangle` or `Bugsee.AddSecureScreenRectangle` loses its `options.name` and `options.components`. Its `class_name` and bounds stay (with `NamesOnly` no node has bounds written, but the test still uses the boxes the package computes). Each node is judged by its own box, so a full-screen container is protected and its far-away children are not.
 
-A node with no usable bounds counts as covered while any secure rectangle is registered.
+A node with no usable bounds counts as covered while any secure rectangle is registered. This applies to a node whose box the package cannot place, not to every node under `NamesOnly`: `NamesOnly` only leaves `bounds` out of the report, and the same nodes lose their names as with `All`.
 
 :::caution[The test is exact only at native resolution]
 The overlap test compares the node boxes, which are in Unity's render pixels, with the secure rectangles as registered, in native pixels. It is exact only when Unity renders at the native resolution and fills the screen. With Resolution Scaling, `Screen.SetResolution` or a surface that is offset in the window, a node under a rectangle can keep its name and components. If the names of your GameObjects must not reach Bugsee, set `CaptureViewHierarchy = false`, which turns the view hierarchy capture off.
