@@ -134,7 +134,7 @@ Remove a rectangle with `Bugsee.RemoveSecureRectangle(RectInt)`, passing the sam
 
 ### Rectangles and the Unity scene tree
 
-The [view hierarchy](/sdk/unity/view-hierarchy) of a report is the Unity scene tree. A node of that tree whose box overlaps a secure rectangle loses its name and its component list. The node keeps its class name and its bounds. A node whose bounds cannot be placed counts as covered while any rectangle is registered. The tree never contains the text of a label or an input field.
+The [view hierarchy](/sdk/unity/view-hierarchy) of a report is the Unity scene tree. A node of that tree whose box overlaps a secure rectangle loses its name and its component list. The node keeps its class name and its bounds (with `CaptureSceneGraph = NamesOnly` no bounds are written, but the same nodes lose their names as with `All`). A node whose bounds cannot be placed counts as covered while any rectangle is registered. The tree never contains the text of a label or an input field.
 
 The test compares the node boxes, which are in Unity's render pixels, with the rectangles as registered, in native pixels. It is exact only when Unity renders at the native resolution and fills the screen. With Resolution Scaling, `Screen.SetResolution` or a surface that is offset in the window, a node under a rectangle can keep its name and components ([bugsee-unity#291](https://github.com/bugsee/bugsee-unity/issues/291)). If the names of your GameObjects must not reach Bugsee, set `CaptureViewHierarchy = false`, which turns the view hierarchy capture off.
 

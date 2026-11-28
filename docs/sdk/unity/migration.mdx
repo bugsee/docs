@@ -338,7 +338,7 @@ These 6.x options have no property in 7.x and no key in the native option manife
 
 ### 4.3 Options that are new in 7.x
 
-7.x types many options that 6.x did not have, among them hang, early-crash, HTTP-error, anomaly and frustration detection, breadcrumbs, performance monitoring, pending-report limits, screenshot scale, `CrashSignals`, `CaptureManagedExceptions`, `CaptureVideoQuality` (with the `VideoQuality` enum) and the iOS capture switches. They are in [Configuration](/sdk/unity/configuration).
+7.x types many options that 6.x did not have, among them hang, early-crash, HTTP-error, anomaly and frustration detection, breadcrumbs, performance monitoring, pending-report limits, screenshot scale, `CrashSignals`, `CaptureManagedExceptions`, `CaptureSceneGraph` (with the `SceneGraphCapture` enum), `CaptureVideoQuality` (with the `VideoQuality` enum), the iOS capture switches and the iOS `DataEncryption` (with the `DataEncryptionMode` enum). They are in [Configuration](/sdk/unity/configuration).
 
 ## 5. Behavior changes
 
@@ -350,7 +350,7 @@ Several options start with another value than they did in 6.x. The table in 4.1 
 - **The Android notification-bar trigger is off.** Set `ReportingTriggerByNotification = true` on `AndroidLaunchOptions` to keep it.
 - **The iOS screenshot trigger is off.** The 6.x iOS wrapper had it on. Set `ReportingTriggerByScreenshot = true` to keep it.
 - **`MaxDataSize` is 150 MB, not 50.**
-- **View hierarchy capture is on.** The 6.x wrapper had it off.
+- **View hierarchy capture is on.** The 6.x wrapper had it off. It sends the 2D bounds of the nodes and a 3D `scene` block of cameras and boxes unless you set `CaptureSceneGraph` to `NamesOnly` or `None`: see [View hierarchy](/sdk/unity/view-hierarchy#how-much-of-the-scene-is-sent).
 - **Exit detection is on.** Application exits (on Android, the reasons of `ApplicationExitInfo`; on iOS, out-of-memory kills) are reported unless you switch them off. On Android set `DetectAndReportExit = false`. On iOS call `options.SetCustomOption(Options.DetectAndReportExit, false)`.
 - **Early-crash handling is on.** The 6.x iOS option `AppLaunchCrashDetection` was off.
 - **The default bug severity on iOS is `High`.** It was `Low` in the 6.x options.
