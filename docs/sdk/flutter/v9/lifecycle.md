@@ -1,0 +1,43 @@
+---
+title: "Lifecycle events"
+description: "How to subscribe to Bugsee SDK lifecycle events in Flutter, with a reference table of all available event types and their descriptions."
+sidebar_position: 9
+slug: "/sdk/flutter/v9/lifecycle"
+---
+
+:::caution[Previous version]
+This page documents Bugsee Flutter SDK **9.x** (`bugsee_flutter` 9.x), the current stable release. The new **10.x** SDK is a rewrite for the Bugsee 7.x native SDKs and is in beta, not yet published to pub.dev: see [Migrating from 9.x to 10.x](/sdk/flutter/migration/) to evaluate it, or the [10.x overview](/sdk/flutter/overview/).
+:::
+
+Bugsee SDK silently works within your app, recording everything to assist you in debugging when something unexpected happens. Our SDK is designed as a black box, but there may be cases when you want to be notified about changes/events within Bugsee itself. Lifecycle events are designed exactly for that. Whenever internal state changes or some important event is raised, a lifecycle event is dispatched to the user code.
+
+## Implementing callback
+
+You should call **Bugsee.setLifecycleCallback** and provide the callback:
+
+```dart
+void onBugseeLifecycleEvent(BugseeLifecycleEventType e) {
+  print(e);
+}
+
+Bugsee.setLifecycleCallback(onBugseeLifecycleEvent);
+```
+
+## Available lifecycle events
+
+|Name|Description|
+|-|-|
+|launched|Event is dispatched when Bugsee was successfully launched|
+|started|Event is dispatched when Bugsee is started after being stopped|
+|stopped|Event is dispatched when Bugsee is stopped|
+|resumed|Event is dispatched when video recording is resumed, i.e. when a [blackout](/sdk/flutter/v9/privacy/video/#blackout) is ended|
+|paused|Event is dispatched when video recording is paused, i.e. when a [blackout](/sdk/flutter/v9/privacy/video/#blackout) is started|
+|relaunchedAfterCrash|Event is dispatched when Bugsee is launched and pending crash report is discovered. That usually means that app was relaunched after crash.|
+|beforeReportShown|Event is dispatched before the reporting UI is shown|
+|afterReportShown|Event is dispatched when reporting UI is shown|
+|beforeReportUploaded|Event is dispatched when report is about to be uploaded to the server|
+|afterReportUploaded|Event is dispatched when report was successfully uploaded to the server|
+|beforeFeedbackShown|Event is dispatched before the Feedback controller is shown|
+|afterFeedbackShown|Event is dispatched after the Feedback controller is shown|
+|beforeReportAssembled|Event is dispatched right before bug/error/crash report is about to be assembled|
+|afterReportAssembled|Event is dispatched right after bug/error/crash report is assembled|

@@ -125,6 +125,13 @@ const config: Config = {
           { from: '/sdk/react-native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
           { from: '/sdk/react_native/v6', to: '/sdk/react_native/v6/installation/' },
           { from: '/sdk/react_native/v6/privacy', to: '/sdk/react_native/v6/privacy/overview/' },
+          // Flutter 9.x pages moved under /sdk/flutter/v9/; routes not carried over 1:1 go to the stable 9.x page.
+          { from: '/sdk/flutter/v9', to: '/sdk/flutter/v9/installation/' },
+          { from: '/sdk/flutter/v9/privacy', to: '/sdk/flutter/v9/privacy/overview/' },
+          { from: '/sdk/flutter/appearance', to: '/sdk/flutter/v9/appearance/' },
+          { from: '/sdk/flutter/custom', to: '/sdk/flutter/v9/custom/' },
+          { from: '/sdk/flutter/manual', to: '/sdk/flutter/v9/manual/' },
+          { from: '/sdk/flutter/symbolication', to: '/sdk/flutter/v9/symbolication/' },
           // 6.x moved under /sdk/unity/v6/. The bare Unity routes stay on 6.x until 7.x is GA.
           { from: '/sdk/unity', to: '/sdk/unity/v6/installation/' },
           { from: '/sdk/unity/privacy', to: '/sdk/unity/v6/privacy/overview/' },
@@ -223,7 +230,7 @@ const config: Config = {
             { label: 'Bugsee for React Native', to: '/sdk/react_native/installation/' },
             { label: 'Bugsee for Xamarin', to: '/sdk/xamarin/installation/' },
             { label: 'Bugsee for .NET/MAUI', to: '/sdk/dotnet/installation/' },
-            { label: 'Bugsee for Flutter', to: '/sdk/flutter/installation/' },
+            { label: 'Bugsee for Flutter', to: '/sdk/flutter/v9/installation/' },
             { label: 'Bugsee for Unity', to: '/sdk/unity/v6/installation/' },
           ],
         },

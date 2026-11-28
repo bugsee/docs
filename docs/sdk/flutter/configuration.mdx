@@ -1,0 +1,226 @@
+---
+title: "Configuration"
+description: "The launch options of Bugsee Flutter SDK 10.x: BugseeOptions and its typed fields, one flat option map for both platforms, enums, the endpoint, and reading the effective options back."
+sidebar_position: 2
+slug: "/sdk/flutter/configuration"
+---
+
+:::warning[Beta]
+This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+:::
+
+You configure the SDK with a `BugseeOptions` object passed to `Bugsee.launch`. One set of options configures both platforms: there are no separate Android and iOS option classes.
+
+```dart
+import 'package:bugsee_flutter/bugsee_flutter.dart';
+
+await Bugsee.launch(
+  'YOUR_APP_TOKEN',
+  options: const BugseeOptions(
+    configDuration: 120,
+    captureLogsLevel: LogLevel.info,
+    configWifiOnlyUpload: true,
+    detectHang: true,
+  ),
+);
+```
+
+## How options work
+
+`BugseeOptions` has a typed, documented field for every option the two native SDKs register, except the options of the leak module and most deprecated ones (`captureLogsOsLog` keeps its field, but the SDK accepts it and ignores it): 100 fields at the pinned SDK versions (Android 7.6.0, iOS 7.1.0). A field is named after its key: `capture.video.frame-rate` is `captureVideoFrameRate`. The fields are generated from the option manifests the two SDKs publish, so they cannot drift from the SDKs.
+
+- **A field you leave out keeps the SDK's own default.** Several defaults differ between Android and iOS; each field's documentation says which.
+- **One configuration for both platforms.** An option that exists on one platform only (the video mode is Android's, the AVPlayer capture is iOS's) is ignored on the other, with a warning printed in debug builds. The same holds for an enum constant that one platform lacks (`FrameRate.raw` on iOS).
+- **Stricter than the SDKs.** Both native SDKs silently drop an unknown key or a value of the wrong type. Here, an unknown key in `BugseeOptions.custom`, a hidden key, a value of the wrong type or a bad `endpoint` is an `ArgumentError` before anything reaches the SDK. `Bugsee.launch` surfaces it through its `Future`.
+- **Keys are the SDK's.** Every option is keyed `com.bugsee.option.*`, the same keys on both platforms. The key of each field is in its documentation comment.
+
+### Options without a field
+
+`BugseeOptions.custom` is a map from full key to value, for options this version has no field for: the options of Bugsee modules this package does not bundle (the leak module) and the deprecated ones. A key that has a typed field is an `ArgumentError` when you also put it in `custom` ("set it in one place"). An option of a module the package does not bundle is sent, but the SDK ignores it unless your app adds that module, and a warning says so in debug builds.
+
+```dart
+const BugseeOptions(
+  custom: {'com.bugsee.option.<key>': true},   // a registered key without a typed field
+);
+```
+
+Enum options in `custom` take the SDK's internal value (an `int`) or a constant name. Use a typed field when there is one.
+
+## Enums
+
+Enum options carry the SDK's internal value, never a Dart ordinal, so they read back from the SDK as integers.
+
+| Enum | Constants (value) | Platform |
+| --- | --- | --- |
+| `LogLevel` | `error` (1), `warning` (2), `info` (3), `debug` (4), `verbose` (5) | both |
+| `FrameRate` | `low` (1), `medium` (2), `high` (3), `raw` (4, Android only) | both |
+| `VideoQuality` | `defaultQuality` (0), `medium` (1), `high` (2) | both |
+| `VideoMode` | `none` (0), `v1` (1), `v2` (2), `fullscreen` (20), `directBuffers` (21) | Android |
+| `ReportSeverity` | `veryLow` (1), `medium` (2), `high` (3), `critical` (4), `blocker` (5) | both |
+| `CrashHandlerType` | `bsd` (1), `mach` (2), `machAndBsd` (3) | iOS |
+| `DataEncryptionMode` | `none` (0), `onDevice` (1), `endToEnd` (2) | iOS |
+| `BugseeStyle` | `light` (0), `dusk` (1), `basedOnStatusBar` (2), `system` (3) | iOS |
+
+`ReportSeverity.low` is an alias of `veryLow`: value 1 is `VeryLow` on Android and `Low` on iOS.
+
+`captureCrashSignals` is an `int` bit set: `ABRT` 1, `SEGV` 2, `BUS` 4, `ILL` 8, `FPE` 16, `TRAP` 32 (63 is all six, `0` turns the selectable signals off). The package exports no constants for it: pass the numbers. The default, `128`, is a sentinel and not a mask: on its own it lets the SDK choose, which today is every signal. To leave out `SEGV` and `BUS`, pass `57`. On Android the value is read once, when the native crash handler is first armed in the process.
+
+## Endpoint
+
+`endpoint` is for an on-premises installation or a test server. Give the base URL, for example `https://bugsee.example.com`. A trailing slash and a `/v2` segment are removed, because both SDKs append the API version themselves. It must be an absolute `http` or `https` URL without a query or fragment; anything else is an `ArgumentError`. The endpoint is not one of the SDKs' public options, so it is not listed in uploaded reports and is not reachable through `custom`.
+
+## Option reference
+
+The tables list every typed field. "Platform" says where the option exists: `both`, `Android` or `iOS`. The SDK default is what the field keeps when you leave it out. A field's documentation comment has the full description and key.
+
+### Capture
+
+| Field | Type | Default | Platform |
+| --- | --- | --- | --- |
+| `captureAvPlayer` | `bool` | `false` | iOS |
+| `captureBluetoothStatus` | `bool` | `false` | iOS |
+| `captureBreadcrumbs` | `bool` | `false` | both |
+| `captureBreadcrumbsExtras` | `bool` | `false` | both |
+| `captureCameraPreview` | `bool` | `false` | iOS |
+| `captureCrashHandlerType` | `CrashHandlerType` | `CrashHandlerType.machAndBsd` | iOS |
+| `captureCrashSignals` | `int` | `128` | both |
+| `captureDeviceNetworkNames` | `bool` | `false` | iOS |
+| `captureDiskSpace` | `bool` | `false` | iOS |
+| `captureLogs` | `bool` | `true` | both |
+| `captureLogsAllSources` | `bool` | `false` | Android |
+| `captureLogsLevel` | `LogLevel` | `LogLevel.verbose` | both |
+| `captureLogsOsLog` | `bool` | `false` | iOS (deprecated: accepted and ignored) |
+| `captureNetwork` | `bool` | `true` | both |
+| `captureNetworkBodySizeLimit` | `int` | `20480` | both |
+| `captureNetworkBodyWithoutType` | `bool` | `false` | both |
+| `captureNetworkDefaultSanitizer` | `bool` | `true` | both |
+| `captureNetworkOnLaunch` | `bool` | `false` | both |
+| `captureOnDeviceSymbolication` | `bool` | `false` | iOS |
+| `captureRespectFlagSecure` | `bool` | `true` | Android |
+| `captureSampleBufferDisplayLayer` | `bool` | `false` | iOS |
+| `captureScreenshot` | `bool` | `true` | both |
+| `captureScreenshotScale` | `double` | `1.0` | both |
+| `captureStatusBarInfo` | `bool` | `false` | iOS |
+| `captureVideo` | `bool` | `true` | both |
+| `captureVideoAdaptive` | `bool` | `false` (Android), `true` (iOS) | both |
+| `captureVideoCustomMuxer` | `bool` | `false` | Android |
+| `captureVideoFrameRate` | `FrameRate` | `FrameRate.high` | both |
+| `captureVideoFullscreenKeepRunning` | `bool` | `true` | Android |
+| `captureVideoFullscreenRememberDecision` | `bool` | `true` | Android |
+| `captureVideoMaxFrameRate` | `int` | `0` | iOS |
+| `captureVideoMinFrameRate` | `int` | `0` | iOS |
+| `captureVideoMode` | `VideoMode` | `VideoMode.v2` | Android |
+| `captureVideoPrivacyBlur` | `bool` | `true` | iOS |
+| `captureVideoQuality` | `VideoQuality` | `VideoQuality.defaultQuality` | both |
+| `captureVideoScale` | `double` | `1.0` | both |
+| `captureVideoSecureScrolling` | `bool` | `false` | Android |
+| `captureViewHierarchy` | `bool` | `true` | both |
+| `captureWebSocket` | `bool` | `true` | iOS |
+| `captureWebViewAdvanced` | `bool` | `true` | both |
+| `captureWebViewReportTrigger` | `bool` | `false` | both |
+
+### Storage and upload
+
+| Field | Type | Default | Platform |
+| --- | --- | --- | --- |
+| `configBuildTarget` | `String` | `none` | iOS |
+| `configBuildType` | `String` | `none` | iOS |
+| `configDataEncryption` | `DataEncryptionMode` | `DataEncryptionMode.none` | iOS |
+| `configDuration` | `int` | `60` | both |
+| `configMaxDataSize` | `int` | `150` | both |
+| `configMaxPendingReportAge` | `int` | `30` | both |
+| `configMaxPendingReports` | `int` | `30` | both |
+| `configNotifyFlushDelay` | `int` | `0` | both |
+| `configReportHandlerCallbackTimeout` | `int` | `30` | Android |
+| `configReportProcessingInProcess` | `bool` | `true` | Android |
+| `configWifiOnlyUpload` | `bool` | `false` | both |
+
+### Detection
+
+| Field | Type | Default | Platform |
+| --- | --- | --- | --- |
+| `crashNdkTombstoneLogs` | `bool` | `false` | Android |
+| `detectAnomaly` | `bool` | `false` | both |
+| `detectAnrSampling` | `bool` | `true` | Android |
+| `detectCrash` | `bool` | `true` | both |
+| `detectCrashNdk` | `bool` | `true` | Android |
+| `detectCrashFillEmptyExceptionStacks` | `bool` | `false` | iOS |
+| `detectCrashSwiftAsyncStackTraces` | `bool` | `true` | iOS |
+| `detectEarlyCrash` | `bool` | `true` | both |
+| `detectExit` | `bool` | `true` | both |
+| `detectExitBgLowMemoryAsError` | `bool` | `false` | Android |
+| `detectExitDependencyDied` | `bool` | `false` | Android |
+| `detectExitExcessiveResourceUsage` | `bool` | `false` | Android |
+| `detectExitLowMemory` | `bool` | `true` | Android |
+| `detectExitNotResponding` | `bool` | `true` | Android |
+| `detectExitNotRespondingAsCrash` | `bool` | `false` | Android |
+| `detectExitOther` | `bool` | `false` | Android |
+| `detectExitPackageStateChanged` | `bool` | `false` | Android |
+| `detectExitPackageUpdated` | `bool` | `false` | Android |
+| `detectExitPermissionChanged` | `bool` | `false` | Android |
+| `detectExitUnknown` | `bool` | `false` | Android |
+| `detectExitUserRequested` | `bool` | `false` | Android |
+| `detectExitUserWasStopped` | `bool` | `false` | Android |
+| `detectFrustration` | `bool` | `false` | both |
+| `detectHang` | `bool` | `false` | both |
+| `detectHangLevelFair` | `int` | `3000` | both |
+| `detectHangLevelMedium` | `int` | `5000` | both |
+| `detectHangLevelSevere` | `int` | `10000` | both |
+| `detectHangSampling` | `bool` | `true` | Android |
+| `detectHttpErrors` | `bool` | `false` | both |
+| `detectMainThreadMisuse` | `bool` | `false` | both |
+
+### Performance (APM)
+
+| Field | Type | Default | Platform |
+| --- | --- | --- | --- |
+| `performanceAdaptiveSampling` | `bool` | `true` | both |
+| `performanceEnabled` | `bool` | `true` | both |
+| `performanceSampleRate` | `double` | `0.01` | both |
+| `performanceUploadMode` | `String` | `'batched'` | Android |
+
+### Reporting and triggers
+
+| Field | Type | Default | Platform |
+| --- | --- | --- | --- |
+| `reportingDefaultsBugPriority` | `ReportSeverity` | `ReportSeverity.high` | both |
+| `reportingDefaultsCrashPriority` | `ReportSeverity` | `ReportSeverity.blocker` | both |
+| `reportingDefaultsErrorPriority` | `ReportSeverity` | `ReportSeverity.high` | both |
+| `reportingTriggersBroadcast` | `bool` | `false` | Android |
+| `reportingTriggersNotificationBar` | `bool` | `false` | Android |
+| `reportingTriggersScreenshot` | `bool` | `false` | both |
+| `reportingTriggersShake` | `bool` | `false` | both |
+| `reportingUiDescriptionRequired` | `bool` | `false` | both |
+| `reportingUiEmailRequired` | `bool` | `false` | both |
+| `reportingUiLabelsEnabled` | `bool` | `false` | both |
+| `reportingUiLabelsRequired` | `bool` | `false` | both |
+| `reportingUiPrioritySelectorEnabled` | `bool` | `false` | both |
+| `reportingUiStyle` | `BugseeStyle` | `BugseeStyle.system` | iOS |
+| `reportingUiSummaryRequired` | `bool` | `false` | both |
+
+## Reading the options back
+
+```dart
+final inEffect = await Bugsee.getLaunchOptions();
+final supplied = await Bugsee.getHostLaunchOptions();
+```
+
+| Method | Returns |
+| --- | --- |
+| `getLaunchOptions()` | The options in effect: what your app supplied, merged over the SDK's defaults. Before the first launch these are the SDK's defaults. The same on both platforms. |
+| `getHostLaunchOptions()` | The options your app supplied to the last launch, without the defaults; empty before the first launch. Replaced, not merged, by the next launch. |
+
+Both are keyed by `com.bugsee.option.*`. Enums come back as the SDK's internal integer, and floats as `double` with the precision of a 32-bit float. Internal options (`$$ENDPOINT`, `$$WRAPPER`, `$$DEBUG`) are never included.
+
+`getHostLaunchOptions()` differs between the platforms and is not normalised: Android reports every recognised option you passed, iOS only those whose value differs from the iOS default. On iOS, an option absent from it does not mean you did not set it. Use `getLaunchOptions()` for what is in effect.
+
+## Options and the launch result
+
+Options apply only when the launch happens. When `Bugsee.launch` returns `alreadyRunning` (a second launch, or Android auto-init), your options were **not applied**; see [Installation](/sdk/flutter/installation#launching-twice-and-auto-init). To change options, `await Bugsee.stop()` and launch again.
+
+## Related pages
+
+- [Installation](/sdk/flutter/installation): the first launch.
+- [Lifecycle & status](/sdk/flutter/lifecycle): launch results, stop and status.
+- [Network capture](/sdk/flutter/network), [Console logs](/sdk/flutter/logs): the options that gate them.
+- [Privacy](/sdk/flutter/privacy/overview): the capture options behind the privacy controls.

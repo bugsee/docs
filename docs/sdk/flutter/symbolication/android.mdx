@@ -1,0 +1,69 @@
+---
+title: "Symbolication: Android"
+description: "Uploading the R8 mapping and the native symbols of a Flutter 10.x Android release build with the Bugsee Gradle plugin, and how to turn the native upload on."
+sidebar_position: 19
+slug: "/sdk/flutter/symbolication/android"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::warning[Beta]
+This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+:::
+
+An Android release build needs two uploads for readable reports, and both come from the Bugsee Gradle plugin that the app applies (see [Installation](/sdk/flutter/installation)). The plugin is mandatory for the 7.x SDK, version 4.1.1 is the one this release is tested with. [Symbolication overview](/sdk/flutter/symbolication/overview) explains what each upload is for. The Dart frames are a separate, manual upload: see [Symbolication: Dart](/sdk/flutter/symbolication/dart).
+
+| What | Setting | Needs the app token |
+| --- | --- | --- |
+| R8/ProGuard mapping | None. Uploaded on every minified build by `uploadBugsee<Variant>Mapping`. | Yes |
+| Native symbols (`libflutter.so`, your `.so` files) | `bugsee { ndk { enabled.set(true) } }`. Off by default. | Yes |
+
+## The app token
+
+The plugin reads your Android app token from one of these places:
+
+- `bugsee.properties` in the Gradle root directory, which for a Flutter app is the `android/` folder.
+- `appToken("...")` in the `bugsee { }` block.
+
+Without a token the upload tasks skip quietly, so a green build does not prove that anything was uploaded.
+
+## Native symbols
+
+A crash in `libflutter.so` or in any other `.so` is readable, with function and file:line, only when Bugsee has the native symbols of that build. The native crash detector is always part of the app, because the plugin depends on the separate `bugsee-android-ndk` artifact. The symbol upload is not: turn it on in `android/app/build.gradle.kts`.
+
+<Tabs groupId="gradle-dsl">
+<TabItem value="kotlin" label="Kotlin DSL">
+
+```kotlin title="android/app/build.gradle.kts"
+bugsee {
+    ndk { enabled.set(true) }
+}
+```
+
+</TabItem>
+<TabItem value="groovy" label="Groovy">
+
+```groovy title="android/app/build.gradle"
+bugsee {
+    ndk { enabled.set(true) }
+}
+```
+
+</TabItem>
+</Tabs>
+
+With it on, the plugin uploads the unstripped libraries of every **non-debuggable** build, with a task named `uploadBugsee<Variant>Native`, for example `uploadBugseeReleaseNative`. A debug build uploads nothing.
+
+:::note
+Without `ndk.enabled`, native crashes in release builds are recorded but stay unreadable. This is the one setting a Flutter app is most likely to miss, because the plugin has it off.
+:::
+
+## Build requirements
+
+- JDK 17 or 21. JDK 25 is not part of the supported set.
+- Bugsee Gradle plugin 4.1.1. An older plugin fails Gradle task validation on `injectBugsee<Variant>BuildId` (4.1.0 fixed it), and a plugin older than 4.0.7 breaks extension registration.
+
+## Check that the upload happened
+
+Run a release build and read the Gradle output for the `uploadBugsee<Variant>Mapping` task and, with the native upload on, `uploadBugsee<Variant>Native`. If the native task is missing, `ndk.enabled` is not set. The native crash detector must also be on the classpath: `./gradlew :app:dependencies | grep bugsee-android-ndk`. The general Android side is described in [Android crashes](/sdk/android/issue-detection/crashes).

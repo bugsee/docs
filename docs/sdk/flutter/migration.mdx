@@ -1,0 +1,241 @@
+---
+title: "Migrating from 9.x to 10.x"
+description: "Step-by-step guide for moving a Flutter app from bugsee_flutter 9.x to 10.x: requirements, platform setup, renamed and removed APIs, launch options, capture that is now opt-in, and a checklist."
+sidebar_position: 25
+slug: "/sdk/flutter/migration"
+---
+
+:::warning[Beta]
+This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation).
+:::
+
+This guide walks through every public-API change between `bugsee_flutter` 9.x (which wraps the 6.x native SDKs) and 10.x, version 10.0.0-beta.1 (which wraps the 7.x native SDKs: Android 7.6.1, iOS 7.1.0). If you are setting up a new project, start from [Installation](/sdk/flutter/installation) instead.
+
+:::note[TL;DR]
+10.x is a rewrite and a clean break, not an in-place upgrade. The package name and the `Bugsee` facade stay, but the launch call, the options, the data calls, the exceptions, the lifecycle events, the report handler and the build setup all change, and `dart:io` network, `print` and Dart error capture are now opt-in. Expect code changes in every file that touches Bugsee. There is **no 9.x compatibility layer**: whether one will be offered is undecided and nothing here promises it. If you cannot change your code, stay on 9.x.
+:::
+
+The package is a prerelease on pub.dev, so a plain `^9.0.0` constraint does not select it: ask for `^10.0.0-beta.1` explicitly, see [Installation](/sdk/flutter/installation).
+
+---
+
+## 1. Requirements
+
+| | 9.x | 10.x |
+| --- | --- | --- |
+| Flutter / Dart | 3.0.0 or newer / 3.0 or newer | **Flutter 3.50.0 or newer / Dart 3.14 or newer** |
+| Native SDKs | Android 6.x, iOS 6.x | Android **7.6.1**, iOS **7.1.0** |
+| Android | `minSdk` 21 | `minSdk` 24 (Flutter 3.50's own minimum; the Bugsee SDK itself supports 21). The **Bugsee Gradle plugin 4.1.1 is mandatory** and applied by the app. JDK 17 or 21. |
+| iOS | CocoaPods podspec (and a Swift Package Manager package), deployment target 11.0 | **Swift Package Manager only: no podspec, no CocoaPods.** Deployment target **15.0**. |
+| Import | `package:bugsee_flutter/bugsee_flutter.dart` (also `bugsee.dart`) | `package:bugsee_flutter/bugsee_flutter.dart` only |
+| Feedback chat | Part of the plugin | The separate package [`bugsee_flutter_feedback`](/sdk/flutter/feedback) |
+
+## 2. Platform setup changes
+
+| Area | 9.x | 10.x |
+| --- | --- | --- |
+| Android Gradle plugin | Not needed | The app applies `com.bugsee.android.gradle` 4.1.1. A Flutter plugin cannot apply it for you. |
+| Android launch | From Dart | From Dart, or by the SDK itself before Dart when the manifest has `com.bugsee.app-token`. Then `Bugsee.launch` answers `alreadyRunning` and its options are not applied. |
+| Android startup | Recording starts at launch | The SDK holds capture from process start until the first Flutter frame and the secure rectangles are ready, about 1 second after it. The first seconds of a session are not recorded. |
+| Android native symbols | Configured as in the native docs | Opt in with `bugsee { ndk { enabled.set(true) } }`. See [Symbolication: Android](/sdk/flutter/symbolication/android). |
+| iOS | CocoaPods | Swift Package Manager. Run `flutter config --enable-swift-package-manager` where it is not the default, and raise the deployment target to 15.0. |
+| Wrapper registration | In the SDK options (`wrapper_info`) | Natively, before the SDK launches. Not something your app does. Do not add an Android provider of your own named `Bugsee<Anything>InitProvider`: the Gradle plugin deletes it. |
+
+## 3. What changed in the model
+
+- **Options are one typed class.** `AndroidLaunchOptions` and `IOSLaunchOptions` are replaced by one `BugseeOptions` with a typed field per 7.x option, shared by both platforms. A field you leave out keeps the SDK's default: 9.x wrote its own defaults into every launch. See [Configuration](/sdk/flutter/configuration).
+- **Launch returns a result.** `Bugsee.launch` returns a `LaunchResult` (`launched`, `alreadyRunning`, `deferred`) and throws `BugseeLaunchException` on failure. `appRunCallback` is gone: `await` the launch, then call `runApp`.
+- **Calls are stricter.** An invalid argument is a `BugseeException` (`BugseeArgumentException`) through the `Future` of the call. The synchronous filter setup calls (`setNetworkFilter`, `setLogFilter`) throw at once on an invalid `timeout`. A bad `BugseeOptions` is an `ArgumentError` from `launch`. 9.x passed most of these on silently.
+- **Nothing is queued before launch.** As in 9.x, `event`, `trace`, `log`, `notify` and `upload` before `launch` are dropped. Attributes, the user identifier and blackout work before launch.
+- **Capture is opt-in** for what only Dart can see: `installNetworkCapture`, `installLogCapture` and `installErrorHandlers`. 9.x installed its global error handler inside `launch` and captured `print` only inside an `appRunCallback` zone.
+- **The report handler is first-class.** `setReportHandler` replaces the 9.x attachments callback. See [Report handler](/sdk/flutter/report-handler).
+
+## 4. API mapping
+
+`Bugsee.` is the facade class in both versions. "Same" means the same name and meaning; a different signature is noted.
+
+### 4.1 Execution
+
+| 9.x | 10.x |
+| --- | --- |
+| `launch(token, {appRunCallback, launchOptions})` returning `Future<bool>` | `launch(token, {options})` returning `Future<LaunchResult>`. `appRunCallback` is **removed**: `await` the launch, then `runApp` (use `Bugsee.runGuarded` for the zone). |
+| `stop()` | Same |
+| `relaunch([options])` | **Removed**: `await Bugsee.stop()`, then `Bugsee.launch(...)` |
+| `pause()` / `resume()` | **Removed**: `startBlackout()` / `endBlackout()`. Blackout stops video, screenshot, touches and the view hierarchy. Logs and data continue. |
+| (none) | `status`, `statusChanges`, `getStatus()`, `isLaunched()`, `waitUntilLaunched()`, `getLaunchOptions()`, `getHostLaunchOptions()`, `isBlackout()`. See [Lifecycle](/sdk/flutter/lifecycle). |
+| `defaultHttpOverrides` | **Removed**: `installNetworkCapture()`, which chains to `HttpOverrides.current` |
+| `setApplicationVersion(version)` | **Removed**: the SDKs read the app version natively |
+| `testExceptionCrash()`, `testSignalCrash()` | **Removed** |
+
+```dart
+// 9.x
+await Bugsee.launch(token, appRunCallback: (launched) => runApp(const MyApp()),
+    launchOptions: AndroidLaunchOptions()..maxRecordingTime = 45);
+
+// 10.x
+await Bugsee.launch(token, options: const BugseeOptions(configDuration: 45));
+runApp(const MyApp());
+```
+
+### 4.2 Data
+
+| 9.x | 10.x |
+| --- | --- |
+| `setAttribute(String, dynamic)`, `getAttribute`, `clearAttribute`, `clearAllAttributes` | Same names. The value is a `String`, `bool`, `int` or finite `double`: anything else is a `BugseeArgumentException`. New `getAllAttributes()`. A value an SDK drops for size is a `BugseeAttributeException`. |
+| `setEmail` / `getEmail` / `clearEmail` | `setUserIdentifier` / `getUserIdentifier` / `clearUserIdentifier`. One identifier: the SDKs have no separate e-mail field, and an e-mail-shaped value links reports to a user. |
+| `event(name, [Map<String, dynamic>])` | `event(name, [Map<String, Object?>])`, validated: JSON-like values, 16 levels deep |
+| `trace(name, dynamic)` | `trace(name, Object)`: a `String`, `bool`, `int` or finite `double` |
+| `log(text, [BugseeLogLevel])` | `log(message, {LogLevel level = LogLevel.info})` |
+| `captureViewHierarchy()` | Same |
+| (none) | `addBreadcrumb(BugseeBreadcrumb)`, `notify(title, ...)`. See [Events and traces](/sdk/flutter/events-and-traces). |
+| `BugseeLogLevel` (`invalid`, `error`, `warning`, `info`, `debug`, `verbose`) | `LogLevel` (`error`, `warning`, `info`, `debug`, `verbose`): no `invalid` |
+
+```dart
+// 9.x
+await Bugsee.setEmail('user@example.com');
+
+// 10.x
+await Bugsee.setUserIdentifier('user@example.com');
+```
+
+See [User and session data](/sdk/flutter/user-session-data).
+
+### 4.3 Exceptions
+
+| 9.x | 10.x |
+| --- | --- |
+| `logHandledException(e, [stack])`, `logException(e, [stack])` (an alias) | `logException(error, [stackTrace])`: an error report. It answers whether the SDK was handed it. |
+| `logUnhandledException(e, [stack])` | Same name: a crash report |
+| The global handler installed by `launch` | Opt-in `installErrorHandlers({reportAsCrash = false})`. **Error reports by default.** 9.x reported `FlutterError.onError` as unhandled: pass `reportAsCrash: true` to restore that. |
+| `runGuarded(body, errorCallback)` (callback required, positional) | `runGuarded(body, {onError})` (named, optional) |
+| `captureChain(body)` | **Removed** |
+| `BugseeIsolate`, `addBugseeErrorListener()` / `removeBugseeErrorListener()` | `Bugsee.listenToIsolateErrors(isolate)`, which returns an `IsolateErrorListener` with `cancel()` |
+| (none) | `reportException(error, {stackTrace, handled, domain})`, `errorHandlersInstalled`, `errorHandlersActive` |
+
+The exception document sent to the backend changed with the SDKs: it now carries a `signature`, and the signature no longer hashes the application version, so the same error in two app versions is one issue. See [Crash and error reporting](/sdk/flutter/manual/crash-error-reporting) and [Dart errors](/sdk/flutter/dart-errors).
+
+### 4.4 Network and logs
+
+| 9.x | 10.x |
+| --- | --- |
+| `HttpOverrides.global = Bugsee.defaultHttpOverrides` | `Bugsee.installNetworkCapture()`, which chains to any overrides you set first |
+| `setNetworkFilter(Future<BugseeNetworkEvent?> Function(BugseeNetworkEvent))`. The event had `type`, `method`, `url`, `redirectUrl`, `body`, `headers`. | `setNetworkFilter(filter, {timeout})`. The event has `id`, `stage`, `method`, `url`, `headers`, `body`, `statusCode`, `redirectedFrom` and more. A filter that throws or hangs **drops** the event. |
+| `registerNetworkEvent(eventData)` | **Removed**: capture is automatic once installed |
+| `setLogFilter(Future<BugseeLogEvent?> Function(BugseeLogEvent))`. The event had `text`, `level`. | `setLogFilter(filter, {timeout})`. The event has `message`, `level`, `tag`. It applies to `print`, `debugPrint` and `forwardLog`, not to `Bugsee.log`. |
+| `print` captured when `launch` was given an `appRunCallback` zone | Opt-in `installLogCapture()` plus `runWithLogCapture` or `runGuarded` |
+| (none) | `forwardLog`, `logCaptureStats`, `networkCaptureStats` |
+
+```dart
+// 9.x
+HttpOverrides.global = Bugsee.defaultHttpOverrides;
+Bugsee.setNetworkFilter((e) async { e.headers?.remove('authorization'); return e; });
+
+// 10.x
+Bugsee.installNetworkCapture();
+Bugsee.setNetworkFilter((e) { e.headers.remove('authorization'); return e; });
+```
+
+See [Network capture](/sdk/flutter/network) and [Console logs](/sdk/flutter/logs).
+
+### 4.5 Reports, attachments, lifecycle
+
+| 9.x | 10.x |
+| --- | --- |
+| `upload([summary, description, severity, labels])`, all optional and positional | `upload(summary, description, {severity, labels})`: summary and description are required |
+| `showReportDialog([summary, description, severity, labels])` | `showReportDialog({summary, description, severity, labels})`, all named |
+| `BugseeSeverityLevel` (`low`, `medium`, `high`, `critical`, `blocker`) | `ReportSeverity` (`veryLow` with the alias `low`, `medium`, `high`, `critical`, `blocker`): the same values 1 to 5 |
+| `BugseeIssueType` | `ReportType` (`bug`, `crash`, `error`) |
+| `setAttachmentsCallback(BugseeAttachmentsCallback)` with `BugseeAttachment(name, filename, data)` | **Removed**: `setReportHandler(BugseeReportHandler(...))`, then `ReportProxy.addAttachment(path, ...)` or `addAttachmentBytes(bytes, ...)` |
+| (none) | `createReport()`, and `ReportProxy` edits (summary, description, e-mail, severity, labels, attributes, screenshot) |
+| `setLifecycleCallback(void Function(BugseeLifecycleEventType))` | `lifecycleEvents`, a `Stream<LifecycleEvent>` (`name` is the SDK's event name, `reportId` where the event carries one). Status changes are `statusChanges`. The 9.x members `resumed` and `paused` have no 7.x event. |
+
+See [Bug reporting](/sdk/flutter/manual/bug-reporting), [Report handler](/sdk/flutter/report-handler) and [Lifecycle](/sdk/flutter/lifecycle).
+
+### 4.6 Privacy
+
+| 9.x | 10.x |
+| --- | --- |
+| `BugseeSecureView(child:, enabled:)` | `BugseeSecureView(child:, enabled:)`, now a regular widget where `child` is required. It is tracked natively, with the limits in [Privacy: video](/sdk/flutter/privacy/video). |
+| `BugseeIgnoreSecureView` | **Removed** |
+| `addSecureRect`, `removeSecureRect`, `removeAllSecureRects`, `getAllSecureRects` | **Removed**: use `BugseeSecureView`. Native-unit rectangles are not exposed. |
+
+### 4.7 Feedback
+
+| 9.x | 10.x (`package:bugsee_flutter_feedback`) |
+| --- | --- |
+| `showFeedbackUI()` | `BugseeFeedback.show()` |
+| `setDefaultFeedbackGreeting(greeting)` | `BugseeFeedback.setGreeting(greeting)` |
+| `setNewFeedbackMessagesCallback(callback)` | `BugseeFeedback.messagesReceived` and `messageSent` streams. They fire only while the chat is on screen. |
+
+See [Feedback](/sdk/flutter/feedback).
+
+### 4.8 Options
+
+The mapping is by meaning: the 9.x names against the 10.x field documentation. `BugseeOptions` has a typed field per option the SDKs register, with the option key, the SDK default and the platforms it applies to in its documentation (defaults differ between platforms). An option that exists on one platform only is ignored on the other, with a debug warning.
+
+| 9.x (`BugseeLaunchOptions`) | 10.x (`BugseeOptions`) |
+| --- | --- |
+| `maxRecordingTime` | `configDuration` |
+| `shakeToReport` | `reportingTriggersShake`. **Off by default since Android 7.6.0 and iOS 7.1.0**: pass `true` to keep shake-to-report. |
+| `crashReport` | `detectCrash` |
+| `ndkCrashReport` (Android) | `detectCrashNdk` |
+| `videoEnabled` | `captureVideo` |
+| `videoScale` | `captureVideoScale` |
+| `captureLogs` | `captureLogs`, plus `captureLogsLevel` |
+| `monitorNetwork` | `captureNetwork` |
+| `screenshotEnabled` | `captureScreenshot` |
+| `maxDataSize` | `configMaxDataSize` |
+| `reportPrioritySelector` | `reportingUiPrioritySelectorEnabled` |
+| `defaultCrashPriority` / `defaultBugPriority` | `reportingDefaultsCrashPriority` / `reportingDefaultsBugPriority` (a `ReportSeverity`) |
+| `frameRate` (`BugseeFrameRate`) | `captureVideoFrameRate` (`FrameRate`: `low`, `medium`, `high`, and `raw` on Android only) |
+| `wifiOnlyUpload` | `configWifiOnlyUpload` |
+| `maxNetworkBodySize` | `captureNetworkBodySizeLimit` |
+| `captureDeviceAndNetworkNames` | `captureDeviceNetworkNames` |
+| `viewHierarchyEnabled` | `captureViewHierarchy` |
+| `reportSummaryRequired`, `reportDescriptionRequired`, `reportEmailRequired` | `reportingUiSummaryRequired`, `reportingUiDescriptionRequired`, `reportingUiEmailRequired` |
+| `reportLabelsEnabled` / `reportLabelsRequired` | `reportingUiLabelsEnabled` / `reportingUiLabelsRequired` |
+| iOS `style` (`BugseeIosVisualStyle`) | `reportingUiStyle` (`BugseeStyle`: `light`, `dusk`, `basedOnStatusBar`, `system`: different members) |
+| iOS `monitorDiskSpace`, `monitorBluetoothStatus`, `captureAVPlayer` | `captureDiskSpace`, `captureBluetoothStatus`, `captureAvPlayer` |
+| Android `videoMode` / `videoQuality` | `captureVideoMode` (`VideoMode`) / `captureVideoQuality` (`VideoQuality`) |
+| Android `notificationBarTrigger` | `reportingTriggersNotificationBar`. **Off by default since Android 7.6.0**: pass `true` to keep the report notification. |
+| iOS `screenshotToReport` | `reportingTriggersScreenshot`. **Off by default in 10.x** (`screenshotToReport` was on by default in 9.x): pass `true` to keep reporting when the user takes a screenshot. |
+| iOS `killDetection` | `detectExit` (on by default). It reports out-of-memory terminations only; it does not restore the 6.x guessing of kills after an unresponsive main thread. |
+| Android `serviceMode` | No one-to-one typed field verified. See `captureVideoMode` and the `captureVideoFullscreen*` fields, and check the behavior before relying on them. Do not pass it in `BugseeOptions.custom`: an unregistered key is an `ArgumentError`. |
+| `setCustomOption(key, value)` | `BugseeOptions(custom: {key: value})`. An unknown key is an `ArgumentError`, not silently dropped. |
+| `BugseeFrameRate`, `BugseeVideoQuality`, `BugseeVideoMode` | `FrameRate`, `VideoQuality`, `VideoMode`. Enums carry the SDK's internal value. |
+| `BugseeNetworkEventStage`, `BugseeNetworkEventNoBodyReason` | `NetworkStage`, `NoBodyReason` |
+
+## 5. Symbols for obfuscated builds
+
+The Dart symbols upload for `--split-debug-info` and `--obfuscate` is unchanged: it is still the manual `symbols.py` upload. See [Symbolication: Dart](/sdk/flutter/symbolication/dart). New in 10.x: the Android native symbol upload is opt-in, see [Symbolication: Android](/sdk/flutter/symbolication/android).
+
+## 6. Removed without a replacement
+
+- **Appearance** (`Bugsee.appearance`, `BugseeAppearance` and its styling surface): the 7.x appearance system differs per platform and is not exposed.
+- APM transactions and spans, `relaunch`, secure activities and native views: not exposed.
+- `BugseeHttpOverrides` as a public class: the capturing client is internal, use `installNetworkCapture`.
+- `pause` and `resume`: use blackout.
+- The test-crash calls and `setApplicationVersion`.
+
+## 7. Behavior changes that can surprise
+
+- A launch that was `true` in 9.x may be `alreadyRunning` or `deferred` in 10.x. Use `waitUntilLaunched()` instead of the boolean.
+- Android auto-init (a token in the manifest) ignores the options passed to `Bugsee.launch`.
+- Nothing is captured from `dart:io`, `print` or Dart errors until you install it.
+- Unhandled Dart errors are error reports, not crash reports, unless `reportAsCrash: true`.
+- Shake-to-report and the Android notification trigger are off by default.
+- The first seconds of an Android session are not recorded, because of the startup hold.
+
+## 8. Checklist
+
+1. Raise Flutter to 3.50.0 or newer.
+2. Android: apply the Bugsee Gradle plugin 4.1.1, build with JDK 17 or 21, and turn on `ndk { enabled.set(true) }` if you want native crashes readable.
+3. iOS: raise the deployment target to 15.0 and enable Swift Package Manager. Remove CocoaPods usage of Bugsee.
+4. Replace `launch(..., appRunCallback:, launchOptions:)` with `await Bugsee.launch(token, options: BugseeOptions(...))`, then `runApp`.
+5. Move your launch options to `BugseeOptions` using the table in 4.8.
+6. Call `installNetworkCapture`, `installLogCapture` and `installErrorHandlers` where you relied on the 9.x behavior. `print` is recorded only inside a zone that carries the hook, so run startup (the bindings, `launch` and `runApp`) inside `Bugsee.runWithLogCapture` or `Bugsee.runGuarded`; see [Console logs](/sdk/flutter/logs).
+7. Rename `setEmail` to `setUserIdentifier` and review the value rules for attributes, events and traces.
+8. Replace the attachments callback with a report handler, and the lifecycle callback with `lifecycleEvents`.
+9. Replace `pause` and `resume` with blackout, and remove `addSecureRect` calls in favor of `BugseeSecureView`.
+10. Move feedback calls to `bugsee_flutter_feedback`.
+11. Rebuild a release, upload the symbols (see the [symbolication overview](/sdk/flutter/symbolication/overview)) and send a test error.

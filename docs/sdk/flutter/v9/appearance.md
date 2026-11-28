@@ -2,10 +2,14 @@
 title: "Appearance"
 description: "Reference for all color customization options available for the Report and Feedback UI in the Bugsee Flutter SDK on iOS and Android."
 sidebar_position: 7
-slug: "/sdk/flutter/appearance"
+slug: "/sdk/flutter/v9/appearance"
 ---
 
-You can always change colors of the [Report](/sdk/flutter/manual/) and [Feedback](/sdk/flutter/feedback/) UI.
+:::caution[Previous version]
+This page documents Bugsee Flutter SDK **9.x** (`bugsee_flutter` 9.x), the current stable release. The new **10.x** SDK is a rewrite for the Bugsee 7.x native SDKs and is in beta, not yet published to pub.dev: see [Migrating from 9.x to 10.x](/sdk/flutter/migration/) to evaluate it, or the [10.x overview](/sdk/flutter/overview/).
+:::
+
+You can always change colors of the [Report](/sdk/flutter/v9/manual/) and [Feedback](/sdk/flutter/v9/feedback/) UI.
 
 ```dart
 // For example

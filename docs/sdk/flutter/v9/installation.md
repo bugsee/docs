@@ -2,8 +2,12 @@
 title: "Installation"
 description: "Step-by-step guide to installing the Bugsee Flutter SDK via pub.dev and initializing it with proper error and isolate capture setup."
 sidebar_position: 0
-slug: "/sdk/flutter/installation"
+slug: "/sdk/flutter/v9/installation"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Flutter SDK **9.x** (`bugsee_flutter` 9.x), the current stable release. The new **10.x** SDK is a rewrite for the Bugsee 7.x native SDKs and is in beta, not yet published to pub.dev: see [Migrating from 9.x to 10.x](/sdk/flutter/migration/) to evaluate it, or the [10.x overview](/sdk/flutter/overview/).
+:::
 
 :::info[Agent-Assisted Setup]
 Ask your AI coding assistant:
@@ -24,7 +28,7 @@ dependencies:
   bugsee_flutter: ^9.0.0
 ```
 
-See the [9.0.0 release notes](/sdk/flutter/release-notes/#900-march-6-2026) for 9.x breaking changes before upgrading from 8.x.
+See the [9.0.0 release notes](/sdk/flutter/v9/release-notes/#900-march-6-2026) for 9.x breaking changes before upgrading from 8.x.
 
 ## Initialization
 
@@ -61,7 +65,7 @@ class MyApp extends StatelessWidget {
 }
 ```
 
-See [configuration](/sdk/flutter/configuration/) to learn more on Bugsee launch options and customizations.
+See [configuration](/sdk/flutter/v9/configuration/) to learn more on Bugsee launch options and customizations.
 
 ## Important tips to ensure all errors are captured
 

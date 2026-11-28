@@ -2,8 +2,12 @@
 title: "Configuration"
 description: "All launch options and configuration parameters available for the Bugsee Flutter SDK on iOS and Android, with platform-specific option tables."
 sidebar_position: 1
-slug: "/sdk/flutter/configuration"
+slug: "/sdk/flutter/v9/configuration"
 ---
+
+:::caution[Previous version]
+This page documents Bugsee Flutter SDK **9.x** (`bugsee_flutter` 9.x), the current stable release. The new **10.x** SDK is a rewrite for the Bugsee 7.x native SDKs and is in beta, not yet published to pub.dev: see [Migrating from 9.x to 10.x](/sdk/flutter/migration/) to evaluate it, or the [10.x overview](/sdk/flutter/overview/).
+:::
 
 ## Launching with options
 
@@ -74,7 +78,7 @@ Future<void> main() async {
 |killDetection|false|Detect abnormal termination (experimental, [read more](/sdk/ios/v6/app-kills/))|
 |maxRecordingTime|60|Maximum recording duration|
 |monitorDiskSpace|false|Enable monitoring of disk space. Disabled by default due to privacy limitations|
-|monitorNetwork|true|Capture network traffic. Dart traffic additionally requires installing the HTTP overrides handler — see [Network capture](/sdk/flutter/network/)|
+|monitorNetwork|true|Capture network traffic. Dart traffic additionally requires installing the HTTP overrides handler — see [Network capture](/sdk/flutter/v9/network/)|
 |reportPrioritySelector|false|Allow user to modify priority when reporting manually|
 |screenshotToReport|true|Screenshot key to trigger report|
 |shakeToReport|true|Shake gesture to trigger report|
@@ -101,7 +105,7 @@ Future<void> main() async {
 |frameRate|BugseeFrameRate.high|Specifies how often frames are captured|
 |maxDataSize|50|Maximum disk space consumed by Bugsee|
 |maxRecordingTime|60|Maximum recording duration|
-|monitorNetwork|true|Capture network traffic. Dart traffic additionally requires installing the HTTP overrides handler — see [Network capture](/sdk/flutter/network/)|
+|monitorNetwork|true|Capture network traffic. Dart traffic additionally requires installing the HTTP overrides handler — see [Network capture](/sdk/flutter/v9/network/)|
 |reportPrioritySelector|false|Allow user to modify priority when reporting manually|
 |screenshotEnabled|true|Attach screenshot to a report|
 |serviceMode|false|Used, when Bugsee is launched from service. No video and no visual controls available. Recording continues even in background.|

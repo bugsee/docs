@@ -1,230 +1,63 @@
 ---
 title: "Release notes"
-description: "Changelog for the Bugsee Flutter SDK listing new features, bug fixes, and breaking changes for each released version."
-sidebar_position: 11
+description: "Release history for Bugsee Flutter SDK 10.x (beta), with the native SDK versions each release is built on."
+sidebar_position: 22
 slug: "/sdk/flutter/release-notes"
 ---
 
-## 9.0.4 (August 18 2026)
-- Feat: Updated native SDKs to their latest versions (Android: [6.0.4](/sdk/android/v6/release-notes/#604-june-22-2026), iOS: [6.3.1](/sdk/ios/v6/release-notes/#631-july-31-2026))
+:::warning[Beta]
+This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+:::
 
-## 9.0.3 (March 26 2026)
-- Fix: Improper artifacts placement for iOS
+Release history for Bugsee Flutter SDK 10.x: `bugsee_flutter` and `bugsee_flutter_feedback`, which are released together at the same version. Looking for the stable release? See the [9.x release notes](/sdk/flutter/v9/release-notes). Upgrading from 9.x? See the [migration guide](/sdk/flutter/migration).
 
-## 9.0.2 (March 20 2026)
-- Feat: Updated native SDKs to their latest versions (Android: [6.0.2](/sdk/android/v6/release-notes/#602-march-11-2026), iOS: [6.1.2](/sdk/ios/v6/release-notes/#612-march-4-2026))
+Each release lists the native SDKs it is built on. Their own changes are in the native SDK release notes: [Android](/sdk/android/release-notes) and [iOS](/sdk/ios/release-notes).
 
-## 9.0.0 (March 6 2026)
-- Feat: Updated native SDKs to their latest versions (Android: [6.0.0](/sdk/android/v6/release-notes/#600-december-9-2025), iOS: [6.1.2](/sdk/ios/v6/release-notes/#612-march-4-2026))
-- Breaking: \[iOS\] Minimum deployment target is iOS 12.0
-- Breaking: \[Android\] Bugsee SDK is now built with Android SDK version 35, hence requires compileSDKVersion 35
-- Breaking: \[Android\] AGP 8.6.0 or newer is now required
+## 10.0.0-beta.1 (prerelease, 2026-11-27)
 
-## 8.6.9 (November 18 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.9.1](/sdk/android/v6/release-notes/#591-september-29-2025), iOS: [5.5.9](/sdk/ios/v6/release-notes/#559-november-17-2025))
+A rewrite for the Bugsee 7.x native SDKs (Android 7.6.1, iOS 7.1.0). **A prerelease**: a plain `^9.0.0` constraint does not select it; ask for `^10.0.0-beta.1` explicitly. Existing 9.x apps should stay on 9.x: there is no compatibility layer: stay on 9.x or follow the migration guide. See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
 
-## 8.6.8 (October 15 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.9.1](/sdk/android/v6/release-notes/#591-september-29-2025), iOS: [5.5.8](/sdk/ios/v6/release-notes/#558-august-21-2025))
+**Features**
 
-## 8.6.7 (September 23 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.8.7](/sdk/android/v6/release-notes/#587-september-9-2025), iOS: [5.5.8](/sdk/ios/v6/release-notes/#558-august-21-2025))
+- **Launch and configuration.** `Bugsee.launch(token, {options})` returns a `LaunchResult` (`launched`, `alreadyRunning`, `deferred`). Also `waitUntilLaunched`, `stop`, `status`, `statusChanges`, `getStatus`, `isLaunched`, `getLaunchOptions` and `getHostLaunchOptions`. `BugseeOptions` has a typed, documented field for each of the 100 options the SDKs register, generated from the manifests they publish; an unknown key or a wrong type is an `ArgumentError` before the SDK sees it. See [Lifecycle & status](/sdk/flutter/lifecycle) and [Configuration](/sdk/flutter/configuration).
+- **Data.** Attributes (`setAttribute`, `getAttribute`, `getAllAttributes`, `clearAttribute`, `clearAllAttributes`), the user identifier, `event`, `trace`, `log`, `addBreadcrumb`, `notify`, blackout (`startBlackout`, `endBlackout`, `isBlackout`), `showReportDialog` and `upload`. See [Custom events & traces](/sdk/flutter/events-and-traces) and [User & session data](/sdk/flutter/user-session-data).
+- **Reports.** `setReportHandler` with `ReportProxy` (before and after callbacks, edits to summary, description, severity, labels and attributes), report attachments and annotated screenshots (path-first, `addAttachmentBytes` up to 1 MiB), `Bugsee.createReport` returning a `CreatedReport`, and the `lifecycleEvents` stream. See [Report handler](/sdk/flutter/report-handler).
+- **Privacy.** The `BugseeSecureView` widget, and the Flutter widget tree in reports (boxes and type names only, no text, keys or semantics; a secure view is one node), plus `Bugsee.captureViewHierarchy()`. See [Privacy](/sdk/flutter/privacy/overview) and [View hierarchy](/sdk/flutter/view-hierarchy).
+- **Dart errors.** `logException`, `logUnhandledException` and `reportException`. Opt-in `installErrorHandlers` (chained, restored, once per error, rate limited, **error reports by default**, `reportAsCrash: true` for crash reports), `errorHandlersActive`, `runGuarded` and `listenToIsolateErrors`. Obfuscated (`--split-debug-info`) stacks are sent untouched for the backend to symbolicate. See [Dart errors](/sdk/flutter/dart-errors).
+- **Network.** Opt-in `installNetworkCapture` records `dart:io` HTTP traffic (`package:http`, the default adapter of `dio`, `Image.network` and others) and hands it to the SDK with the SDK's body options and sanitizer. `setNetworkFilter` is a Dart-side, fail-closed filter that runs first. `networkCaptureStats`. See [Network capture](/sdk/flutter/network).
+- **Logs.** Opt-in `installLogCapture` records `print` (in a zone: `runWithLogCapture`, `runGuarded`) and `debugPrint`; `forwardLog` for your own logging; `setLogFilter` (fail closed); `logCaptureStats`. Lines are recorded with the plugin's own source (`Custom`), not as `Bugsee.log`. See [Console logs](/sdk/flutter/logs).
+- `bugseeFlutterVersion`, so the feedback package can check it runs with the core it was released with.
+- The in-app feedback chat is the separate package `bugsee_flutter_feedback`, released in lock-step. See [Feedback](/sdk/flutter/feedback).
+- The wrapper registers with the SDK before it can launch (an Android content provider; iOS at load time), so reports recovered after a crash carry the wrapper identity.
 
-## 8.6.6 (August 21 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.8.4](/sdk/android/v6/release-notes/#584-august-21-2025), iOS: [5.5.8](/sdk/ios/v6/release-notes/#558-august-21-2025))
+**Breaking changes from 9.x**
 
-## 8.6.5 (June 12 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.7.5](/sdk/android/v6/release-notes/#575-june-8-2025), iOS: [5.5.6](/sdk/ios/v6/release-notes/#556-march-25-2025))
-- Fix: \[Android\] In some configurations, application may crash on device with 16KB memory pages
+- A new API: `Bugsee.launch` returns `LaunchResult` and takes `BugseeOptions` (no `AndroidLaunchOptions` or `IOSLaunchOptions`, no `appRunCallback`). The email becomes the user identifier. Attachments move to the report handler. Secure rectangles are replaced by `BugseeSecureView`. `pause` and `resume` are replaced by blackout. `relaunch`, the appearance system, `setApplicationVersion`, `registerNetworkEvent`, `BugseeIgnoreSecureView` and the test-crash calls are removed. Network, log and error capture are opt-in. The full mapping is in [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+- The Dart log, network and lifecycle types are new: `BugseeLogEvent.message` instead of `text`, `LifecycleEvent` instead of `BugseeLifecycleEventType`, `ReportSeverity` instead of `BugseeSeverityLevel`.
 
-## 8.6.4 (May 6 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.7.3](/sdk/android/v6/release-notes/#573-may-5-2025), iOS: [5.5.6](/sdk/ios/v6/release-notes/#556-march-25-2025))
+**Other changes**
 
-## 8.6.3 (March 17 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.7.2](/sdk/android/v6/release-notes/#572-march-17-2025), iOS: [5.5.5](/sdk/ios/v6/release-notes/#555-february-13-2025))
+- Log lines keep the time they were printed on both platforms: a line that a slow filter or a long queue delayed is no longer recorded late.
+- With Android SDK 7.5.0 and later, the report screenshot captures Flutter's default `SurfaceView`, with the secure views redacted. On an older Android SDK the screenshot was black.
 
-## 8.6.0 - 8.6.2 (March 10 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.7.1](/sdk/android/v6/release-notes/#571-march-4-2025), iOS: [5.5.5](/sdk/ios/v6/release-notes/#555-february-13-2025))
-- Feat: Swift Package Manager support added
+**Requirements**
 
-## 8.5.0 (February 20 2025)
-- Feat: Full Flutter 3.29 support
-- Feat: Updated native SDKs to their latest versions (Android: [5.7.0](/sdk/android/v6/release-notes/#570-february-12-2025), iOS: [5.5.5](/sdk/ios/v6/release-notes/#555-february-13-2025))
+- Flutter 3.50.0 or later, Dart 3.14 or later. The 10.0 major moves the floor to the release with Direct Interop, Android Gradle Plugin 9 and `material_ui`.
+- Android: `minSdk` 24 (Flutter 3.50's own minimum; the Bugsee SDK itself supports 21), JDK 17 or 21, and the Bugsee Gradle plugin 4.1.1 applied by your app (mandatory). Turn on the native symbol upload with `bugsee { ndk { enabled.set(true) } }`: the plugin has it off, and without it native crashes in release builds are unreadable. See [Installation](/sdk/flutter/installation#android).
+- Android: the SDK's startup hold is on, so capture is blacked out from process start until the first Flutter frame is up and the secure views are published (about one second after the frame). The first seconds of a session are not recorded. Time caps bound the hold (10 seconds after the last engine that attached before a frame, 20 seconds with none, 60 seconds at most); a cap is a safety limit, not a privacy guarantee.
+- iOS: 15.0 or later, Swift Package Manager only (no CocoaPods).
 
-## 8.4.3 (February 4 2025)
-- Feat: Updated native SDKs to their latest versions (Android: [5.6.5](/sdk/android/v6/release-notes/#565-february-3-2025), iOS: [5.5.4](/sdk/ios/v6/release-notes/#554-january-27-2025))
-- Fix: \[Android\] Built-in UI shifts upwards in some scenarios on Android 15 (specifically, when hosting application itself is targeting Android 15, i.e. target SDK version is 35)
+**Compatibility**
 
-## 8.4.2 (November 23 2024)
-- Feat: Updated native SDKs to their latest versions (Android: 5.6.5, iOS: 5.5.4)
+- Android: Bugsee Android SDK 7.6.1, Bugsee Gradle plugin 4.1.1.
+- iOS: Bugsee iOS SDK 7.1.0.
 
-## 8.4.1 (November 20 2024)
-- Feat: Internal improvements
+### Known limitations
 
-## 8.4.0 (September 12 2024)
-- Feat: Updated native SDKs to their latest versions (Android: 5.4.2, iOS: 5.3.2)
-- Feat: \[Android\] Add support for 16KB memory pages
-- Fix: \[Android\] Crash when bug is sent from built-in reporting UI after removing screenshot
+- Verification is on Android emulators and iOS simulators, plus integration tests on one physical Android 14 phone, an iPhone XS and an iPhone 16 Pro. On the phones some tests failed or were not run: the view hierarchy test fails on the debug builds of the Android phone and the iPhone XS and passes in profile builds, and the iPhone 16 Pro ran only the attachments, network and logs tests.
+- The iOS crash matrix ran on an iPhone XS: recovered reports of native signals, Objective-C exceptions and a Swift trap. A raised signal 7 (`SIGEMT` on iOS, not `SIGBUS`) leaves no report, and `SIGBUS` is not measured on a device. The iOS paths for Dart exceptions were not run on a phone.
+- The iOS simulator slice has no crash reporter and files no logged exceptions, so crash recovery and Dart error reports cannot be tried on a simulator.
+- Not exposed: APM transactions and spans, the appearance system, `relaunch`.
+- Secure views do not cover the first frame of a region that has just appeared. See [Privacy: Video](/sdk/flutter/privacy/video).
 
-## 8.3.0 (August 5 2024)
-- Feat: Improved Isolate errors handling and corresponding new APIs
-
-## 8.2.1 (April 24 2024)
-- Fix: Use SDK version 34 for Android build
-
-## 8.2.0 (April 22 2024)
-- Fix: More reliable stack trace capture
-- Feat: MonitorDiskSpace launch option is added
-
-## 8.1.0 (April 19 2024)
-- Fix: \[Android\] In some cases, video before FG->BG->FG transitions may be absent
-- Note: \[Android\] compileSdkVersion 34 and up is now required
-
-## 8.0.2 (April 11 2024)
-- Feat: Updated dependencies to their latest versions (Android: 4.2.4, iOS: 5.0.2)
-
-## 8.0.1 (April 11 2024)
-- Feat: Updated dependencies to their latest versions (Android: 4.2.4, iOS: 5.0.0)
-
-## 8.0.0 (January 15 2024)
-- Feat: Updated dependencies to their latest versions
-- Breaking: Minimal supported Dart SDK version is now 3.0.0
-
-## 7.0.0 (December 25 2023)
-- Feat: Updated native SDKs to their latest versions (Android: 4.2.1, iOS: 5.0.0)
-- Breaking: \[iOS\] Bitcode is not present in the resulting binaries any more
-
-## 6.1.0 (December 6 2023)
-- Feat: Updated native SDKs to their latest versions (Android: 4.2.1, iOS: 4.1.0)
-
-## 6.0.1 (October 2 2023)
-- Feat: Updated native SDKs to their latest versions (Android: [4.0.1](/sdk/android/v6/release-notes/#401-september-30-2023), iOS: [4.0.1](/sdk/ios/v6/release-notes/#401-september-30-2023))
-
-## 6.0.0 (September 25 2023)
-- Feat: Updated native SDKs to their latest versions (Android: 4.0.0, iOS: 4.0.0)
-- Feat: Full compatibility with iOS 17.0 and Android 14
-- Breaking: \[iOS\] Minimum deployment target is iOS 11.0 (was 9.0)
-- Breaking: \[iOS\] ARMv7 is not supported any more.
-- Breaking: \[Android\] Bugsee SDK is build against Gradle 7.5, AGP 7.4.2
-- Breaking: \[Android\] Bugsee SDK is build with targetSdk and compileSdk of version 33
-
-## 5.4.0 (August 31 2023)
-- Feat: Updated native SDKs to their latest versions (Android: 3.10.0, iOS: 3.8.0)
-- Feat: Add new API to manually trigger view hierarchy capturing. Multiple view hierarchies support.
-
-## 5.3.2 (August 17 2023)
-- Fix: Build on iOS may fail due to invalid methods' signatures
-
-## 5.3.1 (July 12 2023)
-- Feat: Updated native SDKs to their latest versions (Android: 3.8.2, iOS: 3.7.1)
-- Fix: \[Android\] In some circumstances crashes may not be reported
-
-## 5.3.0 (June 6 2023)
-- Feature: Update native SDKs to the latest versions (Android: 3.8.1, iOS: 3.6.0)
-- Feature: Improved backward compatibility with upcoming versions of Flutter and Dart
-
-## 5.2.0 (April 24 2023)
-- Feature: Update native Android SDK to the latest version 3.7.0
-- Feature: Improved interaction with the WebView. Now it's stable and captures more network requests.
-
-## 5.1.0 (April 6 2023)
-- Feature: Update native SDKs to the latest versions (Android: 3.6.0, iOS: 3.5.0)
-- Feature: Ability to change placeholders for the input fields in the built-in bug reporting UI
-
-## 5.0.5 (March 8 2023)
-- Fix: Incorrect underlying Bugsee Android SDK was used. Now using (Android: 3.4.0, iOS: 3.3.3)
-
-## 5.0.4 (February 26 2023)
-- Feature: Updated native SDKs to their latest versions
-
-## 5.0.3 (January 26 2023)
-- Feature: Updated native SDKs to their latest versions
-
-## 5.0.2 (November 24 2022)
-- Feature: Update native SDKs to the latest versions (Android: 3.0.2, iOS: 3.2.1)
-- Fix: Properly specify fallback value for 'compileSdkVersion'
-
-## 5.0.1 (October 26 2022)
-- Feature: Update native SDKs to the latest versions (Android: 3.0.0, iOS: 3.1.2)
-- Fix: Secure rectangles serialization/deserialization issues
-
-## 5.0.0 (October 14 2022)
-- Breaking: Support for Flutter 2.X and earlier is dropped. Only Flutter 3.0 and up is now supported
-- Fix: Exception may be thrown when showReportDialog() and upload() is called with no data
-
-## 4.0.0 (September 6 2022)
-- Fix: Properly intercept and filter network requests made from native code
-- Feature: Update native SDKs to the latest versions (Android: 3.0.0, iOS: 3.0.0)
-- Note: Please refer to the underlying SDKs release notes to get the detailed list of changes: [Android](/sdk/android/v6/release-notes/#300-august-19-2022) / [iOS](/sdk/ios/v6/release-notes/#300-september-1-2022)
-
-## 3.1.0 (July 8 2022)
-- Feat: Update public method types and improve code style
-
-## 3.0.3 (May 30 2022)
-- Feat: Update underlying SDKs to their latest versions (several race conditions were fixed)
-
-## 3.0.2 (May 23 2022)
-- Feat: Add missing parts (example and pubspec fields) to pub.dev package
-
-## 3.0.1 (May 16 2022)
-- Feat: Flutter 3 support
-
-## 2.1.2 (April 18 2022)
-- Feat: Update underlying SDKs to their latest versions
-- Feat: View hierarchy now captures more data for each node
-
-## 2.1.1 (April 8 2022)
-- Fix: Add missing required components for view hierarchy capturing
-
-## 2.1.0 (April 7 2022)
-- Feat: View hierarchy is now also captured for the Flutter widget tree
-
-## 2.0.0 (March 7 2022)
-- Feat: Update underlying SDKs to their latest versions
-- Fix: iOS SDK does not require cleanup script any more
-- Feat: Secure views are now automatically obscured on video
-- Breaking change: Underlying Bugsee Android SDK is now fully migrated to AndroidX
-
-## 1.3.1 (January 17 2022)
-- Fix: Add missing NotificationBarTrigger launch option for Android
-- Feat: Update dependencies to their latest versions
-
-## 1.3.0 (December 16 2021)
-- Fix: In some rare cases not all crash reports may be sent to the server upon next relaunch \[iOS\]
-
-## 1.2.0 (November 14 2021)
-- Feat: Make Bugsee Flutter SDK compatible with Flutter pre-2.5
-
-## 1.1.1 (November 9 2021)
-- Fix: Properly intercept all console logs
-- Fix: Do not block/hang when Bugsee is launched from background app
-
-## 1.1.0 (October 4 2021)
-- Feat: Update native SDKs to their latest versions
-- Feat: Make SDK compatible and fully functional on iOS 15 and Android 12
-
-## 1.0.8 (September 17 2021)
-- Fix: Make code compatible with Flutter 2.5
-
-## 1.0.7 (August 9 2021)
-- Fix: Build failure with CocoaPods 1.10.2
-
-## 1.0.6 (July 25 2021)
-- Fix: Previous deployment ended up with inconsistent versions. This follow up release fixes it
-
-## 1.0.5 (July 25 2021)
-- Fix: Properly populate versions for Bugsee Flutter wrapper and native Bugsee SDKs
-
-## 1.0.4 (July 18 2021)
-- Fix: Properly handle exceptions with empty stack traces
-
-## 1.0.3 (July 10 2021)
-- Fix: Add missing checks in the Android bridging module
-
-## 1.0.2 (July 6 2021)
-- Fix: Fixing iOS build failure in some environments
-
-## 1.0.1 (June 28 2021)
-- Fix: Network events interception and filtering
-
-## 1.0.0 (May 25 2021)
-- Initial release
+For the previous stable line, see the [9.x release notes](/sdk/flutter/v9/release-notes).
