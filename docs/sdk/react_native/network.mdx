@@ -42,11 +42,11 @@ These launch options control network capture. Set them on the options object or 
 | Option | Key | Default | Description |
 | --- | --- | --- | --- |
 | `captureNetwork` | `com.bugsee.option.capture.network` | `true` | Record network requests and responses. |
-| (no accessor) | `com.bugsee.option.capture.network.body-size-limit` | `20480` | Largest request or response body captured, in bytes. |
-| (no accessor) | `com.bugsee.option.capture.network.body-without-type` | `false` | Also keep bodies that declare no content type. |
-| (no accessor) | `com.bugsee.option.capture.network.on-launch` | `false` | Start network capture during `launch` instead of when capture starts, so startup requests are not missed. |
-| (no accessor) | `com.bugsee.option.capture.network.default-sanitizer` | `true` | Redact known sensitive keys in URLs, headers and JSON bodies. How it combines with a filter differs per platform; see [Filters and the built-in redaction](#filters-and-the-built-in-redaction). |
-| (no accessor) | `com.bugsee.option.detect.http-errors` | `false` | Turn HTTP 5xx responses into error reports. |
+| `captureNetworkBodySizeLimit` | `com.bugsee.option.capture.network.body-size-limit` | `20480` | Largest request or response body captured, in bytes. |
+| `captureNetworkBodyWithoutType` | `com.bugsee.option.capture.network.body-without-type` | `false` | Also keep bodies that declare no content type. |
+| `captureNetworkOnLaunch` | `com.bugsee.option.capture.network.on-launch` | `false` | Start network capture during `launch` instead of when capture starts, so startup requests are not missed. |
+| `captureNetworkUseDefaultSanitizer` | `com.bugsee.option.capture.network.default-sanitizer` | `true` | Redact known sensitive keys in URLs, headers and JSON bodies. How it combines with a filter differs per platform; see [Filters and the built-in redaction](#filters-and-the-built-in-redaction). |
+| `detectAndReportHttpErrors` | `com.bugsee.option.detect.http-errors` | `false` | Turn HTTP 5xx responses into error reports. |
 
 Both native SDKs register these defaults. Read the values in effect with [`Bugsee.getLaunchOptions()`](/sdk/react_native/configuration#reading-the-effective-options).
 
@@ -55,8 +55,8 @@ import Bugsee, { createDefaultLaunchOptions } from '@bugsee/react-native';
 
 const options = createDefaultLaunchOptions();
 options.captureNetwork = true;
-options.setCustomOption('com.bugsee.option.capture.network.body-size-limit', 10240);
-options.setCustomOption('com.bugsee.option.capture.network.on-launch', true);
+options.captureNetworkBodySizeLimit = 10240;
+options.captureNetworkOnLaunch = true;
 
 Bugsee.launch('<your app token>', options);
 ```

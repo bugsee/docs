@@ -86,7 +86,7 @@ The `com.bugsee.option.config.notify-flush-delay` option (milliseconds, default 
 import Bugsee, { createDefaultLaunchOptions } from '@bugsee/react-native';
 
 const options = createDefaultLaunchOptions();
-options.setCustomOption('com.bugsee.option.config.notify-flush-delay', 2000);
+options.notifyFlushDelay = 2000;
 
 Bugsee.launch('<your app token>', options);
 ```

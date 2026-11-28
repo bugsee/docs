@@ -19,10 +19,10 @@ The native SDKs can open the report dialog on their own, without any call from y
 
 | Key | Accessor | Platforms | Default | Opens the report dialog when |
 | --- | --- | --- | --- | --- |
-| `com.bugsee.option.reporting.triggers.shake` | none | both | `false` | The user shakes the device. |
-| `com.bugsee.option.reporting.triggers.screenshot` | none | both | `false` | The user takes a screenshot. |
+| `com.bugsee.option.reporting.triggers.shake` | `triggerByShake` | both | `false` | The user shakes the device. |
+| `com.bugsee.option.reporting.triggers.screenshot` | `triggerByScreenshot` | both | `false` | The user takes a screenshot. |
 | `com.bugsee.option.reporting.triggers.notification-bar` | `triggerByNotification` | Android | `false` | The user taps the Bugsee entry in the notification bar. |
-| `com.bugsee.option.reporting.triggers.broadcast` | none | Android | `false` | An Android broadcast intent asks for a report. |
+| `com.bugsee.option.reporting.triggers.broadcast` | `triggerByBroadcast` | Android | `false` | An Android broadcast intent asks for a report. |
 
 The shake and notification-bar triggers are off by default (since iOS SDK 7.1.0 and Android SDK 7.6.0). Turn the shake and screenshot triggers on at launch:
 
@@ -30,8 +30,8 @@ The shake and notification-bar triggers are off by default (since iOS SDK 7.1.0 
 import Bugsee, { AndroidLaunchOptions, createDefaultLaunchOptions } from '@bugsee/react-native';
 
 const options = createDefaultLaunchOptions();
-options.setCustomOption('com.bugsee.option.reporting.triggers.shake', true);
-options.setCustomOption('com.bugsee.option.reporting.triggers.screenshot', true);
+options.triggerByShake = true;
+options.triggerByScreenshot = true;
 if (options instanceof AndroidLaunchOptions) {
   options.triggerByNotification = true;
 }
@@ -210,17 +210,17 @@ async function openReport() {
 
 A report gets a default severity unless one is passed or set from a report handler. Change the defaults with these launch options:
 
-| Key | Default | Applies to |
-| --- | --- | --- |
-| `com.bugsee.option.reporting.defaults.crash-priority` | `IssueSeverity.Blocker` | Crash reports |
-| `com.bugsee.option.reporting.defaults.error-priority` | `IssueSeverity.High` | Error reports |
-| `com.bugsee.option.reporting.defaults.bug-priority` | `IssueSeverity.High` | Bug reports |
+| Accessor | Key | Default | Applies to |
+| --- | --- | --- | --- |
+| `reportingDefaultCrashPriority` | `com.bugsee.option.reporting.defaults.crash-priority` | `IssueSeverity.Blocker` | Crash reports |
+| `reportingDefaultErrorPriority` | `com.bugsee.option.reporting.defaults.error-priority` | `IssueSeverity.High` | Error reports |
+| `reportingDefaultBugPriority` | `com.bugsee.option.reporting.defaults.bug-priority` | `IssueSeverity.High` | Bug reports |
 
 ```ts
 import Bugsee, { IssueSeverity, createDefaultLaunchOptions } from '@bugsee/react-native';
 
 const options = createDefaultLaunchOptions();
-options.setCustomOption('com.bugsee.option.reporting.defaults.bug-priority', IssueSeverity.Medium);
+options.reportingDefaultBugPriority = IssueSeverity.Medium;
 
 Bugsee.launch('<your app token>', options);
 ```

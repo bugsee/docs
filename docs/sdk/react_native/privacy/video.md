@@ -20,7 +20,7 @@ import Bugsee, { createDefaultLaunchOptions } from '@bugsee/react-native';
 
 const options = createDefaultLaunchOptions();
 options.captureVideo = false;
-options.setCustomOption('com.bugsee.option.capture.screenshot', false);
+options.captureScreenshot = false;
 
 Bugsee.launch('<your app token>', options);
 ```
@@ -199,15 +199,15 @@ With your root component wrapped in [`Bugsee.wrap`](/sdk/react_native/installati
 | Option | Key | Default | Description |
 | --- | --- | --- | --- |
 | `captureVideo` | `com.bugsee.option.capture.video` | `true` | Record the screen. |
-| (no accessor) | `com.bugsee.option.capture.screenshot` | `true` | Attach a screenshot to each report, independently of the video. |
-| (no accessor) | `com.bugsee.option.capture.screenshot.scale` | `1` | Scale the screenshot down and back up, which destroys fine detail such as small text. `1` turns it off. |
-| (no accessor) | `com.bugsee.option.capture.video.scale` | `1` | Extra down-scaling of the recorded video, for example `0.5`, which also reduces detail. |
-| (no accessor) | `com.bugsee.option.capture.video.quality` | `VideoQuality.Default` | Quality of the encoded video. |
-| (no accessor) | `com.bugsee.option.capture.video.frame-rate` | `FrameRate.High` | How often frames are captured. |
-| (no accessor) | `com.bugsee.option.capture.view-hierarchy` | `true` | Capture the view hierarchy. |
+| `captureScreenshot` | `com.bugsee.option.capture.screenshot` | `true` | Attach a screenshot to each report, independently of the video. |
+| `captureScreenshotScale` | `com.bugsee.option.capture.screenshot.scale` | `1` | Scale the screenshot down and back up, which destroys fine detail such as small text. `1` turns it off. |
+| `captureVideoScale` | `com.bugsee.option.capture.video.scale` | `1` | Extra down-scaling of the recorded video, for example `0.5`, which also reduces detail. |
+| `captureVideoQuality` | `com.bugsee.option.capture.video.quality` | `VideoQuality.Default` | Quality of the encoded video. |
+| `captureVideoFrameRate` | `com.bugsee.option.capture.video.frame-rate` | `FrameRate.High` | How often frames are captured. |
+| `captureViewHierarchy` | `com.bugsee.option.capture.view-hierarchy` | `true` | Capture the view hierarchy. |
 | `videoMode` (Android) | `com.bugsee.option.capture.video.mode` | `VideoMode.V2` | Android screen-capture strategy. |
-| (no accessor, Android) | `com.bugsee.option.capture.respect-flag-secure` | `true` | Blank windows with `FLAG_SECURE`. |
-| (no accessor, iOS) | `com.bugsee.option.capture.video.privacy-blur` | `true` | Blur transition frames instead of skipping them; off, the video freezes for the transition. |
+| `captureRespectFlagSecure` (Android) | `com.bugsee.option.capture.respect-flag-secure` | `true` | Blank windows with `FLAG_SECURE`. |
+| `captureVideoPrivacyBlur` (iOS) | `com.bugsee.option.capture.video.privacy-blur` | `true` | Blur transition frames instead of skipping them; off, the video freezes for the transition. |
 
 The defaults are the same on both platforms; read the values in effect with [`Bugsee.getLaunchOptions()`](/sdk/react_native/configuration#reading-the-effective-options). See [Configuration](/sdk/react_native/configuration) for setting keys without an accessor.
 
@@ -216,8 +216,8 @@ import Bugsee, { createDefaultLaunchOptions } from '@bugsee/react-native';
 
 const options = createDefaultLaunchOptions();
 // Keep the video, but make small text unreadable in the screenshot and video
-options.setCustomOption('com.bugsee.option.capture.screenshot.scale', 0.5);
-options.setCustomOption('com.bugsee.option.capture.video.scale', 0.5);
+options.captureScreenshotScale = 0.5;
+options.captureVideoScale = 0.5;
 
 Bugsee.launch('<your app token>', options);
 ```

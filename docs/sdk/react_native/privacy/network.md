@@ -26,7 +26,7 @@ Bugsee.launch('<your app token>', options);
 
 ## Body options
 
-These options limit which bodies are kept. They have no accessor; set them with `setCustomOption`:
+These options limit which bodies are kept. Set them with their accessors (`captureNetworkBodySizeLimit`, `captureNetworkBodyWithoutType`), or by key with `setCustomOption`:
 
 | Key | Default | Description |
 | --- | --- | --- |

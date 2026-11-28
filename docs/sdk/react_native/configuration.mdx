@@ -120,7 +120,7 @@ The **Default** column applies to both platforms unless the row gives one per pl
 | `maxPendingReportAge` | `com.bugsee.option.config.max-pending-report-age` | number (days) | `30` | Oldest a report waiting to be sent may get; `0` or less keeps reports until they are sent or evicted. |
 | `triggerByNotification` | `com.bugsee.option.reporting.triggers.notification-bar` | boolean | `false` | Show a notification-bar entry that opens the report UI. Off by default since Android SDK 7.6.0. |
 
-The other Android-only keys are reachable with `setCustomOption`: see [Platform-only keys](#platform-only-keys).
+The other Android-only options, with their accessors, are in [Platform-only keys](#platform-only-keys).
 
 ## iOS accessors
 
@@ -135,109 +135,109 @@ The other Android-only keys are reachable with `setCustomOption`: see [Platform-
 
 ## Other shared keys
 
-These keys are accepted by both native SDKs but have no accessor. Set them with `setCustomOption`, or in a plain map. Type and default are the same on both platforms, except where a row gives one per platform.
+These keys are accepted by both native SDKs. Each has an accessor on the options object, listed here next to its key; `setCustomOption` and a plain map reach the same keys. Type and default are the same on both platforms, except where a row gives one per platform.
 
 ### Detection
 
-| Key | Type | Default | Description |
-| --- | --- | --- | --- |
-| `com.bugsee.option.detect.early-crash` | boolean | `true` | Also catch crashes very early in startup. |
-| `com.bugsee.option.detect.exit` | boolean | `true` | Detect and report application exits. |
-| `com.bugsee.option.detect.hang.level.fair` | number (ms) | `3000` | Main-thread block that counts as a "Fair" hang. |
-| `com.bugsee.option.detect.hang.level.medium` | number (ms) | `5000` | Main-thread block that counts as a "Medium" hang. |
-| `com.bugsee.option.detect.hang.level.severe` | number (ms) | `10000` | Main-thread block that counts as a "Severe" hang. |
-| `com.bugsee.option.detect.http-errors` | boolean | `false` | Turn HTTP 5xx responses into error reports. |
-| `com.bugsee.option.detect.main_thread_misuse` | boolean | `false` | Report file, network or database work done on the main thread. |
-| `com.bugsee.option.detect.anomaly` | boolean | `false` | The statistical performance-anomaly detector. |
-| `com.bugsee.option.detect.frustration` | boolean | `false` | Detect user-frustration patterns such as rage taps and report them. |
+| Accessor | Key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `detectAndReportEarlyCrash` | `com.bugsee.option.detect.early-crash` | boolean | `true` | Also catch crashes very early in startup. |
+| `detectAndReportExit` | `com.bugsee.option.detect.exit` | boolean | `true` | Detect and report application exits. |
+| `detectAndReportHangFairLevel` | `com.bugsee.option.detect.hang.level.fair` | number (ms) | `3000` | Main-thread block that counts as a "Fair" hang. |
+| `detectAndReportHangMediumLevel` | `com.bugsee.option.detect.hang.level.medium` | number (ms) | `5000` | Main-thread block that counts as a "Medium" hang. |
+| `detectAndReportHangSevereLevel` | `com.bugsee.option.detect.hang.level.severe` | number (ms) | `10000` | Main-thread block that counts as a "Severe" hang. |
+| `detectAndReportHttpErrors` | `com.bugsee.option.detect.http-errors` | boolean | `false` | Turn HTTP 5xx responses into error reports. |
+| `detectAndReportMainThreadMisuse` | `com.bugsee.option.detect.main_thread_misuse` | boolean | `false` | Report file, network or database work done on the main thread. |
+| `detectAndReportAnomaly` | `com.bugsee.option.detect.anomaly` | boolean | `false` | The statistical performance-anomaly detector. |
+| `detectFrustration` | `com.bugsee.option.detect.frustration` | boolean | `false` | Detect user-frustration patterns such as rage taps and report them. |
 
 ### Capture
 
-| Key | Type | Default | Description |
-| --- | --- | --- | --- |
-| `com.bugsee.option.capture.screenshot` | boolean | `true` | Take a screenshot when a report is created. |
-| `com.bugsee.option.capture.screenshot.scale` | number | `1` | Down-then-up scaling of the screenshot, which destroys fine detail; `1` turns it off. |
-| `com.bugsee.option.capture.view-hierarchy` | boolean | `true` | Capture the view hierarchy for reports (also needs [`Bugsee.wrap`](/sdk/react_native/installation#4-launch-bugsee)). |
-| `com.bugsee.option.capture.breadcrumbs.extras` | boolean | `false` | Attach raw system data to the breadcrumbs the native SDK records for system events: the `Intent` extras of system broadcasts on Android, the notification `userInfo` of device events on iOS. |
-| `com.bugsee.option.capture.video.quality` | `VideoQuality` | `Default` | Quality of the encoded video. |
-| `com.bugsee.option.capture.video.frame-rate` | `FrameRate` | `High` | How often frames are captured. |
-| `com.bugsee.option.capture.video.scale` | number | `1` | Extra down-scaling of the recorded video, for example `0.5`. |
-| `com.bugsee.option.capture.video.adaptive` | boolean | `false` (Android) / `true` (iOS) | Skip frames while nothing on screen has been redrawn. |
-| `com.bugsee.option.capture.network.on-launch` | boolean | `false` | Start network capture during `launch` instead of when capture starts, so startup requests are not missed. |
-| `com.bugsee.option.capture.network.body-size-limit` | number (bytes) | `20480` | Largest request or response body captured. |
-| `com.bugsee.option.capture.network.body-without-type` | boolean | `false` | Also keep bodies that declare no content type. |
-| `com.bugsee.option.capture.network.default-sanitizer` | boolean | `true` | Redact known sensitive keys in URLs, headers and JSON bodies. See [Privacy: Network](/sdk/react_native/privacy/network) for how it combines with a network filter on each platform. |
+| Accessor | Key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `captureScreenshot` | `com.bugsee.option.capture.screenshot` | boolean | `true` | Take a screenshot when a report is created. |
+| `captureScreenshotScale` | `com.bugsee.option.capture.screenshot.scale` | number | `1` | Down-then-up scaling of the screenshot, which destroys fine detail; `1` turns it off. |
+| `captureViewHierarchy` | `com.bugsee.option.capture.view-hierarchy` | boolean | `true` | Capture the view hierarchy for reports (also needs [`Bugsee.wrap`](/sdk/react_native/installation#4-launch-bugsee)). |
+| `captureBreadcrumbsExtras` | `com.bugsee.option.capture.breadcrumbs.extras` | boolean | `false` | Attach raw system data to the breadcrumbs the native SDK records for system events: the `Intent` extras of system broadcasts on Android, the notification `userInfo` of device events on iOS. |
+| `captureVideoQuality` | `com.bugsee.option.capture.video.quality` | `VideoQuality` | `Default` | Quality of the encoded video. |
+| `captureVideoFrameRate` | `com.bugsee.option.capture.video.frame-rate` | `FrameRate` | `High` | How often frames are captured. |
+| `captureVideoScale` | `com.bugsee.option.capture.video.scale` | number | `1` | Extra down-scaling of the recorded video, for example `0.5`. |
+| `captureVideoAdaptive` | `com.bugsee.option.capture.video.adaptive` | boolean | `false` (Android) / `true` (iOS) | Skip frames while nothing on screen has been redrawn. |
+| `captureNetworkOnLaunch` | `com.bugsee.option.capture.network.on-launch` | boolean | `false` | Start network capture during `launch` instead of when capture starts, so startup requests are not missed. |
+| `captureNetworkBodySizeLimit` | `com.bugsee.option.capture.network.body-size-limit` | number (bytes) | `20480` | Largest request or response body captured. |
+| `captureNetworkBodyWithoutType` | `com.bugsee.option.capture.network.body-without-type` | boolean | `false` | Also keep bodies that declare no content type. |
+| `captureNetworkUseDefaultSanitizer` | `com.bugsee.option.capture.network.default-sanitizer` | boolean | `true` | Redact known sensitive keys in URLs, headers and JSON bodies. See [Privacy: Network](/sdk/react_native/privacy/network) for how it combines with a network filter on each platform. |
 
 ### Reporting
 
-| Key | Type | Default | Description |
-| --- | --- | --- | --- |
-| `com.bugsee.option.reporting.triggers.shake` | boolean | `false` | Open the report UI when the device is shaken. Off by default since iOS SDK 7.1.0 and Android SDK 7.6.0. |
-| `com.bugsee.option.reporting.triggers.screenshot` | boolean | `false` | Open the report UI when the user takes a screenshot. |
-| `com.bugsee.option.reporting.defaults.crash-priority` | `IssueSeverity` | `Blocker` | Severity of crash reports. |
-| `com.bugsee.option.reporting.defaults.error-priority` | `IssueSeverity` | `High` | Severity of error reports. |
-| `com.bugsee.option.reporting.defaults.bug-priority` | `IssueSeverity` | `High` | Severity of bug reports. |
-| `com.bugsee.option.reporting.ui.summary-required` | boolean | `false` | Make the Summary field mandatory. |
-| `com.bugsee.option.reporting.ui.description-required` | boolean | `false` | Make the Description field mandatory. |
-| `com.bugsee.option.reporting.ui.email-required` | boolean | `false` | Make the Email field mandatory. |
-| `com.bugsee.option.reporting.ui.labels-enabled` | boolean | `false` | Show the Labels field. |
-| `com.bugsee.option.reporting.ui.labels-required` | boolean | `false` | Make the Labels field mandatory. |
-| `com.bugsee.option.reporting.ui.priority-selector-enabled` | boolean | `false` | Let the user pick the priority. |
+| Accessor | Key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `triggerByShake` | `com.bugsee.option.reporting.triggers.shake` | boolean | `false` | Open the report UI when the device is shaken. Off by default since iOS SDK 7.1.0 and Android SDK 7.6.0. |
+| `triggerByScreenshot` | `com.bugsee.option.reporting.triggers.screenshot` | boolean | `false` | Open the report UI when the user takes a screenshot. |
+| `reportingDefaultCrashPriority` | `com.bugsee.option.reporting.defaults.crash-priority` | `IssueSeverity` | `Blocker` | Severity of crash reports. |
+| `reportingDefaultErrorPriority` | `com.bugsee.option.reporting.defaults.error-priority` | `IssueSeverity` | `High` | Severity of error reports. |
+| `reportingDefaultBugPriority` | `com.bugsee.option.reporting.defaults.bug-priority` | `IssueSeverity` | `High` | Severity of bug reports. |
+| `reportingUISummaryRequired` | `com.bugsee.option.reporting.ui.summary-required` | boolean | `false` | Make the Summary field mandatory. |
+| `reportingUIDescriptionRequired` | `com.bugsee.option.reporting.ui.description-required` | boolean | `false` | Make the Description field mandatory. |
+| `reportingUIEmailRequired` | `com.bugsee.option.reporting.ui.email-required` | boolean | `false` | Make the Email field mandatory. |
+| `reportingUILabelsEnabled` | `com.bugsee.option.reporting.ui.labels-enabled` | boolean | `false` | Show the Labels field. |
+| `reportingUILabelsRequired` | `com.bugsee.option.reporting.ui.labels-required` | boolean | `false` | Make the Labels field mandatory. |
+| `reportingUIPrioritySelectorEnabled` | `com.bugsee.option.reporting.ui.priority-selector-enabled` | boolean | `false` | Let the user pick the priority. |
 
 ### Upload and performance
 
-| Key | Type | Default | Description |
-| --- | --- | --- | --- |
-| `com.bugsee.option.config.notify-flush-delay` | number (ms) | `0` | Coalescing window before queued `Bugsee.notify` items are sent. |
-| `com.bugsee.option.performance.enabled` | boolean | `true` | Master switch for performance monitoring; see [Performance monitoring](/sdk/react_native/performance). |
-| `com.bugsee.option.performance.sample-rate` | number `[0, 1]` | `0.01` | Probability that a transaction is sampled for a standalone upload, which is not active in this beta; see [Sampling](/sdk/react_native/performance#sampling). |
-| `com.bugsee.option.performance.adaptive-sampling` | boolean | `true` | Promote unsampled transactions that look interesting into the standalone upload, which is not active in this beta. |
+| Accessor | Key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `notifyFlushDelay` | `com.bugsee.option.config.notify-flush-delay` | number (ms) | `0` | Coalescing window before queued `Bugsee.notify` items are sent. |
+| `performanceMonitoring` | `com.bugsee.option.performance.enabled` | boolean | `true` | Master switch for performance monitoring; see [Performance monitoring](/sdk/react_native/performance). |
+| `performanceSampleRate` | `com.bugsee.option.performance.sample-rate` | number `[0, 1]` | `0.01` | Probability that a transaction is sampled for a standalone upload, which is not active in this beta; see [Sampling](/sdk/react_native/performance#sampling). |
+| `performanceAdaptiveSampling` | `com.bugsee.option.performance.adaptive-sampling` | boolean | `true` | Promote unsampled transactions that look interesting into the standalone upload, which is not active in this beta. |
 
 ## Platform-only keys
 
 Keys for native WebView capture, shared or platform-only, are omitted from this page and from the shared tables above.
 
-Some keys are accepted by one SDK only; the other SDK does not recognize them. `setCustomOption` does not check the platform, so set these only on the platform they belong to.
+Some keys are accepted by one SDK only; the other SDK does not recognize them. The accessors exist only on the matching options class; `setCustomOption` does not check the platform, so set a key by hand only on the platform it belongs to.
 
-**Android only.** Native SDK reference: [Android configuration](/sdk/android/configuration).
+**Android only.** These are accessors on `AndroidLaunchOptions`. Native SDK reference: [Android configuration](/sdk/android/configuration).
 
-| Key | Type | Default | Description |
-| --- | --- | --- | --- |
-| `com.bugsee.option.capture.respect-flag-secure` | boolean | `true` | Protect windows that set `FLAG_SECURE`: they are blanked in the video and screenshots and left out of the view hierarchy. See [Privacy: Video](/sdk/react_native/privacy/video). |
-| `com.bugsee.option.capture.video.custom-muxer` | boolean | `false` | Encode the video with Bugsee's own MP4 muxer instead of the system one. |
-| `com.bugsee.option.capture.video.fullscreen-keep-running` | boolean | `true` | With `VideoMode.Fullscreen`, keep screen capture running in the background, rather than stopping it and asking the user again on return. |
-| `com.bugsee.option.capture.video.fullscreen-remember-decision` | boolean | `true` | With `VideoMode.Fullscreen`, remember the user's screen-capture consent across launches. |
-| `com.bugsee.option.capture.video.secure-scrolling` | boolean | `false` | With `VideoMode.V1`, skip more frames while secure views are on screen. |
-| `com.bugsee.option.config.report-handler-callback-timeout` | number (seconds) | `30` | Lowers the report handler deadline; see [Report handler](/sdk/react_native/report-handler#async-callbacks-and-deadlines). |
-| `com.bugsee.option.config.report-processing-in-process` | boolean | `true` | Assemble and upload reports in the app's process. `false` schedules them as system jobs, which survive the process at the cost of upload latency. |
-| `com.bugsee.option.detect.anr.sampling` | boolean | `true` | Sample the main thread during an ANR, to attribute the report to the frames that were blocking. |
-| `com.bugsee.option.detect.hang.sampling` | boolean | `true` | The same for hangs, while `detectAndReportHang` is on. |
-| `com.bugsee.option.detect.exit.not_responding` | boolean | `true` | Report exits after the app stopped responding (ANR). |
-| `com.bugsee.option.detect.exit.not_responding.as_crash` | boolean | `false` | Report those exits as crashes rather than errors. |
-| `com.bugsee.option.detect.exit.*`: `dependency_died`, `excessive_resource_usage`, `other`, `package_state_changed`, `package_updated`, `permission_changed`, `unknown`, `user_requested`, `user_was_stopped` | boolean | `false` | Report exits for that reason too. |
-| `com.bugsee.option.performance.upload-mode` | string | `"batched"` | How a standalone performance upload would send data; that upload is not active in this beta. |
-| `com.bugsee.option.reporting.triggers.broadcast` | boolean | `false` | Let a broadcast intent open the report dialog. |
+| Accessor | Key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `captureRespectFlagSecure` | `com.bugsee.option.capture.respect-flag-secure` | boolean | `true` | Protect windows that set `FLAG_SECURE`: they are blanked in the video and screenshots and left out of the view hierarchy. See [Privacy: Video](/sdk/react_native/privacy/video). |
+| `captureVideoUsingCustomMuxer` | `com.bugsee.option.capture.video.custom-muxer` | boolean | `false` | Encode the video with Bugsee's own MP4 muxer instead of the system one. |
+| `captureVideoFullscreenKeepRunning` | `com.bugsee.option.capture.video.fullscreen-keep-running` | boolean | `true` | With `VideoMode.Fullscreen`, keep screen capture running in the background, rather than stopping it and asking the user again on return. |
+| `captureVideoFullscreenRememberUserDecision` | `com.bugsee.option.capture.video.fullscreen-remember-decision` | boolean | `true` | With `VideoMode.Fullscreen`, remember the user's screen-capture consent across launches. |
+| `captureVideoSecureScrolling` | `com.bugsee.option.capture.video.secure-scrolling` | boolean | `false` | With `VideoMode.V1`, skip more frames while secure views are on screen. |
+| `reportHandlerCallbackTimeout` | `com.bugsee.option.config.report-handler-callback-timeout` | number (seconds) | `30` | Lowers the report handler deadline; see [Report handler](/sdk/react_native/report-handler#async-callbacks-and-deadlines). |
+| `reportProcessingInProcess` | `com.bugsee.option.config.report-processing-in-process` | boolean | `true` | Assemble and upload reports in the app's process. `false` schedules them as system jobs, which survive the process at the cost of upload latency. |
+| `detectAndReportAnrSampling` | `com.bugsee.option.detect.anr.sampling` | boolean | `true` | Sample the main thread during an ANR, to attribute the report to the frames that were blocking. |
+| `detectAndReportHangSampling` | `com.bugsee.option.detect.hang.sampling` | boolean | `true` | The same for hangs, while `detectAndReportHang` is on. |
+| `detectAndReportExitNotResponding` | `com.bugsee.option.detect.exit.not_responding` | boolean | `true` | Report exits after the app stopped responding (ANR). |
+| `detectAndReportExitNotRespondingAsCrash` | `com.bugsee.option.detect.exit.not_responding.as_crash` | boolean | `false` | Report those exits as crashes rather than errors. |
+| `detectAndReportExit` followed by `DependencyDied`, `ExcessiveResourceUsage`, `Other`, `PackageStateChanged`, `PackageUpdated`, `PermissionChanged`, `Unknown`, `UserRequested` or `UserWasStopped` | `com.bugsee.option.detect.exit.*`: `dependency_died`, `excessive_resource_usage`, `other`, `package_state_changed`, `package_updated`, `permission_changed`, `unknown`, `user_requested`, `user_was_stopped` | boolean | `false` | Report exits for that reason too. |
+| `performanceUploadMode` | `com.bugsee.option.performance.upload-mode` | string | `"batched"` | How a standalone performance upload would send data; that upload is not active in this beta. |
+| `triggerByBroadcast` | `com.bugsee.option.reporting.triggers.broadcast` | boolean | `false` | Let a broadcast intent open the report dialog. |
 
-**iOS only**, beyond the accessors above. Native SDK reference: [iOS configuration](/sdk/ios/configuration), which lists every option key with its type and default.
+**iOS only**, beyond the accessors above. These are accessors on `IOSLaunchOptions`. Native SDK reference: [iOS configuration](/sdk/ios/configuration), which lists every option key with its type and default.
 
-| Key | Type | Default | Description |
-| --- | --- | --- | --- |
-| `com.bugsee.option.capture.bluetooth-status` | boolean | `false` | Monitor the Bluetooth state. Needs `NSBluetoothAlwaysUsageDescription` in `Info.plist`. |
-| `com.bugsee.option.capture.camera-preview` | boolean | `false` | Record the live camera image shown in an `AVCaptureVideoPreviewLayer`. This records whatever the camera sees, and adds work to your camera session. Off, a camera preview records as an empty rectangle. |
-| `com.bugsee.option.capture.device-network-names` | boolean | `false` | Capture the device name, the Wi-Fi network name and the mobile carrier name. |
-| `com.bugsee.option.capture.logs.oslog` | boolean | `false` | Accepted and ignored in this beta: `os_log` entries are not captured. |
-| `com.bugsee.option.capture.on-device-symbolication` | boolean | `false` | Symbolicate crash stack frames on the device. |
-| `com.bugsee.option.capture.sample-buffer-display-layer` | boolean | `false` | Capture video shown through an `AVSampleBufferDisplayLayer` in the recording (pixel-buffer samples only). |
-| `com.bugsee.option.capture.status-bar-info` | boolean | `false` | On-screen status indicators for testing the SDK itself. No effect in release builds of the SDK. |
-| `com.bugsee.option.capture.video.max-frame-rate` | number (fps) | `0` | Highest capture frame rate. `0` uses the rate `capture.video.frame-rate` picks. |
-| `com.bugsee.option.capture.video.min-frame-rate` | number (fps) | `0` | Lowest capture frame rate. `0` uses the rate `capture.video.frame-rate` picks. |
-| `com.bugsee.option.capture.video.privacy-blur` | boolean | `true` | Blur the frames of a screen transition instead of leaving them out. `false` freezes the video for the transition. |
-| `com.bugsee.option.capture.websocket` | boolean | `true` | Record WebSocket traffic; see [Network events](/sdk/react_native/network#websocket-traffic). |
-| `com.bugsee.option.config.build-target` | string | none | Build target name, sent with reports. |
-| `com.bugsee.option.config.build-type` | string | none | Build type, such as `debug` or `release`, sent with reports. |
-| `com.bugsee.option.detect.crash.fill_empty_exception_stacks` | boolean | `false` | Fill in the stack of an uncaught `NSException` that has none from the crashing thread. This can change how crashes are grouped. |
-| `com.bugsee.option.detect.crash.swift_async_stacktraces` | boolean | `true` | Stitch Swift async frames into the stacks of C++ exceptions. |
-| `com.bugsee.option.reporting.ui.style` | number | `3` | Style of the report UI: `0` Light, `1` Dusk, `2` based on the status bar, `3` the system style. The package exports no constants for it. |
+| Accessor | Key | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| `captureBluetoothStatus` | `com.bugsee.option.capture.bluetooth-status` | boolean | `false` | Monitor the Bluetooth state. Needs `NSBluetoothAlwaysUsageDescription` in `Info.plist`. |
+| `captureCameraPreview` | `com.bugsee.option.capture.camera-preview` | boolean | `false` | Record the live camera image shown in an `AVCaptureVideoPreviewLayer`. This records whatever the camera sees, and adds work to your camera session. Off, a camera preview records as an empty rectangle. |
+| `captureDeviceAndNetworkNames` | `com.bugsee.option.capture.device-network-names` | boolean | `false` | Capture the device name, the Wi-Fi network name and the mobile carrier name. |
+| `captureOSLogs` | `com.bugsee.option.capture.logs.oslog` | boolean | `false` | Accepted and ignored in this beta: `os_log` entries are not captured. |
+| `captureOnDeviceSymbolication` | `com.bugsee.option.capture.on-device-symbolication` | boolean | `false` | Symbolicate crash stack frames on the device. |
+| `captureSampleBufferDisplayLayer` | `com.bugsee.option.capture.sample-buffer-display-layer` | boolean | `false` | Capture video shown through an `AVSampleBufferDisplayLayer` in the recording (pixel-buffer samples only). |
+| `captureStatusBarInfo` | `com.bugsee.option.capture.status-bar-info` | boolean | `false` | On-screen status indicators for testing the SDK itself. No effect in release builds of the SDK. |
+| `captureVideoMaxFramerate` | `com.bugsee.option.capture.video.max-frame-rate` | number (fps) | `0` | Highest capture frame rate. `0` uses the rate `capture.video.frame-rate` picks. |
+| `captureVideoMinFramerate` | `com.bugsee.option.capture.video.min-frame-rate` | number (fps) | `0` | Lowest capture frame rate. `0` uses the rate `capture.video.frame-rate` picks. |
+| `captureVideoPrivacyBlur` | `com.bugsee.option.capture.video.privacy-blur` | boolean | `true` | Blur the frames of a screen transition instead of leaving them out. `false` freezes the video for the transition. |
+| `captureWebSocket` | `com.bugsee.option.capture.websocket` | boolean | `true` | Record WebSocket traffic; see [Network events](/sdk/react_native/network#websocket-traffic). |
+| `buildTarget` | `com.bugsee.option.config.build-target` | string | none | Build target name, sent with reports. |
+| `buildType` | `com.bugsee.option.config.build-type` | string | none | Build type, such as `debug` or `release`, sent with reports. |
+| `detectCrashFillEmptyExceptionStacks` | `com.bugsee.option.detect.crash.fill_empty_exception_stacks` | boolean | `false` | Fill in the stack of an uncaught `NSException` that has none from the crashing thread. This can change how crashes are grouped. |
+| `detectCrashSwiftAsyncStackTraces` | `com.bugsee.option.detect.crash.swift_async_stacktraces` | boolean | `true` | Stitch Swift async frames into the stacks of C++ exceptions. |
+| `reportingUIStyle` | `com.bugsee.option.reporting.ui.style` | number | `3` | Style of the report UI: `0` Light, `1` Dusk, `2` based on the status bar, `3` the system style. The package exports no constants for it. |
 
 ## Enum reference
 
@@ -246,9 +246,9 @@ Enum-typed options take a number. Use the exported constants rather than writing
 ```ts
 import { FrameRate, IssueSeverity, VideoQuality } from '@bugsee/react-native';
 
-options.setCustomOption('com.bugsee.option.capture.video.frame-rate', FrameRate.Medium);
-options.setCustomOption('com.bugsee.option.capture.video.quality', VideoQuality.High);
-options.setCustomOption('com.bugsee.option.reporting.defaults.bug-priority', IssueSeverity.Critical);
+options.captureVideoFrameRate = FrameRate.Medium;
+options.captureVideoQuality = VideoQuality.High;
+options.reportingDefaultBugPriority = IssueSeverity.Critical;
 ```
 
 | Enum | Values | Used by |
@@ -346,8 +346,8 @@ options.duration = 90;
 options.captureBreadcrumbs = true;
 options.captureLogsLevel = LogLevel.Info;
 options.detectAndReportHang = true;
-options.setCustomOption('com.bugsee.option.reporting.triggers.shake', true);
-options.setCustomOption('com.bugsee.option.reporting.defaults.bug-priority', IssueSeverity.Medium);
+options.triggerByShake = true;
+options.reportingDefaultBugPriority = IssueSeverity.Medium;
 
 if (options instanceof AndroidLaunchOptions) {
   options.triggerByNotification = true;

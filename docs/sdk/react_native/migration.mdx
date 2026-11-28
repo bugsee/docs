@@ -133,8 +133,8 @@ import Bugsee, { IssueSeverity, createDefaultLaunchOptions } from '@bugsee/react
 
 const options = createDefaultLaunchOptions();
 options.duration = 120;
-options.setCustomOption('com.bugsee.option.reporting.triggers.shake', true);
-options.setCustomOption('com.bugsee.option.reporting.defaults.bug-priority', IssueSeverity.High);
+options.triggerByShake = true;
+options.reportingDefaultBugPriority = IssueSeverity.High;
 
 Bugsee.launch(token, options);
 ```
@@ -167,7 +167,7 @@ In `7.0.0-beta1`, `launch` and `relaunch` took only the plain map, so you passed
 
 ## 3. Option mapping
 
-In the tables below, a 7.x accessor is a property of the options object; a key without an accessor is set with `options.setCustomOption(key, value)` or in a plain map. [Configuration](/sdk/react_native/configuration) has every key with its type and default.
+In the tables below, a 7.x accessor is a property of the options object; `setCustomOption(key, value)` and a plain map reach the same `com.bugsee.option.*` keys. [Configuration](/sdk/react_native/configuration) has every key with its type and default.
 
 ### 3.1 Options on both platforms
 
@@ -175,26 +175,26 @@ In the tables below, a 7.x accessor is a property of the options object; a key w
 | --- | --- |
 | `maxRecordingTime` (`MaxRecordingTime`) | `duration` (`com.bugsee.option.config.duration`) |
 | `videoEnabled` (`VideoEnabled`) | `captureVideo` (`com.bugsee.option.capture.video`) |
-| `screenshotEnabled` (`ScreenshotEnabled`) | `com.bugsee.option.capture.screenshot` |
+| `screenshotEnabled` (`ScreenshotEnabled`) | `captureScreenshot` (`com.bugsee.option.capture.screenshot`) |
 | `captureLogs` (`CaptureLogs`) | `captureLogs` (`com.bugsee.option.capture.logs`) |
 | `monitorNetwork` (`MonitorNetwork`) | `captureNetwork` (`com.bugsee.option.capture.network`) |
-| `maxNetworkBodySize` | `com.bugsee.option.capture.network.body-size-limit` |
+| `maxNetworkBodySize` | `captureNetworkBodySizeLimit` (`com.bugsee.option.capture.network.body-size-limit`) |
 | `crashReport` (`CrashReport`) | `detectAndReportCrash` (`com.bugsee.option.detect.crash`) |
 | `handleRejections` (JavaScript only, off unless set) | No option. Unhandled promise rejections are always reported after `launch`, as errors; `detectAndReportCrash: false` turns that off with the other automatic reporting. See [Unhandled promise rejections](/sdk/react_native/manual/crash-error-reporting#unhandled-promise-rejections). |
 | `wifiOnlyUpload` (`WifiOnlyUpload`) | `wifiOnlyUpload` (`com.bugsee.option.config.wifi-only-upload`) |
 | `maxDataSize` (`MaxDataSize`) | `maxDataSize` (`com.bugsee.option.config.max-data-size`) |
-| `shakeToReport` (`ShakeToReport`) | `com.bugsee.option.reporting.triggers.shake` |
-| `screenshotToReport` (Android `ScreenshotToTrigger`, iOS `ScreenshotToReport`) | `com.bugsee.option.reporting.triggers.screenshot` |
-| `reportPrioritySelector` (`BugseeReportPrioritySelector`) | `com.bugsee.option.reporting.ui.priority-selector-enabled` |
-| `reportSummaryRequired` (`ReportSummaryRequired`) | `com.bugsee.option.reporting.ui.summary-required` |
-| `reportDescriptionRequired` (`ReportDescriptionRequired`) | `com.bugsee.option.reporting.ui.description-required` |
-| `reportEmailRequired` (`ReportEmailRequired`) | `com.bugsee.option.reporting.ui.email-required` |
-| `defaultCrashPriority` (`BugseeDefaultCrashPriority`) | `com.bugsee.option.reporting.defaults.crash-priority` |
-| `defaultBugPriority` (`BugseeDefaultBugPriority`) | `com.bugsee.option.reporting.defaults.bug-priority` |
-| _(no 6.x option)_ | `com.bugsee.option.reporting.defaults.error-priority` |
-| `frameRate` (`FrameRate`) | `com.bugsee.option.capture.video.frame-rate` |
-| `minFrameRate`, `maxFrameRate` (`MinFrameRate`, `MaxFrameRate`; sent on both platforms) | iOS only: `com.bugsee.option.capture.video.min-frame-rate`, `com.bugsee.option.capture.video.max-frame-rate` |
-| `captureDeviceAndNetworkNames` (`CaptureDeviceAndNetworkNames`; sent on both platforms) | iOS only: `com.bugsee.option.capture.device-network-names` |
+| `shakeToReport` (`ShakeToReport`) | `triggerByShake` (`com.bugsee.option.reporting.triggers.shake`) |
+| `screenshotToReport` (Android `ScreenshotToTrigger`, iOS `ScreenshotToReport`) | `triggerByScreenshot` (`com.bugsee.option.reporting.triggers.screenshot`) |
+| `reportPrioritySelector` (`BugseeReportPrioritySelector`) | `reportingUIPrioritySelectorEnabled` (`com.bugsee.option.reporting.ui.priority-selector-enabled`) |
+| `reportSummaryRequired` (`ReportSummaryRequired`) | `reportingUISummaryRequired` (`com.bugsee.option.reporting.ui.summary-required`) |
+| `reportDescriptionRequired` (`ReportDescriptionRequired`) | `reportingUIDescriptionRequired` (`com.bugsee.option.reporting.ui.description-required`) |
+| `reportEmailRequired` (`ReportEmailRequired`) | `reportingUIEmailRequired` (`com.bugsee.option.reporting.ui.email-required`) |
+| `defaultCrashPriority` (`BugseeDefaultCrashPriority`) | `reportingDefaultCrashPriority` (`com.bugsee.option.reporting.defaults.crash-priority`) |
+| `defaultBugPriority` (`BugseeDefaultBugPriority`) | `reportingDefaultBugPriority` (`com.bugsee.option.reporting.defaults.bug-priority`) |
+| _(no 6.x option)_ | `reportingDefaultErrorPriority` (`com.bugsee.option.reporting.defaults.error-priority`) |
+| `frameRate` (`FrameRate`) | `captureVideoFrameRate` (`com.bugsee.option.capture.video.frame-rate`) |
+| `minFrameRate`, `maxFrameRate` (`MinFrameRate`, `MaxFrameRate`; sent on both platforms) | iOS only: `captureVideoMinFramerate` (`com.bugsee.option.capture.video.min-frame-rate`), `captureVideoMaxFramerate` (`com.bugsee.option.capture.video.max-frame-rate`) |
+| `captureDeviceAndNetworkNames` (`CaptureDeviceAndNetworkNames`; sent on both platforms) | iOS only: `captureDeviceAndNetworkNames` (`com.bugsee.option.capture.device-network-names`) |
 | `setCustomOption(key, value)` with a 6.x option name | `setCustomOption(key, value)` with a `com.bugsee.option.*` key |
 
 ### 3.2 Android options
@@ -203,7 +203,7 @@ In the tables below, a 7.x accessor is a property of the options object; a key w
 | --- | --- |
 | `notificationBarTrigger` (`NotificationBarTrigger`) | `triggerByNotification` (`com.bugsee.option.reporting.triggers.notification-bar`) |
 | `videoMode` (`VideoMode`: `None`, `V1`, `V2`, `V3`) | `videoMode` (`com.bugsee.option.capture.video.mode`: `None`, `V1`, `V2`, `Fullscreen`, `DirectBuffers`). `V3` no longer exists. |
-| `videoQuality` (`VideoQuality`) | `com.bugsee.option.capture.video.quality` |
+| `videoQuality` (`VideoQuality`) | `captureVideoQuality` (`com.bugsee.option.capture.video.quality`) |
 | `fallbackVideoMode` (`FallbackVideoMode`) | No 7.x option. |
 | `serviceMode` (`ServiceMode`) | No 7.x option. |
 | `ndkCrashReport` (`NdkCrashReport`) | No option: the package includes NDK crash reporting (`bugsee-android-ndk`). With Expo, the config plugin's `nativeCrashReporting: false` leaves it out. A bare app can do what that option writes: exclude the module in `android/app/build.gradle` with `configurations.configureEach { exclude group: 'com.bugsee', module: 'bugsee-android-ndk' }`, and declare no `bugsee-android-ndk` dependency of its own. |
@@ -215,8 +215,8 @@ In the tables below, a 7.x accessor is a property of the options object; a key w
 | --- | --- |
 | `monitorDiskSpace` (`MonitorDiskSpace`) | `captureDiskSpace` (`com.bugsee.option.capture.disk-space`) |
 | `captureAVPlayer` (`CaptureAVPlayer`) | `captureAVPlayer` (`com.bugsee.option.capture.avplayer`) |
-| `videoScale` (`VideoScale`) | `com.bugsee.option.capture.video.scale` (both platforms in 7.x) |
-| `monitorBluetoothStatus` (`MonitorBluetoothStatus`) | `com.bugsee.option.capture.bluetooth-status` |
+| `videoScale` (`VideoScale`) | `captureVideoScale` (`com.bugsee.option.capture.video.scale`; both platforms in 7.x) |
+| `monitorBluetoothStatus` (`MonitorBluetoothStatus`) | `captureBluetoothStatus` (`com.bugsee.option.capture.bluetooth-status`) |
 | `killDetection` (`BugseeKillDetectionKey`) | No option by that name. Exit detection is `com.bugsee.option.detect.exit`. |
 
 ### 3.4 New in 7.x

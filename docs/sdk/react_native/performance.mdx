@@ -196,7 +196,7 @@ If no span can be started at all, `startTransaction` and `startSpan` throw an or
 
 ## Sampling
 
-These launch options control APM. They have no accessor; set them with `setCustomOption` or in a plain map.
+These launch options control APM. Each has an accessor on the options object (`performanceMonitoring`, `performanceSampleRate`, `performanceAdaptiveSampling`, and Android's `performanceUploadMode`); `setCustomOption` and a plain map reach the same keys.
 
 | Key | Default | Description |
 | --- | --- | --- |
@@ -209,7 +209,7 @@ These launch options control APM. They have no accessor; set them with `setCusto
 import Bugsee, { createDefaultLaunchOptions } from '@bugsee/react-native';
 
 const options = createDefaultLaunchOptions();
-options.setCustomOption('com.bugsee.option.performance.sample-rate', 0.1);
+options.performanceSampleRate = 0.1;
 
 Bugsee.launch('<your app token>', options);
 ```

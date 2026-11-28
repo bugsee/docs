@@ -38,7 +38,7 @@ Built on Bugsee Android SDK 7.6.0 and Bugsee iOS SDK 7.1.0, the first stable iOS
 
 **Changes**
 
-- **Shake-to-report is off by default on both platforms** (`com.bugsee.option.reporting.triggers.shake`, iOS SDK 7.1.0 and Android SDK 7.6.0). If your app relied on it, turn it on at launch: `options.setCustomOption('com.bugsee.option.reporting.triggers.shake', true)`. See [Bug reporting](/sdk/react_native/manual/bug-reporting#built-in-report-triggers).
+- **Shake-to-report is off by default on both platforms** (`com.bugsee.option.reporting.triggers.shake`, iOS SDK 7.1.0 and Android SDK 7.6.0). If your app relied on it, turn it on at launch: `options.triggerByShake = true`. See [Bug reporting](/sdk/react_native/manual/bug-reporting#built-in-report-triggers).
 - **The Android notification-bar trigger is off by default** (`triggerByNotification`, Android SDK 7.6.0). Set `options.triggerByNotification = true` on an Android options object to keep it.
 - **`crashSignals` is available on both platforms.** Both native SDKs now register `com.bugsee.option.capture.crash-signals`, with the same bit values (`ABRT` 1, `SEGV` 2, `BUS` 4, `ILL` 8, `FPE` 16, `TRAP` 32). The accessor moved from the iOS options to the shared options. The default, 128, means every signal when it is the whole value; combined with other bits it is dropped and only the signal bits count. On Android it is read once, when the native crash handler is armed. See [Configuration](/sdk/react_native/configuration#shared-accessors).
 - Launch options are synchronized with the option manifests the two native SDKs published for these versions.
