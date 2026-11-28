@@ -13,6 +13,37 @@ Release history for Bugsee Unity SDK 7.x, the package `com.bugsee.unity`. Lookin
 
 Each release lists the native SDKs it is built on. Their own changes are in the native SDK release notes: [Android](/sdk/android/release-notes) and [iOS](/sdk/ios/release-notes).
 
+## 7.0.0-beta.2 (November 27, 2026)
+
+The second beta of the 7.x line. It adds the 3D scene to the view hierarchy and moves the Android SDK to 7.6.1. It ships with Bugsee Android SDK 7.6.1 and Bugsee iOS SDK 7.1.0. It is a beta: it can contain rough edges, and the API can change in later betas.
+
+**Added**
+
+- **The managed view hierarchy carries the 3D scene.** A report now has a `scene` block next to the tree: the enabled cameras, the renderers that were drawn and sit inside a camera's view volume (meshes and sprites as oriented boxes), and the World Space and Screen Space - Camera canvases as planes, in glTF axes and metres. The new Unity-only launch option `CaptureSceneGraph` (`com.bugsee.option.unity.capture-scene-graph`) chooses how much is sent: `All` (the default), `NamesOnly` (names and no positions: no `bounds` and no `scene` block) or `None` (no managed tree). A capture can truncate the scene or leave it out when the tree could not be written in time. **With the default `All`, an AR app can upload the device pose and the geometry of the AR planes and meshes it renders: set `NamesOnly` or `None` to avoid that.**
+
+**Changed**
+
+- **Native Android SDK moved from 7.6.0 to 7.6.1** (`bugsee-android`, `bugsee-android-ndk` and the optional `bugsee-android-feedback`). It is a patch release that fixes a native crash (SIGSEGV) in screen capture: on Android 7.0 and later, an Activity or `SurfaceView` torn down while the SDK captured a screenshot or video frame could crash the app inside the system's `PixelCopy` call. The public API and the option manifest are unchanged. iOS stays on 7.1.0.
+- **The view hierarchy capture does less work.** The walk allocates less, reads a `RectTransform`'s corners with one native call fewer, and the scene block reuses what the tree walk already read instead of walking every transform a second time. The report JSON is unchanged, except that the scene block now reflects the instants of the tree walk: an object re-layered or deactivated between the tree and the scene read is seen as the tree saw it.
+
+**Fixed**
+
+- **The view hierarchy hides the name and components of every node under a secure rectangle at any render resolution.** With Resolution Scaling, `Screen.SetResolution` below the display size, a surface that is offset in the window (status bar, cutout) or an iOS render scale that differs from the screen scale, a covered node could keep `options.name` and `options.components`. A node without bounds still counts as covered, and while the surface cannot be read or is mid-rotation every node does, for the rest of that capture.
+
+**Known issues**
+
+- Handled managed exceptions in a Release IL2CPP build on Android without IL2CPP line information stay unsymbolicated (no file and line) when the symbols are Public (symbol table only). Use Debugging symbols plus the IL2CPP line map. Development builds send no addresses on Android, and Debugging symbols do not change that. See [Symbolication: Android](/sdk/unity/symbolication/android#public-and-debugging-symbols).
+- Switching the symbol level from Public to Debugging for the same `libil2cpp.so` build id may leave frames raw on the dashboard. This is open and under investigation ([issue 263](https://github.com/bugsee/bugsee-unity/issues/263)).
+- After an iOS launch that ended before the app became active, the next launch may block the main thread for up to about 8 seconds while the crash report uploads. The fix is in the native iOS SDK and is not released yet. Normal Unity launches do not hit it, because the SDK starts while the app is active. The opt-in iOS native early launch starts the SDK at app launch, before the app is active, so an app that uses it can hit this.
+- A report handler that throws does not drop the report, and is not a redaction boundary ([bugsee-unity#293](https://github.com/bugsee/bugsee-unity/issues/293)). See [Privacy: Report](/sdk/unity/privacy/report).
+
+**Compatibility**
+
+- Unity 2021.3 or later. iOS 15.0 or later, Android API 21 or later.
+- Android: Bugsee Android SDK 7.6.1 (with `bugsee-android-ndk` 7.6.1), Bugsee Gradle plugin 4.1.1.
+- iOS: Bugsee iOS SDK 7.1.0.
+- `bugsee-cli` 0.9.0.
+
 ## 7.0.0-beta.1 (November 23, 2026)
 
 The first beta of the 7.x line, which continues the sequence from 6.x. It is a new package with a new C# API. It ships with Bugsee Android SDK 7.6.0 and Bugsee iOS SDK 7.1.0. It is a beta: it can contain rough edges, and the API can change in later betas.
