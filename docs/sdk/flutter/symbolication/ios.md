@@ -19,7 +19,7 @@ For the Dart frames of the same app see [Symbolication: Dart](/sdk/flutter/symbo
 
 ## Upload from a Run Script phase
 
-In Xcode, open the Runner target, **Build Phases**, add a **Run Script** phase after **Embed Frameworks** and call the CLI. `bugsee-cli` has to be installed where the build can reach it, see [CLI installation](/cli/installation).
+In Xcode, open the Runner target, **Build Phases**, add a **Run Script** phase after **Embed Frameworks** and call the CLI. `bugsee-cli` **0.7.7 or newer** (the version that has `xcode upload-dsyms`) has to be installed where the build can reach it, see [CLI installation](/cli/installation).
 
 ```sh title="Run Script phase"
 "$SRCROOT/path/to/bugsee-cli" xcode upload-dsyms --app-token "$BUGSEE_APP_TOKEN"

@@ -150,7 +150,7 @@ Properties of the filter:
 - Requests from a client that was created before `installNetworkCapture` by code that keeps it (a `static final HttpClient`, an app-wide singleton), and the first `WebSocket` if it was used before the install. Install first, in `main`.
 - Requests while another `HttpOverrides` replaced the capture without chaining, or inside a zone with its own overrides.
 
-Native networking stacks (`cronet_http`, `cupertino_http`, `native_dio_adapter`, a WebView, a platform channel) go through the native SDKs' own interception, not this capture. An app that uses both sees each request once, from its own stack.
+Native networking stacks (`cronet_http`, `cupertino_http`, `native_dio_adapter`, a WebView, a platform channel) go through the native SDKs' own interception, not this capture. That interception exists only where the app adds the matching native Bugsee module itself (the Flutter package does not include the optional HTTP modules, see [Installation](/sdk/flutter/installation#android)); without it that traffic is not captured at all. An app that uses both sees each request once, from its own stack.
 
 ## Limits
 

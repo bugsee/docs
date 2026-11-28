@@ -87,7 +87,9 @@ await Bugsee.setReportHandler(
     onAfterReportCreated: (report) async {
       final snapshot = await report.read();
       if (snapshot.type == ReportType.crash) {
-        await report.replaceLabels([...snapshot.labels, 'crash-triage']);
+        if (!snapshot.labels.contains('crash-triage')) {
+          await report.replaceLabels([...snapshot.labels, 'crash-triage']);
+        }
       }
     },
   ),

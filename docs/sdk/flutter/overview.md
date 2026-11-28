@@ -59,7 +59,7 @@ Nothing below is turned on by `Bugsee.launch`:
 | | |
 | --- | --- |
 | Flutter / Dart | 3.50.0 or later / 3.14 or later |
-| Android | `minSdk` 21; JDK 17 or 21 for the build; the Bugsee Gradle plugin 4.1.1, applied by your app |
+| Android | `minSdk` 24 (Flutter 3.50's own minimum; the Bugsee SDK itself supports 21); JDK 17 or 21 for the build; the Bugsee Gradle plugin 4.1.1, applied by your app |
 | iOS | 15.0 or later; Swift Package Manager only |
 | Not covered | web, desktop (the calls do nothing there), tvOS, visionOS |
 

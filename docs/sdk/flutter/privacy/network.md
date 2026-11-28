@@ -106,7 +106,7 @@ In the verification, **Android recorded that URL verbatim** (`?token=abc123` sta
 ## What is not covered
 
 - **Data you pass yourself.** A URL you pass to `Bugsee.event`, `Bugsee.trace`, `Bugsee.log`, `Bugsee.addBreadcrumb` or an attribute is yours to redact.
-- **Native stacks.** Traffic from `cronet_http`, `cupertino_http`, `native_dio_adapter`, a WebView or a platform channel goes through the native SDKs' own interception, not through the Dart filter. Set a native network filter if that traffic matters.
+- **Native stacks.** Traffic from `cronet_http`, `cupertino_http`, `native_dio_adapter`, a WebView or a platform channel goes through the native SDKs' own interception, not through the Dart filter, and is captured only if the app adds the matching native Bugsee module itself (the Flutter package does not include the optional HTTP modules; see [Installation](/sdk/flutter/installation#android)). Where it is captured, set a native network filter if that traffic matters.
 - **WebSocket frames** are not captured at all; the handshake is a normal exchange and passes through the filter.
 - **Other isolates** are not captured.
 

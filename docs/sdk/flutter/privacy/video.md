@@ -59,7 +59,7 @@ The [view hierarchy](/sdk/flutter/view-hierarchy#secure-views) records a `Bugsee
 
 ### Limits
 
-- **A region that has just appeared is recorded in the clear for its first frame or so.** Dart can publish a region only after layout has placed it, so a newly mounted `BugseeSecureView` is not yet covered in its first frame. For something that must never be captured, keep the `BugseeSecureView` mounted and swap its content, instead of inserting the whole widget when the content appears.
+- **A region that has just appeared is recorded in the clear for its first frame or so.** Dart can publish a region only after layout has placed it, so a newly mounted `BugseeSecureView` is not yet covered in its first frame. Keeping the `BugseeSecureView` mounted and swapping its content covers only what lies inside the rectangle already published: a child that grows leaves the added area in the clear for its first frame too. For something that must never be captured, give the `BugseeSecureView` its final size before the content appears (a fixed-size box), or use blackout while the content changes.
 - **Pixels drawn outside the region's own subtree are not covered.** An `Overlay` magnifier or tooltip, for example, is not part of the region.
 - **A rotated region is covered by its bounding box**, and a partly clipped region is covered whole, so it can cover a few neighboring pixels.
 - **Only the app's main view is placed on mobile.**

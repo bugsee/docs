@@ -43,7 +43,7 @@ A rewrite for the Bugsee 7.x native SDKs (Android 7.6.1, iOS 7.1.0). **A prerele
 **Requirements**
 
 - Flutter 3.50.0 or later, Dart 3.14 or later. The 10.0 major moves the floor to the release with Direct Interop, Android Gradle Plugin 9 and `material_ui`.
-- Android: `minSdk` 21, JDK 17 or 21, and the Bugsee Gradle plugin 4.1.1 applied by your app (mandatory). Turn on the native symbol upload with `bugsee { ndk { enabled.set(true) } }`: the plugin has it off, and without it native crashes in release builds are unreadable. See [Installation](/sdk/flutter/installation#android).
+- Android: `minSdk` 24 (Flutter 3.50's own minimum; the Bugsee SDK itself supports 21), JDK 17 or 21, and the Bugsee Gradle plugin 4.1.1 applied by your app (mandatory). Turn on the native symbol upload with `bugsee { ndk { enabled.set(true) } }`: the plugin has it off, and without it native crashes in release builds are unreadable. See [Installation](/sdk/flutter/installation#android).
 - Android: the SDK's startup hold is on, so capture is blacked out from process start until the first Flutter frame is up and the secure views are published (about one second after the frame). The first seconds of a session are not recorded. Time caps bound the hold (10 seconds after the last engine that attached before a frame, 20 seconds with none, 60 seconds at most); a cap is a safety limit, not a privacy guarantee.
 - iOS: 15.0 or later, Swift Package Manager only (no CocoaPods).
 

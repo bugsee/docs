@@ -6,7 +6,7 @@ slug: "/sdk/flutter/migration"
 ---
 
 :::warning[Beta]
-This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation). Upgrading? See [Migrating from 9.x to 10.x](/sdk/flutter/migration).
+This page documents Bugsee Flutter SDK **10.x**, which is in beta (`10.0.0-beta.1`, a prerelease on pub.dev) and can change between betas. The stable release is **9.x**: see the [9.x documentation](/sdk/flutter/v9/installation).
 :::
 
 This guide walks through every public-API change between `bugsee_flutter` 9.x (which wraps the 6.x native SDKs) and 10.x, version 10.0.0-beta.1 (which wraps the 7.x native SDKs: Android 7.6.1, iOS 7.1.0). If you are setting up a new project, start from [Installation](/sdk/flutter/installation) instead.
@@ -25,7 +25,7 @@ The package is a prerelease on pub.dev, so a plain `^9.0.0` constraint does not 
 | --- | --- | --- |
 | Flutter / Dart | 3.0.0 or newer / 3.0 or newer | **Flutter 3.50.0 or newer / Dart 3.14 or newer** |
 | Native SDKs | Android 6.x, iOS 6.x | Android **7.6.1**, iOS **7.1.0** |
-| Android | `minSdk` 21 | `minSdk` 21. The **Bugsee Gradle plugin 4.1.1 is mandatory** and applied by the app. JDK 17 or 21. |
+| Android | `minSdk` 21 | `minSdk` 24 (Flutter 3.50's own minimum; the Bugsee SDK itself supports 21). The **Bugsee Gradle plugin 4.1.1 is mandatory** and applied by the app. JDK 17 or 21. |
 | iOS | CocoaPods podspec (and a Swift Package Manager package), deployment target 11.0 | **Swift Package Manager only: no podspec, no CocoaPods.** Deployment target **15.0**. |
 | Import | `package:bugsee_flutter/bugsee_flutter.dart` (also `bugsee.dart`) | `package:bugsee_flutter/bugsee_flutter.dart` only |
 | Feedback chat | Part of the plugin | The separate package [`bugsee_flutter_feedback`](/sdk/flutter/feedback) |
@@ -199,7 +199,8 @@ The mapping is by meaning: the 9.x names against the 10.x field documentation. `
 | Android `videoMode` / `videoQuality` | `captureVideoMode` (`VideoMode`) / `captureVideoQuality` (`VideoQuality`) |
 | Android `notificationBarTrigger` | `reportingTriggersNotificationBar`. **Off by default since Android 7.6.0**: pass `true` to keep the report notification. |
 | iOS `screenshotToReport` | `reportingTriggersScreenshot`. **Off by default in 10.x** (`screenshotToReport` was on by default in 9.x): pass `true` to keep reporting when the user takes a screenshot. |
-| iOS `killDetection`; Android `serviceMode` | No one-to-one typed field verified. Search `BugseeOptions` for the 7.x option, or pass it in `BugseeOptions.custom`. |
+| iOS `killDetection` | `detectExit` (on by default). It reports out-of-memory terminations only; it does not restore the 6.x guessing of kills after an unresponsive main thread. |
+| Android `serviceMode` | No one-to-one typed field verified. See `captureVideoMode` and the `captureVideoFullscreen*` fields, and check the behavior before relying on them. Do not pass it in `BugseeOptions.custom`: an unregistered key is an `ArgumentError`. |
 | `setCustomOption(key, value)` | `BugseeOptions(custom: {key: value})`. An unknown key is an `ArgumentError`, not silently dropped. |
 | `BugseeFrameRate`, `BugseeVideoQuality`, `BugseeVideoMode` | `FrameRate`, `VideoQuality`, `VideoMode`. Enums carry the SDK's internal value. |
 | `BugseeNetworkEventStage`, `BugseeNetworkEventNoBodyReason` | `NetworkStage`, `NoBodyReason` |

@@ -15,7 +15,7 @@ Upgrading from 9.x? See the [migration guide](/sdk/flutter/migration).
 
 **1. Which Flutter, Android and iOS versions does 10.x need?**
 
-Flutter 3.50.0 or newer (Dart 3.14). Android `minSdk` 21, built with JDK 17 or 21 and the Bugsee Gradle plugin 4.1.1. iOS 15.0 or newer, with Swift Package Manager only: Bugsee publishes no CocoaPods pod and the plugin has no podspec. The native SDKs are Android 7.6.0 and iOS 7.1.0. See [Installation](/sdk/flutter/installation).
+Flutter 3.50.0 or newer (Dart 3.14). Android `minSdk` 24 (Flutter 3.50's own minimum; the Bugsee SDK itself supports 21), built with JDK 17 or 21 and the Bugsee Gradle plugin 4.1.1. iOS 15.0 or newer, with Swift Package Manager only: Bugsee publishes no CocoaPods pod and the plugin has no podspec. The native SDKs are Android 7.6.1 and iOS 7.1.0. See [Installation](/sdk/flutter/installation).
 
 <br />
 
@@ -69,7 +69,7 @@ Those are opt-in in 10.x and `launch` does not turn them on. Call `Bugsee.instal
 
 **10. Dart errors are not reported. What do I check?**
 
-Check `Bugsee.errorHandlersActive`. It is `false` when another tool, for example Crashlytics, replaced the handlers after `installErrorHandlers`: call `installErrorHandlers` after it, so Bugsee chains to it. Also make sure the error happens after launch. A debug build prints a warning at `launch` when the handlers are not current.
+Check `Bugsee.errorHandlersActive`. It is `false` when another tool, for example Crashlytics, replaced the handlers after `installErrorHandlers`: call `Bugsee.uninstallErrorHandlers()` and then `Bugsee.installErrorHandlers()`, so Bugsee chains to the current handlers (a second `installErrorHandlers` while installed does nothing). Also make sure the error happens after launch. A debug build prints a warning at `launch` when the handlers are not current.
 
 <br />
 

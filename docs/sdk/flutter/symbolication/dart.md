@@ -29,13 +29,16 @@ flutter build apk --release --obfuscate --split-debug-info=build/symbols
 
 The upload is manual. Nothing in a Flutter build calls the Bugsee uploader, the plugin ships none, and `bugsee-cli` has no Flutter type yet (its `--type elf` is for native libraries).
 
-The script the 9.x plugin used still produces the upload the backend accepts. The script needs Python 3 with the `requests` package (`python3 -m pip install requests`); without it the command stops with `ModuleNotFoundError` before uploading. Run it after the build, in the project folder, pinned to a fixed commit and checked against its checksum:
+The script the 9.x plugin used zips the symbols and uploads them to Bugsee. Production acceptance of this upload is not confirmed: see [What is verified](#what-is-verified). The script needs Python 3 with the `requests` package (`python3 -m pip install requests`); without it the command stops with `ModuleNotFoundError` before uploading. Run it after the build, in the project folder, pinned to a fixed commit and checked against its checksum:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/bugsee/bugsee-flutter/9bc0f8645755114491235dc68fec84fdc5671755/scripts/symbols.py -o symbols.py \
   && echo "ef2ed4c25b87da764fd5b70238a41d776f6aa88b5e3174faa4e33de2f08453f7  symbols.py" | shasum -a 256 -c - \
+  && ls build/symbols/*.symbols > /dev/null \
   && python3 symbols.py -t <APP_TOKEN> -d build/symbols
 ```
+
+The `ls` line stops the chain with a non-zero status when `build/symbols` has no `.symbols` file; the script itself exits `0` in that case and uploads nothing. The script also exits `0`, without uploading, when Bugsee refuses the first request (a wrong app token, an HTTP 401 or 500): it prints nothing, so a CI job passes. It exits `1` only when the server answers with an error or the archive transfer fails. After the first upload of a build, check that the symbols appear for the app in the Bugsee dashboard before you rely on the job.
 
 | Option | Meaning |
 | --- | --- |

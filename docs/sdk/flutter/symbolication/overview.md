@@ -17,7 +17,7 @@ A Flutter app has up to four kinds of frames in one report, and each has its own
 
 | Frames | Debug file | How it reaches Bugsee |
 | --- | --- | --- |
-| Android Java and Kotlin | R8 mapping (`mapping.txt`) | Automatic. The Bugsee Gradle plugin uploads it on every minified build (`upload<Variant>Mapping`). |
+| Android Java and Kotlin | R8 mapping (`mapping.txt`) | Automatic. The Bugsee Gradle plugin uploads it on every minified build (`uploadBugsee<Variant>Mapping`). |
 | Android native (`libflutter.so`, your own `.so` files) | Unstripped native libraries | Automatic once you turn it on: `bugsee { ndk { enabled.set(true) } }`. It covers non-debuggable builds only. |
 | Dart frames of a release build made with `--split-debug-info` (and `--obfuscate`) | `build/symbols/*.symbols` | **Manual.** Nothing in a Flutter build calls the Bugsee uploader, and `bugsee-cli` has no Flutter type yet. |
 | iOS native (the app, `Flutter.framework`) | The build's dSYMs | **Manual in a Flutter app.** A Run Script build phase that runs `bugsee-cli xcode upload-dsyms`, or an upload from CI. |

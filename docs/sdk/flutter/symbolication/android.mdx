@@ -16,7 +16,7 @@ An Android release build needs two uploads for readable reports, and both come f
 
 | What | Setting | Needs the app token |
 | --- | --- | --- |
-| R8/ProGuard mapping | None. Uploaded on every minified build by `upload<Variant>Mapping`. | Yes |
+| R8/ProGuard mapping | None. Uploaded on every minified build by `uploadBugsee<Variant>Mapping`. | Yes |
 | Native symbols (`libflutter.so`, your `.so` files) | `bugsee { ndk { enabled.set(true) } }`. Off by default. | Yes |
 
 ## The app token
@@ -53,7 +53,7 @@ bugsee {
 </TabItem>
 </Tabs>
 
-With it on, the plugin uploads the unstripped libraries of every **non-debuggable** build, with a task named `upload<Variant>Native`, for example `uploadBugseeReleaseNative`. A debug build uploads nothing.
+With it on, the plugin uploads the unstripped libraries of every **non-debuggable** build, with a task named `uploadBugsee<Variant>Native`, for example `uploadBugseeReleaseNative`. A debug build uploads nothing.
 
 :::note
 Without `ndk.enabled`, native crashes in release builds are recorded but stay unreadable. This is the one setting a Flutter app is most likely to miss, because the plugin has it off.
@@ -66,4 +66,4 @@ Without `ndk.enabled`, native crashes in release builds are recorded but stay un
 
 ## Check that the upload happened
 
-Run a release build and read the Gradle output for the `upload<Variant>Mapping` task and, with the native upload on, `upload<Variant>Native`. If the native task is missing, `ndk.enabled` is not set. The native crash detector must also be on the classpath: `./gradlew :app:dependencies | grep bugsee-android-ndk`. The general Android side is described in [Android crashes](/sdk/android/issue-detection/crashes).
+Run a release build and read the Gradle output for the `uploadBugsee<Variant>Mapping` task and, with the native upload on, `uploadBugsee<Variant>Native`. If the native task is missing, `ndk.enabled` is not set. The native crash detector must also be on the classpath: `./gradlew :app:dependencies | grep bugsee-android-ndk`. The general Android side is described in [Android crashes](/sdk/android/issue-detection/crashes).
